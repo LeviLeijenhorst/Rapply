@@ -1,16 +1,16 @@
 {
-  email {$CADDY_EMAIL}
+  email contact@coachscribe.nl
 }
 
-backend.{$BASE_DOMAIN} {
+backend.coachscribe.nl {
   reverse_proxy 127.0.0.1:8787
 }
 
-supabase.{$BASE_DOMAIN} {
+supabase.coachscribe.nl {
   reverse_proxy 127.0.0.1:8000
 }
 
-admin.{$BASE_DOMAIN} {
+admin.coachscribe.nl {
   reverse_proxy 127.0.0.1:3000
 }
 
