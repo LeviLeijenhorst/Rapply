@@ -3,6 +3,9 @@ services:
     image: caddy:2
     restart: unless-stopped
     network_mode: host
+    environment:
+      BASE_DOMAIN: "${BASE_DOMAIN}"
+      CADDY_EMAIL: "${CADDY_EMAIL}"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -12,7 +15,7 @@ services:
 
   coachscribe_server:
     build:
-      context: ../..
+      context: ../../..
       dockerfile: deploy/production/server.Dockerfile
     restart: unless-stopped
     ports:
