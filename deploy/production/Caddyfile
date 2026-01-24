@@ -3,14 +3,14 @@
 }
 
 backend.coachscribe.nl {
-  reverse_proxy 127.0.0.1:8787
+  reverse_proxy coachscribe_server:8787
 }
 
 supabase.coachscribe.nl {
-  reverse_proxy 127.0.0.1:8000
+  reverse_proxy host.docker.internal:8000
 }
 
 admin.coachscribe.nl {
-  reverse_proxy 127.0.0.1:3000
+  reverse_proxy host.docker.internal:3000
 }
 
