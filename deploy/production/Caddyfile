@@ -11,6 +11,9 @@ supabase.coachscribe.nl {
 }
 
 admin.coachscribe.nl {
+  basicauth {
+    {$ADMIN_BASIC_AUTH_USER} {$ADMIN_BASIC_AUTH_HASH}
+  }
   reverse_proxy host.docker.internal:3000
 }
 
