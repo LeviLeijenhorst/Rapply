@@ -10,8 +10,8 @@
 
 ### Supabase
 
-- API reachable at `https://supabase.yourdomain.com`
-- Studio reachable at `https://studio.yourdomain.com`
+- API reachable at `https://supabase.coachscribe.nl`
+- Studio reachable at `https://admin.coachscribe.nl` (protected)
 - SMTP configured and tested:
   - signup email arrives
   - password reset email arrives
@@ -20,7 +20,7 @@
 
 ### CoachScribe server API
 
-- API reachable at `https://api.yourdomain.com/health`
+- API reachable at `https://backend.coachscribe.nl/health`
 - `NODE_ENV=production`
 - `CORS_ALLOWED_ORIGINS` set to your allowed origins
 - Rate limiting enabled (defaults are fine to start)
