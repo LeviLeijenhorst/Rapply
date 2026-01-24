@@ -1,0 +1,16 @@
+{
+  email {$CADDY_EMAIL}
+}
+
+backend.{$BASE_DOMAIN} {
+  reverse_proxy 127.0.0.1:8787
+}
+
+supabase.{$BASE_DOMAIN} {
+  reverse_proxy 127.0.0.1:8000
+}
+
+admin.{$BASE_DOMAIN} {
+  reverse_proxy 127.0.0.1:3000
+}
+

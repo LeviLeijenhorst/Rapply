@@ -1,0 +1,106 @@
+{
+  "name": "CoachScribe",
+  "slug": "coachscribe",
+  "scheme": "CoachScribe",
+  "version": "1.0.0",
+  "orientation": "portrait",
+  "userInterfaceStyle": "automatic",
+  "icon": "./assets/images/app-icon-all.png",
+  "updates": {
+    "fallbackToCacheTimeout": 0,
+    "url": "https://u.expo.dev/b235980e-87e1-41eb-a6ed-4bf1e4c83221"
+  },
+  "runtimeVersion": {
+    "policy": "appVersion"
+  },
+  "newArchEnabled": true,
+  "jsEngine": "hermes",
+  "assetBundlePatterns": [
+    "**/*"
+  ],
+  "android": {
+    "icon": "./assets/images/app-icon-android-legacy.png",
+    "package": "com.jnlstudios.coachscribe",
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/images/app-icon-android-adaptive-foreground.png",
+      "backgroundImage": "./assets/images/app-icon-android-adaptive-background.png"
+    },
+    "allowBackup": false,
+    "edgeToEdgeEnabled": true,
+    "permissions": [
+      "RECORD_AUDIO",
+      "WAKE_LOCK",
+      "FOREGROUND_SERVICE",
+      "FOREGROUND_SERVICE_MICROPHONE",
+      "POST_NOTIFICATIONS",
+      "BILLING"
+    ],
+    "foregroundService": {
+      "notificationTitle": "CoachScribe is recording",
+      "notificationText": "Recording in progress"
+    }
+  },
+  "ios": {
+    "icon": "./assets/images/app-icon-ios.png",
+    "supportsTablet": true,
+    "bundleIdentifier": "com.jnlstudios.coachscribe",
+    "buildNumber": "1",
+    "infoPlist": {
+      "NSMicrophoneUsageDescription": "CoachScribe records audio to generate transcripts and insights.",
+      "UIBackgroundModes": [
+        "audio",
+        "audio"
+      ],
+      "ITSAppUsesNonExemptEncryption": false
+    },
+    "privacyManifests": {
+      "NSPrivacyAccessedAPITypes": [
+        {
+          "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+          "NSPrivacyAccessedAPITypeReasons": [
+            "CA92.1"
+          ]
+        }
+      ]
+    }
+  },
+  "web": {
+    "favicon": "./assets/images/app-icon-web-favicon.png",
+    "bundler": "metro"
+  },
+  "plugins": [
+    "expo-localization",
+    "expo-font",
+    [
+      "expo-splash-screen",
+      {
+        "image": "./assets/images/app-icon-android-adaptive-foreground.png",
+        "imageWidth": 300,
+        "resizeMode": "contain",
+        "backgroundColor": "#191015"
+      }
+    ],
+    [
+      "react-native-edge-to-edge",
+      {
+        "android": {
+          "parentTheme": "Light",
+          "enforceNavigationBarContrast": false
+        }
+      }
+    ],
+    "expo-build-properties"
+  ],
+  "experiments": {
+    "tsconfigPaths": true
+  },
+  "extra": {
+    "ignite": {
+      "version": "11.3.2"
+    },
+    "eas": {
+      "projectId": "b235980e-87e1-41eb-a6ed-4bf1e4c83221"
+    }
+  },
+  "owner": "levitl"
+}
