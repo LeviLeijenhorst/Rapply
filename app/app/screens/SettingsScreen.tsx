@@ -20,9 +20,14 @@ export default function SettingsScreen() {
             }}
             accessibilityRole="button"
             accessibilityLabel="Mijn account"
-            style={({ pressed }) => [pressed && { opacity: 0.8 }]}
+            style={styles.profileButton}
           >
-            <Icon name="profileCircle" />
+            {({ pressed }) => (
+              <>
+                {pressed && <View style={styles.pressOverlay} />}
+                <Icon name="profileCircle" />
+              </>
+            )}
           </Pressable>
         </View>
 
@@ -40,12 +45,12 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: spacing.big,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 0,
     paddingTop: spacing.small,
     paddingBottom: spacing.big,
   },
@@ -53,5 +58,18 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily,
     fontSize: 22,
     color: colors.textPrimary,
+    marginLeft: spacing.big,
+  },
+  profileButton: {
+    width: 66,
+    height: 66,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    margin: 0,
+  },
+  pressOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.pressedOverlay,
   },
 })

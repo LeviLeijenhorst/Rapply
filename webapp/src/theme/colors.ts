@@ -1,9 +1,11 @@
 export const colors = {
-  pageBackground: '#F6F6F6',
+  pageBackground: '#F8F9F9',
   surface: '#FEFEFE',
   border: '#E0E0E0',
-  selected: '#FF5B03',
-  text: '#1D0A00',
-  textSecondary: 'rgba(29,10,0,0.6)',
+  hoverBackground: 'rgba(38,52,63,0.02)',
+  selected: '#BE0165',
+  text: '#26343F',
+  textStrong: '#1D0A00',
+  textSecondary: 'rgba(38,52,63,0.6)',
 } as const
 

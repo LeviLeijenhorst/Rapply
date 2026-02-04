@@ -6,10 +6,10 @@ import { Icon } from "./Icon"
 import BackButton from "./BackButton"
 import { colors, radius, safeAreaTop, spacing, typography, vibrate } from "./constants"
 import { Input } from "./Input"
-import { supabase } from "@/config/supabase"
 import { OverlayPressable } from "./OverlayPressable"
 import { postToSecureApi } from "@/services/secureApi"
 import { deleteDirectory } from "./EncryptedStorage"
+import { getAuthSession, onAuthSessionChange, signOut, updateAccountDisplayName } from "@/services/auth"
 
 export default function SettingsAccountScreen() {
   const navigation = useNavigation<any>()
@@ -38,39 +38,30 @@ export default function SettingsAccountScreen() {
   useEffect(() => {
     let isCancelled = false
 
-    async function loadProfile(nextUserId: string) {
-      const result = await supabase.from("profiles").select("display_name").eq("user_id", nextUserId).single()
-      if (isCancelled) return
-      const displayName = typeof result.data?.display_name === "string" ? result.data.display_name : ""
-      setSavedName(displayName)
-      setName(displayName)
-    }
-
     async function loadSession() {
-      const sessionResult = await supabase.auth.getSession()
-      const user = sessionResult.data.session?.user ?? null
+      const session = await getAuthSession()
       if (isCancelled) return
-      if (!user) {
+      if (!session) {
         setUserId(null)
         setEmail("")
         setSavedName("")
         setName("")
         return
       }
-      setUserId(user.id)
-      setEmail(typeof user.email === "string" ? user.email : "")
-      await loadProfile(user.id)
+      setUserId(session.userId)
+      setEmail(session.email || "")
+      const displayName = typeof session.displayName === "string" ? session.displayName : ""
+      setSavedName(displayName)
+      setName(displayName)
     }
 
     loadSession()
 
-    const subscription = supabase.auth.onAuthStateChange(() => {
-      loadSession()
-    })
+    const unsubscribe = onAuthSessionChange(() => loadSession())
 
     return () => {
       isCancelled = true
-      subscription.data.subscription.unsubscribe()
+      unsubscribe()
     }
   }, [])
 
@@ -80,10 +71,7 @@ export default function SettingsAccountScreen() {
     try {
       setLoading(true)
       const nextName = name.trim() || null
-      const result = await supabase.from("profiles").update({ display_name: nextName }).eq("user_id", userId)
-      if (result.error) {
-        throw result.error
-      }
+      await updateAccountDisplayName(nextName)
       setSavedName(name.trim())
       navigation.navigate("Settings", { showSaved: true })
     } catch (e: any) {
@@ -97,7 +85,7 @@ export default function SettingsAccountScreen() {
   async function onLogout() {
     vibrate()
     try {
-      await supabase.auth.signOut()
+      await signOut()
       navigation.reset({ index: 0, routes: [{ name: "AuthWelcome" }] })
     } catch {}
   }
@@ -118,11 +106,11 @@ export default function SettingsAccountScreen() {
             try {
               await deleteDirectory("CoachScribe")
             } catch {}
-            try {
+          try {
               await deleteDirectory("coachees")
             } catch {}
             try {
-              await supabase.auth.signOut()
+              await signOut()
             } catch {}
             navigation.reset({ index: 0, routes: [{ name: "AuthWelcome" }] })
           } catch {
@@ -185,7 +173,7 @@ export default function SettingsAccountScreen() {
         style={styles.card}
       >
         <View style={styles.rowBetween}>
-          <Text style={styles.rowText}>Wachtwoord wijzigen</Text>
+          <Text style={styles.rowText}>Account beheren</Text>
           <Icon name="chevronRight" />
         </View>
       </OverlayPressable>
@@ -208,10 +196,12 @@ export default function SettingsAccountScreen() {
       <Modal transparent visible={showPasswordChanged} animationType="fade" onRequestClose={() => setShowPasswordChanged(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Wachtwoord gewijzigd</Text>
-            <Text style={{ fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary }}>
-              Je wachtwoord is succesvol gewijzigd.
-            </Text>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Wachtwoord gewijzigd</Text>
+              <Text style={{ fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary }}>
+                Je wachtwoord is succesvol gewijzigd.
+              </Text>
+            </View>
             <View style={styles.modalActions}>
               <OverlayPressable
                 onPress={() => {
@@ -265,15 +255,16 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     backgroundColor: colors.white,
     borderRadius: radius,
-    padding: spacing.big,
+    padding: 0,
+    overflow: "hidden",
   },
   modalTitle: { fontFamily: typography.fontFamily, fontSize: 18, color: colors.textPrimary, marginBottom: spacing.small },
+  modalContent: { padding: spacing.big },
   modalActions: {
-    marginTop: spacing.big,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "stretch",
     justifyContent: "flex-end",
   },
-  modalBtn: { height: 44, paddingHorizontal: spacing.big, alignItems: "center", justifyContent: "center" },
+  modalBtn: { flex: 1, height: 48, alignItems: "center", justifyContent: "center" },
   modalConfirm: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textOrange, fontWeight: "700" },
 })

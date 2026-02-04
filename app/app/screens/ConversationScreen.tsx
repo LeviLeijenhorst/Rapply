@@ -1991,7 +1991,7 @@ export default function ConversationScreen() {
                       : "Samenvatting wordt gegenereerd…"}
                 </Text>
               </View>
-            ) : (
+            ) : summaryFocused ? (
               <TextInput
                 ref={summaryInputRef}
                 style={[styles.editor, { flex: 1 }]}
@@ -2017,6 +2017,29 @@ export default function ConversationScreen() {
                   }
                 }}
               />
+            ) : (
+              <Pressable
+                style={{ flex: 1 }}
+                onPress={() => {
+                  setSummaryFocused(true)
+                  requestAnimationFrame(() => {
+                    summaryInputRef.current?.focus?.()
+                  })
+                }}
+              >
+                <ScrollView
+                  ref={summaryScrollRef}
+                  style={{ flex: 1 }}
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={{ paddingBottom: 120 }}
+                >
+                  {(summary || "").trim() ? (
+                    <View>{renderAssistantMessageText(summary)}</View>
+                  ) : (
+                    <Text style={styles.summaryPlaceholder}>{isReport ? "Schrijf je verslag" : "Schrijf je samenvatting"}</Text>
+                  )}
+                </ScrollView>
+              </Pressable>
             )}
           </View>
         </View>
@@ -2267,51 +2290,6 @@ export default function ConversationScreen() {
     // // notes
     return (
       <View style={{ flex: 1 }}>
-        <View style={[styles.content, { paddingTop: spacing.small, paddingBottom: spacing.small, zIndex: 2 }]}>
-          <View style={styles.noteComposerContainer}>
-            {notesSelectMode ? (
-              <View style={styles.noteComposerActionsRow}>
-                {selectedNoteIds.length > 0 ? (
-                  <Pressable accessibilityRole="button" onPress={requestDeleteSelectedNotes} style={styles.noteComposerIconBtn}>
-                    <Icon name="trash" color="#FF0001" />
-                  </Pressable>
-                ) : (
-                  <View style={{ width: 44, height: 44 }} />
-                )}
-                <Pressable accessibilityRole="button" onPress={exitNotesSelectMode} style={styles.noteComposerTextBtn}>
-                  <Text style={styles.noteComposerDoneText}>Gereed</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <View style={styles.noteComposer}>
-                <TextInput
-                  ref={newNoteInputRef}
-                  value={newNote}
-                  onChangeText={setNewNote}
-                  placeholder="Nieuwe notitie..."
-                  placeholderTextColor={colors.textSecondary}
-                  style={styles.noteComposerInput}
-                  multiline
-                  scrollEnabled
-                  onFocus={() => setNotesFocused(true)}
-                  onBlur={() => setNotesFocused(false)}
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => {
-                    vibrate()
-                    if (newNote.trim()) saveNewNote()
-                  }}
-                  disabled={!newNote.trim()}
-                  style={[styles.noteComposerBtn, !newNote.trim() && { opacity: 0.5 }]}
-                >
-                  <Text style={styles.noteComposerBtnText}>Toevoegen</Text>
-                </Pressable>
-              </View>
-            )}
-          </View>
-        </View>
-
         <View style={{ flex: 1 }}>
           <ScrollView
             scrollEnabled={!notesSelectMode && !scrubbing}
@@ -2320,7 +2298,7 @@ export default function ConversationScreen() {
             removeClippedSubviews={false}
             overScrollMode="never"
             keyboardDismissMode="none"
-            contentContainerStyle={{ paddingTop: 0, paddingBottom: safeAreaBottom + (notesFocused ? keyboardHeight : 0) + 50 }}
+            contentContainerStyle={{ paddingTop: 0, paddingBottom: 120 + safeAreaBottom + (notesFocused ? keyboardHeight : 0) }}
           >
             {notes
               .slice()
@@ -2383,6 +2361,64 @@ export default function ConversationScreen() {
             />
           ) : null}
         </View>
+
+        <RNAnimated.View
+          style={[
+            styles.noteComposerBar,
+            { transform: [{ translateY: notesFocused ? -keyboardHeight : 0 }] },
+            { bottom: 0, paddingBottom: safeAreaBottom },
+          ]}
+        >
+          {LinearGradientMaybe ? (
+            <LinearGradientMaybe
+              colors={["transparent", colors.backgroundLight]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.noteComposerBackgroundGradient}
+              pointerEvents="none"
+            />
+          ) : null}
+          {notesSelectMode ? (
+            <View style={styles.noteComposerActionsRow}>
+              {selectedNoteIds.length > 0 ? (
+                <Pressable accessibilityRole="button" onPress={requestDeleteSelectedNotes} style={styles.noteComposerIconBtn}>
+                  <Icon name="trash" color="#FF0001" />
+                </Pressable>
+              ) : (
+                <View style={{ width: 44, height: 44 }} />
+              )}
+              <Pressable accessibilityRole="button" onPress={exitNotesSelectMode} style={styles.noteComposerTextBtn}>
+                <Text style={styles.noteComposerDoneText}>Gereed</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.noteComposer}>
+              <TextInput
+                ref={newNoteInputRef}
+                value={newNote}
+                onChangeText={setNewNote}
+                placeholder="Nieuwe notitie..."
+                placeholderTextColor={colors.textSecondary}
+                style={styles.noteComposerInput}
+                multiline
+                scrollEnabled
+                onFocus={() => setNotesFocused(true)}
+                onBlur={() => setNotesFocused(false)}
+              />
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  vibrate()
+                  if (newNote.trim()) saveNewNote()
+                }}
+                disabled={!newNote.trim()}
+                style={[styles.noteComposerBtn, !newNote.trim() && { opacity: 0.5 }]}
+              >
+                <Icon name="send" color={colors.white} />
+              </Pressable>
+            </View>
+          )}
+        </RNAnimated.View>
       </View>
     )
   }
@@ -2399,8 +2435,13 @@ export default function ConversationScreen() {
             <Text style={styles.cancel}>Annuleren</Text>
           </Pressable>
         ) : (
-          <Pressable onPress={onBack} accessibilityRole="button" style={({ pressed }) => [styles.headerEdgeButtonLeft, pressed && { opacity: 0.8 }]}>
-            <Icon name="back" size={28} />
+          <Pressable onPress={onBack} accessibilityRole="button" style={styles.headerEdgeButtonLeft}>
+            {({ pressed }) => (
+              <>
+                {pressed && <View style={styles.pressOverlay} />}
+                <Icon name="back" size={28} />
+              </>
+            )}
           </Pressable>
         )}
 
@@ -2411,13 +2452,23 @@ export default function ConversationScreen() {
               setEditMode(false)
             }}
             accessibilityRole="button"
-            style={({ pressed }) => [styles.headerEdgeButtonRight, pressed && { opacity: 0.8 }]}
+            style={styles.headerEdgeButtonRight}
           >
-            <Text style={styles.done}>Gereed</Text>
+            {({ pressed }) => (
+              <>
+                {pressed && <View style={styles.pressOverlay} />}
+                <Text style={styles.done}>Gereed</Text>
+              </>
+            )}
           </Pressable>
         ) : (
-          <Pressable onPress={onMore} accessibilityRole="button" style={({ pressed }) => [styles.headerEdgeButtonRight, pressed && { opacity: 0.8 }]}>
-            <Icon name="more" />
+          <Pressable onPress={onMore} accessibilityRole="button" style={styles.headerEdgeButtonRight}>
+            {({ pressed }) => (
+              <>
+                {pressed && <View style={styles.pressOverlay} />}
+                <Icon name="more" />
+              </>
+            )}
           </Pressable>
         )}
       </View>
@@ -2590,8 +2641,10 @@ export default function ConversationScreen() {
       {showDeleteWarning && (
         <View style={styles.warningOverlay} pointerEvents="box-none">
           <View style={styles.warningCard}>
-            <Text style={styles.warningTitle}>Let op</Text>
-            <Text style={styles.warningBody}>Je staat op het punt om dit gesprek (de audio-opname, transcriptie, etc.) te verwijderen.</Text>
+            <View style={styles.warningContent}>
+              <Text style={styles.warningTitle}>Let op</Text>
+              <Text style={styles.warningBody}>Je staat op het punt om dit gesprek (de audio-opname, transcriptie, etc.) te verwijderen.</Text>
+            </View>
             <View style={styles.warningActions}>
               <Pressable onPress={() => setShowDeleteWarning(false)} style={({ pressed }) => [styles.warningBtn, pressed ? styles.warningBtnPressed : null]}>
                 <Text style={styles.warningCancel}>Annuleren</Text>
@@ -2614,12 +2667,14 @@ export default function ConversationScreen() {
       {showUnsavedSummaryWarning && (
         <View style={styles.warningOverlay} pointerEvents="box-none">
           <View style={styles.warningCard}>
-            <Text style={styles.warningTitle}>Niet opgeslagen</Text>
-            <Text style={styles.warningBody}>
-              {sessionType === "written_report"
-                ? "Je hebt wijzigingen in het verslag die nog niet zijn opgeslagen. Wil je deze wijzigingen weggooien?"
-                : "Je hebt wijzigingen in de samenvatting die nog niet zijn opgeslagen. Wil je deze wijzigingen weggooien?"}
-            </Text>
+            <View style={styles.warningContent}>
+              <Text style={styles.warningTitle}>Niet opgeslagen</Text>
+              <Text style={styles.warningBody}>
+                {sessionType === "written_report"
+                  ? "Je hebt wijzigingen in het verslag die nog niet zijn opgeslagen. Wil je deze wijzigingen weggooien?"
+                  : "Je hebt wijzigingen in de samenvatting die nog niet zijn opgeslagen. Wil je deze wijzigingen weggooien?"}
+              </Text>
+            </View>
             <View style={styles.warningActions}>
               <Pressable
                 onPress={() => {
@@ -2657,10 +2712,12 @@ export default function ConversationScreen() {
       {showDeleteNotesWarning && (
         <View style={styles.warningOverlay} pointerEvents="box-none">
           <View style={styles.warningCard}>
-            <Text style={styles.warningTitle}>Notities verwijderen?</Text>
-            <Text style={styles.warningBody}>
-              Je staat op het punt om {selectedNoteIds.length} notitie{selectedNoteIds.length === 1 ? "" : "s"} te verwijderen.
-            </Text>
+            <View style={styles.warningContent}>
+              <Text style={styles.warningTitle}>Notities verwijderen?</Text>
+              <Text style={styles.warningBody}>
+                Je staat op het punt om {selectedNoteIds.length} notitie{selectedNoteIds.length === 1 ? "" : "s"} te verwijderen.
+              </Text>
+            </View>
             <View style={styles.warningActions}>
               <Pressable
                 onPress={() => {
@@ -2702,8 +2759,12 @@ const styles = StyleSheet.create({
     minHeight: 66 + safeAreaTop,
     position: "relative",
   },
-  headerEdgeButtonLeft: { width: 66, height: 66, alignItems: "center", justifyContent: "center" },
-  headerEdgeButtonRight: { width: 66, height: 66, alignItems: "center", justifyContent: "center" },
+  headerEdgeButtonLeft: { width: 66, height: 66, alignItems: "center", justifyContent: "center", overflow: "hidden", margin: 0 },
+  headerEdgeButtonRight: { width: 66, height: 66, alignItems: "center", justifyContent: "center", overflow: "hidden", margin: 0 },
+  pressOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.pressedOverlay,
+  },
   cancel: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary },
   done: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textOrange, fontWeight: "700" },
   coacheeName: {
@@ -2787,9 +2848,10 @@ const styles = StyleSheet.create({
   menuRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.big, height: 44 },
   menuRowText: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textPrimary },
   warningOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.2)", alignItems: "center", justifyContent: "center", padding: spacing.big },
-  warningCard: { width: "100%", maxWidth: 360, backgroundColor: colors.white, borderRadius: radius, padding: spacing.big },
+  warningCard: { width: "100%", maxWidth: 360, backgroundColor: colors.white, borderRadius: radius, padding: 0, overflow: "hidden" },
   warningTitle: { fontFamily: typography.fontFamily, fontSize: 18, color: colors.textPrimary, marginBottom: spacing.small },
   warningBody: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary },
+  warningContent: { padding: spacing.big },
   warningActions: { marginTop: spacing.big, flexDirection: "row", alignItems: "stretch", justifyContent: "space-between", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.textSecondary + "22" },
   warningBtn: { flex: 1, height: 44, alignItems: "center", justifyContent: "center" },
   warningBtnPressed: { backgroundColor: colors.searchBar },
@@ -2824,31 +2886,62 @@ const styles = StyleSheet.create({
   transcribeBtn: { marginTop: spacing.small, paddingHorizontal: spacing.big, height: 40, borderRadius: radius, backgroundColor: colors.orange, alignItems: "center", justifyContent: "center" },
   transcribeText: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.white, fontWeight: "700" },
   noteDate: { fontFamily: typography.fontFamily, fontSize: 14, color: colors.textSecondary, marginBottom: 6 },
-  noteComposerContainer: { marginTop: spacing.small },
-  noteComposer: { flexDirection: "row", alignItems: "flex-start" },
-  noteComposerActionsRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 },
+  noteComposerBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "transparent",
+    paddingLeft: spacing.big,
+    paddingTop: 5,
+  },
+  noteComposerBackgroundGradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  noteComposer: { flexDirection: "row", alignItems: "center", width: "100%", paddingRight: spacing.big },
+  noteComposerActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 44,
+    width: "100%",
+    paddingRight: spacing.big,
+  },
   noteComposerIconBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   noteComposerTextBtn: { paddingHorizontal: spacing.small },
   noteComposerDoneText: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.orange, fontWeight: "700" },
   noteComposerInput: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 52,
     maxHeight: 120,
     borderWidth: 1,
     borderColor: colors.searchBar,
     borderRadius: radius,
-    padding: spacing.big,
+    paddingHorizontal: spacing.big,
+    paddingVertical: 10,
     fontFamily: typography.fontFamily,
     fontSize: typography.textSize,
-    lineHeight: 20,
     color: colors.textPrimary,
     backgroundColor: colors.white,
     marginRight: spacing.small,
     textAlignVertical: "top",
   },
-  noteComposerBtn: { height: 44, paddingHorizontal: spacing.big, borderRadius: radius, backgroundColor: colors.orange, alignItems: "center", justifyContent: "center" },
+  noteComposerBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.orange,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: spacing.big,
+  },
   noteComposerDeleteBtn: { height: 44, paddingHorizontal: spacing.big, borderRadius: radius, backgroundColor: colors.white, alignItems: "center", justifyContent: "center" },
-  noteComposerBtnText: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.white, fontWeight: "700" },
+  noteComposerBtnText: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.orange, fontWeight: "700" },
   transcriptScrollToTop: {
     position: "absolute",
     right: spacing.big,
@@ -2942,6 +3035,7 @@ const styles = StyleSheet.create({
   assistantBullet: { marginRight: spacing.small },
   assistantListItemText: { flex: 1 },
   assistantHeader: { marginTop: spacing.small, fontWeight: "700", fontSize: typography.textSize + 2 },
+  summaryPlaceholder: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary, paddingTop: spacing.small },
   replyPreview: { marginBottom: 6, paddingHorizontal: spacing.big, paddingVertical: 8, borderRadius: radius, backgroundColor: colors.backgroundLight },
   replyPreviewOnAssistant: { backgroundColor: "rgba(255,255,255,0.15)" },
   replyBar: { position: "absolute", left: spacing.big, right: 48 + spacing.big + spacing.small, bottom: 48 + 8 + safeAreaBottom, borderRadius: radius, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.searchBar, paddingHorizontal: spacing.big, paddingVertical: 8, flexDirection: "row", alignItems: "center" },

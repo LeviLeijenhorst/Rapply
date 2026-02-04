@@ -1,5 +1,4 @@
 import { writeEncryptedFile, readEncryptedFile, listFiles } from "@/screens/EncryptedStorage"
-import { generateSummaryFromTranscript } from "./summary"
 import { transcribeViaEncryptedUpload } from "./transcriptionUpload"
 import { logger } from "@/utils/logger"
 
@@ -58,17 +57,17 @@ export async function readSummaryStatus(coacheeName: string | undefined, recordi
   }
 }
 
-async function transcribeRecordingViaEncryptedUpload(params: { recordingId: string; sourceUri: string }): Promise<string> {
+async function transcribeRecordingViaEncryptedUpload(params: { recordingId: string; sourceUri: string }): Promise<{ transcript: string; summary: string }> {
   const { recordingId, sourceUri } = params
   try {
     logger.debug("[transcription] Starting encrypted upload transcription")
-    const transcript = await transcribeViaEncryptedUpload({
+    const result = await transcribeViaEncryptedUpload({
       recordingId,
       sourceUri,
       languageCode: "nl",
       mimeType: inferMimeTypeFromUri(sourceUri),
     })
-    return transcript
+    return result
   } catch (error: any) {
     logger.error("[transcription] Upload error")
     throw new Error(error?.message || "Transcription failed")
@@ -84,25 +83,20 @@ export async function startTranscription(params: {
   logger.debug("[transcription] startTranscription called")
   try {
     await writeTranscriptionStatus(coacheeName, recordingId, "transcribing")
+    await writeSummaryStatus(coacheeName, recordingId, "generating")
     const coacheeId = coacheeName?.trim().length ? slugifyCoacheeName(coacheeName!) : "loose_recordings"
     const baseDirectory = `CoachScribe/coachees/${coacheeId}/${recordingId}`
-    const transcript = await transcribeRecordingViaEncryptedUpload({ recordingId, sourceUri })
+    const { transcript, summary } = await transcribeRecordingViaEncryptedUpload({ recordingId, sourceUri })
     await writeEncryptedFile(baseDirectory, "transcript.txt.enc", transcript, "text")
-    try {
-      await writeSummaryStatus(coacheeName, recordingId, "generating")
-      const summary = await generateSummaryFromTranscript(transcript)
-      await writeEncryptedFile(baseDirectory, "summary.txt.enc", summary, "text")
-      await writeSummaryStatus(coacheeName, recordingId, "done")
-    } catch (summaryErr: any) {
-      logger.warn("[transcription] Summary generation failed")
-      try {
-        await writeSummaryStatus(coacheeName, recordingId, "error", summaryErr?.message || "Unknown error")
-      } catch {}
-    }
+    await writeEncryptedFile(baseDirectory, "summary.txt.enc", summary, "text")
+    await writeSummaryStatus(coacheeName, recordingId, "done")
     await writeTranscriptionStatus(coacheeName, recordingId, "done")
   } catch (err: any) {
     logger.error("[transcription] startTranscription error")
     await writeTranscriptionStatus(coacheeName, recordingId, "error", err?.message || "Unknown error")
+    try {
+      await writeSummaryStatus(coacheeName, recordingId, "error", err?.message || "Unknown error")
+    } catch {}
     throw err
   }
 }
@@ -125,13 +119,8 @@ export async function ensureSummaryExists(coacheeName: string | undefined, recor
   try {
     const files = await listFiles(baseDirectory)
     if (files.includes("summary.txt.enc")) return true
-    if (!files.includes("transcript.txt.enc")) return false
-    const transcript = await readEncryptedFile(baseDirectory, "transcript.txt.enc")
-    await writeSummaryStatus(coacheeName, recordingId, "generating")
-    const summary = await generateSummaryFromTranscript(transcript)
-    await writeEncryptedFile(baseDirectory, "summary.txt.enc", summary, "text")
-    await writeSummaryStatus(coacheeName, recordingId, "done")
-    return true
+    await writeSummaryStatus(coacheeName, recordingId, "error", "Missing summary")
+    return false
   } catch {
     try {
       await writeSummaryStatus(coacheeName, recordingId, "error")

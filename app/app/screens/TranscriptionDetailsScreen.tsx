@@ -586,10 +586,12 @@ export default function TranscriptionDetailsScreen() {
         <View style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={() => setShowLeaveWarning(false)} />
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Opname verwijderen</Text>
-            <Text style={{ fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary }}>
-              Je opname wordt permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt.
-            </Text>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Opname verwijderen</Text>
+              <Text style={{ fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary }}>
+                Je opname wordt permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt.
+              </Text>
+            </View>
             <View style={styles.modalActions}>
               <Pressable
                 onPress={() => {
@@ -626,13 +628,15 @@ export default function TranscriptionDetailsScreen() {
             keyboardVerticalOffset={spacing.big * 2}
           >
             <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Nieuwe coachee</Text>
-              <Input
-                ref={addCoacheeInputRef}
-                value={newCoachee}
-                onChangeText={setNewCoachee}
-                placeholder="Naam coachee"
-              />
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Nieuwe coachee</Text>
+                <Input
+                  ref={addCoacheeInputRef}
+                  value={newCoachee}
+                  onChangeText={setNewCoachee}
+                  placeholder="Naam coachee"
+                />
+              </View>
               <View style={styles.modalActions}>
                 <Pressable
                   onPress={() => {
@@ -745,9 +749,11 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     backgroundColor: colors.white,
     borderRadius: radius,
-    padding: spacing.big,
+    padding: 0,
+    overflow: "hidden",
   },
   modalAvoid: { flex: 1, alignItems: "center", justifyContent: "center", width: "100%", padding: spacing.big },
+  modalContent: { padding: spacing.big },
   modalTitle: { fontFamily: typography.fontFamily, fontSize: 18, color: colors.textPrimary, marginBottom: spacing.small },
   modalActions: {
     marginTop: spacing.big,

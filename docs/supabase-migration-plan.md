@@ -1,4 +1,10 @@
-# Migration plan (Firebase → Supabase, self-hosted, fresh start, UUID users)
+# Migration plan (deprecated)
+
+This project is going fully Azure. The single source of truth is:
+
+- `docs/azure-plan.md`
+
+This file is kept only for historical context. Do not update this file.
 
 This repo has no live users and no production data, so the goal is to migrate cleanly without needing compatibility layers.
 

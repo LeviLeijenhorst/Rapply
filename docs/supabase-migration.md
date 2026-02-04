@@ -1,4 +1,10 @@
-# Supabase migration notes (self-hosted)
+# Supabase migration notes (deprecated)
+
+This project is going fully Azure. The single source of truth is:
+
+- `docs/azure-plan.md`
+
+This file is kept only for historical context. Do not update this file.
 
 This repo currently depends on Firebase for:
 

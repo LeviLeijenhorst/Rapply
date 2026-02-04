@@ -6,8 +6,7 @@ import { Icon } from "./Icon"
 import BackButton from "./BackButton"
 import { colors, radius, safeAreaTop, safeAreaBottom, spacing, typography, vibrate } from "./constants"
 import { Input } from "./Input"
-import { supabase } from "@/config/supabase"
-import { getSupabaseUserId } from "@/config/supabase"
+import { postToSecureApi } from "@/services/secureApi"
 
 export default function ContactFeedbackScreen() {
   const navigation = useNavigation<any>()
@@ -54,19 +53,7 @@ export default function ContactFeedbackScreen() {
     }
     try {
       setSending(true)
-      const userId = await getSupabaseUserId()
-      const sessionResult = await supabase.auth.getSession()
-      const sessionEmail = sessionResult.data.session?.user?.email ?? null
-
-      const insertResult = await supabase.from("feedback").insert({
-        user_id: userId,
-        name: name.trim() || null,
-        email: sessionEmail,
-        message: trimmed,
-      })
-      if (insertResult.error) {
-        throw insertResult.error
-      }
+      await postToSecureApi("/feedback", { name: name.trim() || null, message: trimmed })
       setName("")
       setMessage("")
       Alert.alert("Bedankt!", "Je feedback is ontvangen.")

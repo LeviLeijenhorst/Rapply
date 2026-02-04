@@ -1,0 +1,134 @@
+.root {
+  --fill-progress: 0;
+  --fill-color: #bd0265;
+  --text-color: #bd0265;
+  --border-color: #bd0265;
+  --background-color: transparent;
+
+  height: 48px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--background-color);
+  padding-left: 20px;
+  padding-right: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.root:focus-visible {
+  outline: 2px solid rgba(189, 2, 101, 0.35);
+  outline-offset: 2px;
+}
+
+.measure {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  visibility: hidden;
+  pointer-events: none;
+  font-family: "Inter", Helvetica;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+  background: var(--fill-color);
+  transform: scaleX(var(--fill-progress));
+  transform-origin: left;
+  transition: transform 260ms ease;
+}
+
+.labelBase {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-color);
+  clip-path: inset(0 0 0 calc(var(--fill-progress) * 100%));
+  transition: clip-path 260ms ease;
+}
+
+.labelFill {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #ffffff;
+  pointer-events: none;
+  clip-path: inset(0 calc((1 - var(--fill-progress)) * 100%) 0 0);
+  transition: clip-path 260ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+
+  .labelBase {
+    transition: none;
+  }
+
+  .labelFill {
+    transition: none;
+  }
+}
+
+.labelBaseText {
+  font-family: "Inter", Helvetica;
+  font-size: 14px;
+  font-weight: 500;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.labelFillText {
+  font-family: "Inter", Helvetica;
+  font-size: 14px;
+  font-weight: 500;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.arrowIcon {
+  width: 18px;
+  height: 18px;
+  color: inherit;
+}
+
+.outlined {
+  --fill-progress: 0;
+  --background-color: transparent;
+  --text-color: #bd0265;
+}
+
+.filled {
+  --fill-progress: 1;
+  --background-color: transparent;
+  --text-color: #bd0265;
+}
+
+.outlined:hover {
+  --fill-progress: 1;
+}
+
+.filled:hover {
+  --fill-progress: 0;
+}
+
+

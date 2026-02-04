@@ -3,9 +3,9 @@ import { Directory, File, Paths } from "expo-file-system"
 import * as FileSystemLegacy from "expo-file-system/legacy"
 import { Buffer } from "buffer"
 import { requireNativeModule } from "expo"
-import { getSupabaseAccessToken, getSupabasePublishableKey, getSupabaseUrl, getSupabaseUserId } from "@/config/supabase"
 import { postToSecureApi } from "./secureApi"
 import { logger } from "@/utils/logger"
+import { requireUserId } from "./auth"
 
 const ExpoSegmentedAudioNative = requireNativeModule<any>("ExpoSegmentedAudio") as any
 
@@ -28,37 +28,22 @@ async function createTemporaryEncryptedAudioFilePath(recordingId: string) {
   return file.uri
 }
 
-function encodePath(value: string) {
-  return String(value || "")
-    .split("/")
-    .map((p) => encodeURIComponent(p))
-    .join("/")
-}
-
-async function uploadEncryptedFileToSupabaseStorage(params: { bucket: string; path: string; fileUri: string }) {
-  const { bucket, path, fileUri } = params
-  const supabaseUrl = getSupabaseUrl()
-  const apikey = getSupabasePublishableKey()
-  const accessToken = await getSupabaseAccessToken()
-
-  const url = `${supabaseUrl}/storage/v1/object/${encodeURIComponent(bucket)}/${encodePath(path)}`
+async function uploadEncryptedFileToUploadUrl(params: { uploadUrl: string; uploadHeaders: Record<string, string>; fileUri: string }) {
+  const fileUri = params.fileUri
+  const uploadUrl = String(params.uploadUrl || "").trim()
+  const uploadHeaders = (params.uploadHeaders || {}) as Record<string, string>
+  if (!uploadUrl) {
+    throw new Error("Missing uploadUrl")
+  }
 
   let result: any
   try {
-    result = await FileSystemLegacy.uploadAsync(url, fileUri, {
-      httpMethod: "POST",
+    result = await FileSystemLegacy.uploadAsync(uploadUrl, fileUri, {
+      httpMethod: "PUT",
       uploadType: FileSystemLegacy.FileSystemUploadType.BINARY_CONTENT,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        apikey,
-        "Content-Type": "application/octet-stream",
-      },
+      headers: { ...uploadHeaders, "Content-Type": "application/octet-stream" },
     })
   } catch (error: any) {
-    const message = String(error?.message || error || "")
-    if (__DEV__ && message.includes("Network request failed") && url.startsWith("http://127.0.0.1:54321/")) {
-      throw new Error("Geen verbinding met Supabase Storage. Run op je PC: adb reverse tcp:54321 tcp:54321.")
-    }
     throw error
   }
 
@@ -76,7 +61,7 @@ export async function transcribeViaEncryptedUpload(params: {
 }) {
   const { recordingId, sourceUri, languageCode, mimeType } = params
 
-  await getSupabaseUserId()
+  await requireUserId()
 
   logger.debug("[transcription] preflight start")
   const preflight = await postToSecureApi("/transcription/preflight", {})
@@ -87,8 +72,13 @@ export async function transcribeViaEncryptedUpload(params: {
   const operationId = String(preflight?.operationId || "").trim()
   const uploadToken = String(preflight?.uploadToken || "").trim()
   const uploadPath = String(preflight?.uploadPath || "").trim()
+  const uploadUrl = String(preflight?.uploadUrl || "").trim()
+  const uploadHeaders = (preflight?.uploadHeaders || {}) as Record<string, string>
   if (!operationId || !uploadToken || !uploadPath) {
     throw new Error("Transcription preflight failed")
+  }
+  if (!uploadUrl) {
+    throw new Error("Transcription preflight missing uploadUrl")
   }
 
   const keyBase64 = await createRandomKeyBase64()
@@ -99,10 +89,10 @@ export async function transcribeViaEncryptedUpload(params: {
     if (!ok) throw new Error("Failed to encrypt audio for upload")
 
     logger.debug("[transcription] storage upload start")
-    await uploadEncryptedFileToSupabaseStorage({
-      bucket: "transcription-uploads",
-      path: uploadPath,
+    await uploadEncryptedFileToUploadUrl({
       fileUri: encryptedUri,
+      uploadUrl,
+      uploadHeaders,
     })
 
     logger.debug("[transcription] start request")
@@ -114,9 +104,11 @@ export async function transcribeViaEncryptedUpload(params: {
       mime_type: mimeType,
     })
 
-    const text = String(result?.text || result?.transcript || "")
-    if (!text.trim()) throw new Error("No transcript returned")
-    return text
+    const transcript = String(result?.text || result?.transcript || "")
+    const summary = String(result?.summary || "")
+    if (!transcript.trim()) throw new Error("No transcript returned")
+    if (!summary.trim()) throw new Error("No summary returned")
+    return { transcript, summary }
   } catch (error: any) {
     logger.error("[transcription] transcribeViaEncryptedUpload failed", { message: String(error?.message || error || "") })
     throw error

@@ -1,23 +1,13 @@
-import Config from "@/config"
-import { getSupabaseAccessToken } from "@/config/supabase"
-import { logger } from "@/utils/logger"
 import { Platform } from "react-native"
 
-export function getSecureApiBaseUrl() {
-  const value = (Config as any).FUNCTIONS_BASE_URL
-  if (typeof value === "string" && value.trim()) {
-    const url = value.trim().replace(/\/+$/, "")
-    logger.debug("[secureApi] Base URL resolved")
-    return url
-  }
-  logger.error("[secureApi] Missing FUNCTIONS_BASE_URL in config")
-  throw new Error("Missing FUNCTIONS_BASE_URL")
-}
+import { logger } from "@/utils/logger"
+
+import { getApiBaseUrl } from "./apiBaseUrl"
+import { requireAccessToken } from "./auth"
 
 export async function getSecureApiIdToken() {
   try {
-    const token = await getSupabaseAccessToken()
-    return token
+    return await requireAccessToken()
   } catch (error: any) {
     logger.error("[secureApi] Failed to get ID token")
     throw error
@@ -26,21 +16,17 @@ export async function getSecureApiIdToken() {
 
 export async function postToSecureApi(path: string, body: unknown) {
   const token = await getSecureApiIdToken()
-  try {
-    const dotCount = typeof token === "string" ? (token.match(/\./g) || []).length : 0
-    logger.debug("[secureApi] Token format check", { dotCount, tokenLength: typeof token === "string" ? token.length : null })
-  } catch {}
-  const baseUrl = getSecureApiBaseUrl()
+  const baseUrl = getApiBaseUrl()
   const url = `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`
   let res: Response
   try {
     res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body ?? {}),
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body ?? {}),
     })
   } catch (error: any) {
     logger.error("[secureApi] Network request failed", { url, path })
@@ -66,5 +52,3 @@ export async function postToSecureApi(path: string, body: unknown) {
   }
   return json
 }
-
-

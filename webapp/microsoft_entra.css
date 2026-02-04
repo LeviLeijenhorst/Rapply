@@ -1,0 +1,89 @@
+body {
+  background-color: #F8F9F9;
+  color: #26343F;
+}
+
+a {
+  color: #BE0165;
+}
+
+.ext-header {
+  color: #26343F;
+}
+
+.ext-header-description {
+  color: rgba(38,52,63,0.6);
+}
+
+.ext-background-overlay {
+  background-color: rgba(38,52,63,0.02);
+}
+
+.ext-sign-in-box {
+  background-color: #FEFEFE;
+  border-bottom: 1px solid #E0E0E0;
+}
+
+.ext-title {
+  color: #1D0A00;
+}
+
+.ext-subtitle {
+  color: rgba(38,52,63,0.6);
+}
+
+.ext-button.ext-primary {
+  background-color: #BE0165;
+  border-color: #BE0165;
+  color: #FEFEFE;
+}
+
+.ext-button.ext-secondary {
+  background-color: #FEFEFE;
+  border-color: #BE0165;
+  color: #BE0165;
+}
+
+.ext-error {
+  color: #BE0165;
+}
+
+.ext-input {
+  background-color: #FEFEFE;
+  color: #26343F;
+}
+
+.ext-input.ext-text-box {
+}
+
+.ext-input.ext-text-box.ext-has-error {
+  border-color: #BE0165;
+}
+
+.ext-link {
+  color: #BE0165;
+}
+
+.ext-password-reset-links-container {
+  color: rgba(38,52,63,0.6);
+}
+
+.ext-boilerplate-text {
+  color: rgba(38,52,63,0.6);
+}
+
+.ext-promoted-fed-cred-box {
+  background-color: #FEFEFE;
+}
+
+.ext-footer {
+  color: rgba(38,52,63,0.6);
+}
+
+.ext-footer.ext-has-background {
+}
+
+.ext-footer-links {
+  color: #BE0165;
+}
+  

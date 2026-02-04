@@ -1,7 +1,7 @@
 {
   "name": "CoachScribe",
   "slug": "coachscribe",
-  "scheme": "CoachScribe",
+  "scheme": "coachscribe",
   "version": "1.0.0",
   "orientation": "portrait",
   "userInterfaceStyle": "automatic",

@@ -1,13 +1,20 @@
 import React from 'react'
-import { StyleSheet, View } from 'react-native'
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 
 import { colors } from '../theme/colors'
-import { CoacheeDropdown } from './CoacheeDropdown'
 import { CoachscribeLogo } from './CoachscribeLogo'
-import { SettingsIcon } from './icons/SettingsIcon'
 import { UsageIndicator } from './UsageIndicator'
+import { Text } from './Text'
 
-export function Navbar() {
+type Props = {
+  onLogout: () => void
+  onOpenSubscription: () => void
+}
+
+export function Navbar({ onLogout, onOpenSubscription }: Props) {
+  const { width } = useWindowDimensions()
+  const hideUsage = width < 600
+
   return (
     <View style={styles.container}>
       {/* Navbar area above sidebar */}
@@ -18,15 +25,21 @@ export function Navbar() {
 
       {/* Navbar area to the right of the sidebar */}
       <View style={styles.rightArea}>
-        {/* Coachee dropdown */}
-        <CoacheeDropdown coacheeName="Coachee naam" onPress={() => undefined} />
-
         {/* Right actions */}
         <View style={styles.rightActions}>
           {/* Usage indicator */}
-          <UsageIndicator usedMinutes={24} availableMinutes={60} planLabel="Basis" />
-          {/* Settings icon */}
-          <SettingsIcon color={colors.text} size={24} />
+          {!hideUsage ? (
+            <Pressable onPress={onOpenSubscription} style={({ hovered }) => [styles.usagePressable, hovered ? styles.usagePressableHovered : undefined]}>
+              {/* Usage indicator */}
+              <UsageIndicator usedMinutes={24} availableMinutes={60} planLabel="Basis" />
+            </Pressable>
+          ) : null}
+          <Pressable onPress={onLogout} style={({ hovered }) => [styles.logoutButton, hovered ? styles.logoutButtonHovered : undefined]}>
+            {/* Logout */}
+            <Text isBold style={styles.logoutButtonText}>
+              Uitloggen
+            </Text>
+          </Pressable>
         </View>
       </View>
     </View>
@@ -35,7 +48,7 @@ export function Navbar() {
 
 const styles = StyleSheet.create({
   container: {
-    height: 89,
+    height: 72,
     backgroundColor: colors.surface,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
@@ -44,7 +57,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   leftArea: {
-    width: 220,
+    width: 240,
     height: '100%',
     padding: 24,
     justifyContent: 'center',
@@ -55,12 +68,37 @@ const styles = StyleSheet.create({
     padding: 24,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
   },
   rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+  },
+  logoutButton: {
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...( { cursor: 'pointer' } as any ),
+  },
+  logoutButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  logoutButtonText: {
+    fontSize: 13,
+    lineHeight: 16,
+    color: colors.textStrong,
+  },
+  usagePressable: {
+    borderRadius: 12,
+  },
+  usagePressableHovered: {
+    opacity: 0.9,
   },
 })
 

@@ -14,11 +14,16 @@
  * Read more here: https://reactnative.dev/docs/security#storing-sensitive-info
  */
 import BaseConfig from "./config.base"
-import ProdConfig from "./config.prod"
 
-let ExtraConfig = ProdConfig
+let ExtraConfig
 
-if (__DEV__) {
+const forceProdConfigRaw = (process.env as any)?.EXPO_PUBLIC_FORCE_PROD_CONFIG
+const forceProdConfig =
+  typeof forceProdConfigRaw === "string" ? forceProdConfigRaw.trim().toLowerCase() : ""
+
+if (!__DEV__ || (forceProdConfig && forceProdConfig !== "0" && forceProdConfig !== "false")) {
+  ExtraConfig = require("./config.prod").default
+} else {
   ExtraConfig = require("./config.dev").default
 }
 

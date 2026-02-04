@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react"
 import { Alert, Keyboard, ScrollView, StyleSheet, View } from "react-native"
 import { useNavigation } from "@react-navigation/native"
-import { supabase } from "@/config/supabase"
-import { getSupabaseUserId } from "@/config/supabase"
 import { Icon } from "./Icon"
 import { Input } from "./Input"
 import { Text } from "./Text"
 import { colors, radius, safeAreaBottom, safeAreaTop, spacing, typography, vibrate } from "./constants"
 import { OverlayPressable } from "./OverlayPressable"
+import { getAuthSession } from "@/services/auth"
+import { postToSecureApi } from "@/services/secureApi"
 
 export default function SubscriptionPraktijkScreen() {
   const navigation = useNavigation<any>()
@@ -28,9 +28,9 @@ export default function SubscriptionPraktijkScreen() {
 
   useEffect(() => {
     let cancelled = false
-    supabase.auth.getSession().then((result) => {
+    getAuthSession().then((session) => {
       if (cancelled) return
-      const sessionEmail = result.data.session?.user?.email ?? ""
+      const sessionEmail = session?.email ?? ""
       setEmail(sessionEmail)
     })
     return () => {
@@ -59,19 +59,7 @@ export default function SubscriptionPraktijkScreen() {
 
     try {
       setSending(true)
-      const userId = await getSupabaseUserId()
-      const sessionResult = await supabase.auth.getSession()
-      const accountEmail = sessionResult.data.session?.user?.email ?? null
-
-      const insertResult = await supabase.from("praktijk_requests").insert({
-        user_id: userId,
-        email: trimmedEmail,
-        account_email: accountEmail,
-        message: trimmedMessage,
-      })
-      if (insertResult.error) {
-        throw insertResult.error
-      }
+      await postToSecureApi("/praktijk/request", { email: trimmedEmail, message: trimmedMessage })
       setMessage("")
       Alert.alert("Bedankt!", "Je aanvraag is verstuurd. We nemen contact met je op.")
       navigation.goBack()

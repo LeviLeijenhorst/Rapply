@@ -2,6 +2,7 @@ import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
 import { colors } from '../theme/colors'
+import { webTransitionSmooth } from '../theme/webTransitions'
 import { MicrophoneSmallIcon } from './icons/MicrophoneSmallIcon'
 import { Text } from './Text'
 
@@ -14,7 +15,7 @@ type Props = {
 
 export function ConversationCard({ title, timeLabel, durationLabel, onPress }: Props) {
   return (
-    <Pressable onPress={onPress} style={styles.card}>
+    <Pressable onPress={onPress} style={({ hovered }) => [styles.card, webTransitionSmooth, hovered ? styles.cardHovered : undefined]}>
       {/* Conversation card */}
       <View style={styles.iconCircle}>
         {/* Conversation icon */}
@@ -49,6 +50,10 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  cardHovered: {
+    backgroundColor: colors.hoverBackground,
+    ...( { boxShadow: '0 10px 24px rgba(0,0,0,0.05)' } as any ),
   },
   iconCircle: {
     width: 36,

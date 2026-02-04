@@ -102,6 +102,27 @@ export async function loadSummariesForCoachee(coacheeName: string, excludeConver
   return result
 }
 
+export async function loadLatestConversationTranscriptForCoachee(coacheeName: string) {
+  const name = coacheeName.trim()
+  const coacheeId = name ? slugifyId(name) : "loose_recordings"
+  const root = `CoachScribe/coachees/${coacheeId}`
+  try {
+    const entries = await listFiles(root)
+    const conversationIds = entries
+      .filter((entry) => isConversationId(entry))
+      .sort((a, b) => Number(b) - Number(a))
+    for (const conversationId of conversationIds) {
+      try {
+        const files = await listFiles(`${root}/${conversationId}`)
+        if (!files.includes("transcript.txt.enc")) continue
+        const transcript = await readEncryptedFile(`${root}/${conversationId}`, "transcript.txt.enc")
+        return { conversationId, transcript }
+      } catch {}
+    }
+  } catch {}
+  return null
+}
+
 export async function getTranscriptForConversation(coacheeName: string, conversationId: string) {
   const name = coacheeName.trim()
   const coacheeId = name ? slugifyId(name) : "loose_recordings"

@@ -36,6 +36,6 @@ module.exports = ({ config }: ConfigContext): Partial<ExpoConfig> => {
         ],
       },
     },
-    plugins: [...existingPlugins, "expo-secure-store", "expo-audio"],
+    plugins: [...existingPlugins, "expo-secure-store", "expo-web-browser", "expo-audio"],
   }
 }

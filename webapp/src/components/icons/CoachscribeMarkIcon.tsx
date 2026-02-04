@@ -2,16 +2,15 @@ import React from 'react'
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg'
 
 type Props = {
-  color: string
 }
 
-export function CoachscribeMarkIcon({ color }: Props) {
+export function CoachscribeMarkIcon(_: Props) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
       <Defs>
         <LinearGradient id="paint0_linear_40_4061" x1={1.49953} y1={22.8828} x2={22.7342} y2={0.260399} gradientUnits="userSpaceOnUse">
-          <Stop stopColor="#FF5B03" />
-          <Stop offset={1} stopColor="#FF8F52" />
+          <Stop stopColor="#7E0056" />
+          <Stop offset={1} stopColor="#F20070" />
         </LinearGradient>
       </Defs>
       <Path

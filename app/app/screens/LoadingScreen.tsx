@@ -1,9 +1,10 @@
 import React, { useEffect } from "react"
 import { View, StyleSheet, ActivityIndicator } from "react-native"
 import { colors, spacing } from "./constants"
-import { supabase } from "@/config/supabase"
 import { useNavigation } from "@react-navigation/native"
 import { logger } from "@/utils/logger"
+import { getAuthSession, onAuthSessionChange } from "@/services/auth"
+import * as Linking from "expo-linking"
 
 export default function LoadingScreen() {
   const navigation = useNavigation<any>()
@@ -11,30 +12,35 @@ export default function LoadingScreen() {
   useEffect(() => {
     let isCancelled = false
     let didNavigate = false
+    let sawAuthCallback = false
 
     async function routeFromCurrentSession() {
       try {
-        const sessionResult = await supabase.auth.getSession()
-        const user = sessionResult.data.session?.user ?? null
+        const session = await getAuthSession()
+        const userId = session?.userId ?? null
         if (isCancelled) return
 
-        if (!user) {
+        if (!userId) {
+          // If we're returning from Entra redirect (deep link contains auth code),
+          // keep the user on the loading screen briefly to avoid flashing AuthWelcome.
+          try {
+            const initialUrl = await Linking.getInitialURL()
+            const url = typeof initialUrl === "string" ? initialUrl : ""
+            if (url.includes("://auth") && (url.includes("code=") || url.includes("session_state=") || url.includes("state="))) {
+              sawAuthCallback = true
+              return
+            }
+          } catch {}
+
           didNavigate = true
           navigation.reset({ index: 0, routes: [{ name: "AuthWelcome" }] })
           return
         }
 
-        const isEmailConfirmed = !!user.email_confirmed_at
-        if (isEmailConfirmed) {
-          didNavigate = true
-          navigation.reset({ index: 0, routes: [{ name: "Welcome" }] })
-          return
-        }
-
         didNavigate = true
-        navigation.reset({ index: 0, routes: [{ name: "VerifyEmail", params: { email: user.email ?? "" } }] })
+        navigation.reset({ index: 0, routes: [{ name: "Welcome" }] })
       } catch (error: any) {
-        logger.error("[Loading] Failed to read Supabase session", { message: String(error?.message ?? error ?? "") })
+        logger.error("[Loading] Failed to read session", { message: String(error?.message ?? error ?? "") })
         if (isCancelled) return
         didNavigate = true
         navigation.reset({ index: 0, routes: [{ name: "AuthWelcome" }] })
@@ -43,7 +49,7 @@ export default function LoadingScreen() {
 
     routeFromCurrentSession()
 
-    const subscription = supabase.auth.onAuthStateChange(() => {
+    const unsubscribe = onAuthSessionChange(() => {
       routeFromCurrentSession()
     })
 
@@ -52,12 +58,12 @@ export default function LoadingScreen() {
       if (didNavigate) return
       logger.warn("[Loading] Timeout waiting for session, routing to AuthWelcome")
       navigation.reset({ index: 0, routes: [{ name: "AuthWelcome" }] })
-    }, 5000)
+    }, sawAuthCallback ? 15000 : 5000)
 
     return () => {
       isCancelled = true
       clearTimeout(timeout)
-      subscription.data.subscription.unsubscribe()
+      unsubscribe()
     }
   }, [])
 

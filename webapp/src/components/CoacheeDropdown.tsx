@@ -2,6 +2,7 @@ import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
 import { colors } from '../theme/colors'
+import { webTransitionSmooth } from '../theme/webTransitions'
 import { ChevronDownIcon } from './icons/ChevronDownIcon'
 import { UserSquareIcon } from './icons/UserSquareIcon'
 import { Text } from './Text'
@@ -13,7 +14,7 @@ type Props = {
 
 export function CoacheeDropdown({ coacheeName, onPress }: Props) {
   return (
-    <Pressable onPress={onPress} style={styles.container}>
+    <Pressable onPress={onPress} style={({ hovered }) => [styles.container, webTransitionSmooth, hovered ? styles.containerHovered : undefined]}>
       {/* Coachee dropdown */}
       <View style={styles.leftContent}>
         {/* Coachee icon */}
@@ -41,6 +42,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  containerHovered: {
+    backgroundColor: colors.hoverBackground,
   },
   leftContent: {
     flexDirection: 'row',

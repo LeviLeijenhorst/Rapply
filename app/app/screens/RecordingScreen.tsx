@@ -321,13 +321,13 @@ export default function RecordingScreen() {
       <View style={styles.bottomCard}>
         <Text style={styles.timer}>{formattedTimeText}</Text>
         <View style={styles.controlsRow}>
-          <Pressable accessibilityRole="button" onPress={handleCloseButtonPress} style={styles.smallButton}>
+          <Pressable accessibilityRole="button" onPress={handleCloseButtonPress} style={({ pressed }) => [styles.smallButton, pressed && styles.smallButtonPressed]}>
             <Icon name="close" color={colors.orange} size={40} />
           </Pressable>
-          <Pressable accessibilityRole="button" onPress={handleStopButtonPress} style={styles.bigButton}>
+          <Pressable accessibilityRole="button" onPress={handleStopButtonPress} style={({ pressed }) => [styles.bigButton, pressed && styles.bigButtonPressed]}>
             <Icon name="stop" color={colors.white} size={48} />
           </Pressable>
-          <Pressable accessibilityRole="button" onPress={handleTogglePauseButtonPress} style={styles.smallButton}>
+          <Pressable accessibilityRole="button" onPress={handleTogglePauseButtonPress} style={({ pressed }) => [styles.smallButton, pressed && styles.smallButtonPressed]}>
             {isRecordingPaused ? (
               <Icon name="play" color={colors.orange} size={18} />
             ) : (
@@ -346,19 +346,29 @@ export default function RecordingScreen() {
       >
         <Pressable style={styles.modalOverlay} onPress={() => setIsCloseConfirmationVisible(false)}>
           <Pressable style={styles.modalCard} onPress={() => {}}>
-            <Text style={styles.modalTitle}>Opname sluiten?</Text>
-            <Text style={styles.modalMessage}>
-              Weet je zeker dat je de opname wilt sluiten? De opname wordt niet opgeslagen.
-            </Text>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Opname sluiten?</Text>
+              <Text style={styles.modalMessage}>
+                Weet je zeker dat je de opname wilt sluiten? De opname wordt niet opgeslagen.
+              </Text>
+            </View>
             <View style={styles.modalActions}>
               <Pressable
                 onPress={() => {
                   vibrate()
                   setIsCloseConfirmationVisible(false)
                 }}
-                style={({ pressed }) => [styles.modalButton, pressed && { opacity: 0.85 }]}
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  pressed && styles.modalButtonPressed,
+                ]}
               >
-                <Text style={styles.modalCancel}>Annuleren</Text>
+                {({ pressed }) => (
+                  <>
+                    {pressed && <View style={styles.modalButtonOverlay} />}
+                    <Text style={styles.modalCancel}>Annuleren</Text>
+                  </>
+                )}
               </Pressable>
               <View style={styles.modalDivider} />
               <Pressable
@@ -367,9 +377,17 @@ export default function RecordingScreen() {
                   setIsCloseConfirmationVisible(false)
                   navigation.goBack()
                 }}
-                style={({ pressed }) => [styles.modalButton, pressed && { opacity: 0.85 }]}
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  pressed && styles.modalButtonPressed,
+                ]}
               >
-                <Text style={styles.modalConfirm}>Sluiten</Text>
+                {({ pressed }) => (
+                  <>
+                    {pressed && <View style={styles.modalButtonOverlay} />}
+                    <Text style={styles.modalConfirm}>Sluiten</Text>
+                  </>
+                )}
               </Pressable>
             </View>
           </Pressable>
@@ -460,6 +478,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.orange + "0D",
   },
+  smallButtonPressed: {
+    backgroundColor: colors.orange + "20",
+  },
   bigButton: {
     width: 76,
     height: 76,
@@ -467,6 +488,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.orange,
+  },
+  bigButtonPressed: {
+    backgroundColor: colors.orange + "E6",
   },
 
   modalOverlay: {
@@ -481,8 +505,10 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     backgroundColor: colors.white,
     borderRadius: radius,
-    padding: spacing.big,
+    padding: 0,
+    overflow: "hidden",
   },
+  modalContent: { padding: spacing.big },
   modalTitle: { fontFamily: typography.fontFamily, fontSize: 18, color: colors.textPrimary, marginBottom: spacing.small },
   modalMessage: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary },
   modalActions: {
@@ -493,13 +519,20 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.textSecondary + "22",
   },
-  modalButton: { flex: 1, height: 44, alignItems: "center", justifyContent: "center" },
+  modalButton: { flex: 1, height: 44, alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" },
+  modalButtonPressed: {},
+  modalButtonOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.pressedOverlay,
+  },
   modalDivider: { width: StyleSheet.hairlineWidth, height: 44, backgroundColor: colors.textSecondary + "22" },
-  modalCancel: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary },
+  modalCancel: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary, includeFontPadding: false, textAlignVertical: "center" },
   modalConfirm: {
     fontFamily: typography.fontFamily,
     fontSize: typography.textSize,
     color: colors.textOrange,
     fontWeight: "700",
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
 })

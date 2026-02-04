@@ -1,14 +1,14 @@
 import { Platform, StatusBar, Vibration } from "react-native"
 
 export const colors = {
-  orange: "#FF5B03",
-  pressedOverlay: "#FF5B0315",
+  orange: "#BE0165",
+  pressedOverlay: "#BE016515",
   white: "#FEFEFE",
   backgroundLight: "#F6F6F6",
   searchBar: "#E0E0E0",
   textPrimary: "#1D0A00",
   textSecondary: "#656565",
-  textOrange: "#FF5B03",
+  textOrange: "#BE0165",
 }
 
 export const spacing = { small: 12, big: 16 }

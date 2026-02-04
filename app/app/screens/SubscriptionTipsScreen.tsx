@@ -1,7 +1,6 @@
 import React, { useState } from "react"
 import { Alert, ScrollView, StyleSheet, TextInput, View } from "react-native"
 import { useNavigation, useRoute } from "@react-navigation/native"
-import { getSupabaseUserId } from "@/config/supabase"
 import { Icon } from "./Icon"
 import { Text } from "./Text"
 import { colors, radius, safeAreaBottom, safeAreaTop, spacing, typography, vibrate } from "./constants"
@@ -10,6 +9,7 @@ import { Linking, Platform } from "react-native"
 import Constants from "expo-constants"
 import { postToSecureApi } from "@/services/secureApi"
 import { OverlayPressable } from "./OverlayPressable"
+import { requireUserId } from "@/services/auth"
 
 export default function SubscriptionTipsScreen() {
   const navigation = useNavigation<any>()
@@ -48,7 +48,7 @@ export default function SubscriptionTipsScreen() {
     vibrate()
     try {
       setSending(true)
-      await getSupabaseUserId()
+      await requireUserId()
       await postToSecureApi("/subscriptionCancel/feedback", {
         selectedPlan,
         selectedReason,

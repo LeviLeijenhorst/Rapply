@@ -35,16 +35,17 @@ import { getActiveRouteName, navigate, navigationRef, useNavigationPersistence, 
 import { ThemeProvider } from "./theme/context"
 import { customFontsToLoad } from "./theme/typography"
 import { loadDateFnsLocale } from "./utils/formatDate"
+import { logger } from "./utils/logger"
 import * as storage from "./utils/storage"
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { configureRevenueCat } from "./services/revenuecat"
 import { tabBarTotalHeight, safeAreaBottom, colors, vibrate } from "./screens/constants"
 import { TabBar } from "./screens/TabBar"
 import { Icon } from "./screens/Icon"
-import { supabase } from "./config/supabase"
 import { syncRevenueCatIdentity } from "./services/revenuecat"
 import { deleteDirectory } from "./screens/EncryptedStorage"
 import { invalidateBillingStatusCache } from "./services/billing"
+import { onAuthSessionChange } from "./services/auth"
 
 export const NAVIGATION_PERSISTENCE_KEY = "NAVIGATION_STATE"
 
@@ -83,10 +84,24 @@ export function App() {
   }, [])
 
   useEffect(() => {
+    // Debug Entra redirect: confirm whether the app receives the deep link callback.
+    Linking.getInitialURL()
+      .then((url) => {
+        if (url) logger.info("[linking] initialURL", { url })
+      })
+      .catch(() => {})
+
+    const sub = Linking.addEventListener("url", ({ url }) => {
+      logger.info("[linking] url", { url })
+    })
+    return () => sub.remove()
+  }, [])
+
+  useEffect(() => {
     configureRevenueCat()
     let lastUserId: string | null = null
-    const subscription = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const nextUserId = session?.user?.id ?? null
+    const unsubscribe = onAuthSessionChange(async (session) => {
+      const nextUserId = session?.userId ?? null
 
       const isSwitchingBetweenDifferentUsers = !!nextUserId && !!lastUserId && nextUserId !== lastUserId
       if (isSwitchingBetweenDifferentUsers) {
@@ -108,7 +123,7 @@ export function App() {
       } catch {}
     })
     return () => {
-      subscription.data.subscription.unsubscribe()
+      unsubscribe()
     }
   }, [])
 
@@ -225,8 +240,8 @@ export function App() {
                       backgroundColor: colors.orange,
                       alignItems: "center",
                       justifyContent: "center",
-                      opacity: pressed ? 0.9 : 1,
                     },
+                    pressed && { backgroundColor: colors.orange + "CC" },
                   ]}
                 >
                   <Icon name="microphone" color={colors.white} />

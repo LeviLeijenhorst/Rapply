@@ -4,7 +4,7 @@ import { Text } from "./Text"
 import { Tab } from "./Tab"
 import { Icon } from "./Icon"
 import { colors, radius, safeAreaBottom, spacing, typography, vibrate } from "./constants"
-import { askAssistant, loadAskAiHistory, loadCoacheeAskAiHistory, loadSummariesForCoachee, saveAskAiHistory, saveCoacheeAskAiHistory } from "@/services/askai"
+import { askAssistant, loadAskAiHistory, loadCoacheeAskAiHistory, loadLatestConversationTranscriptForCoachee, loadSummariesForCoachee, saveAskAiHistory, saveCoacheeAskAiHistory } from "@/services/askai"
 import { logger } from "@/utils/logger"
 
 type AskAiChatScope = "conversation" | "coachee"
@@ -198,15 +198,20 @@ export function AskAiChat(props: {
     setMessages((prev) => [...prev, placeholder])
 
     try {
+      const coacheeLatestTranscript =
+        scope === "coachee"
+          ? await loadLatestConversationTranscriptForCoachee(resolvedCoacheeName)
+          : null
+      const latestConversationId = coacheeLatestTranscript?.conversationId
       const previousSummaries =
         scope === "conversation" && String(conversationId || "").trim()
           ? await loadSummariesForCoachee(resolvedCoacheeName, String(conversationId))
-          : await loadSummariesForCoachee(resolvedCoacheeName)
+          : await loadSummariesForCoachee(resolvedCoacheeName, latestConversationId)
 
       const final = await askAssistant({
         coacheeName: resolvedCoacheeName,
-        currentConversationId: scope === "conversation" ? String(conversationId) : null,
-        currentTranscript: scope === "conversation" ? String(currentTranscript || "") : "",
+        currentConversationId: scope === "conversation" ? String(conversationId) : latestConversationId || null,
+        currentTranscript: scope === "conversation" ? String(currentTranscript || "") : String(coacheeLatestTranscript?.transcript || ""),
         userQuestion: text,
         previousSummaries,
       })
@@ -459,8 +464,10 @@ export function AskAiChat(props: {
       >
         <View style={styles.warningOverlayFullScreen}>
           <View style={styles.warningCard}>
-            <Text style={styles.warningTitle}>Berichten wissen</Text>
-            <Text style={styles.warningBody}>Weet je zeker dat je alle AI-berichten wilt wissen?</Text>
+            <View style={styles.warningContent}>
+              <Text style={styles.warningTitle}>Berichten wissen</Text>
+              <Text style={styles.warningBody}>Weet je zeker dat je alle AI-berichten wilt wissen?</Text>
+            </View>
             <View style={styles.warningActions}>
               <Pressable onPress={() => setShowClearWarning(false)} style={({ pressed }) => [styles.warningBtn, pressed ? styles.warningBtnPressed : null]}>
                 <Text style={styles.warningCancel}>Annuleren</Text>
@@ -528,7 +535,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.small,
   },
   sendBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.orange, alignItems: "center", justifyContent: "center", marginRight: spacing.big },
-  sendBtnDisabled: { backgroundColor: "#FFC29E" },
+  sendBtnDisabled: { backgroundColor: colors.orange + "80" },
   suggestionsRow: { marginTop: spacing.small, alignItems: "center" },
   suggestionBtn: {
     minHeight: 44,
@@ -551,9 +558,10 @@ const styles = StyleSheet.create({
   assistantListItemText: { flex: 1 },
   assistantHeader: { marginTop: spacing.small, fontWeight: "700", fontSize: typography.textSize + 2 },
   warningOverlayFullScreen: { flex: 1, backgroundColor: "rgba(0,0,0,0.2)", alignItems: "center", justifyContent: "center", padding: spacing.big },
-  warningCard: { width: "100%", maxWidth: 360, backgroundColor: colors.white, borderRadius: radius, padding: spacing.big },
+  warningCard: { width: "100%", maxWidth: 360, backgroundColor: colors.white, borderRadius: radius, padding: 0, overflow: "hidden" },
   warningTitle: { fontFamily: typography.fontFamily, fontSize: 18, color: colors.textPrimary, marginBottom: spacing.small },
   warningBody: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary },
+  warningContent: { padding: spacing.big },
   warningActions: { marginTop: spacing.big, flexDirection: "row", alignItems: "stretch", justifyContent: "space-between", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.textSecondary + "22" },
   warningBtn: { flex: 1, height: 44, alignItems: "center", justifyContent: "center" },
   warningBtnPressed: { backgroundColor: colors.searchBar },

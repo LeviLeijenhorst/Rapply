@@ -151,7 +151,7 @@ export default function SettingsHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1 },
+  wrap: { flex: 1, padding: spacing.big },
   usageCard: {
     flexDirection: "row",
     alignItems: "center",

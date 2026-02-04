@@ -313,7 +313,12 @@ export default function CoacheeScreen() {
               accessibilityRole="button"
               style={styles.iconButton}
             >
-              <Icon name="more" />
+              {({ pressed }) => (
+                <>
+                  {pressed && <View style={styles.pressOverlay} />}
+                  <Icon name="more" />
+                </>
+              )}
             </Pressable>
             <Pressable
               onPress={() => {
@@ -325,7 +330,12 @@ export default function CoacheeScreen() {
               style={styles.iconButton}
               hitSlop={{ top: 16, right: 16, bottom: 16, left: 16 }}
             >
-              <Icon name="plus" color={colors.orange} />
+              {({ pressed }) => (
+                <>
+                  {pressed && <View style={styles.pressOverlay} />}
+                  <Icon name="plus" color={colors.orange} />
+                </>
+              )}
             </Pressable>
           </View>
         )}
@@ -551,13 +561,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.big,
+    paddingHorizontal: 0,
     paddingTop: 0,
     paddingBottom: spacing.big,
   },
-  headerButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  headerButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center", margin: 0 },
   headerRight: { flexDirection: "row", alignItems: "center" },
-  iconButton: { marginLeft: spacing.small },
+  iconButton: { width: 66, height: 66, alignItems: "center", justifyContent: "center", overflow: "hidden", margin: 0 },
+  pressOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.pressedOverlay,
+  },
   selectHeaderRight: { flexDirection: "row", alignItems: "center" },
   selectDone: {
     marginLeft: spacing.small,

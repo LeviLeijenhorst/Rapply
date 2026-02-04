@@ -14,7 +14,7 @@ import { readSummaryStatus, readTranscriptionStatus } from "@/services/transcrip
 
 type ListType = "coachees" | "looseRecordings"
 
-const headerAddButtonSize = 35
+const headerAddButtonSize = 66
 
 export const CoacheesScreen: FC = function CoacheesScreen() {
   const [listType, setListType] = useState<ListType>("coachees")
@@ -193,47 +193,52 @@ export const CoacheesScreen: FC = function CoacheesScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.headerRow}>
-          <Text style={styles.headerTitle}>Coachees</Text>
-          <View style={styles.headerRight}>
-            {listType === "looseRecordings" && looseSelectMode && (
-              <Pressable
-                onPress={() => {
-                  vibrate()
-                  setShowDeleteLooseWarning(true)
-                }}
-                accessibilityRole="button"
-                style={styles.iconButton}
-              >
-                <Icon name="trash" color="#FF0001" />
-              </Pressable>
-            )}
+      <View style={styles.headerRow}>
+        <Text style={styles.headerTitle}>Coachees</Text>
+        <View style={styles.headerRight}>
+          {listType === "looseRecordings" && looseSelectMode && (
             <Pressable
-              style={styles.addButton}
               onPress={() => {
                 vibrate()
-                if (listType === "looseRecordings") {
-                  setShowAddMenu((isVisible) => !isVisible)
-                  setLooseSelectMode(false)
-                  setSelectedLooseIndices([])
-                  setShowDeleteLooseWarning(false)
-                } else {
-                  setLooseSelectMode(false)
-                  setSelectedLooseIndices([])
-                  setShowDeleteLooseWarning(false)
-                  navigation.navigate("AddCoachee")
-                }
+                setShowDeleteLooseWarning(true)
               }}
               accessibilityRole="button"
-              accessibilityLabel="Add coachee"
-              hitSlop={{ top: 16, right: 16, bottom: 16, left: 16 }}
+              style={styles.iconButton}
             >
-                <Icon name="plus" color={colors.orange} />
+              <Icon name="trash" color="#FF0001" />
             </Pressable>
-          </View>
+          )}
+          <Pressable
+            style={styles.addButton}
+            onPress={() => {
+              vibrate()
+              if (listType === "looseRecordings") {
+                setShowAddMenu((isVisible) => !isVisible)
+                setLooseSelectMode(false)
+                setSelectedLooseIndices([])
+                setShowDeleteLooseWarning(false)
+              } else {
+                setLooseSelectMode(false)
+                setSelectedLooseIndices([])
+                setShowDeleteLooseWarning(false)
+                navigation.navigate("AddCoachee")
+              }
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Add coachee"
+            hitSlop={{ top: 16, right: 16, bottom: 16, left: 16 }}
+          >
+            {({ pressed }) => (
+              <>
+                {pressed && <View style={styles.pressOverlay} />}
+                <Icon name="plus" color={colors.orange} />
+              </>
+            )}
+          </Pressable>
         </View>
+      </View>
 
+      <View style={styles.container}>
         <View style={styles.contentWrap}>
           <SearchBar
             value={query}
@@ -437,6 +442,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 0,
     paddingTop: spacing.small,
     paddingBottom: spacing.big,
   },
@@ -444,14 +450,22 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily,
     fontSize: 22,
     color: colors.textPrimary,
+    marginLeft: spacing.big,
   },
   headerRight: { flexDirection: "row", alignItems: "center" },
-  iconButton: { marginRight: spacing.big },
+  iconButton: { margin: 0 },
   addButton: {
     width: headerAddButtonSize,
     height: headerAddButtonSize,
-    borderRadius: headerAddButtonSize / 2,
+    borderRadius: 0,
+    alignItems: "center",
+    justifyContent: "center",
     overflow: "hidden",
+    margin: 0,
+  },
+  pressOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.pressedOverlay,
   },
   contentWrap: {
     flex: 1,

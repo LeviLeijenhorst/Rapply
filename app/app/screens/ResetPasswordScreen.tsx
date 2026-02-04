@@ -3,8 +3,6 @@ import { View, TextInput, Pressable, StyleSheet } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import { Text } from "./Text"
 import { colors, radius, safeAreaTop, spacing, typography, vibrate } from "./constants"
-import Config from "@/config"
-import { supabase } from "@/config/supabase"
 
 export default function ResetPasswordScreen() {
   const navigation = useNavigation<any>()
@@ -22,16 +20,9 @@ export default function ResetPasswordScreen() {
     }
     try {
       setLoading(true)
-      const result = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: Config.AUTH_ACTION_CONTINUE_URL })
-      if (result.error) {
-        throw result.error
-      }
-      setInfo("We hebben je een e-mail gestuurd met instructies om je wachtwoord te resetten.")
+      setInfo("Wachtwoord resetten via e-mail is nog niet beschikbaar. Log in en ga naar: Mijn account → Wachtwoord wijzigen.")
     } catch (e: any) {
-      const code = String(e?.code ?? "")
       let msg = "Er ging iets mis. Probeer het later opnieuw."
-      if (code.includes("user_not_found")) msg = "Geen account gevonden met dit emailadres."
-      if (code.includes("invalid_email")) msg = "Ongeldig emailadres."
       setError(msg)
     } finally {
       setLoading(false)
