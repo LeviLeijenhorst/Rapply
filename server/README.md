@@ -1,4 +1,4 @@
-## Local server (Supabase JWT verified)
+## Local server (Postgres + session token auth)
 
 This folder contains a small server that replaces the old Firebase Functions.
 
@@ -13,11 +13,13 @@ npm install
 
 2. Create `server/.env` (do not commit it). Copy `server/env.example` and fill in the values.
 
-- **SUPABASE_URL**: use your local Supabase URL (for example `http://127.0.0.1:54321`)
-- **SUPABASE_SERVICE_ROLE_KEY**: use the **Secret** value from `npx supabase status` (it starts with `sb_secret_`)
+- **DATABASE_URL**: Postgres connection string for your Azure Postgres Flexible Server (or local Postgres)
+- **DATABASE_SSL**: set to `1` in production on Azure
+- **AZURE_STORAGE_ACCOUNT_NAME** and **AZURE_STORAGE_ACCOUNT_KEY**: for Azure Blob Storage
+- **AZURE_STORAGE_TRANSCRIPTION_UPLOADS_CONTAINER**: container name (default: `transcription-uploads`)
 - **REVENUECAT_SECRET_KEY**: optional for local dev (billing plan detection)
-- **MISTRAL_API_KEY**: required if you want to run transcription (Voxtral Small)
-- **MISTRAL_TRANSCRIPTION_MODEL**: optional (defaults to Voxtral Small)
+- **MISTRAL_API_KEY**: required if you want to run transcription (Voxtral)
+- **MISTRAL_TRANSCRIPTION_MODEL**: optional (defaults to Voxtral)
 - **CORS_ALLOWED_ORIGINS**: optional for local dev; required for production (comma-separated list)
 - **RATE_LIMIT_WINDOW_MS** and **RATE_LIMIT_MAX_REQUESTS**: optional
 

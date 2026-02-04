@@ -1,19 +1,23 @@
-import express from "express"
-import cors from "cors"
+import express, { type Request, type Response } from "express"
+import crypto from "crypto"
 import { env } from "./env"
 import { asyncHandler, sendError } from "./http"
-import { authImplementationVersion, requireSupabaseUser } from "./auth"
-import { supabaseAdmin } from "./supabaseAdmin"
+import {
+  authImplementationVersion,
+  requireAuthenticatedUser,
+} from "./auth"
 import { createCorsMiddleware, createRateLimitMiddleware, parseCorsAllowedOriginsFromEnv } from "./security"
 import { ensureBillingUser, readBillingStatus } from "./billing/store"
 import { derivePlanStateFromRevenueCatSubscriber, derivePurchasedSecondsFromRevenueCatSubscriber, fetchRevenueCatSubscriber } from "./billing/revenuecat"
 import { randomBase64Url } from "./transcription/random"
 import { createUploadToken, consumeUploadToken, chargeSecondsIdempotent, refundSecondsIdempotent } from "./transcription/store"
-import { fetchEncryptedUploadStream } from "./transcription/storage"
+import { createEncryptedUploadUrl, deleteEncryptedUpload, deleteEncryptedUploadsByPrefix, fetchEncryptedUploadStream } from "./transcription/storage"
 import { computeAudioDurationSecondsFromEncryptedUpload } from "./transcription/duration"
 import { runVoxtralTranscriptionFromEncryptedUpload } from "./transcription/voxtral"
 import { generateSummaryWithMistral } from "./summary/mistralSummary"
 import { completeChatWithMistral } from "./chat/mistralChat"
+import { execute } from "./db"
+import { updateUserDisplayName } from "./users"
 
 const app = express()
 
@@ -41,17 +45,25 @@ const rateLimitTranscription = createRateLimitMiddleware({
 })
 const rateLimitAccount = createRateLimitMiddleware({ windowMs: rateLimitWindowMs, maxRequests: 10, keyPrefix: "account" })
 
-app.get("/health", (_req, res) => {
+app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({
     ok: true,
     build: {
       authImplementationVersion,
     },
     config: {
-      supabase: {
-        hasUrl: !!env.supabaseUrl,
-        hasServiceRoleKey: !!env.supabaseServiceRoleKey,
-        serviceRoleKeyDotCount: (env.supabaseServiceRoleKey.match(/\./g) || []).length,
+      database: {
+        hasDatabaseUrl: !!env.databaseUrl,
+        ssl: env.databaseSsl ? "on" : "off",
+      },
+      azureStorage: {
+        hasAccountName: !!env.azureStorageAccountName,
+        hasAccountKey: !!env.azureStorageAccountKey,
+        transcriptionUploadsContainer: env.azureStorageTranscriptionUploadsContainer,
+      },
+      entra: {
+        hasOpenIdConfigurationUrl: !!env.entraOpenIdConfigurationUrl,
+        hasAudience: !!env.entraAudience,
       },
       mistral: {
         hasApiKey: !!env.mistralApiKey,
@@ -71,15 +83,150 @@ app.get("/health", (_req, res) => {
 })
 
 app.post(
-  "/summary",
-  rateLimitAi,
+  "/auth/me",
   asyncHandler(async (req, res) => {
-    await requireSupabaseUser(req)
+    const user = await requireAuthenticatedUser(req)
+    res.status(200).json({ userId: user.userId, email: user.email, displayName: user.displayName, entraUserId: user.entraUserId })
+  }),
+)
 
-    const transcript = typeof req.body?.transcript === "string" ? req.body.transcript : ""
-    const summary = await generateSummaryWithMistral({ transcript })
+app.post(
+  "/auth/exchange-code",
+  asyncHandler(async (req, res) => {
+    const code = typeof req.body?.code === "string" ? req.body.code.trim() : ""
+    const codeVerifier = typeof req.body?.codeVerifier === "string" ? req.body.codeVerifier.trim() : ""
+    const redirectUri = typeof req.body?.redirectUri === "string" ? req.body.redirectUri.trim() : ""
 
-    res.status(200).json({ summary })
+    if (!code) {
+      sendError(res, 400, "Missing code")
+      return
+    }
+    if (!codeVerifier) {
+      sendError(res, 400, "Missing codeVerifier")
+      return
+    }
+    if (!redirectUri) {
+      sendError(res, 400, "Missing redirectUri")
+      return
+    }
+
+    console.log("[auth/exchange-code] using client credentials", {
+      clientId: env.entraClientId,
+      secretLength: env.entraClientSecret.length,
+    })
+
+    const configResponse = await fetch(env.entraOpenIdConfigurationUrl)
+    if (!configResponse.ok) {
+      sendError(res, 502, `Failed to load OpenID configuration (${configResponse.status})`)
+      return
+    }
+
+    const openIdConfig = (await configResponse.json()) as any
+    const tokenEndpoint = typeof openIdConfig?.token_endpoint === "string" ? openIdConfig.token_endpoint.trim() : ""
+    if (!tokenEndpoint) {
+      sendError(res, 502, "Missing token endpoint in OpenID configuration")
+      return
+    }
+
+    const tokenParams = new URLSearchParams({
+      client_id: env.entraClientId,
+      client_secret: env.entraClientSecret,
+      code,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+      code_verifier: codeVerifier,
+    })
+
+    const tokenResponse = await fetch(tokenEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: tokenParams.toString(),
+    })
+
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text()
+      sendError(res, tokenResponse.status, `Token exchange failed: ${errorText}`)
+      return
+    }
+
+    const tokenData = (await tokenResponse.json()) as any
+    const accessToken = typeof tokenData?.access_token === "string" ? tokenData.access_token : ""
+    const refreshToken = typeof tokenData?.refresh_token === "string" ? tokenData.refresh_token : null
+
+    if (!accessToken) {
+      sendError(res, 502, "Missing access token from provider")
+      return
+    }
+
+    res.status(200).json({ accessToken, refreshToken })
+  }),
+)
+
+app.post(
+  "/auth/refresh-token",
+  asyncHandler(async (req, res) => {
+    const refreshToken = typeof req.body?.refreshToken === "string" ? req.body.refreshToken.trim() : ""
+    if (!refreshToken) {
+      sendError(res, 400, "Missing refreshToken")
+      return
+    }
+
+    const configResponse = await fetch(env.entraOpenIdConfigurationUrl)
+    if (!configResponse.ok) {
+      sendError(res, 502, `Failed to load OpenID configuration (${configResponse.status})`)
+      return
+    }
+
+    const openIdConfig = (await configResponse.json()) as any
+    const tokenEndpoint = typeof openIdConfig?.token_endpoint === "string" ? openIdConfig.token_endpoint.trim() : ""
+    if (!tokenEndpoint) {
+      sendError(res, 502, "Missing token endpoint in OpenID configuration")
+      return
+    }
+
+    const tokenParams = new URLSearchParams({
+      client_id: env.entraClientId,
+      client_secret: env.entraClientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    })
+
+    const tokenResponse = await fetch(tokenEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: tokenParams.toString(),
+    })
+
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text()
+      sendError(res, tokenResponse.status, `Token refresh failed: ${errorText}`)
+      return
+    }
+
+    const tokenData = (await tokenResponse.json()) as any
+    const accessToken = typeof tokenData?.access_token === "string" ? tokenData.access_token : ""
+    const nextRefreshToken = typeof tokenData?.refresh_token === "string" ? tokenData.refresh_token : refreshToken
+
+    if (!accessToken) {
+      sendError(res, 502, "Missing access token from provider")
+      return
+    }
+
+    res.status(200).json({ accessToken, refreshToken: nextRefreshToken })
+  }),
+)
+
+app.post(
+  "/account/displayName",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const displayName = typeof req.body?.displayName === "string" ? req.body.displayName : null
+    await updateUserDisplayName({ userId: user.userId, displayName })
+    res.status(200).json({ ok: true })
   }),
 )
 
@@ -87,7 +234,7 @@ app.post(
   "/chat",
   rateLimitAi,
   asyncHandler(async (req, res) => {
-    await requireSupabaseUser(req)
+    await requireAuthenticatedUser(req)
 
     const messages = req.body?.messages
     const temperature = req.body?.temperature
@@ -100,7 +247,7 @@ app.post(
 app.post(
   "/subscriptionCancel/feedback",
   asyncHandler(async (req, res) => {
-    const user = await requireSupabaseUser(req)
+    const user = await requireAuthenticatedUser(req)
 
     const selectedPlan = typeof req.body?.selectedPlan === "string" ? req.body.selectedPlan.trim() : ""
     const selectedReason = typeof req.body?.selectedReason === "string" ? req.body.selectedReason.trim() : ""
@@ -112,18 +259,66 @@ app.post(
       return
     }
 
-    const insertResult = await supabaseAdmin.from("subscription_cancel_feedback").insert({
-      user_id: user.userId,
-      selected_plan: selectedPlan,
-      selected_reason: selectedReason,
-      other_reason_text: otherReasonText || null,
-      tips_text: tipsText || null,
-      account_email: user.email,
-    })
-    if (insertResult.error) {
-      sendError(res, 500, insertResult.error.message)
+    await execute(
+      `
+      insert into public.subscription_cancel_feedback (
+        id, user_id, selected_plan, selected_reason, other_reason_text, tips_text, account_email
+      )
+      values ($1, $2, $3, $4, $5, $6, $7)
+      `,
+      [crypto.randomUUID(), user.userId, selectedPlan, selectedReason, otherReasonText || null, tipsText || null, user.email],
+    )
+
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/feedback",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+
+    const name = typeof req.body?.name === "string" ? req.body.name.trim() : ""
+    const email = typeof req.body?.email === "string" ? req.body.email.trim() : ""
+    const message = typeof req.body?.message === "string" ? req.body.message.trim() : ""
+
+    if (!message) {
+      sendError(res, 400, "Missing message")
       return
     }
+
+    await execute(
+      `
+      insert into public.feedback (id, user_id, name, email, message)
+      values ($1, $2, $3, $4, $5)
+      `,
+      [crypto.randomUUID(), user.userId, name || null, email || null, message],
+    )
+
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/praktijk/request",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+
+    const email = typeof req.body?.email === "string" ? req.body.email.trim() : ""
+    const message = typeof req.body?.message === "string" ? req.body.message.trim() : ""
+
+    if (!email || !message) {
+      sendError(res, 400, "Missing email or message")
+      return
+    }
+
+    await execute(
+      `
+      insert into public.praktijk_requests (id, user_id, email, account_email, message)
+      values ($1, $2, $3, $4, $5)
+      `,
+      [crypto.randomUUID(), user.userId, email, user.email, message],
+    )
 
     res.status(200).json({ ok: true })
   }),
@@ -133,54 +328,11 @@ app.post(
   "/account/delete",
   rateLimitAccount,
   asyncHandler(async (req, res) => {
-    const user = await requireSupabaseUser(req)
+    const user = await requireAuthenticatedUser(req)
 
-    async function deleteBucketFolderRecursively(params: { bucket: string; folder: string }) {
-      const bucket = params.bucket
-      const rootFolder = params.folder.replace(/^\/+|\/+$/g, "")
-      if (!rootFolder) return
+    await deleteEncryptedUploadsByPrefix({ prefix: `${user.userId}/` })
 
-      const filePathsToRemove: string[] = []
-      const foldersToVisit: string[] = [rootFolder]
-      const visited = new Set<string>()
-
-      while (foldersToVisit.length > 0) {
-        const folder = foldersToVisit.pop()!
-        if (visited.has(folder)) continue
-        visited.add(folder)
-
-        const listResult = await supabaseAdmin.storage.from(bucket).list(folder, { limit: 1000, offset: 0 })
-        if (listResult.error) {
-          continue
-        }
-
-        const entries = Array.isArray(listResult.data) ? listResult.data : []
-        for (const entry of entries) {
-          const name = typeof (entry as any)?.name === "string" ? String((entry as any).name).trim() : ""
-          if (!name) continue
-          const isFolder = !(entry as any)?.id
-          const fullPath = `${folder}/${name}`
-          if (isFolder) {
-            foldersToVisit.push(fullPath)
-          } else {
-            filePathsToRemove.push(fullPath)
-          }
-        }
-      }
-
-      const chunkSize = 100
-      for (let i = 0; i < filePathsToRemove.length; i += chunkSize) {
-        const chunk = filePathsToRemove.slice(i, i + chunkSize)
-        const removeResult = await supabaseAdmin.storage.from(bucket).remove(chunk)
-        if (removeResult.error) {
-          throw new Error(removeResult.error.message)
-        }
-      }
-    }
-
-    await deleteBucketFolderRecursively({ bucket: "transcription-uploads", folder: user.userId })
-
-    await supabaseAdmin.auth.admin.deleteUser(user.userId)
+    await execute(`delete from public.users where id = $1`, [user.userId])
 
     res.status(200).json({ ok: true })
   }),
@@ -190,7 +342,7 @@ app.post(
   "/billing/sync",
   rateLimitBilling,
   asyncHandler(async (req, res) => {
-    const user = await requireSupabaseUser(req)
+    const user = await requireAuthenticatedUser(req)
 
     await ensureBillingUser(user.userId)
 
@@ -198,11 +350,7 @@ app.post(
     const planState = derivePlanStateFromRevenueCatSubscriber(subscriber)
     const purchasedSecondsFromRevenueCat = derivePurchasedSecondsFromRevenueCatSubscriber(subscriber)
 
-    await supabaseAdmin
-      .from("billing_users")
-      .update({ purchased_seconds: purchasedSecondsFromRevenueCat })
-      .eq("user_id", user.userId)
-      .throwOnError()
+    await execute(`update public.billing_users set purchased_seconds = $1, updated_at = now() where user_id = $2`, [purchasedSecondsFromRevenueCat, user.userId])
 
     const billingStatus = await readBillingStatus({
       userId: user.userId,
@@ -225,7 +373,7 @@ app.post(
   "/billing/status",
   rateLimitBilling,
   asyncHandler(async (req, res) => {
-    const user = await requireSupabaseUser(req)
+    const user = await requireAuthenticatedUser(req)
 
     await ensureBillingUser(user.userId)
 
@@ -251,7 +399,7 @@ app.post(
   "/transcription/preflight",
   rateLimitTranscription,
   asyncHandler(async (req, res) => {
-    const user = await requireSupabaseUser(req)
+    const user = await requireAuthenticatedUser(req)
 
     await ensureBillingUser(user.userId)
 
@@ -274,6 +422,7 @@ app.post(
     const operationId = randomBase64Url(16)
     const uploadPath = `${user.userId}/${operationId}/${Date.now()}.csa1`
     const token = await createUploadToken({ userId: user.userId, operationId, uploadPath })
+    const upload = await createEncryptedUploadUrl({ blobName: uploadPath, expiresInSeconds: 10 * 60 })
 
     res.status(200).json({
       allowed: true,
@@ -282,6 +431,8 @@ app.post(
       operationId,
       uploadToken: token.uploadToken,
       uploadPath,
+      uploadUrl: upload.uploadUrl,
+      uploadHeaders: upload.uploadHeaders,
       uploadTokenExpiresAtMs: token.expiresAtMs,
     })
   }),
@@ -291,7 +442,7 @@ app.post(
   "/transcription/start",
   rateLimitTranscription,
   asyncHandler(async (req, res) => {
-    const user = await requireSupabaseUser(req)
+    const user = await requireAuthenticatedUser(req)
 
     const operationId = typeof req.body?.operationId === "string" ? req.body.operationId.trim() : ""
     const uploadToken = typeof req.body?.uploadToken === "string" ? req.body.uploadToken.trim() : ""
@@ -324,7 +475,7 @@ app.post(
         return
       }
 
-      const durationStream = await fetchEncryptedUploadStream({ bucket: "transcription-uploads", path: uploadPath })
+      const durationStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
       const durationSeconds = await computeAudioDurationSecondsFromEncryptedUpload({ encryptedStream: durationStream, keyBase64, mimeType })
       const secondsToCharge = Math.max(1, Math.ceil(durationSeconds))
 
@@ -345,7 +496,7 @@ app.post(
         throw new Error("Mistral API key is not configured")
       }
 
-      const transcriptionStream = await fetchEncryptedUploadStream({ bucket: "transcription-uploads", path: uploadPath })
+      const transcriptionStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
       const transcript = await runVoxtralTranscriptionFromEncryptedUpload({
         encryptedStream: transcriptionStream,
         keyBase64,
@@ -355,18 +506,23 @@ app.post(
         model: env.mistralTranscriptionModel,
       })
 
-      const updateResult = await supabaseAdmin
-        .from("transcription_operations")
-        .update({ status: "completed", completed_at: new Date().toISOString(), transcript })
-        .eq("operation_id", operationId)
-        .eq("user_id", user.userId)
-      if (updateResult.error) {
-        throw new Error(updateResult.error.message)
-      }
+      const summary = await generateSummaryWithMistral({ transcript })
+
+      await execute(
+        `
+        update public.transcription_operations
+        set status = 'completed',
+            completed_at = now()
+        where operation_id = $1
+          and user_id = $2
+        `,
+        [operationId, user.userId],
+      )
 
       res.status(200).json({
         transcript,
         text: transcript,
+        summary,
         secondsCharged: charge.secondsCharged,
         remainingSecondsAfter: charge.remainingSecondsAfter,
         planKey: planState.planKey,
@@ -374,29 +530,31 @@ app.post(
     } catch (e: any) {
       try {
         await refundSecondsIdempotent({ userId: user.userId, operationId })
-        await supabaseAdmin
-          .from("transcription_operations")
-          .upsert({
-            operation_id: operationId,
-            user_id: user.userId,
-            status: "failed",
-            failed_at: new Date().toISOString(),
-            error_message: String(e?.message || e),
-          })
-          .throwOnError()
+        await execute(
+          `
+          insert into public.transcription_operations (operation_id, user_id, status, failed_at, error_message)
+          values ($1, $2, 'failed', now(), $3)
+          on conflict (operation_id) do update
+            set user_id = excluded.user_id,
+                status = excluded.status,
+                failed_at = now(),
+                error_message = excluded.error_message
+          `,
+          [operationId, user.userId, String(e?.message || e)],
+        )
       } catch {}
       sendError(res, 500, String(e?.message || e))
     } finally {
       try {
         if (uploadPath) {
-          await supabaseAdmin.storage.from("transcription-uploads").remove([uploadPath])
+          await deleteEncryptedUpload({ blobName: uploadPath })
         }
       } catch {}
     }
   }),
 )
 
-app.use((req, res) => {
+app.use((req: Request, res: Response) => {
   sendError(res, 404, `Not found: ${req.method} ${req.path}`)
 })
 

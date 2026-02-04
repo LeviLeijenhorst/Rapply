@@ -57,6 +57,9 @@ type VoxtralSegment = {
   startTime?: number
   endTime?: number
   content?: string
+  speaker?: string
+  speaker_id?: string
+  speakerId?: string
 }
 
 function formatSegmentsToCoachScribeLines(segments: VoxtralSegment[]) {
@@ -74,7 +77,8 @@ function formatSegmentsToCoachScribeLines(segments: VoxtralSegment[]) {
     const text = normalizeSpacing(String(seg?.text || seg?.content || ""))
     if (!text) continue
     const ts = formatTimestampMmSsTenths(start ?? 0)
-    lines.push(`[${ts}] speaker_1: ${text}`)
+    const speakerId = String(seg?.speaker || seg?.speaker_id || seg?.speakerId || "speaker_1").trim()
+    lines.push(`[${ts}] ${speakerId}: ${text}`)
   }
   if (lines.length > 0) return lines.join("\n")
   return ""
@@ -157,13 +161,16 @@ export async function runVoxtralTranscriptionFromEncryptedUpload(params: {
   const blob = new BlobConstructor([audioBuffer], { type: normalizedMimeType })
   form.append("file", blob, `audio.${extension}`)
   form.append("model", model)
+  form.append("response_format", "verbose_json")
   const requestedLanguageCode = String(languageCode || "").trim()
   const shouldSendLanguage =
     requestedLanguageCode === "en" ||
     requestedLanguageCode === "en-US" ||
     requestedLanguageCode === "en-GB" ||
     requestedLanguageCode === "fr" ||
-    requestedLanguageCode === "fr-FR"
+    requestedLanguageCode === "fr-FR" ||
+    requestedLanguageCode === "nl" ||
+    requestedLanguageCode === "nl-NL"
   if (shouldSendLanguage) {
     form.append("language", requestedLanguageCode)
   }

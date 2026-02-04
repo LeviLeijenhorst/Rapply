@@ -30,7 +30,7 @@ export function createCorsMiddleware(params: {
   const options: CorsOptions = {
     methods: ["POST", "OPTIONS"],
     allowedHeaders: ["Authorization", "Content-Type"],
-    origin: (origin, callback) => {
+    origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
       if (!origin) {
         callback(null, true)
         return

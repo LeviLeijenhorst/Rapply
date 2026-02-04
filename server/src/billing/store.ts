@@ -1,5 +1,5 @@
-import { supabaseAdmin } from "../supabaseAdmin"
 import { freeSeconds, getIncludedSecondsForPlanKey, type PlanKey } from "./constants"
+import { queryOne, execute } from "../db"
 
 export type BillingStatus = {
   planKey: PlanKey | null
@@ -27,16 +27,14 @@ function clampNonNegative(value: unknown): number {
 }
 
 export async function ensureBillingUser(userId: string): Promise<void> {
-  const upsertResult = await supabaseAdmin.from("billing_users").upsert(
-    { user_id: userId },
-    {
-      onConflict: "user_id",
-      ignoreDuplicates: true,
-    },
+  await execute(
+    `
+    insert into public.billing_users (user_id)
+    values ($1)
+    on conflict (user_id) do nothing
+    `,
+    [userId],
   )
-  if (upsertResult.error) {
-    throw new Error(upsertResult.error.message)
-  }
 }
 
 export async function readBillingStatus(params: { userId: string; planKey: PlanKey | null; cycleStartMs: number | null; cycleEndMs: number | null }): Promise<BillingStatus> {
@@ -45,17 +43,19 @@ export async function readBillingStatus(params: { userId: string; planKey: PlanK
   const includedSeconds = getIncludedSecondsForPlanKey(planKey)
   const cycleKey = buildCycleKey(cycleStartMs, cycleEndMs)
 
-  const rowResult = await supabaseAdmin
-    .from("billing_users")
-    .select("purchased_seconds, non_expiring_used_seconds, cycle_used_seconds_by_key")
-    .eq("user_id", userId)
-    .maybeSingle()
+  const row = await queryOne<{
+    purchased_seconds: number
+    non_expiring_used_seconds: number
+    cycle_used_seconds_by_key: any
+  }>(
+    `
+    select purchased_seconds, non_expiring_used_seconds, cycle_used_seconds_by_key
+    from public.billing_users
+    where user_id = $1
+    `,
+    [userId],
+  )
 
-  if (rowResult.error) {
-    throw new Error(rowResult.error.message)
-  }
-
-  const row = rowResult.data
   const purchasedSeconds = clampNonNegative(row?.purchased_seconds ?? 0)
   const nonExpiringUsedSeconds = clampNonNegative(row?.non_expiring_used_seconds ?? 0)
   const cycleUsedSecondsByKey = (row?.cycle_used_seconds_by_key ?? {}) as Record<string, number>
