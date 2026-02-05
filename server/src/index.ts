@@ -14,8 +14,8 @@ import { createUploadToken, consumeUploadToken, chargeSecondsIdempotent, refundS
 import { createEncryptedUploadUrl, deleteEncryptedUpload, deleteEncryptedUploadsByPrefix, fetchEncryptedUploadStream } from "./transcription/storage"
 import { computeAudioDurationSecondsFromEncryptedUpload } from "./transcription/duration"
 import { runVoxtralTranscriptionFromEncryptedUpload } from "./transcription/voxtral"
-import { generateSummaryWithMistral } from "./summary/mistralSummary"
-import { completeChatWithMistral } from "./chat/mistralChat"
+import { generateSummaryWithAzureOpenAi } from "./summary/azureOpenAiSummary"
+import { completeChatWithAzureOpenAi } from "./chat/azureOpenAiChat"
 import { execute } from "./db"
 import { updateUserDisplayName } from "./users"
 import {
@@ -85,6 +85,13 @@ app.get("/health", (_req: Request, res: Response) => {
       mistral: {
         hasApiKey: !!env.mistralApiKey,
         transcriptionModel: env.mistralTranscriptionModel,
+      },
+      azureOpenAi: {
+        hasEndpoint: !!env.azureOpenAiEndpoint,
+        hasKey: !!env.azureOpenAiKey,
+        version: env.azureOpenAiVersion,
+        chatDeployment: env.azureOpenAiChatDeployment,
+        summaryDeployment: env.azureOpenAiSummaryDeployment,
       },
       revenuecat: {
         hasSecretKey: !!env.revenueCatSecretKey,
@@ -383,7 +390,7 @@ app.post(
     const messages = req.body?.messages
     const temperature = req.body?.temperature
 
-    const text = await completeChatWithMistral({ messages, temperature })
+    const text = await completeChatWithAzureOpenAi({ messages, temperature })
     res.status(200).json({ text })
   }),
 )
@@ -650,7 +657,7 @@ app.post(
         model: env.mistralTranscriptionModel,
       })
 
-      const summary = await generateSummaryWithMistral({ transcript })
+      const summary = await generateSummaryWithAzureOpenAi({ transcript })
 
       await execute(
         `
