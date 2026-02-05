@@ -18,6 +18,12 @@ jobs:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy
+    env:
+      EXPO_PUBLIC_FUNCTIONS_BASE_URL: ${{ vars.EXPO_PUBLIC_FUNCTIONS_BASE_URL }}
+      EXPO_PUBLIC_ENTRA_OPENID_CONFIGURATION_URL: ${{ vars.EXPO_PUBLIC_ENTRA_OPENID_CONFIGURATION_URL }}
+      EXPO_PUBLIC_ENTRA_CLIENT_ID: ${{ vars.EXPO_PUBLIC_ENTRA_CLIENT_ID }}
+      EXPO_PUBLIC_ENTRA_API_SCOPE: ${{ vars.EXPO_PUBLIC_ENTRA_API_SCOPE }}
+      EXPO_PUBLIC_ENTRA_ACCOUNT_PORTAL_URL: ${{ vars.EXPO_PUBLIC_ENTRA_ACCOUNT_PORTAL_URL }}
     steps:
       - uses: actions/checkout@v4
       - name: Build and Deploy
