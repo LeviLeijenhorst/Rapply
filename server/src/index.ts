@@ -263,8 +263,7 @@ app.post(
     const payload = req.body || {}
     const id = readId(payload.id, "id")
     const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs, "updatedAtUnixMs")
-    const nameRaw = readOptionalText(payload.name)
-    const name = typeof nameRaw === "string" ? nameRaw : undefined
+    const name = readOptionalText(payload.name)
     const isArchived = typeof payload.isArchived === "boolean" ? payload.isArchived : undefined
     await updateCoachee(user.userId, { id, name, isArchived, updatedAtUnixMs })
     res.status(200).json({ ok: true })
@@ -302,10 +301,7 @@ app.post(
       id,
       updatedAtUnixMs,
       coacheeId: payload.coacheeId === null ? null : readOptionalId(payload.coacheeId),
-      title: (() => {
-        const titleRaw = readOptionalText(payload.title)
-        return typeof titleRaw === "string" ? titleRaw : undefined
-      })(),
+      title: readOptionalText(payload.title),
       transcript: readOptionalText(payload.transcript, true),
       summary: readOptionalText(payload.summary, true),
       transcriptionStatus: readOptionalTranscriptionStatus(payload.transcriptionStatus),
@@ -719,3 +715,106 @@ app.listen(env.port, () => {
   console.log(`[server] mistral configured: ${hasMistralApiKey ? "yes" : "no"}; model: ${transcriptionModel}`)
 })
 
+function readId(value: unknown, fieldName: string): string {
+  const text = typeof value === "string" ? value.trim() : ""
+  if (!text) {
+    throw new Error(`Missing ${fieldName}`)
+  }
+  return text
+}
+
+function readOptionalId(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined
+  const text = typeof value === "string" ? value.trim() : ""
+  return text || undefined
+}
+
+function readText(value: unknown, fieldName: string): string {
+  const text = typeof value === "string" ? value.trim() : ""
+  if (!text) {
+    throw new Error(`Missing ${fieldName}`)
+  }
+  return text
+}
+
+function readOptionalText(value: unknown, allowEmpty = false): string | null | undefined {
+  if (value === undefined) return undefined
+  if (value === null) return null
+  const text = typeof value === "string" ? value.trim() : ""
+  if (!text && !allowEmpty) return null
+  return text
+}
+
+function readUnixMs(value: unknown, fieldName: string): number {
+  const numeric = typeof value === "number" ? value : Number(value)
+  if (!Number.isFinite(numeric)) {
+    throw new Error(`Missing ${fieldName}`)
+  }
+  return Number(numeric)
+}
+
+function readOptionalTranscriptionStatus(value: unknown): Session["transcriptionStatus"] | undefined {
+  if (typeof value !== "string") return undefined
+  const trimmed = value.trim()
+  if (trimmed === "idle" || trimmed === "transcribing" || trimmed === "generating" || trimmed === "done" || trimmed === "error") {
+    return trimmed
+  }
+  return undefined
+}
+
+function readCoachee(value: unknown): Coachee {
+  const payload = (value || {}) as any
+  const createdAtUnixMs = readUnixMs(payload.createdAtUnixMs, "coachee.createdAtUnixMs")
+  const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs ?? payload.createdAtUnixMs, "coachee.updatedAtUnixMs")
+  return {
+    id: readId(payload.id, "coachee.id"),
+    name: readText(payload.name, "coachee.name"),
+    createdAtUnixMs,
+    updatedAtUnixMs,
+    isArchived: typeof payload.isArchived === "boolean" ? payload.isArchived : false,
+  }
+}
+
+function readSession(value: unknown): Session {
+  const payload = (value || {}) as any
+  const createdAtUnixMs = readUnixMs(payload.createdAtUnixMs, "session.createdAtUnixMs")
+  const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs ?? payload.createdAtUnixMs, "session.updatedAtUnixMs")
+  const kind = readText(payload.kind, "session.kind") as Session["kind"]
+  return {
+    id: readId(payload.id, "session.id"),
+    coacheeId: payload.coacheeId === null ? null : readOptionalId(payload.coacheeId) ?? null,
+    title: readText(payload.title, "session.title"),
+    kind,
+    audioBlobId: readOptionalText(payload.audioBlobId, true) ?? null,
+    uploadFileName: readOptionalText(payload.uploadFileName, true) ?? null,
+    transcript: readOptionalText(payload.transcript, true) ?? null,
+    summary: readOptionalText(payload.summary, true) ?? null,
+    transcriptionStatus: readOptionalTranscriptionStatus(payload.transcriptionStatus) ?? "idle",
+    transcriptionError: readOptionalText(payload.transcriptionError, true) ?? null,
+    createdAtUnixMs,
+    updatedAtUnixMs,
+  }
+}
+
+function readNote(value: unknown): Note {
+  const payload = (value || {}) as any
+  const createdAtUnixMs = readUnixMs(payload.createdAtUnixMs, "note.createdAtUnixMs")
+  const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs ?? payload.createdAtUnixMs, "note.updatedAtUnixMs")
+  return {
+    id: readId(payload.id, "note.id"),
+    sessionId: readId(payload.sessionId, "note.sessionId"),
+    text: readText(payload.text, "note.text"),
+    createdAtUnixMs,
+    updatedAtUnixMs,
+  }
+}
+
+function readWrittenReport(value: unknown): WrittenReport {
+  const payload = (value || {}) as any
+  const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs, "writtenReport.updatedAtUnixMs")
+  return {
+    sessionId: readId(payload.sessionId, "writtenReport.sessionId"),
+    text: readText(payload.text, "writtenReport.text"),
+    updatedAtUnixMs,
+  }
+}
