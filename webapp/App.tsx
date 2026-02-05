@@ -47,7 +47,7 @@ export default function App() {
       {/* App status bar */}
       <StatusBar style="auto" />
       {/* App shell */}
-      <LocalAppDataProvider>
+      <LocalAppDataProvider isAuthenticated={isAuthenticated}>
         {isLoggingOut ? (
           <AuthScreenLayout>
             <AuthLoadingScreen message="Bezig met uitloggen..." />

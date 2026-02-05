@@ -67,9 +67,10 @@ const LocalAppDataContext = createContext<ContextValue | null>(null)
 
 type Props = {
   children: ReactNode
+  isAuthenticated: boolean
 }
 
-export function LocalAppDataProvider({ children }: Props) {
+export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
   const [data, setData] = useState<LocalAppData>(() => loadLocalAppData())
 
   useEffect(() => {
@@ -77,6 +78,7 @@ export function LocalAppDataProvider({ children }: Props) {
   }, [data])
 
   useEffect(() => {
+    if (!isAuthenticated) return
     let isActive = true
     void (async () => {
       try {
@@ -100,7 +102,7 @@ export function LocalAppDataProvider({ children }: Props) {
     return () => {
       isActive = false
     }
-  }, [])
+  }, [isAuthenticated])
 
   async function refreshFromServer() {
     try {
