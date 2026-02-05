@@ -13,7 +13,7 @@ import { randomBase64Url } from "./transcription/random"
 import { createUploadToken, consumeUploadToken, chargeSecondsIdempotent, refundSecondsIdempotent } from "./transcription/store"
 import { createEncryptedUploadUrl, deleteEncryptedUpload, deleteEncryptedUploadsByPrefix, fetchEncryptedUploadStream } from "./transcription/storage"
 import { computeAudioDurationSecondsFromEncryptedUpload } from "./transcription/duration"
-import { runVoxtralTranscriptionFromEncryptedUpload } from "./transcription/voxtral"
+import { runAzureOpenAiTranscriptionFromEncryptedUpload } from "./transcription/azureOpenAiTranscription"
 import { generateSummaryWithAzureOpenAi } from "./summary/azureOpenAiSummary"
 import { completeChatWithAzureOpenAi } from "./chat/azureOpenAiChat"
 import { execute } from "./db"
@@ -82,16 +82,14 @@ app.get("/health", (_req: Request, res: Response) => {
         hasOpenIdConfigurationUrl: !!env.entraOpenIdConfigurationUrl,
         hasAudience: !!env.entraAudience,
       },
-      mistral: {
-        hasApiKey: !!env.mistralApiKey,
-        transcriptionModel: env.mistralTranscriptionModel,
-      },
       azureOpenAi: {
         hasEndpoint: !!env.azureOpenAiEndpoint,
         hasKey: !!env.azureOpenAiKey,
         version: env.azureOpenAiVersion,
         chatDeployment: env.azureOpenAiChatDeployment,
         summaryDeployment: env.azureOpenAiSummaryDeployment,
+        transcriptionDeployment: env.azureOpenAiTranscriptionDeployment,
+        transcriptionVersion: env.azureOpenAiTranscriptionVersion,
       },
       revenuecat: {
         hasSecretKey: !!env.revenueCatSecretKey,
@@ -642,19 +640,12 @@ app.post(
         cycleEndMs: planState.cycleEndMs,
       })
 
-      const apiKey = env.mistralApiKey
-      if (!apiKey) {
-        throw new Error("Mistral API key is not configured")
-      }
-
       const transcriptionStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
-      const transcript = await runVoxtralTranscriptionFromEncryptedUpload({
+      const transcript = await runAzureOpenAiTranscriptionFromEncryptedUpload({
         encryptedStream: transcriptionStream,
         keyBase64,
         mimeType,
         languageCode: languageCode || "nl",
-        apiKey,
-        model: env.mistralTranscriptionModel,
       })
 
       const summary = await generateSummaryWithAzureOpenAi({ transcript })
@@ -716,10 +707,19 @@ app.use((err: any, _req: any, res: any, _next: any) => {
 })
 
 app.listen(env.port, () => {
-  const hasMistralApiKey = !!env.mistralApiKey
-  const transcriptionModel = env.mistralTranscriptionModel
-  console.log(`[server] listening on http://127.0.0.1:${env.port}`)
-  console.log(`[server] mistral configured: ${hasMistralApiKey ? "yes" : "no"}; model: ${transcriptionModel}`)
+  const hasAzureOpenAiEndpoint = !!env.azureOpenAiEndpoint
+  const hasAzureOpenAiKey = !!env.azureOpenAiKey
+  console.log("[server] listening on http://127.0.0.1:" + env.port)
+  console.log(
+    "[server] azure openai configured: " +
+      (hasAzureOpenAiEndpoint && hasAzureOpenAiKey ? "yes" : "no") +
+      "; chat: " +
+      (env.azureOpenAiChatDeployment || "missing") +
+      "; summary: " +
+      (env.azureOpenAiSummaryDeployment || "missing") +
+      "; transcription: " +
+      (env.azureOpenAiTranscriptionDeployment || "missing"),
+  )
 })
 
 function readId(value: unknown, fieldName: string): string {
