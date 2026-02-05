@@ -16,7 +16,21 @@ import {
   updateNote,
   updateSession,
 } from './localAppDataStore'
-import { LocalAppData, SessionKind } from './types'
+import { createId } from './createId'
+import { Coachee, LocalAppData, Note, Session, SessionKind, WrittenReport } from './types'
+import {
+  createCoacheeRemote,
+  createNoteRemote,
+  createSessionRemote,
+  deleteCoacheeRemote,
+  deleteNoteRemote,
+  deleteSessionRemote,
+  readAppData,
+  setWrittenReportRemote,
+  updateCoacheeRemote,
+  updateNoteRemote,
+  updateSessionRemote,
+} from '../services/appData'
 
 type ContextValue = {
   data: LocalAppData
@@ -62,45 +76,187 @@ export function LocalAppDataProvider({ children }: Props) {
     saveLocalAppData(data)
   }, [data])
 
+  useEffect(() => {
+    let isActive = true
+    void (async () => {
+      try {
+        const remote = await readAppData()
+        if (!isActive) return
+        if (isEmptyAppData(remote)) {
+          const localSnapshot = loadLocalAppData()
+          if (!isEmptyAppData(localSnapshot)) {
+            await seedRemoteFromLocal(localSnapshot)
+            const seeded = await readAppData()
+            if (!isActive) return
+            setData(seeded)
+            return
+          }
+        }
+        setData(remote)
+      } catch (error) {
+        console.error('[LocalAppDataProvider] Failed to load remote app data', error)
+      }
+    })()
+    return () => {
+      isActive = false
+    }
+  }, [])
+
+  async function refreshFromServer() {
+    try {
+      const remote = await readAppData()
+      setData(remote)
+    } catch (error) {
+      console.error('[LocalAppDataProvider] Failed to refresh remote app data', error)
+    }
+  }
+
+  function runRemoteAction(action: Promise<void>) {
+    void action.then(refreshFromServer).catch((error) => {
+      console.error('[LocalAppDataProvider] Remote update failed', error)
+    })
+  }
+
+  function isEmptyAppData(next: LocalAppData) {
+    return next.coachees.length === 0 && next.sessions.length === 0 && next.notes.length === 0 && next.writtenReports.length === 0
+  }
+
+  async function seedRemoteFromLocal(localSnapshot: LocalAppData) {
+    for (const coachee of localSnapshot.coachees) {
+      await createCoacheeRemote(coachee)
+    }
+    for (const session of localSnapshot.sessions) {
+      await createSessionRemote(session)
+    }
+    for (const note of localSnapshot.notes) {
+      await createNoteRemote(note)
+    }
+    for (const report of localSnapshot.writtenReports) {
+      await setWrittenReportRemote(report)
+    }
+  }
+
   const value = useMemo<ContextValue>(() => {
     return {
       data,
       reset: () => setData(loadLocalAppData()),
 
       createCoachee: (name) => {
-        let createdCoacheeId = ''
-        setData((previous) => {
-          const result = createCoachee(previous, name)
-          const newCoachee = result.coachees.find((c) => c.name === name.trim() && !c.isArchived)
-          if (newCoachee) {
-            createdCoacheeId = newCoachee.id
-          }
-          return result
-        })
-        return createdCoacheeId
+        const trimmedName = name.trim()
+        if (!trimmedName) return ''
+        const now = Date.now()
+        const coachee: Coachee = {
+          id: createId('coachee'),
+          name: trimmedName,
+          createdAtUnixMs: now,
+          updatedAtUnixMs: now,
+          isArchived: false,
+        }
+        setData((previous) => createCoachee(previous, coachee))
+        runRemoteAction(createCoacheeRemote(coachee))
+        return coachee.id
       },
-      updateCoacheeName: (coacheeId, name) => setData((previous) => updateCoacheeName(previous, coacheeId, name)),
-      archiveCoachee: (coacheeId) => setData((previous) => archiveCoachee(previous, coacheeId)),
-      restoreCoachee: (coacheeId) => setData((previous) => restoreCoachee(previous, coacheeId)),
-      deleteCoachee: (coacheeId) => setData((previous) => deleteCoachee(previous, coacheeId)),
+      updateCoacheeName: (coacheeId, name) => {
+        const updatedAtUnixMs = Date.now()
+        setData((previous) => updateCoacheeName(previous, coacheeId, name))
+        runRemoteAction(updateCoacheeRemote({ id: coacheeId, name: name.trim(), updatedAtUnixMs }))
+      },
+      archiveCoachee: (coacheeId) => {
+        const updatedAtUnixMs = Date.now()
+        setData((previous) => archiveCoachee(previous, coacheeId))
+        runRemoteAction(updateCoacheeRemote({ id: coacheeId, isArchived: true, updatedAtUnixMs }))
+      },
+      restoreCoachee: (coacheeId) => {
+        const updatedAtUnixMs = Date.now()
+        setData((previous) => restoreCoachee(previous, coacheeId))
+        runRemoteAction(updateCoacheeRemote({ id: coacheeId, isArchived: false, updatedAtUnixMs }))
+      },
+      deleteCoachee: (coacheeId) => {
+        setData((previous) => deleteCoachee(previous, coacheeId))
+        runRemoteAction(deleteCoacheeRemote(coacheeId))
+      },
 
       createSession: (values) => {
-        let createdSessionId = ''
+        const title = values.title.trim()
+        if (!title) return ''
+        const now = Date.now()
+        const session: Session = {
+          id: createId('session'),
+          coacheeId: values.coacheeId,
+          title,
+          kind: values.kind,
+          audioBlobId: values.audioBlobId,
+          uploadFileName: values.uploadFileName,
+          transcript: null,
+          summary: null,
+          transcriptionStatus: 'idle',
+          transcriptionError: null,
+          createdAtUnixMs: now,
+          updatedAtUnixMs: now,
+        }
         setData((previous) => {
-          const result = createSession(previous, values)
-          createdSessionId = result.sessionId
+          const result = createSession(previous, session)
           return result.data
         })
-        return createdSessionId
+        runRemoteAction(createSessionRemote(session))
+        return session.id
       },
-      updateSession: (sessionId, values) => setData((previous) => updateSession(previous, sessionId, values)),
-      deleteSession: (sessionId) => setData((previous) => deleteSession(previous, sessionId)),
+      updateSession: (sessionId, values) => {
+        const updatedAtUnixMs = Date.now()
+        setData((previous) => updateSession(previous, sessionId, values))
+        runRemoteAction(
+          updateSessionRemote({
+            id: sessionId,
+            updatedAtUnixMs,
+            coacheeId: values.coacheeId,
+            title: values.title,
+            transcript: values.transcript,
+            summary: values.summary,
+            transcriptionStatus: values.transcriptionStatus,
+            transcriptionError: values.transcriptionError,
+          }),
+        )
+      },
+      deleteSession: (sessionId) => {
+        setData((previous) => deleteSession(previous, sessionId))
+        runRemoteAction(deleteSessionRemote(sessionId))
+      },
 
-      createNote: (sessionId, text) => setData((previous) => createNote(previous, sessionId, text)),
-      updateNote: (noteId, text) => setData((previous) => updateNote(previous, noteId, text)),
-      deleteNote: (noteId) => setData((previous) => deleteNote(previous, noteId)),
+      createNote: (sessionId, text) => {
+        const trimmedText = text.trim()
+        if (!trimmedText) return
+        const now = Date.now()
+        const note: Note = {
+          id: createId('note'),
+          sessionId,
+          text: trimmedText,
+          createdAtUnixMs: now,
+          updatedAtUnixMs: now,
+        }
+        setData((previous) => {
+          const result = createNote(previous, note)
+          return result.data
+        })
+        runRemoteAction(createNoteRemote(note))
+      },
+      updateNote: (noteId, text) => {
+        const updatedAtUnixMs = Date.now()
+        setData((previous) => updateNote(previous, noteId, text))
+        runRemoteAction(updateNoteRemote({ id: noteId, text: text.trim(), updatedAtUnixMs }))
+      },
+      deleteNote: (noteId) => {
+        setData((previous) => deleteNote(previous, noteId))
+        runRemoteAction(deleteNoteRemote(noteId))
+      },
 
-      setWrittenReport: (sessionId, text) => setData((previous) => setWrittenReport(previous, sessionId, text)),
+      setWrittenReport: (sessionId, text) => {
+        const updatedAtUnixMs = Date.now()
+        setData((previous) => setWrittenReport(previous, sessionId, text))
+        const trimmedText = text.trim()
+        if (!trimmedText) return
+        const report: WrittenReport = { sessionId, text: trimmedText, updatedAtUnixMs }
+        runRemoteAction(setWrittenReportRemote(report))
+      },
     }
   }, [data])
 

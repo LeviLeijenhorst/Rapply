@@ -18,6 +18,23 @@ import { generateSummaryWithMistral } from "./summary/mistralSummary"
 import { completeChatWithMistral } from "./chat/mistralChat"
 import { execute } from "./db"
 import { updateUserDisplayName } from "./users"
+import {
+  createCoachee,
+  createNote,
+  createSession,
+  deleteCoachee,
+  deleteNote,
+  deleteSession,
+  readAppData,
+  setWrittenReport,
+  updateCoachee,
+  updateNote,
+  updateSession,
+  type Coachee,
+  type Note,
+  type Session,
+  type WrittenReport,
+} from "./appData"
 
 const app = express()
 
@@ -217,6 +234,137 @@ app.post(
     }
 
     res.status(200).json({ accessToken, refreshToken: nextRefreshToken })
+  }),
+)
+
+app.post(
+  "/app-data",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const data = await readAppData(user.userId)
+    res.status(200).json(data)
+  }),
+)
+
+app.post(
+  "/coachees/create",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const coachee = readCoachee(req.body?.coachee)
+    await createCoachee(user.userId, coachee)
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/coachees/update",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const payload = req.body || {}
+    const id = readId(payload.id, "id")
+    const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs, "updatedAtUnixMs")
+    const nameRaw = readOptionalText(payload.name)
+    const name = typeof nameRaw === "string" ? nameRaw : undefined
+    const isArchived = typeof payload.isArchived === "boolean" ? payload.isArchived : undefined
+    await updateCoachee(user.userId, { id, name, isArchived, updatedAtUnixMs })
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/coachees/delete",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const id = readId(req.body?.id, "id")
+    await deleteCoachee(user.userId, id)
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/sessions/create",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const session = readSession(req.body?.session)
+    await createSession(user.userId, session)
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/sessions/update",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const payload = req.body || {}
+    const id = readId(payload.id, "id")
+    const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs, "updatedAtUnixMs")
+    await updateSession(user.userId, {
+      id,
+      updatedAtUnixMs,
+      coacheeId: payload.coacheeId === null ? null : readOptionalId(payload.coacheeId),
+      title: (() => {
+        const titleRaw = readOptionalText(payload.title)
+        return typeof titleRaw === "string" ? titleRaw : undefined
+      })(),
+      transcript: readOptionalText(payload.transcript, true),
+      summary: readOptionalText(payload.summary, true),
+      transcriptionStatus: readOptionalTranscriptionStatus(payload.transcriptionStatus),
+      transcriptionError: readOptionalText(payload.transcriptionError, true),
+    })
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/sessions/delete",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const id = readId(req.body?.id, "id")
+    await deleteSession(user.userId, id)
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/notes/create",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const note = readNote(req.body?.note)
+    await createNote(user.userId, note)
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/notes/update",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const payload = req.body || {}
+    const id = readId(payload.id, "id")
+    const text = readText(payload.text, "text")
+    const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs, "updatedAtUnixMs")
+    await updateNote(user.userId, { id, text, updatedAtUnixMs })
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/notes/delete",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const id = readId(req.body?.id, "id")
+    await deleteNote(user.userId, id)
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/written-reports/set",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const report = readWrittenReport(req.body?.report)
+    await setWrittenReport(user.userId, report)
+    res.status(200).json({ ok: true })
   }),
 )
 

@@ -67,6 +67,7 @@ This is the only document that contains the full Azure plan and the current prog
 - Run:
   - `server/sql/001_init.sql` **Done (tables present)**
   - `server/sql/002_entra_external_id.sql` **Done (entra_user_id column present, sessions table removed)**
+  - `server/sql/003_app_data.sql` **Not started**
 
 ### Phase 4: Configure backend for Azure (Status: In progress)
 

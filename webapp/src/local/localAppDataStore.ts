@@ -1,6 +1,5 @@
 import { createDefaultLocalAppData } from './defaultData'
 import { readJsonFromLocalStorage, writeJsonToLocalStorage } from './localStorageJson'
-import { createId } from './createId'
 import { Coachee, LocalAppData, Note, Session, SessionKind, WrittenReport } from './types'
 
 const storageKey = 'coachscribe.localAppData.v2'
@@ -35,11 +34,8 @@ export function saveLocalAppData(data: LocalAppData) {
   writeJsonToLocalStorage(storageKey, data)
 }
 
-export function createCoachee(data: LocalAppData, name: string): LocalAppData {
-  const trimmedName = name.trim()
-  if (!trimmedName) return data
-  const next: Coachee = { id: createId('coachee'), name: trimmedName, createdAtUnixMs: Date.now(), isArchived: false }
-  return { ...data, coachees: [next, ...data.coachees] }
+export function createCoachee(data: LocalAppData, coachee: Coachee): LocalAppData {
+  return { ...data, coachees: [coachee, ...data.coachees] }
 }
 
 export function updateCoacheeName(data: LocalAppData, coacheeId: string, name: string): LocalAppData {
@@ -64,27 +60,7 @@ export function deleteCoachee(data: LocalAppData, coacheeId: string): LocalAppDa
   return { ...data, coachees: remainingCoachees, sessions: remainingSessions, notes: remainingNotes, writtenReports: remainingWrittenReports }
 }
 
-export function createSession(
-  data: LocalAppData,
-  values: { coacheeId: string | null; title: string; kind: SessionKind; audioBlobId: string | null; uploadFileName: string | null }
-): { data: LocalAppData; sessionId: string } {
-  const title = values.title.trim()
-  if (!title) return { data, sessionId: '' }
-
-  const session: Session = {
-    id: createId('session'),
-    coacheeId: values.coacheeId,
-    title,
-    createdAtUnixMs: Date.now(),
-    kind: values.kind,
-    audioBlobId: values.audioBlobId,
-    uploadFileName: values.uploadFileName,
-    transcript: null,
-    summary: null,
-    transcriptionStatus: 'idle',
-    transcriptionError: null,
-  }
-
+export function createSession(data: LocalAppData, session: Session): { data: LocalAppData; sessionId: string } {
   return { data: { ...data, sessions: [session, ...data.sessions] }, sessionId: session.id }
 }
 
@@ -132,12 +108,8 @@ export function listNotesForSession(data: LocalAppData, sessionId: string): Note
   return data.notes.filter((n) => n.sessionId === sessionId).sort((a, b) => b.updatedAtUnixMs - a.updatedAtUnixMs)
 }
 
-export function createNote(data: LocalAppData, sessionId: string, text: string): LocalAppData {
-  const trimmedText = text.trim()
-  if (!trimmedText) return data
-  const now = Date.now()
-  const note: Note = { id: createId('note'), sessionId, text: trimmedText, createdAtUnixMs: now, updatedAtUnixMs: now }
-  return { ...data, notes: [note, ...data.notes] }
+export function createNote(data: LocalAppData, note: Note): { data: LocalAppData; noteId: string } {
+  return { data: { ...data, notes: [note, ...data.notes] }, noteId: note.id }
 }
 
 export function updateNote(data: LocalAppData, noteId: string, text: string): LocalAppData {

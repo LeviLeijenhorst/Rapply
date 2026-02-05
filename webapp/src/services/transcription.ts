@@ -89,9 +89,6 @@ export async function transcribeAudio(params: {
   if (!transcript.trim()) {
     throw new Error('No transcript returned')
   }
-  if (!summary.trim()) {
-    throw new Error('No summary returned')
-  }
 
   return { transcript, summary }
 }
