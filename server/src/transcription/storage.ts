@@ -21,6 +21,13 @@ export async function deleteEncryptedUpload(params: { blobName: string }): Promi
   await blob.deleteIfExists()
 }
 
+export async function getEncryptedUploadSize(params: { blobName: string }): Promise<number> {
+  const container = getTranscriptionUploadsContainerClient()
+  const blob = container.getBlobClient(params.blobName.replace(/^\/+/, ""))
+  const properties = await blob.getProperties()
+  return typeof properties.contentLength === "number" ? properties.contentLength : 0
+}
+
 export async function deleteEncryptedUploadsByPrefix(params: { prefix: string }): Promise<void> {
   const container = getTranscriptionUploadsContainerClient()
   const prefix = params.prefix.replace(/^\/+/, "")

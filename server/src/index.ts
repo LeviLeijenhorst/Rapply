@@ -11,7 +11,7 @@ import { ensureBillingUser, readBillingStatus } from "./billing/store"
 import { derivePlanStateFromRevenueCatSubscriber, derivePurchasedSecondsFromRevenueCatSubscriber, fetchRevenueCatSubscriber } from "./billing/revenuecat"
 import { randomBase64Url } from "./transcription/random"
 import { createUploadToken, consumeUploadToken, chargeSecondsIdempotent, refundSecondsIdempotent } from "./transcription/store"
-import { createEncryptedUploadUrl, deleteEncryptedUpload, deleteEncryptedUploadsByPrefix, fetchEncryptedUploadStream } from "./transcription/storage"
+import { createEncryptedUploadUrl, deleteEncryptedUpload, deleteEncryptedUploadsByPrefix, fetchEncryptedUploadStream, getEncryptedUploadSize } from "./transcription/storage"
 import { computeAudioDurationSecondsFromEncryptedUpload } from "./transcription/duration"
 import { runVoxtralTranscriptionFromEncryptedUpload } from "./transcription/voxtral"
 import { generateSummaryWithMistral } from "./summary/mistralSummary"
@@ -625,6 +625,7 @@ app.post(
 
       const durationStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
       const durationSeconds = await computeAudioDurationSecondsFromEncryptedUpload({ encryptedStream: durationStream, keyBase64, mimeType })
+      const uploadBytes = await getEncryptedUploadSize({ blobName: uploadPath })
       const secondsToCharge = Math.max(1, Math.ceil(durationSeconds))
 
       const subscriber = await fetchRevenueCatSubscriber(user.userId)
@@ -642,9 +643,9 @@ app.post(
       const apiKey = env.mistralApiKey
       const azureSpeechKey = env.azureSpeechKey
       const azureSpeechRegion = env.azureSpeechRegion
-      const mustUseMistral = durationSeconds >= 600
+      const mustUseMistral = durationSeconds >= 600 || uploadBytes >= 10 * 1024 * 1024
       transcriptionProvider = apiKey ? "mistral" : azureSpeechKey && azureSpeechRegion ? "azure-speech" : "none"
-      console.log("[transcription] start", { operationId, durationSeconds, mimeType, provider: transcriptionProvider })
+      console.log("[transcription] start", { operationId, durationSeconds, uploadBytes, mimeType, provider: transcriptionProvider })
 
       if (mustUseMistral && !apiKey) {
         throw new Error("Long audio requires Mistral transcription. Configure MISTRAL_API_KEY.")
