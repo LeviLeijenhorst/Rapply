@@ -642,8 +642,13 @@ app.post(
       const apiKey = env.mistralApiKey
       const azureSpeechKey = env.azureSpeechKey
       const azureSpeechRegion = env.azureSpeechRegion
+      const mustUseMistral = durationSeconds >= 600
       transcriptionProvider = apiKey ? "mistral" : azureSpeechKey && azureSpeechRegion ? "azure-speech" : "none"
       console.log("[transcription] start", { operationId, durationSeconds, mimeType, provider: transcriptionProvider })
+
+      if (mustUseMistral && !apiKey) {
+        throw new Error("Long audio requires Mistral transcription. Configure MISTRAL_API_KEY.")
+      }
 
       let transcript = ""
       if (apiKey) {
