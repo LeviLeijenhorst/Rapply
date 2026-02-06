@@ -5,6 +5,7 @@ import { Text } from '../Text'
 import { colors } from '../../theme/colors'
 import { StandaardVerslagIcon } from '../icons/StandaardVerslagIcon'
 import { CopyIcon } from '../icons/CopyIcon'
+import { CopiedIcon } from '../icons/CopiedIcon'
 import { ShareTranscriptIcon } from '../icons/ShareTranscriptIcon'
 
 type Props = {
@@ -118,12 +119,12 @@ export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary
               if (typeof navigator === 'undefined') return
               navigator.clipboard?.writeText(reportCopyText).then(() => {
                 setShowCopyNotification(true)
-                setTimeout(() => setShowCopyNotification(false), 2000)
+                setTimeout(() => setShowCopyNotification(false), 3000)
               })
             }}
             style={({ hovered }) => [styles.actionButton, hovered ? styles.actionButtonHovered : undefined]}
           >
-            <CopyIcon color="#8E8480" size={18} />
+            {showCopyNotification ? <CopiedIcon size={18} /> : <CopyIcon color="#8E8480" size={18} />}
           </Pressable>
           <Pressable
             onPress={async () => {
@@ -145,11 +146,6 @@ export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary
           >
             <ShareTranscriptIcon color="#8E8480" size={18} />
           </Pressable>
-          {showCopyNotification ? (
-            <View style={styles.copyNotification}>
-              <Text style={styles.copyNotificationText}>Gekopieerd</Text>
-            </View>
-          ) : null}
         </View>
       </View>
     </View>

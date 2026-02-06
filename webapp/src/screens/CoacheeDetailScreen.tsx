@@ -69,7 +69,9 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
   const notesSession = useMemo(() => {
     return data.sessions.find((item) => item.coacheeId === coacheeId && item.kind === 'notes') ?? null
   }, [coacheeId, data.sessions])
-  const notesDateTimeLabel = notesSession ? `${notesSession.dateLabel}, ${notesSession.timeLabel}` : ''
+  const notesDateTimeLabel = notesSession
+    ? `${new Date(notesSession.createdAtUnixMs).toLocaleDateString('nl-NL', { month: 'short', day: 'numeric', year: 'numeric' })}, ${new Date(notesSession.createdAtUnixMs).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`
+    : ''
 
   const isMenuVisible = !!menuSessionId && !!menuAnchorPoint
 
@@ -144,7 +146,6 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
     const previousCount = previousMessageCountRef.current
     const nextCount = chatMessages.length
     if (nextCount > previousCount) {
-      shouldAutoScrollRef.current = true
       scrollChatToEnd()
     }
     previousMessageCountRef.current = nextCount
@@ -152,7 +153,6 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
 
   useEffect(() => {
     if (!isChatSending) return
-    shouldAutoScrollRef.current = true
     scrollChatToEnd()
   }, [isChatSending])
 

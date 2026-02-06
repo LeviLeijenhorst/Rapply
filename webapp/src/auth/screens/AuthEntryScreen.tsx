@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Image, Pressable, StyleSheet, View } from 'react-native'
 
 import { AuthCard } from '../components/AuthCard'
-import { CoachscribeLogo } from '../../components/CoachscribeLogo'
+import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon'
 import { Text } from '../../components/Text'
 import { colors } from '../../theme/colors'
 
@@ -12,21 +12,34 @@ type Props = {
 }
 
 export function AuthEntryScreen({ mode, onStartLogin }: Props) {
-  const [hasAgreed, setHasAgreed] = useState(false)
+  const [hasAgreedToPolicy, setHasAgreedToPolicy] = useState(false)
   const illustrationSource =
     mode === 'registreren'
       ? require('../../../assets/authhuman_2.png')
       : require('../../../assets/authhuman_1.png')
 
+  async function startLogin() {
+    try {
+      onStartLogin?.()
+      const { signInWithEntra } = await import('../entraAuth')
+      await signInWithEntra()
+    } catch (error) {
+      console.error('Entra sign in failed:', error)
+      alert('Inloggen mislukt. Probeer het opnieuw.')
+    }
+  }
+
+  const isActionDisabled = !hasAgreedToPolicy
+
   return (
     <AuthCard>
-      {/* Split panels */}
+      {/* Authentication panels */}
       <View style={styles.panelsRow}>
-        {/* Left panel (magenta) */}
+        {/* Left panel */}
         <View style={styles.leftPanel}>
-          {/* Slogan */}
-          <Text isBold style={styles.sloganText}>
-            Betere coaching begint bij volledige aandacht
+          {/* Welcome title */}
+          <Text isBold style={styles.titleText}>
+            Welkom
           </Text>
           {/* Illustration */}
           <View style={styles.illustrationContainer}>
@@ -34,32 +47,27 @@ export function AuthEntryScreen({ mode, onStartLogin }: Props) {
           </View>
         </View>
 
-        {/* Right panel (white) */}
+        {/* Right panel */}
         <View style={styles.rightPanel}>
           <View style={styles.rightPanelContent}>
-            {/* CoachScribe logo */}
-            <CoachscribeLogo />
             {/* Continue button */}
             <Pressable
-              onPress={async () => {
-                try {
-                  onStartLogin?.()
-                  const { signInWithEntra } = await import('../entraAuth')
-                  await signInWithEntra()
-                } catch (error) {
-                  console.error('Entra sign in failed:', error)
-                  alert('Inloggen mislukt. Probeer het opnieuw.')
-                }
-              }}
-              style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined]}
+              onPress={isActionDisabled ? undefined : startLogin}
+              style={({ hovered }) => [
+                styles.actionButton,
+                hovered ? styles.actionButtonHovered : undefined,
+                isActionDisabled ? styles.actionButtonDisabled : undefined,
+              ]}
             >
-              <Text isBold style={styles.primaryButtonText}>
+              <Text isBold style={styles.actionButtonText}>
                 Doorgaan
               </Text>
             </Pressable>
             {/* Agreement checkbox */}
-            <Pressable style={styles.checkboxRow} onPress={() => setHasAgreed(!hasAgreed)}>
-              <View style={[styles.checkbox, hasAgreed ? styles.checkboxChecked : undefined]} />
+            <Pressable style={styles.checkboxRow} onPress={() => setHasAgreedToPolicy((value) => !value)}>
+              <View style={[styles.checkbox, hasAgreedToPolicy ? styles.checkboxChecked : undefined]}>
+                {hasAgreedToPolicy ? <CheckmarkIcon color={colors.selected} width={14} height={12} /> : null}
+              </View>
               <Text style={styles.checkboxText}>
                 Ik ga akkoord met de privacy policy en gebruikersovereenkomst.
               </Text>
@@ -75,23 +83,23 @@ const styles = StyleSheet.create({
   panelsRow: {
     width: '100%',
     flexDirection: 'row',
-    height: '100%',
+    minHeight: 560,
   },
   leftPanel: {
     flexGrow: 1,
     flexShrink: 1,
     flexBasis: 0,
     minWidth: 0,
-    backgroundColor: colors.selected,
+    backgroundColor: '#FFFFFF',
     padding: 48,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 24,
   },
-  sloganText: {
-    fontSize: 26,
-    lineHeight: 34,
-    color: '#FFFFFF',
+  titleText: {
+    fontSize: 40,
+    lineHeight: 44,
+    color: colors.selected,
     textAlign: 'center',
   },
   illustrationContainer: {
@@ -100,20 +108,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   illustrationImage: {
-    width: 300,
-    height: 240,
+    width: 360,
+    height: 300,
   },
   rightPanel: {
     flexGrow: 1,
     flexShrink: 1,
     flexBasis: 0,
     minWidth: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.selected,
     padding: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderLeftWidth: 1,
-    borderLeftColor: colors.border,
   },
   rightPanelContent: {
     width: '100%',
@@ -121,48 +127,53 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 24,
   },
-  primaryButton: {
-    width: 420,
+  actionButton: {
+    width: 400,
     maxWidth: '100%',
-    height: 52,
+    height: 48,
     borderRadius: 6,
-    backgroundColor: colors.selected,
+    backgroundColor: '#FFFFFF',
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primaryButtonHovered: {
-    backgroundColor: 'rgba(123,14,100,0.92)',
+  actionButtonHovered: {
+    backgroundColor: '#F6E6F0',
   },
-  primaryButtonText: {
+  actionButtonDisabled: {
+    opacity: 0.5,
+  },
+  actionButtonText: {
     fontSize: 14,
     lineHeight: 18,
-    color: '#FFFFFF',
+    color: colors.selected,
   },
   checkboxRow: {
-    width: 420,
+    width: 400,
     maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
   checkbox: {
-    width: 18,
-    height: 18,
+    width: 22,
+    height: 22,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checkboxChecked: {
-    backgroundColor: colors.selected,
-    borderColor: colors.selected,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
   },
   checkboxText: {
     flex: 1,
     fontSize: 14,
     lineHeight: 20,
-    color: '#1A1A1A',
+    color: '#FFFFFF',
   },
 })
 

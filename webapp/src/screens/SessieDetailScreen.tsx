@@ -7,6 +7,8 @@ import { AanpassenIcon } from '../components/icons/AanpassenIcon'
 import { ShareTranscriptIcon } from '../components/icons/ShareTranscriptIcon'
 import { CoacheeAvatarIcon } from '../components/icons/CoacheeAvatarIcon'
 import { CalendarCircleIcon } from '../components/icons/CalendarCircleIcon'
+import { FullScreenOpenIcon } from '../components/icons/FullScreenOpenIcon'
+import { FullScreenCloseIcon } from '../components/icons/FullScreenCloseIcon'
 import { Text } from '../components/Text'
 import { colors } from '../theme/colors'
 import { ConversationTabs, ConversationTabKey } from '../components/sessionDetail/ConversationTabs'
@@ -36,11 +38,22 @@ type Props = {
   dateLabel: string
   onBack: () => void
   onOpenNewCoachee: () => void
+  onChangeCoachee: (coacheeId: string | null) => void
   newlyCreatedCoacheeName?: string | null
   onNewlyCreatedCoacheeHandled?: () => void
 }
 
-export function SessieDetailScreen({ sessionId, title, coacheeName, dateLabel, onBack, onOpenNewCoachee, newlyCreatedCoacheeName, onNewlyCreatedCoacheeHandled }: Props) {
+export function SessieDetailScreen({
+  sessionId,
+  title,
+  coacheeName,
+  dateLabel,
+  onBack,
+  onOpenNewCoachee,
+  onChangeCoachee,
+  newlyCreatedCoacheeName,
+  onNewlyCreatedCoacheeHandled,
+}: Props) {
   const { width } = useWindowDimensions()
   const isCompactLayout = width < 1100
   const isVerySmallLayout = width < 860
@@ -453,9 +466,7 @@ export function SessieDetailScreen({ sessionId, title, coacheeName, dateLabel, o
                         style={({ hovered }) => [styles.chatActionButton, hovered ? styles.chatActionButtonHovered : undefined]}
                       >
                         {/* Maximize chat */}
-                        <Text isBold style={styles.chatActionText}>
-                          Volledig scherm
-                        </Text>
+                        <FullScreenOpenIcon />
                       </Pressable>
                     </View>
                   ) : null}
@@ -559,6 +570,7 @@ export function SessieDetailScreen({ sessionId, title, coacheeName, dateLabel, o
               coacheeId: nextCoacheeId,
               title: values.sessionTitle,
             })
+            onChangeCoachee(nextCoacheeId)
             setEditableSessionTitle(values.sessionTitle)
             setEditableCoacheeName(values.coacheeName)
             setSelectedTemplateKey(values.templateKey)
@@ -780,9 +792,7 @@ export function SessieDetailScreen({ sessionId, title, coacheeName, dateLabel, o
                         style={({ hovered }) => [styles.chatActionButton, hovered ? styles.chatActionButtonHovered : undefined]}
                       >
                         {/* Maximize chat */}
-                        <Text isBold style={styles.chatActionText}>
-                          Volledig scherm
-                        </Text>
+                        <FullScreenOpenIcon />
                       </Pressable>
                     </View>
                   ) : null}
@@ -934,9 +944,7 @@ export function SessieDetailScreen({ sessionId, title, coacheeName, dateLabel, o
                     style={({ hovered }) => [styles.chatActionButton, hovered ? styles.chatActionButtonHovered : undefined]}
                   >
                     {/* Close full screen */}
-                    <Text isBold style={styles.chatActionText}>
-                      Sluiten
-                    </Text>
+                    <FullScreenCloseIcon />
                   </Pressable>
                 </View>
               </View>
@@ -988,6 +996,11 @@ export function SessieDetailScreen({ sessionId, title, coacheeName, dateLabel, o
                   <Pressable
                     key={name}
                     onPress={() => {
+                      const nextCoacheeId = isUnassignedCoacheeName(name)
+                        ? null
+                        : data.coachees.find((coachee) => coachee.name === name)?.id ?? session?.coacheeId ?? null
+                      updateSession(sessionId, { coacheeId: nextCoacheeId })
+                      onChangeCoachee(nextCoacheeId)
                       setEditableCoacheeName(name)
                       setIsCoacheeMenuOpen(false)
                     }}

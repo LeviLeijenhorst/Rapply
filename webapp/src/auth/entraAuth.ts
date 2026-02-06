@@ -53,7 +53,11 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 }
 
 function buildRedirectUri(): string {
-  if (typeof window === 'undefined') return 'http://localhost:8081'
+  const configuredBaseUrl = config.entra.redirectBaseUrl?.trim()
+  if (configuredBaseUrl) {
+    return `${configuredBaseUrl.replace(/\/$/, '')}/auth/callback`
+  }
+  if (typeof window === 'undefined') return 'http://localhost:8081/auth/callback'
   return `${window.location.origin}/auth/callback`
 }
 
@@ -65,7 +69,7 @@ type AccessTokenPayload = {
   exp?: number
 }
 
-export async function signInWithEntra(): Promise<void> {
+export async function signInWithEntra(values?: { screenHint?: 'signup' }): Promise<void> {
   const discovery = await fetchOpenIdConfiguration()
   const redirectUri = buildRedirectUri()
   const codeVerifier = generateCodeVerifier()
@@ -86,9 +90,16 @@ export async function signInWithEntra(): Promise<void> {
     code_challenge_method: 'S256',
     response_mode: 'query',
   })
+  if (values?.screenHint) {
+    params.set('screen_hint', values.screenHint)
+  }
 
   const authUrl = `${discovery.authorization_endpoint}?${params.toString()}`
   window.location.assign(authUrl)
+}
+
+export async function signUpWithEntra(): Promise<void> {
+  return signInWithEntra({ screenHint: 'signup' })
 }
 
 export async function handleAuthCallback(): Promise<EntraAuthResult> {
@@ -130,17 +141,30 @@ export async function handleAuthCallback(): Promise<EntraAuthResult> {
   localStorage.removeItem('entra_redirect_uri')
   localStorage.removeItem('entra_auth_start_time')
 
-  const tokenResponse = await fetch(`${config.api.baseUrl}/auth/exchange-code`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      code,
-      codeVerifier,
+  let tokenResponse: Response
+  const exchangeUrl = `${config.api.baseUrl}/auth/exchange-code`
+  try {
+    tokenResponse = await fetch(exchangeUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        code,
+        codeVerifier,
+        redirectUri,
+      }),
+    })
+  } catch (error) {
+    console.error('[auth/exchange-code] request failed', {
+      exchangeUrl,
       redirectUri,
-    }),
-  })
+      pageOrigin: typeof window !== 'undefined' ? window.location.origin : 'unknown',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+      errorMessage: error instanceof Error ? error.message : String(error),
+    })
+    throw new Error('Failed to reach the API server. Please check the API base URL and server status.')
+  }
 
   if (!tokenResponse.ok) {
     const errorText = await tokenResponse.text()

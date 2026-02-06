@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
 
 import { AnimatedDropdownPanel } from '../AnimatedDropdownPanel'
+import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { useBrowserAudioRecorder } from '../../hooks/useBrowserAudioRecorder'
 import { useLiveAudioWaveformBars } from '../../hooks/useLiveAudioWaveformBars'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
@@ -35,6 +36,7 @@ type Props = {
   onStartWrittenReport: () => void
   onOpenSession: (sessionId: string) => void
   onOpenNewCoachee: () => void
+  initialCoacheeId?: string | null
   newlyCreatedCoacheeId?: string | null
   onNewlyCreatedCoacheeHandled: () => void
 }
@@ -45,7 +47,16 @@ function formatTimeLabel(totalSeconds: number) {
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
-export function NewSessionModal({ visible, onClose, onStartWrittenReport, onOpenSession, onOpenNewCoachee, newlyCreatedCoacheeId, onNewlyCreatedCoacheeHandled }: Props) {
+export function NewSessionModal({
+  visible,
+  onClose,
+  onStartWrittenReport,
+  onOpenSession,
+  onOpenNewCoachee,
+  initialCoacheeId,
+  newlyCreatedCoacheeId,
+  onNewlyCreatedCoacheeHandled,
+}: Props) {
   const isReducedMotionEnabled = useReducedMotion()
   const { data, createSession, updateSession } = useLocalAppData()
   const recorder = useBrowserAudioRecorder()
@@ -61,6 +72,7 @@ export function NewSessionModal({ visible, onClose, onStartWrittenReport, onOpen
   const [selectedAudioFile, setSelectedAudioFile] = useState<File | null>(null)
   const [isUploadDragActive, setIsUploadDragActive] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
+  const [isCloseWarningVisible, setIsCloseWarningVisible] = useState(false)
   const sessionTitleInputRef = useRef<TextInput | null>(null)
   const uploadDropAreaRef = useRef<View | null>(null)
   const isUploadDragActiveRef = useRef(false)
@@ -94,6 +106,7 @@ export function NewSessionModal({ visible, onClose, onStartWrittenReport, onOpen
     setAudioPreviewUrl(null)
     setIsSavingAudio(false)
     setIsMinimized(false)
+    setIsCloseWarningVisible(false)
     setIsUploadDragActive(false)
     setCoacheeDropdownMaxHeight(null)
     setReportTypeDropdownMaxHeight(null)
@@ -123,6 +136,14 @@ export function NewSessionModal({ visible, onClose, onStartWrittenReport, onOpen
       }
     }
   }, [newlyCreatedCoacheeId, visible, activeCoachees, onNewlyCreatedCoacheeHandled])
+
+  useEffect(() => {
+    if (!visible) return
+    if (!initialCoacheeId) return
+    const coachee = activeCoachees.find((item) => item.id === initialCoacheeId)
+    if (!coachee) return
+    setSelectedCoacheeId(initialCoacheeId)
+  }, [activeCoachees, initialCoacheeId, visible])
 
   useEffect(() => {
     if (!isRendered) return
@@ -404,11 +425,7 @@ export function NewSessionModal({ visible, onClose, onStartWrittenReport, onOpen
   }
 
   function handleBackdropPress() {
-    if (step === 'recording') {
-      setIsMinimized(true)
-      return
-    }
-    handleClose()
+    setIsCloseWarningVisible(true)
   }
 
   async function createAndOpenSession(values: { kind: 'recording' | 'upload' }) {
@@ -514,9 +531,9 @@ export function NewSessionModal({ visible, onClose, onStartWrittenReport, onOpen
             {/* Recording waveform */}
             <View style={styles.minimizedWaveform}>
               {bars.map((index) => {
-                const rawHeight = liveWaveHeights[index] ?? 16
-                const isQuiet = rawHeight <= 12
-                const height = isQuiet ? 4 : Math.max(12, rawHeight * 0.65)
+                const rawHeight = liveWaveHeights[index] ?? 6
+                const normalizedHeight = Math.min(1, Math.max(0, (rawHeight - 6) / 194))
+                const height = 4 + normalizedHeight * 12
                 return <View key={index} style={[styles.minimizedWaveBar, { height }]} />
               })}
             </View>
@@ -936,7 +953,7 @@ export function NewSessionModal({ visible, onClose, onStartWrittenReport, onOpen
             ) : null}
             <View style={[styles.footerRightGroup, isUploadStep ? undefined : styles.footerRightGroupAlignEnd]}>
               <Pressable
-                onPress={handleClose}
+                onPress={() => setIsCloseWarningVisible(true)}
                 style={({ hovered, pressed }) => [
                   styles.footerButtonBase,
                   styles.footerButtonSecondary,
@@ -987,11 +1004,11 @@ export function NewSessionModal({ visible, onClose, onStartWrittenReport, onOpen
                   styles.footerButtonRight,
                   step === 'upload' && !selectedAudioFile ? styles.primaryButtonDisabled : undefined,
                   !selectedOption && step === 'select' ? styles.primaryButtonDisabled : undefined,
-                  step === 'recorded' && (!audioBlobId || !selectedCoachee || isSavingAudio) ? styles.primaryButtonDisabled : undefined,
+                  step === 'recorded' && isSavingAudio ? styles.primaryButtonDisabled : undefined,
                   hovered && (step === 'select' ? !!selectedOption : step === 'upload' ? !!selectedAudioFile : step === 'recorded' ? !!audioBlobId : false)
                     ? styles.footerButtonPrimaryHovered
                     : undefined,
-                  pressed && !(step === 'upload' && !selectedAudioFile) && !(!selectedOption && step === 'select') && !(step === 'recorded' && (!audioBlobId || !selectedCoachee || isSavingAudio))
+                  pressed && !(step === 'upload' && !selectedAudioFile) && !(!selectedOption && step === 'select') && !(step === 'recorded' && isSavingAudio)
                     ? styles.footerButtonPrimaryPressed
                     : undefined,
                 ]}
@@ -1005,6 +1022,56 @@ export function NewSessionModal({ visible, onClose, onStartWrittenReport, onOpen
           </View>
         ) : null}
       </Animated.View>
+
+      <AnimatedOverlayModal
+        visible={isCloseWarningVisible}
+        onClose={() => setIsCloseWarningVisible(false)}
+        contentContainerStyle={styles.closeWarningContainer}
+      >
+        {/* Close warning */}
+        <View style={styles.closeWarningContent}>
+          {/* Warning title */}
+          <Text isBold style={styles.closeWarningTitle}>
+            Weet je zeker dat je wil sluiten?
+          </Text>
+          {/* Warning text */}
+          <Text style={styles.closeWarningText}>
+            Als je sluit, gaat je huidige opname of invoer verloren.
+          </Text>
+          {/* Warning actions */}
+          <View style={styles.closeWarningActions}>
+            <Pressable
+              onPress={() => setIsCloseWarningVisible(false)}
+              style={({ hovered }) => [
+                styles.closeWarningButton,
+                styles.closeWarningButtonSecondary,
+                hovered ? styles.closeWarningButtonSecondaryHovered : undefined,
+              ]}
+            >
+              {/* Keep */}
+              <Text isBold style={styles.closeWarningButtonSecondaryText}>
+                Annuleren
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setIsCloseWarningVisible(false)
+                handleClose()
+              }}
+              style={({ hovered }) => [
+                styles.closeWarningButton,
+                styles.closeWarningButtonPrimary,
+                hovered ? styles.closeWarningButtonPrimaryHovered : undefined,
+              ]}
+            >
+              {/* Close */}
+              <Text isBold style={styles.closeWarningButtonPrimaryText}>
+                Sluiten
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </AnimatedOverlayModal>
     </View>
   )
 }
@@ -1354,6 +1421,60 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: colors.textStrong,
+  },
+  closeWarningContainer: {
+    width: 520,
+  },
+  closeWarningContent: {
+    padding: 24,
+    gap: 16,
+  },
+  closeWarningTitle: {
+    fontSize: 18,
+    lineHeight: 22,
+    color: colors.textStrong,
+  },
+  closeWarningText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.text,
+  },
+  closeWarningActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  closeWarningButton: {
+    height: 40,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeWarningButtonSecondary: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  closeWarningButtonSecondaryHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  closeWarningButtonSecondaryText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+  },
+  closeWarningButtonPrimary: {
+    backgroundColor: colors.selected,
+  },
+  closeWarningButtonPrimaryHovered: {
+    backgroundColor: '#A50058',
+  },
+  closeWarningButtonPrimaryText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#FFFFFF',
   },
   softCircle: {
     width: 72,

@@ -19,12 +19,7 @@ export function AuthCard({ children }: Props) {
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    flex: 1,
-    height: '100%',
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
+    borderRadius: 12,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,

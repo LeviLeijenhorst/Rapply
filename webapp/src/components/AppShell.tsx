@@ -6,6 +6,7 @@ import { AnimatedMainContent } from './AnimatedMainContent'
 import { Navbar } from './Navbar'
 import { Sidebar, SidebarItemKey } from './Sidebar'
 import { Text } from './Text'
+import { BreadcrumbBar } from './BreadcrumbBar'
 import { getCoacheeDisplayName } from '../utils/coachee'
 import { CoacheeDetailScreen } from '../screens/CoacheeDetailScreen'
 import { CoacheesScreen } from '../screens/CoacheesScreen'
@@ -58,7 +59,7 @@ function parseRouteFromPath(pathname: string): RouteState {
   if (parts[0] === 'templates') return { kind: 'templates' }
   if (parts[0] === 'geschreven-verslag') return { kind: 'geschrevenVerslag' }
   if (parts[0] === 'archief') return { kind: 'archief' }
-  return { kind: 'sessies' }
+  return { kind: 'coachees' }
 }
 
 function buildPathFromRoute(route: RouteState): string {
@@ -78,12 +79,15 @@ type Props = {
 export function AppShell({ onLogout }: Props) {
   const { width } = useWindowDimensions()
   const isTooSmall = width < 420
+  const isSidebarCompact = width < 700
   const { data, createCoachee } = useLocalAppData()
 
-  const [selectedSidebarItemKey, setSelectedSidebarItemKey] = useState<SidebarItemKey>('sessies')
+  const [selectedSidebarItemKey, setSelectedSidebarItemKey] = useState<SidebarItemKey>('coachees')
   const [selectedSessieId, setSelectedSessieId] = useState<string | null>(null)
   const [selectedCoacheeId, setSelectedCoacheeId] = useState<string | null>(null)
+  const [sessionOriginRoute, setSessionOriginRoute] = useState<RouteState | null>(null)
   const [isNewSessionModalOpen, setIsNewSessionModalOpen] = useState(false)
+  const [newSessionCoacheeId, setNewSessionCoacheeId] = useState<string | null>(null)
   const [isGeschrevenVerslagOpen, setIsGeschrevenVerslagOpen] = useState(false)
   const [overlayScreenKey, setOverlayScreenKey] = useState<OverlayScreenKey | null>(null)
 
@@ -104,6 +108,7 @@ export function AppShell({ onLogout }: Props) {
         setIsGeschrevenVerslagOpen(false)
         setSelectedSessieId(null)
         setSelectedCoacheeId(null)
+        setSessionOriginRoute(null)
         return
       }
       if (route.kind === 'geschrevenVerslag') {
@@ -112,6 +117,7 @@ export function AppShell({ onLogout }: Props) {
         setSelectedSidebarItemKey('sessies')
         setSelectedSessieId(null)
         setSelectedCoacheeId(null)
+        setSessionOriginRoute(null)
         return
       }
 
@@ -122,31 +128,36 @@ export function AppShell({ onLogout }: Props) {
         setSelectedSidebarItemKey('coachees')
         setSelectedCoacheeId(null)
         setSelectedSessieId(null)
+        setSessionOriginRoute(null)
         return
       }
       if (route.kind === 'coachee') {
         setSelectedSidebarItemKey('coachees')
         setSelectedCoacheeId(route.coacheeId)
         setSelectedSessieId(null)
+        setSessionOriginRoute(null)
         return
       }
       if (route.kind === 'templates') {
         setSelectedSidebarItemKey('templates')
         setSelectedCoacheeId(null)
         setSelectedSessieId(null)
+        setSessionOriginRoute(null)
         return
       }
       if (route.kind === 'sessie') {
         setSelectedSidebarItemKey('sessies')
         setSelectedSessieId(route.sessieId)
         setSelectedCoacheeId(null)
+        setSessionOriginRoute(null)
         return
       }
       setSelectedSidebarItemKey('sessies')
       setSelectedSessieId(null)
       setSelectedCoacheeId(null)
+      setSessionOriginRoute(null)
     },
-    [setOverlayScreenKey, setIsGeschrevenVerslagOpen, setSelectedCoacheeId, setSelectedSessieId, setSelectedSidebarItemKey],
+    [setOverlayScreenKey, setIsGeschrevenVerslagOpen, setSelectedCoacheeId, setSelectedSessieId, setSelectedSidebarItemKey, setSessionOriginRoute],
   )
 
   const navigateTo = useCallback(
@@ -182,6 +193,11 @@ export function AppShell({ onLogout }: Props) {
       window.history.back()
       return
     }
+    if (sessionOriginRoute && selectedSessieId) {
+      navigateTo(sessionOriginRoute)
+      setSessionOriginRoute(null)
+      return
+    }
     if (selectedSidebarItemKey === 'coachees' && selectedCoacheeId) {
       navigateTo({ kind: 'coachees' })
       return
@@ -191,7 +207,7 @@ export function AppShell({ onLogout }: Props) {
       return
     }
     navigateTo({ kind: 'sessies' })
-  }, [navigateTo, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
+  }, [navigateTo, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey, sessionOriginRoute, setSessionOriginRoute])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -199,8 +215,14 @@ export function AppShell({ onLogout }: Props) {
       const route = parseRouteFromPath(window.location.pathname)
       applyRoute(route)
     }
-    if (!window.location.pathname || window.location.pathname === '/' || window.location.pathname === '/inloggen') {
-      const nextPath = buildPathFromRoute({ kind: 'sessies' })
+    if (
+      !window.location.pathname ||
+      window.location.pathname === '/' ||
+      window.location.pathname === '/inloggen' ||
+      window.location.pathname === '/sessies' ||
+      window.location.pathname === '/sessies/'
+    ) {
+      const nextPath = buildPathFromRoute({ kind: 'coachees' })
       window.history.replaceState({ path: nextPath }, '', nextPath)
     }
     handlePopState()
@@ -212,15 +234,15 @@ export function AppShell({ onLogout }: Props) {
     ? overlayScreenKey
     : isGeschrevenVerslagOpen
       ? 'geschreven-verslag'
-      : selectedSidebarItemKey === 'sessies'
-        ? selectedSessieId
-          ? `sessie-${selectedSessieId}`
-          : 'sessies'
-        : selectedSidebarItemKey === 'coachees'
-          ? selectedCoacheeId
-            ? `coachee-${selectedCoacheeId}`
-            : 'coachees'
-          : selectedSidebarItemKey
+      : selectedSessieId
+        ? `sessie-${selectedSessieId}`
+        : selectedSidebarItemKey === 'sessies'
+          ? 'sessies'
+          : selectedSidebarItemKey === 'coachees'
+            ? selectedCoacheeId
+              ? `coachee-${selectedCoacheeId}`
+              : 'coachees'
+            : selectedSidebarItemKey
 
   const [newlyCreatedCoacheeId, setNewlyCreatedCoacheeId] = useState<string | null>(null)
   const [newlyCreatedCoacheeName, setNewlyCreatedCoacheeName] = useState<string | null>(null)
@@ -228,6 +250,30 @@ export function AppShell({ onLogout }: Props) {
   const openNewCoacheeModal = useCallback(() => {
     setIsCoacheeModalOpen(true)
   }, [])
+
+  const openNewSessionModal = useCallback((coacheeId: string | null) => {
+    setNewSessionCoacheeId(coacheeId)
+    setIsNewSessionModalOpen(true)
+  }, [])
+
+  const openSessionFromCoachee = useCallback(
+    (sessionId: string, coacheeId: string) => {
+      const nextRoute: RouteState = { kind: 'sessie', sessieId: sessionId }
+      if (typeof window !== 'undefined') {
+        const nextPath = buildPathFromRoute(nextRoute)
+        if (window.location.pathname !== nextPath) {
+          window.history.pushState({ path: nextPath }, '', nextPath)
+        }
+      }
+      setOverlayScreenKey(null)
+      setIsGeschrevenVerslagOpen(false)
+      setSessionOriginRoute({ kind: 'coachee', coacheeId })
+      setSelectedSessieId(sessionId)
+      setSelectedSidebarItemKey('coachees')
+      setSelectedCoacheeId(coacheeId)
+    },
+    [setIsGeschrevenVerslagOpen, setOverlayScreenKey, setSelectedCoacheeId, setSelectedSessieId, setSelectedSidebarItemKey, setSessionOriginRoute],
+  )
 
   useEffect(() => {
     if (newlyCreatedCoacheeId) {
@@ -241,13 +287,43 @@ export function AppShell({ onLogout }: Props) {
   const currentRoute = useMemo<RouteState>(() => {
     if (overlayScreenKey === 'archief') return { kind: 'archief' }
     if (isGeschrevenVerslagOpen) return { kind: 'geschrevenVerslag' }
+    if (selectedSessieId) return { kind: 'sessie', sessieId: selectedSessieId }
     if (selectedSidebarItemKey === 'coachees') {
       return selectedCoacheeId ? { kind: 'coachee', coacheeId: selectedCoacheeId } : { kind: 'coachees' }
     }
     if (selectedSidebarItemKey === 'templates') return { kind: 'templates' }
-    if (selectedSessieId) return { kind: 'sessie', sessieId: selectedSessieId }
     return { kind: 'sessies' }
   }, [isGeschrevenVerslagOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
+
+  const breadcrumbItems = useMemo(() => {
+    if (selectedSessieId) {
+      const session = data.sessions.find((item) => item.id === selectedSessieId)
+      if (!session) return []
+      const sessionTitle = session.title ?? 'Sessie'
+      const coacheeName = getCoacheeDisplayName(data.coachees, session.coacheeId)
+      if (sessionOriginRoute?.kind === 'coachee' && session.coacheeId) {
+        return [
+          { label: 'Coachees', onPress: () => navigateTo({ kind: 'coachees' }) },
+          { label: coacheeName, onPress: () => navigateTo({ kind: 'coachee', coacheeId: sessionOriginRoute.coacheeId }) },
+          { label: sessionTitle, onPress: () => navigateTo({ kind: 'sessie', sessieId: selectedSessieId }) },
+        ]
+      }
+      return [
+        { label: 'Sessies', onPress: () => navigateTo({ kind: 'sessies' }) },
+        { label: sessionTitle, onPress: () => navigateTo({ kind: 'sessie', sessieId: selectedSessieId }) },
+      ]
+    }
+    if (selectedSidebarItemKey === 'coachees' && selectedCoacheeId) {
+      const coacheeName = data.coachees.find((item) => item.id === selectedCoacheeId)?.name ?? 'Coachee'
+      return [
+        { label: 'Coachees', onPress: () => navigateTo({ kind: 'coachees' }) },
+        { label: coacheeName, onPress: () => navigateTo({ kind: 'coachee', coacheeId: selectedCoacheeId }) },
+      ]
+    }
+    return []
+  }, [data.coachees, data.sessions, navigateTo, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey, sessionOriginRoute])
+
+  const hasBreadcrumbs = breadcrumbItems.length >= 2
 
   function renderMainContent() {
     if (overlayScreenKey === 'archief') {
@@ -274,6 +350,42 @@ export function AppShell({ onLogout }: Props) {
       )
     }
 
+    if (selectedSessieId) {
+      const selectedSessie = data.sessions.find((item) => item.id === selectedSessieId)
+      if (!selectedSessie) {
+        return (
+          <EmptyPageMessage
+            message="Deze sessie bestaat niet meer."
+            onGoHome={() => navigateTo({ kind: 'sessies' })}
+          />
+        )
+      }
+      const sessieTitle = selectedSessie.title ?? 'Sessie'
+      const coacheeName = getCoacheeDisplayName(data.coachees, selectedSessie.coacheeId)
+      const dateLabel = new Date(selectedSessie.createdAtUnixMs).toLocaleDateString('nl-NL')
+      return (
+        <SessieDetailScreen
+          sessionId={selectedSessieId}
+          title={sessieTitle}
+          coacheeName={coacheeName}
+          dateLabel={dateLabel}
+          onBack={goBack}
+          onOpenNewCoachee={openNewCoacheeModal}
+            onChangeCoachee={(nextCoacheeId) => {
+              if (!nextCoacheeId) {
+                setSelectedSidebarItemKey('sessies')
+                setSessionOriginRoute(null)
+              }
+            }}
+          newlyCreatedCoacheeName={newlyCreatedCoacheeName}
+          onNewlyCreatedCoacheeHandled={() => {
+            setNewlyCreatedCoacheeId(null)
+            setNewlyCreatedCoacheeName(null)
+          }}
+        />
+      )
+    }
+
     if (selectedSidebarItemKey === 'coachees') {
       if (selectedCoacheeId) {
         const selectedCoachee = data.coachees.find((c) => c.id === selectedCoacheeId)
@@ -290,9 +402,9 @@ export function AppShell({ onLogout }: Props) {
             coacheeId={selectedCoacheeId}
             onBack={goBack}
             onSelectSession={(sessionId) => {
-              navigateTo({ kind: 'sessie', sessieId: sessionId })
+              openSessionFromCoachee(sessionId, selectedCoacheeId)
             }}
-            onPressCreateSession={() => setIsNewSessionModalOpen(true)}
+            onPressCreateSession={() => openNewSessionModal(selectedCoacheeId)}
           />
         )
       }
@@ -307,41 +419,12 @@ export function AppShell({ onLogout }: Props) {
     }
 
     if (selectedSidebarItemKey === 'sessies') {
-      if (selectedSessieId) {
-        const selectedSessie = data.sessions.find((item) => item.id === selectedSessieId)
-        if (!selectedSessie) {
-          return (
-            <EmptyPageMessage
-              message="Deze sessie bestaat niet meer."
-              onGoHome={() => navigateTo({ kind: 'sessies' })}
-            />
-          )
-        }
-        const sessieTitle = selectedSessie.title ?? 'Sessie'
-        const coacheeName = getCoacheeDisplayName(data.coachees, selectedSessie.coacheeId)
-        const dateLabel = new Date(selectedSessie.createdAtUnixMs).toLocaleDateString('nl-NL')
-        return (
-          <SessieDetailScreen
-            sessionId={selectedSessieId}
-            title={sessieTitle}
-            coacheeName={coacheeName}
-            dateLabel={dateLabel}
-            onBack={goBack}
-            onOpenNewCoachee={openNewCoacheeModal}
-            newlyCreatedCoacheeName={newlyCreatedCoacheeName}
-            onNewlyCreatedCoacheeHandled={() => {
-              setNewlyCreatedCoacheeId(null)
-              setNewlyCreatedCoacheeName(null)
-            }}
-          />
-        )
-      }
       return (
         <SessiesScreen
           onSelectSessie={(sessieId) => {
             navigateTo({ kind: 'sessie', sessieId })
           }}
-          onPressCreateSession={() => setIsNewSessionModalOpen(true)}
+          onPressCreateSession={() => openNewSessionModal(null)}
         />
       )
     }
@@ -363,6 +446,12 @@ export function AppShell({ onLogout }: Props) {
           setSettingsMenuAnchorPoint(null)
         }}
       />
+      {hasBreadcrumbs ? (
+        <View style={[styles.breadcrumbContainer, isSidebarCompact ? styles.breadcrumbContainerCompact : undefined]}>
+          {/* Breadcrumb bar */}
+          <BreadcrumbBar items={breadcrumbItems} />
+        </View>
+      ) : null}
       {isTooSmall ? (
         <View style={styles.tooSmallContainer}>
           <Text style={styles.tooSmallText}>Deze webapp is niet ontworpen voor apparaten smaller dan 420px.</Text>
@@ -385,7 +474,7 @@ export function AppShell({ onLogout }: Props) {
                 setIsHelpMenuOpen(false)
                 setIsSettingsMenuOpen(false)
               }}
-              onPressCreateSession={() => setIsNewSessionModalOpen(true)}
+              onPressCreateSession={() => openNewSessionModal(null)}
               onOpenHelpMenu={(anchorPoint) => {
                 setHelpMenuAnchorPoint(anchorPoint)
                 setIsHelpMenuOpen(true)
@@ -398,7 +487,7 @@ export function AppShell({ onLogout }: Props) {
               }}
             />
             {/* Main content */}
-            <View style={styles.mainContent}>
+            <View style={[styles.mainContent, hasBreadcrumbs ? styles.mainContentWithBreadcrumbs : undefined]}>
               <AnimatedMainContent contentKey={mainContentKey}>{renderMainContent()}</AnimatedMainContent>
             </View>
           </View>
@@ -458,20 +547,25 @@ export function AppShell({ onLogout }: Props) {
 
           <NewSessionModal
             visible={isNewSessionModalOpen}
+            initialCoacheeId={newSessionCoacheeId}
             onClose={() => {
               setIsNewSessionModalOpen(false)
               setNewlyCreatedCoacheeId(null)
+              setNewSessionCoacheeId(null)
             }}
             onOpenNewCoachee={openNewCoacheeModal}
             newlyCreatedCoacheeId={newlyCreatedCoacheeId}
             onNewlyCreatedCoacheeHandled={() => setNewlyCreatedCoacheeId(null)}
             onStartWrittenReport={() => {
               setIsNewSessionModalOpen(false)
+              setNewSessionCoacheeId(null)
               setPreviousRoute(currentRoute)
               navigateTo({ kind: 'geschrevenVerslag' })
             }}
             onOpenSession={(sessionId) => {
               setIsNewSessionModalOpen(false)
+              setNewSessionCoacheeId(null)
+              setSessionOriginRoute(null)
               navigateTo({ kind: 'sessie', sessieId: sessionId })
             }}
           />
@@ -519,6 +613,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.pageBackground,
     ...( { height: '100vh', overflow: 'hidden' } as any ),
   },
+  breadcrumbContainer: {
+    height: 40,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    position: 'absolute',
+    top: 80,
+    ...( { left: 264, right: 24 } as any ),
+    zIndex: 2,
+  },
+  breadcrumbContainerCompact: {
+    ...( { left: 96, right: 12 } as any ),
+  },
   contentRow: {
     flex: 1,
     flexDirection: 'row',
@@ -528,6 +634,9 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     ...( { overflow: 'auto' } as any ),
+  },
+  mainContentWithBreadcrumbs: {
+    paddingTop: 48,
   },
   mainContentText: {
     fontSize: 16,

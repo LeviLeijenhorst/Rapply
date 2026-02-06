@@ -46,40 +46,42 @@ export function useLiveAudioWaveformBars({ mediaStream, barCount, isActive }: Va
     const binCount = analyser.frequencyBinCount
     const frequencyData = new Uint8Array(binCount)
 
-      const minHeight = 8
-      const maxHeight = 240
-      const targetFpsMs = 33
-      const smoothing = 0.45
+    const minimumHeight = 6
+    const maximumHeight = 220
+    const targetFrameMs = 33
+    const smoothing = 0.45
+    const gain = 3.6
 
-      const tick = () => {
-        animationFrameRef.current = window.requestAnimationFrame(tick)
-        const now = performance.now()
-        if (now - lastUpdateMsRef.current < targetFpsMs) return
-        lastUpdateMsRef.current = now
+    const tick = () => {
+      animationFrameRef.current = window.requestAnimationFrame(tick)
+      const now = performance.now()
+      if (now - lastUpdateMsRef.current < targetFrameMs) return
+      lastUpdateMsRef.current = now
 
-        analyser.getByteFrequencyData(frequencyData)
+      analyser.getByteFrequencyData(frequencyData)
 
-        const nextBars: number[] = []
-        const previousBars = previousBarsRef.current
-        const binsPerBar = Math.max(1, Math.floor(binCount / stableBarCount))
-        const centerIndex = (stableBarCount - 1) / 2
-        const activeRadius = Math.max(1, Math.floor(stableBarCount * 0.35))
+      const nextBars: number[] = []
+      const previousBars = previousBarsRef.current
+      const binsPerBar = Math.max(1, Math.floor(binCount / stableBarCount))
+      const centerIndex = (stableBarCount - 1) / 2
+      const activeRadius = Math.max(1, Math.floor(stableBarCount * 0.35))
 
-        for (let index = 0; index < stableBarCount; index++) {
-          const start = index * binsPerBar
-          const end = Math.min(binCount, start + binsPerBar)
-          let sum = 0
-          for (let i = start; i < end; i++) sum += frequencyData[i] ?? 0
-          const average = sum / Math.max(1, end - start)
-          const normalized = clamp(average / 255, 0, 1)
-          const distanceFromCenter = Math.abs(index - centerIndex)
-          const centerWeight = clamp(1 - distanceFromCenter / activeRadius, 0, 1)
-          const boosted = clamp(normalized * 4.5, 0, 1)
-          const height = minHeight + boosted * centerWeight * (maxHeight - minHeight)
-          const previous = previousBars[index] ?? minHeight
-          const smoothed = previous * smoothing + height * (1 - smoothing)
-          nextBars.push(smoothed)
-        }
+      for (let index = 0; index < stableBarCount; index++) {
+        const start = index * binsPerBar
+        const end = Math.min(binCount, start + binsPerBar)
+        let sum = 0
+        for (let i = start; i < end; i++) sum += frequencyData[i] ?? 0
+        const average = sum / Math.max(1, end - start)
+        const normalized = clamp(average / 255, 0, 1)
+        const eased = Math.pow(normalized, 1.4)
+        const distanceFromCenter = Math.abs(index - centerIndex)
+        const centerWeight = clamp(1 - distanceFromCenter / activeRadius, 0, 1)
+        const boosted = clamp(eased * gain, 0, 1)
+        const height = minimumHeight + boosted * centerWeight * (maximumHeight - minimumHeight)
+        const previous = previousBars[index] ?? minimumHeight
+        const smoothed = previous * smoothing + height * (1 - smoothing)
+        nextBars.push(smoothed)
+      }
 
       previousBarsRef.current = nextBars
       setBars(nextBars)
