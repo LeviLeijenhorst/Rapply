@@ -101,9 +101,8 @@ export async function runVoxtralTranscriptionFromEncryptedUpload(params: {
   const blob = new BlobConstructor([audioBuffer], { type: mimeType })
   form.append("file", blob, "audio")
   form.append("model", model)
-  form.append("response_format", "verbose_json")
-  form.append("diarization", "true")
-  form.append("timestamp_granularities[]", "segment")
+  form.append("diarize", "true")
+  form.append("timestamp_granularities", "segment")
   const languageCode = normalizeText(params.languageCode)
   if (languageCode) {
     form.append("language", languageCode)
