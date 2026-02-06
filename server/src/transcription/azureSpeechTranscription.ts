@@ -84,6 +84,11 @@ export async function runAzureSpeechTranscriptionFromEncryptedUpload(params: {
 
   const contentType = normalizeText(mimeType) || "audio/mpeg"
   const language = normalizeLanguage(languageCode)
+  console.log("[azure-speech] request", {
+    language,
+    contentType,
+    audioBytes: audioBuffer.length,
+  })
   const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${encodeURIComponent(
     language,
   )}`
@@ -99,6 +104,11 @@ export async function runAzureSpeechTranscriptionFromEncryptedUpload(params: {
   })
 
   const textBody = await response.text().catch(() => "")
+  console.log("[azure-speech] response", {
+    status: response.status,
+    ok: response.ok,
+    bodyPreview: textBody ? textBody.slice(0, 200) : "",
+  })
   if (!response.ok) {
     throw new Error(`Azure Speech transcription failed: ${textBody || response.statusText || "Unknown error"}`)
   }
