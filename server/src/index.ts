@@ -14,8 +14,8 @@ import { createUploadToken, consumeUploadToken, chargeSecondsIdempotent, refundS
 import { createEncryptedUploadUrl, deleteEncryptedUpload, deleteEncryptedUploadsByPrefix, fetchEncryptedUploadStream, getEncryptedUploadSize } from "./transcription/storage"
 import { computeAudioDurationSecondsFromEncryptedUpload } from "./transcription/duration"
 import { runVoxtralTranscriptionFromEncryptedUpload } from "./transcription/voxtral"
-import { generateSummaryWithMistral } from "./summary/mistralSummary"
-import { completeChatWithMistral } from "./chat/mistralChat"
+import { generateSummaryWithAzureOpenAi } from "./summary/azureOpenAiSummary"
+import { completeChatWithAzureOpenAi } from "./chat/azureOpenAiChat"
 import { execute } from "./db"
 import { updateUserDisplayName } from "./users"
 import {
@@ -391,7 +391,7 @@ app.post(
     const messages = req.body?.messages
     const temperature = req.body?.temperature
 
-    const text = await completeChatWithMistral({ messages, temperature })
+    const text = await completeChatWithAzureOpenAi({ messages, temperature })
     res.status(200).json({ text })
   }),
 )
@@ -697,7 +697,7 @@ app.post(
         throw new Error("No transcription provider is configured")
       }
 
-      const summary = await generateSummaryWithMistral({ transcript })
+      const summary = await generateSummaryWithAzureOpenAi({ transcript })
 
       await execute(
         `
