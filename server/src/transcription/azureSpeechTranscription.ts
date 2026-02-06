@@ -13,6 +13,25 @@ function normalizeSpacing(value: string) {
     .trim()
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value)
+}
+
+function safeObjectKeys(value: unknown): string[] {
+  if (!isPlainObject(value)) return []
+  return Object.keys(value).slice(0, 50)
+}
+
+function safeJsonPreview(value: unknown): string {
+  try {
+    const json = JSON.stringify(value)
+    if (typeof json !== "string") return ""
+    return json.length > 500 ? json.slice(0, 500) + "â€¦" : json
+  } catch {
+    return ""
+  }
+}
+
 async function readStreamToBuffer(stream: NodeJS.ReadableStream, maxBytes: number): Promise<Buffer> {
   const chunks: Buffer[] = []
   let total = 0
@@ -90,5 +109,18 @@ export async function runAzureSpeechTranscriptionFromEncryptedUpload(params: {
     return `[00:00.0] speaker_1: ${displayText}`
   }
 
-  throw new Error("No transcript returned")
+  const responseKeys = safeObjectKeys(json)
+  const recognitionStatus = normalizeText(String(json?.RecognitionStatus || ""))
+  const preview = safeJsonPreview(json)
+  throw new Error(
+    "No transcript returned. " +
+      "Status=" +
+      (recognitionStatus || "missing") +
+      "; ContentType=" +
+      contentType +
+      "; Keys=" +
+      (responseKeys.length ? responseKeys.join(",") : "none") +
+      "; Preview=" +
+      (preview || "empty"),
+  )
 }
