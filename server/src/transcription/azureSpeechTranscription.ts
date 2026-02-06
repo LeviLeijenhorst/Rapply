@@ -39,7 +39,7 @@ async function readStreamToBuffer(stream: NodeJS.ReadableStream, maxBytes: numbe
     const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
     total += buf.length
     if (total > maxBytes) {
-      throw new Error("Audio file is too large for transcription")
+      throw new Error(`Audio file is too large for transcription (max ${maxBytes} bytes)`)
     }
     chunks.push(buf)
   }
@@ -79,7 +79,7 @@ export async function runAzureSpeechTranscriptionFromEncryptedUpload(params: {
   const aesKey = ensureValidAesKey(keyBase64)
   const decryptedAudioStream = encryptedStream.pipe(new Csa1DecryptStream(aesKey))
 
-  const maxBytes = 50 * 1024 * 1024
+  const maxBytes = 200 * 1024 * 1024
   const audioBuffer = await readStreamToBuffer(decryptedAudioStream, maxBytes)
 
   const contentType = normalizeText(mimeType) || "audio/mpeg"
@@ -95,7 +95,7 @@ export async function runAzureSpeechTranscriptionFromEncryptedUpload(params: {
       "Content-Type": contentType,
       Accept: "application/json",
     },
-    body: audioBuffer,
+    body: audioBuffer as any,
   })
 
   const textBody = await response.text().catch(() => "")
