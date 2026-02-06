@@ -180,12 +180,14 @@ export async function transcribeAudio(params: {
       throw new Error(`Upload failed: ${uploadResponse.status} ${errorText}`)
     }
 
+    const preferProvider = normalized.audioBlob.size >= 10 * 1024 * 1024 ? 'mistral' : undefined
     const result = (await callSecureApi('/transcription/start', {
       operationId,
       uploadToken,
       keyBase64,
       language_code: languageCode,
       mime_type: normalized.mimeType,
+      prefer_provider: preferProvider,
     })) as {
       transcript?: string
       text?: string

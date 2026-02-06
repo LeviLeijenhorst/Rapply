@@ -601,6 +601,7 @@ app.post(
     const keyBase64 = typeof req.body?.keyBase64 === "string" ? req.body.keyBase64.trim() : ""
     const languageCode = typeof req.body?.language_code === "string" ? req.body.language_code.trim() : "nl"
     const mimeType = typeof req.body?.mime_type === "string" ? req.body.mime_type.trim() : "audio/m4a"
+    const preferProvider = typeof req.body?.prefer_provider === "string" ? req.body.prefer_provider.trim() : ""
 
     if (!operationId) {
       sendError(res, 400, "Missing operationId")
@@ -655,12 +656,26 @@ app.post(
       transcriptionProvider = apiKey ? "mistral" : azureSpeechKey && azureSpeechRegion ? "azure-speech" : "none"
       console.log("[transcription] start", { operationId, durationSeconds, uploadBytes, mimeType, provider: transcriptionProvider })
 
+      if (preferProvider === "mistral" && !apiKey) {
+        throw new Error("Mistral transcription was requested but MISTRAL_API_KEY is missing.")
+      }
+
       if (mustUseMistral && !apiKey) {
         throw new Error("Long audio requires Mistral transcription. Configure MISTRAL_API_KEY.")
       }
 
       let transcript = ""
-      if (apiKey) {
+      if (apiKey && preferProvider === "mistral") {
+        const transcriptionStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
+        transcript = await runVoxtralTranscriptionFromEncryptedUpload({
+          encryptedStream: transcriptionStream,
+          keyBase64,
+          mimeType,
+          languageCode: languageCode || "nl",
+          apiKey,
+          model: env.mistralTranscriptionModel,
+        })
+      } else if (apiKey) {
         const transcriptionStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
         transcript = await runVoxtralTranscriptionFromEncryptedUpload({
           encryptedStream: transcriptionStream,
