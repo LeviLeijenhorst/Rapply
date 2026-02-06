@@ -142,6 +142,8 @@ export async function transcribeAudio(params: {
       uploadToken?: string
       uploadUrl?: string
       uploadHeaders?: Record<string, string>
+      remainingSeconds?: number
+      planKey?: string
     }
 
     console.log('[transcription] preflight response', {
@@ -149,10 +151,13 @@ export async function transcribeAudio(params: {
       hasOperationId: !!preflight.operationId,
       hasUploadToken: !!preflight.uploadToken,
       hasUploadUrl: !!preflight.uploadUrl,
+      remainingSeconds: preflight.remainingSeconds,
+      planKey: preflight.planKey,
     })
 
     if (!preflight.allowed) {
-      throw new Error('Not enough seconds remaining for transcription')
+      const remainingSeconds = typeof preflight.remainingSeconds === 'number' ? preflight.remainingSeconds : null
+      throw new Error(`Not enough seconds remaining for transcription${remainingSeconds !== null ? ` (remaining ${remainingSeconds}s)` : ''}`)
     }
 
     const operationId = String(preflight.operationId || '').trim()

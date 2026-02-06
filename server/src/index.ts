@@ -660,14 +660,34 @@ app.post(
       const subscriber = await fetchRevenueCatSubscriber(user.userId)
       const planState = derivePlanStateFromRevenueCatSubscriber(subscriber)
 
-      const charge = await chargeSecondsIdempotent({
-        userId: user.userId,
-        operationId,
-        secondsToCharge,
-        planKey: planState.planKey,
-        cycleStartMs: planState.cycleStartMs,
-        cycleEndMs: planState.cycleEndMs,
-      })
+      let charge: { secondsCharged: number; remainingSecondsAfter: number }
+      try {
+        charge = await chargeSecondsIdempotent({
+          userId: user.userId,
+          operationId,
+          secondsToCharge,
+          planKey: planState.planKey,
+          cycleStartMs: planState.cycleStartMs,
+          cycleEndMs: planState.cycleEndMs,
+        })
+      } catch (e: any) {
+        const message = String(e?.message || e)
+        if (message === "Not enough seconds remaining") {
+          const status = await readBillingStatus({
+            userId: user.userId,
+            planKey: planState.planKey,
+            cycleStartMs: planState.cycleStartMs,
+            cycleEndMs: planState.cycleEndMs,
+          })
+          sendError(
+            res,
+            402,
+            `Not enough seconds remaining. Needed ${secondsToCharge}s, remaining ${status.remainingSeconds}s.`,
+          )
+          return
+        }
+        throw e
+      }
 
       const apiKey = env.mistralApiKey
       const azureSpeechKey = env.azureSpeechKey
