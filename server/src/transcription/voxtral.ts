@@ -31,6 +31,43 @@ function pickText(response: any): string {
   return text
 }
 
+function formatTimestamp(seconds: number) {
+  const s = Number.isFinite(seconds) ? Math.max(0, seconds) : 0
+  const minutes = Math.floor(s / 60)
+  const remainingSeconds = s - minutes * 60
+  const mm = String(minutes).padStart(2, "0")
+  const ss = remainingSeconds.toFixed(1).padStart(4, "0")
+  return `${mm}:${ss}`
+}
+
+function normalizeSpeakerLabel(value: unknown) {
+  const text = normalizeText(String(value || ""))
+  return text || "speaker_1"
+}
+
+function buildTranscriptFromSegments(response: any): string {
+  const segments = Array.isArray(response?.segments) ? response.segments : Array.isArray(response?.result?.segments) ? response.result.segments : null
+  if (!segments) return ""
+
+  const lines: string[] = []
+  for (const segment of segments) {
+    const start = typeof segment?.start === "number" ? segment.start : Number(segment?.start)
+    const text = normalizeSpacing(String(segment?.text || segment?.transcript || segment?.content || ""))
+    if (!text) continue
+
+    const speaker =
+      segment?.speaker !== undefined
+        ? normalizeSpeakerLabel(segment.speaker)
+        : segment?.speaker_id !== undefined
+          ? normalizeSpeakerLabel(`speaker_${Number(segment.speaker_id) + 1}`)
+          : "speaker_1"
+
+    lines.push(`[${formatTimestamp(start)}] ${speaker}: ${text}`)
+  }
+
+  return lines.join("\n").trim()
+}
+
 export async function runVoxtralTranscriptionFromEncryptedUpload(params: {
   encryptedStream: NodeJS.ReadableStream
   keyBase64: string
@@ -64,6 +101,9 @@ export async function runVoxtralTranscriptionFromEncryptedUpload(params: {
   const blob = new BlobConstructor([audioBuffer], { type: mimeType })
   form.append("file", blob, "audio")
   form.append("model", model)
+  form.append("response_format", "verbose_json")
+  form.append("diarization", "true")
+  form.append("timestamp_granularities[]", "segment")
   const languageCode = normalizeText(params.languageCode)
   if (languageCode) {
     form.append("language", languageCode)
@@ -84,9 +124,14 @@ export async function runVoxtralTranscriptionFromEncryptedUpload(params: {
   }
 
   const json = textBody ? JSON.parse(textBody) : null
-  const text = pickText(json)
-  if (text) {
-    return `[00:00.0] speaker_1: ${normalizeSpacing(text)}`
+  const diarized = buildTranscriptFromSegments(json)
+  if (diarized) {
+    return diarized
   }
-  throw new Error("No transcript returned")
+
+  const text = pickText(json)
+  if (!text) {
+    throw new Error("No transcript returned")
+  }
+  return `[00:00.0] speaker_1: ${normalizeSpacing(text)}`
 }

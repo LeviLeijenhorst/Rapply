@@ -18,6 +18,7 @@ import { typography } from '../theme/typography'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { completeChat, LocalChatMessage } from '../services/chat'
 import { ChatStateMessage, createChatMessageId } from '../utils/chatState'
+import { buildCoacheeSummariesSystemMessages } from '../utils/quickQuestionsContext'
 
 type SessionListItem = {
   id: string
@@ -122,11 +123,18 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
     setIsChatSending(true)
 
     try {
+      const coacheeSessions = data.sessions
+        .filter((item) => item.coacheeId === coacheeId && item.kind !== 'notes')
+        .map((item) => ({ title: item.title, createdAtUnixMs: item.createdAtUnixMs, summary: item.summary }))
+
       const responseText = await completeChat({
-        messages: nextChatMessages.map<LocalChatMessage>((message) => ({
-          role: message.role,
-          text: message.text,
-        })),
+        messages: [
+          ...buildCoacheeSummariesSystemMessages({ coacheeName, sessions: coacheeSessions }),
+          ...nextChatMessages.map<LocalChatMessage>((message) => ({
+            role: message.role,
+            text: message.text,
+          })),
+        ],
       })
       setChatMessages((previousMessages) => [
         ...previousMessages,

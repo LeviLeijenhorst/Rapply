@@ -357,6 +357,49 @@ export function SessieDetailScreen({
     }
   }
 
+  async function generateReportForTemplate(templateKey: string) {
+    if (session?.transcriptionStatus === 'transcribing' || session?.transcriptionStatus === 'generating') return
+
+    updateSession(sessionId, { transcriptionStatus: 'generating', transcriptionError: null })
+
+    try {
+      let transcript = String(session?.transcript || '').trim()
+      if (!transcript) {
+        if (!session?.audioBlobId) {
+          throw new Error('Geen audio beschikbaar om een transcript te maken.')
+        }
+        const audioData = await loadAudioBlob(session.audioBlobId)
+        if (!audioData) {
+          throw new Error('Failed to load audio')
+        }
+        const transcription = await transcribeAudio({
+          audioBlob: audioData.blob,
+          mimeType: audioData.mimeType,
+          languageCode: 'nl',
+        })
+        transcript = String(transcription.transcript || '').trim()
+        if (!transcript) {
+          throw new Error('No transcript returned')
+        }
+        updateSession(sessionId, { transcript })
+      }
+
+      const summary = await generateSummary({ transcript, templateKey })
+      updateSession(sessionId, {
+        summary,
+        transcriptionStatus: 'done',
+        transcriptionError: null,
+      })
+    } catch (error) {
+      console.error('[SessieDetailScreen] Report generation failed', error)
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      updateSession(sessionId, {
+        transcriptionStatus: 'error',
+        transcriptionError: message,
+      })
+    }
+  }
+
 
   if (isMobileLayout) {
     return (
@@ -450,7 +493,7 @@ export function SessieDetailScreen({
                   summary={session?.summary ?? null}
                   transcriptionStatus={session?.transcriptionStatus ?? 'idle'}
                   transcriptionError={session?.transcriptionError ?? null}
-                  onRetryTranscription={retryTranscription}
+                  onRetryTranscription={() => generateReportForTemplate(selectedTemplateKey)}
                 />
               </View>
               {/* Active tab content */}
@@ -605,6 +648,7 @@ export function SessieDetailScreen({
                         : 'Gespreksplan'
             setSelectedTemplateLabel(nextLabel)
             setIsTemplatePickerModalVisible(false)
+            void generateReportForTemplate(templateKey)
           }}
         />
 
@@ -760,7 +804,7 @@ export function SessieDetailScreen({
                     summary={session?.summary ?? null}
                     transcriptionStatus={session?.transcriptionStatus ?? 'idle'}
                     transcriptionError={session?.transcriptionError ?? null}
-                    onRetryTranscription={retryTranscription}
+                    onRetryTranscription={() => generateReportForTemplate(selectedTemplateKey)}
                   />
                 </View>
               </ScrollView>
@@ -916,6 +960,7 @@ export function SessieDetailScreen({
                       : 'Gespreksplan'
           setSelectedTemplateLabel(nextLabel)
           setIsTemplatePickerModalVisible(false)
+          void generateReportForTemplate(templateKey)
         }}
       />
 

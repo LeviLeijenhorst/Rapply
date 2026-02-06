@@ -14,6 +14,7 @@ import { createUploadToken, consumeUploadToken, chargeSecondsIdempotent, refundS
 import { createEncryptedUploadUrl, deleteEncryptedUpload, deleteEncryptedUploadsByPrefix, fetchEncryptedUploadStream, getEncryptedUploadSize } from "./transcription/storage"
 import { computeAudioDurationSecondsFromEncryptedUpload } from "./transcription/duration"
 import { runVoxtralTranscriptionFromEncryptedUpload } from "./transcription/voxtral"
+import { runAzureSpeechTranscriptionFromEncryptedUpload } from "./transcription/azureSpeechTranscription"
 import { generateSummaryWithAzureOpenAi } from "./summary/azureOpenAiSummary"
 import { completeChatWithAzureOpenAi } from "./chat/azureOpenAiChat"
 import { execute } from "./db"
@@ -393,6 +394,25 @@ app.post(
 
     const text = await completeChatWithAzureOpenAi({ messages, temperature })
     res.status(200).json({ text })
+  }),
+)
+
+app.post(
+  "/summary/generate",
+  rateLimitAi,
+  asyncHandler(async (req, res) => {
+    await requireAuthenticatedUser(req)
+
+    const transcript = typeof req.body?.transcript === "string" ? req.body.transcript : ""
+    const templateKey = typeof req.body?.template_key === "string" ? req.body.template_key.trim() : ""
+
+    if (!String(transcript || "").trim()) {
+      sendError(res, 400, "Missing transcript")
+      return
+    }
+
+    const summary = await generateSummaryWithAzureOpenAi({ transcript, templateKey })
+    res.status(200).json({ summary })
   }),
 )
 

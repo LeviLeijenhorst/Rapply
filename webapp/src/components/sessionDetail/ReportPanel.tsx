@@ -21,27 +21,57 @@ type Props = {
 function renderSummaryWithHeadings(summary: string) {
   const lines = summary.replace(/\r/g, '').split('\n')
   const elements: React.ReactNode[] = []
-  
-  for (let i = 0; i < lines.length; i++) {
+
+  for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i]
-    const headingMatch = line.match(/^\s*###\s+(.*)$/)
+
+    const headingMatch = line.match(/^\s*###\s*(.+?)\s*$/)
     if (headingMatch) {
       elements.push(
         <Text key={`h-${i}`} style={styles.sectionTitle}>
           {headingMatch[1]}
-        </Text>
+        </Text>,
       )
-    } else if (line.trim()) {
+      continue
+    }
+
+    const bulletMatch = line.match(/^\s*[-*]\s+(.+?)\s*$/)
+    if (bulletMatch) {
+      const items: string[] = []
+      let index = i
+      while (index < lines.length) {
+        const currentLine = lines[index]
+        const match = currentLine.match(/^\s*[-*]\s+(.+?)\s*$/)
+        if (!match) break
+        items.push(match[1])
+        index += 1
+      }
+      i = index - 1
+
+      elements.push(
+        <View key={`ul-${i}`} style={styles.bullets}>
+          {items.map((item, itemIndex) => (
+            <View key={`li-${i}-${itemIndex}`} style={styles.bulletRow}>
+              <Text style={styles.bulletSymbol}>•</Text>
+              <Text style={styles.bulletText}>{item}</Text>
+            </View>
+          ))}
+        </View>,
+      )
+      continue
+    }
+
+    if (line.trim()) {
       elements.push(
         <Text key={`p-${i}`} style={styles.paragraph}>
           {line}
-        </Text>
+        </Text>,
       )
     } else if (i < lines.length - 1) {
       elements.push(<View key={`spacer-${i}`} style={{ height: 8 }} />)
     }
   }
-  
+
   return elements
 }
 
