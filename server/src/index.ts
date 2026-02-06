@@ -99,6 +99,14 @@ app.get("/health", (_req: Request, res: Response) => {
   })
 })
 
+app.get("/debug/transcription-provider", (_req: Request, res: Response) => {
+  res.status(200).json({
+    mistralKeyPresent: !!env.mistralApiKey,
+    mistralModel: env.mistralTranscriptionModel,
+    azureSpeechConfigured: !!env.azureSpeechKey && !!env.azureSpeechRegion,
+  })
+})
+
 app.post(
   "/auth/me",
   asyncHandler(async (req, res) => {
