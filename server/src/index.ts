@@ -13,9 +13,9 @@ import { randomBase64Url } from "./transcription/random"
 import { createUploadToken, consumeUploadToken, chargeSecondsIdempotent, refundSecondsIdempotent } from "./transcription/store"
 import { createEncryptedUploadUrl, deleteEncryptedUpload, deleteEncryptedUploadsByPrefix, fetchEncryptedUploadStream } from "./transcription/storage"
 import { computeAudioDurationSecondsFromEncryptedUpload } from "./transcription/duration"
-import { runAzureSpeechTranscriptionFromEncryptedUpload } from "./transcription/azureSpeechTranscription"
-import { generateSummaryWithAzureOpenAi } from "./summary/azureOpenAiSummary"
-import { completeChatWithAzureOpenAi } from "./chat/azureOpenAiChat"
+import { runVoxtralTranscriptionFromEncryptedUpload } from "./transcription/voxtral"
+import { generateSummaryWithMistral } from "./summary/mistralSummary"
+import { completeChatWithMistral } from "./chat/mistralChat"
 import { execute } from "./db"
 import { updateUserDisplayName } from "./users"
 import {
@@ -82,16 +82,9 @@ app.get("/health", (_req: Request, res: Response) => {
         hasOpenIdConfigurationUrl: !!env.entraOpenIdConfigurationUrl,
         hasAudience: !!env.entraAudience,
       },
-      azureOpenAi: {
-        hasEndpoint: !!env.azureOpenAiEndpoint,
-        hasKey: !!env.azureOpenAiKey,
-        version: env.azureOpenAiVersion,
-        chatDeployment: env.azureOpenAiChatDeployment,
-        summaryDeployment: env.azureOpenAiSummaryDeployment,
-      },
-      azureSpeech: {
-        hasKey: !!env.azureSpeechKey,
-        region: env.azureSpeechRegion || "",
+      mistral: {
+        hasApiKey: !!env.mistralApiKey,
+        transcriptionModel: env.mistralTranscriptionModel,
       },
       revenuecat: {
         hasSecretKey: !!env.revenueCatSecretKey,
@@ -390,7 +383,7 @@ app.post(
     const messages = req.body?.messages
     const temperature = req.body?.temperature
 
-    const text = await completeChatWithAzureOpenAi({ messages, temperature })
+    const text = await completeChatWithMistral({ messages, temperature })
     res.status(200).json({ text })
   }),
 )
@@ -616,6 +609,10 @@ app.post(
 
     let uploadPath = ""
 
+    let transcriptionProvider = "unknown"
+    const mistralKeyPresent = !!env.mistralApiKey
+    const azureSpeechConfigured = !!env.azureSpeechKey && !!env.azureSpeechRegion
+
     try {
       const consumed = await consumeUploadToken({ userId: user.userId, uploadToken, operationId })
       uploadPath = consumed.uploadPath
@@ -642,15 +639,36 @@ app.post(
         cycleEndMs: planState.cycleEndMs,
       })
 
-      const transcriptionStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
-      const transcript = await runAzureSpeechTranscriptionFromEncryptedUpload({
-        encryptedStream: transcriptionStream,
-        keyBase64,
-        mimeType,
-        languageCode: languageCode || "nl",
-      })
+      const apiKey = env.mistralApiKey
+      const azureSpeechKey = env.azureSpeechKey
+      const azureSpeechRegion = env.azureSpeechRegion
+      transcriptionProvider = apiKey ? "mistral" : azureSpeechKey && azureSpeechRegion ? "azure-speech" : "none"
+      console.log("[transcription] start", { operationId, durationSeconds, mimeType, provider: transcriptionProvider })
 
-      const summary = await generateSummaryWithAzureOpenAi({ transcript })
+      let transcript = ""
+      if (apiKey) {
+        const transcriptionStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
+        transcript = await runVoxtralTranscriptionFromEncryptedUpload({
+          encryptedStream: transcriptionStream,
+          keyBase64,
+          mimeType,
+          languageCode: languageCode || "nl",
+          apiKey,
+          model: env.mistralTranscriptionModel,
+        })
+      } else if (azureSpeechKey && azureSpeechRegion) {
+        const transcriptionStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
+        transcript = await runAzureSpeechTranscriptionFromEncryptedUpload({
+          encryptedStream: transcriptionStream,
+          keyBase64,
+          mimeType,
+          languageCode: languageCode || "nl",
+        })
+      } else {
+        throw new Error("No transcription provider is configured")
+      }
+
+      const summary = await generateSummaryWithMistral({ transcript })
 
       await execute(
         `
@@ -687,7 +705,12 @@ app.post(
           [operationId, user.userId, String(e?.message || e)],
         )
       } catch {}
-      sendError(res, 500, String(e?.message || e))
+      const errorMessage = String(e?.message || e)
+      sendError(
+        res,
+        500,
+        `${errorMessage} (provider=${transcriptionProvider}; mistralKeyPresent=${mistralKeyPresent}; azureSpeechConfigured=${azureSpeechConfigured})`,
+      )
     } finally {
       try {
         if (uploadPath) {
@@ -709,23 +732,10 @@ app.use((err: any, _req: any, res: any, _next: any) => {
 })
 
 app.listen(env.port, () => {
-  const hasAzureOpenAiEndpoint = !!env.azureOpenAiEndpoint
-  const hasAzureOpenAiKey = !!env.azureOpenAiKey
-  console.log("[server] listening on http://127.0.0.1:" + env.port)
-  console.log(
-    "[server] azure openai configured: " +
-      (hasAzureOpenAiEndpoint && hasAzureOpenAiKey ? "yes" : "no") +
-      "; chat: " +
-      (env.azureOpenAiChatDeployment || "missing") +
-      "; summary: " +
-      (env.azureOpenAiSummaryDeployment || "missing"),
-  )
-  console.log(
-    "[server] azure speech configured: " +
-      (env.azureSpeechKey && env.azureSpeechRegion ? "yes" : "no") +
-      "; region: " +
-      (env.azureSpeechRegion || "missing"),
-  )
+  const hasMistralApiKey = !!env.mistralApiKey
+  const transcriptionModel = env.mistralTranscriptionModel
+  console.log(`[server] listening on http://127.0.0.1:${env.port}`)
+  console.log(`[server] mistral configured: ${hasMistralApiKey ? "yes" : "no"}; model: ${transcriptionModel}`)
 })
 
 function readId(value: unknown, fieldName: string): string {
