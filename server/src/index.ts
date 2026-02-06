@@ -13,7 +13,7 @@ import { randomBase64Url } from "./transcription/random"
 import { createUploadToken, consumeUploadToken, chargeSecondsIdempotent, refundSecondsIdempotent } from "./transcription/store"
 import { createEncryptedUploadUrl, deleteEncryptedUpload, deleteEncryptedUploadsByPrefix, fetchEncryptedUploadStream } from "./transcription/storage"
 import { computeAudioDurationSecondsFromEncryptedUpload } from "./transcription/duration"
-import { runAzureOpenAiTranscriptionFromEncryptedUpload } from "./transcription/azureOpenAiTranscription"
+import { runAzureSpeechTranscriptionFromEncryptedUpload } from "./transcription/azureSpeechTranscription"
 import { generateSummaryWithAzureOpenAi } from "./summary/azureOpenAiSummary"
 import { completeChatWithAzureOpenAi } from "./chat/azureOpenAiChat"
 import { execute } from "./db"
@@ -88,8 +88,10 @@ app.get("/health", (_req: Request, res: Response) => {
         version: env.azureOpenAiVersion,
         chatDeployment: env.azureOpenAiChatDeployment,
         summaryDeployment: env.azureOpenAiSummaryDeployment,
-        transcriptionDeployment: env.azureOpenAiTranscriptionDeployment,
-        transcriptionVersion: env.azureOpenAiTranscriptionVersion,
+      },
+      azureSpeech: {
+        hasKey: !!env.azureSpeechKey,
+        region: env.azureSpeechRegion || "",
       },
       revenuecat: {
         hasSecretKey: !!env.revenueCatSecretKey,
@@ -641,7 +643,7 @@ app.post(
       })
 
       const transcriptionStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
-      const transcript = await runAzureOpenAiTranscriptionFromEncryptedUpload({
+      const transcript = await runAzureSpeechTranscriptionFromEncryptedUpload({
         encryptedStream: transcriptionStream,
         keyBase64,
         mimeType,
@@ -716,9 +718,13 @@ app.listen(env.port, () => {
       "; chat: " +
       (env.azureOpenAiChatDeployment || "missing") +
       "; summary: " +
-      (env.azureOpenAiSummaryDeployment || "missing") +
-      "; transcription: " +
-      (env.azureOpenAiTranscriptionDeployment || "missing"),
+      (env.azureOpenAiSummaryDeployment || "missing"),
+  )
+  console.log(
+    "[server] azure speech configured: " +
+      (env.azureSpeechKey && env.azureSpeechRegion ? "yes" : "no") +
+      "; region: " +
+      (env.azureSpeechRegion || "missing"),
   )
 })
 
