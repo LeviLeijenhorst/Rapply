@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
+import { FormattedText } from '../FormattedText'
 import { Text } from '../Text'
 import { colors } from '../../theme/colors'
 import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
@@ -12,8 +13,60 @@ type Props = {
   onClose: () => void
 }
 
+type PrivacyLine = {
+  kind: 'title' | 'sectionHeader' | 'keyValue' | 'paragraph' | 'empty'
+  text: string
+}
+
+function parsePrivacyLines(text: string): PrivacyLine[] {
+  const rawLines = String(text || '').replace(/\r/g, '').split('\n')
+  const lines = rawLines.map((line) => line.trimEnd())
+  const result: PrivacyLine[] = []
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const rawLine = lines[index]
+    const trimmedLine = rawLine.trim()
+
+    if (!trimmedLine) {
+      result.push({ kind: 'empty', text: '' })
+      continue
+    }
+
+    if (index === 0) {
+      result.push({ kind: 'title', text: trimmedLine })
+      continue
+    }
+
+    const colonIndex = trimmedLine.indexOf(':')
+    if (colonIndex > 0) {
+      const key = trimmedLine.slice(0, colonIndex).trim()
+      const value = trimmedLine.slice(colonIndex + 1).trim()
+      if (key.length > 0 && key.length <= 26 && value.length > 0) {
+        result.push({ kind: 'keyValue', text: `**${key}:** ${value}` })
+        continue
+      }
+    }
+
+    const isLikelyHeader =
+      trimmedLine.length <= 48 &&
+      !trimmedLine.includes('.') &&
+      !trimmedLine.includes(':') &&
+      !trimmedLine.startsWith('http') &&
+      !trimmedLine.startsWith('www.')
+
+    if (isLikelyHeader) {
+      result.push({ kind: 'sectionHeader', text: trimmedLine })
+      continue
+    }
+
+    result.push({ kind: 'paragraph', text: trimmedLine })
+  }
+
+  return result
+}
+
 export function PrivacyPolicyModal({ visible, text, onClose }: Props) {
-  const cleanedText = useMemo(() => String(text || '').replace(/\r/g, '').trim(), [text])
+  const parsedLines = useMemo(() => parsePrivacyLines(text), [text])
 
   if (!visible) return null
 
@@ -33,8 +86,30 @@ export function PrivacyPolicyModal({ visible, text, onClose }: Props) {
 
       {/* Modal body */}
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
-        {/* Privacy text */}
-        <Text style={styles.privacyText}>{cleanedText}</Text>
+        {/* Privacy policy content */}
+        <View style={styles.content}>
+          {parsedLines.map((line, index) => {
+            if (line.kind === 'empty') return <View key={`empty-${index}`} style={styles.spacer} />
+            if (line.kind === 'title') {
+              return (
+                <Text key={`title-${index}`} isBold style={styles.title}>
+                  {line.text}
+                </Text>
+              )
+            }
+            if (line.kind === 'sectionHeader') {
+              return (
+                <Text key={`h-${index}`} isBold style={styles.sectionHeader}>
+                  {line.text}
+                </Text>
+              )
+            }
+            if (line.kind === 'keyValue') {
+              return <FormattedText key={`kv-${index}`} text={line.text} textStyle={styles.paragraph} boldStyle={styles.paragraphBold} />
+            }
+            return <FormattedText key={`p-${index}`} text={line.text} textStyle={styles.paragraph} boldStyle={styles.paragraphBold} />
+          })}
+        </View>
       </ScrollView>
     </AnimatedOverlayModal>
   )
@@ -80,7 +155,30 @@ const styles = StyleSheet.create({
   bodyContent: {
     padding: 24,
   },
-  privacyText: {
+  content: {
+    width: '100%',
+    gap: 10,
+  },
+  spacer: {
+    height: 10,
+  },
+  title: {
+    fontSize: 22,
+    lineHeight: 28,
+    color: colors.textStrong,
+  },
+  sectionHeader: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.textStrong,
+    marginTop: 4,
+  },
+  paragraph: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textStrong,
+  },
+  paragraphBold: {
     fontSize: 14,
     lineHeight: 20,
     color: colors.textStrong,
