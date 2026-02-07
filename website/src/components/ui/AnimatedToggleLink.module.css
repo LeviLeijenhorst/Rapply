@@ -8,6 +8,7 @@
   height: 48px;
   border-radius: 999px;
   border: 1px solid var(--border-color);
+  box-sizing: border-box;
   background: var(--background-color);
   padding-left: 20px;
   padding-right: 20px;
@@ -19,6 +20,7 @@
   position: relative;
   overflow: hidden;
   cursor: pointer;
+  transition: border-width 160ms ease;
 }
 
 .root:focus-visible {
@@ -45,7 +47,6 @@
   background: var(--fill-color);
   transform: scaleX(var(--fill-progress));
   transform-origin: left;
-  transition: transform 260ms ease;
 }
 
 .labelBase {
@@ -58,7 +59,6 @@
   gap: 10px;
   color: var(--text-color);
   clip-path: inset(0 0 0 calc(var(--fill-progress) * 100%));
-  transition: clip-path 260ms ease;
 }
 
 .labelFill {
@@ -72,21 +72,10 @@
   color: #ffffff;
   pointer-events: none;
   clip-path: inset(0 calc((1 - var(--fill-progress)) * 100%) 0 0);
-  transition: clip-path 260ms ease;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .fill {
-    transition: none;
-  }
-
-  .labelBase {
-    transition: none;
-  }
-
-  .labelFill {
-    transition: none;
-  }
+.root:hover {
+  border-width: 2px;
 }
 
 .labelBaseText {
@@ -122,13 +111,4 @@
   --background-color: transparent;
   --text-color: #bd0265;
 }
-
-.outlined:hover {
-  --fill-progress: 1;
-}
-
-.filled:hover {
-  --fill-progress: 0;
-}
-
 

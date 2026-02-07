@@ -4,7 +4,7 @@ import { Text } from "./Text"
 import { Tab } from "./Tab"
 import { Icon } from "./Icon"
 import { colors, radius, safeAreaBottom, spacing, typography, vibrate } from "./constants"
-import { askAssistant, loadAskAiHistory, loadCoacheeAskAiHistory, loadLatestConversationTranscriptForCoachee, loadSummariesForCoachee, saveAskAiHistory, saveCoacheeAskAiHistory } from "@/services/askai"
+import { askAssistant, loadAskAiHistory, loadCoacheeAskAiHistory, loadConversationTranscriptsForCoachee, loadSummariesForCoachee, saveAskAiHistory, saveCoacheeAskAiHistory } from "@/services/askai"
 import { logger } from "@/utils/logger"
 
 type AskAiChatScope = "conversation" | "coachee"
@@ -198,22 +198,30 @@ export function AskAiChat(props: {
     setMessages((prev) => [...prev, placeholder])
 
     try {
-      const coacheeLatestTranscript =
-        scope === "coachee"
-          ? await loadLatestConversationTranscriptForCoachee(resolvedCoacheeName)
-          : null
-      const latestConversationId = coacheeLatestTranscript?.conversationId
+      const resolvedConversationId = scope === "conversation" ? String(conversationId || "").trim() : ""
+
+      const { entries: coacheeTranscriptEntries, isTruncated: coacheeTranscriptEntriesAreTruncated } = await loadConversationTranscriptsForCoachee({
+        coacheeName: resolvedCoacheeName,
+        excludeConversationId: resolvedConversationId && resolvedCurrentTranscript ? resolvedConversationId : undefined,
+      })
+
+      const latestConversationEntry = coacheeTranscriptEntries[0] ?? null
+      const latestConversationId = latestConversationEntry?.conversationId ?? null
+      const latestConversationTranscript = latestConversationEntry?.transcript ?? ""
+
       const previousSummaries =
-        scope === "conversation" && String(conversationId || "").trim()
+        scope === "conversation" && resolvedConversationId
           ? await loadSummariesForCoachee(resolvedCoacheeName, String(conversationId))
-          : await loadSummariesForCoachee(resolvedCoacheeName, latestConversationId)
+          : await loadSummariesForCoachee(resolvedCoacheeName, latestConversationId || undefined)
 
       const final = await askAssistant({
         coacheeName: resolvedCoacheeName,
-        currentConversationId: scope === "conversation" ? String(conversationId) : latestConversationId || null,
-        currentTranscript: scope === "conversation" ? String(currentTranscript || "") : String(coacheeLatestTranscript?.transcript || ""),
+        currentConversationId: scope === "conversation" ? resolvedConversationId : latestConversationId,
+        currentTranscript: scope === "conversation" ? String(currentTranscript || "") : latestConversationTranscript,
         userQuestion: text,
         previousSummaries,
+        coacheeConversationTranscripts: coacheeTranscriptEntries,
+        coacheeConversationTranscriptsTruncated: coacheeTranscriptEntriesAreTruncated,
       })
 
       if (requestIdRef.current === requestId) {

@@ -210,7 +210,7 @@ export function EditSessieModal({
                 setIsCoacheeMenuOpen((value) => !value)
                 setIsTemplateMenuOpen(false)
               }}
-              style={({ hovered }) => [styles.fieldRow, styles.dropdownRow, hovered ? styles.fieldRowHovered : undefined]}
+              style={({ hovered }) => [styles.fieldRow, hovered ? styles.fieldRowHovered : undefined]}
             >
               {/* Coachee dropdown */}
               <Text style={styles.dropdownText}>{coacheeName}</Text>
@@ -275,7 +275,7 @@ export function EditSessieModal({
                   setIsTemplateMenuOpen((value) => !value)
                   setIsCoacheeMenuOpen(false)
                 }}
-                style={({ hovered }) => [styles.fieldRow, styles.dropdownRow, hovered ? styles.fieldRowHovered : undefined]}
+                style={({ hovered }) => [styles.fieldRow, hovered ? styles.fieldRowHovered : undefined]}
               >
                 {/* Template dropdown */}
                 <Text style={styles.dropdownText}>{selectedTemplateLabel}</Text>
@@ -429,11 +429,6 @@ const styles = StyleSheet.create({
     gap: 12,
     ...( { cursor: 'pointer' } as any ),
   },
-  dropdownRow: {
-    borderWidth: 0,
-    borderColor: 'transparent',
-    ...( { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any ),
-  },
   fieldRowHovered: {
     backgroundColor: colors.hoverBackground,
   },
@@ -472,8 +467,8 @@ const styles = StyleSheet.create({
     top: 64,
     borderRadius: 16,
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 0,
+    borderColor: 'transparent',
     padding: 0,
     gap: 0,
     ...( { boxShadow: '0 8px 20px rgba(0,0,0,0.12)' } as any ),

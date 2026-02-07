@@ -67,7 +67,7 @@ const testimonials: Testimonial[] = [
   },
 ];
 
-export function HomePage(): JSX.Element {
+export function HomePage() {
   const showTestimonials = false;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openFrequentlyAskedQuestionId, setOpenFrequentlyAskedQuestionId] = useState<string | null>(null);
@@ -117,14 +117,15 @@ export function HomePage(): JSX.Element {
           <div className={styles.topNavigation}>
             <Link className={styles.logo} href="/">
               <img
-                className={styles.logoMark}
+                className={styles.logoIcon}
                 alt="Coachscribe logo"
-                src="https://c.animaapp.com/mkvhzsufsbyOX4/img/vector-3.svg"
+                src="/assets/coachscribe-logo-icon.png"
               />
-              <span className={styles.logoText}>
-                <span className={styles.logoTextCoach}>Coach</span>
-                <span className={styles.logoTextScribe}>Scribe</span>
-              </span>
+              <img
+                className={styles.logoText}
+                alt="Coachscribe"
+                src="/assets/coachscribe-logo-text.png"
+              />
             </Link>
 
             <nav className={styles.navigationLinks} aria-label="Navigatie">
@@ -508,11 +509,8 @@ export function HomePage(): JSX.Element {
           <div className={styles.footerGrid}>
             <div>
               <div className={styles.footerBrand}>
-                <img alt="Coachscribe logo" src="https://c.animaapp.com/mkvhzsufsbyOX4/img/vector-3.svg" width={28} height={28} />
-                <span className={styles.logoText}>
-                  <span className={styles.logoTextCoach}>Coach</span>
-                  <span className={styles.logoTextScribe}>Scribe</span>
-                </span>
+                <img className={styles.logoIcon} alt="Coachscribe logo" src="/assets/coachscribe-logo-icon.png" />
+                <img className={styles.logoText} alt="Coachscribe" src="/assets/coachscribe-logo-text.png" />
               </div>
               <p className={styles.footerText}>
                 CoachScribe neemt sessies op van coaches en zet deze om in praktische verslagen die aansluiten op de

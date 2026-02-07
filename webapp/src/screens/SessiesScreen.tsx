@@ -15,6 +15,7 @@ import { webTransitionSmooth } from '../theme/webTransitions'
 import { typography } from '../theme/typography'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { getCoacheeDisplayName, unassignedCoacheeLabel } from '../utils/coachee'
+import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
 
 type Props = {
   onSelectSessie: (sessieId: string) => void
@@ -31,6 +32,8 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
   const searchInputRef = useRef<TextInput | null>(null)
   const [menuSessionId, setMenuSessionId] = useState<string | null>(null)
   const [menuAnchorPoint, setMenuAnchorPoint] = useState<{ x: number; y: number } | null>(null)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null)
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const isSearchExpanded = isSearchOpen || normalizedQuery.length > 0
 
@@ -55,6 +58,7 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
 
   const searchInputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
   const isMenuVisible = !!menuSessionId && !!menuAnchorPoint
+  const pendingDeleteSessionTitle = pendingDeleteSessionId ? data.sessions.find((item) => item.id === pendingDeleteSessionId)?.title : null
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -192,7 +196,8 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
             isDanger: true,
             onPress: () => {
               if (!menuSessionId) return
-              deleteSession(menuSessionId)
+              setPendingDeleteSessionId(menuSessionId)
+              setIsDeleteModalOpen(true)
               setMenuSessionId(null)
               setMenuAnchorPoint(null)
             },
@@ -201,6 +206,21 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
         onClose={() => {
           setMenuSessionId(null)
           setMenuAnchorPoint(null)
+        }}
+      />
+
+      <ConfirmSessieDeleteModal
+        visible={isDeleteModalOpen}
+        sessieTitle={pendingDeleteSessionTitle}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setPendingDeleteSessionId(null)
+        }}
+        onConfirm={() => {
+          if (!pendingDeleteSessionId) return
+          deleteSession(pendingDeleteSessionId)
+          setIsDeleteModalOpen(false)
+          setPendingDeleteSessionId(null)
         }}
       />
     </View>

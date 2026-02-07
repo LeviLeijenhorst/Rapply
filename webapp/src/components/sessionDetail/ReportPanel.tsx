@@ -25,11 +25,23 @@ function renderSummaryWithHeadings(summary: string) {
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i]
 
+    const dividerMatch = line.match(/^\s*---\s*$/)
+    if (dividerMatch) {
+      elements.push(
+        <View key={`hr-${i}`} style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+        </View>,
+      )
+      continue
+    }
+
     const headingMatch = line.match(/^\s*###\s*(.+?)\s*$/)
     if (headingMatch) {
+      const rawText = headingMatch[1]
+      const cleanText = rawText.replace(/^\s*#\s*/, '').trim()
       elements.push(
         <Text key={`h-${i}`} style={styles.sectionTitle}>
-          {headingMatch[1]}
+          {cleanText}
         </Text>,
       )
       continue
@@ -230,9 +242,18 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   sectionTitle: {
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 18,
+    lineHeight: 24,
     color: colors.textStrong,
+  },
+  dividerRow: {
+    width: '100%',
+    paddingVertical: 8,
+  },
+  dividerLine: {
+    width: '100%',
+    height: 1,
+    backgroundColor: colors.border,
   },
   bullets: {
     gap: 8,

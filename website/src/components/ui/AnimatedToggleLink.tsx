@@ -11,7 +11,7 @@ type AnimatedToggleLinkProps = {
   withArrow?: boolean;
 };
 
-export function AnimatedToggleLink({ label, href, variant, withArrow }: AnimatedToggleLinkProps): JSX.Element {
+export function AnimatedToggleLink({ label, href, variant, withArrow }: AnimatedToggleLinkProps) {
   const className = `${styles.root} ${variant === "filled" ? styles.filled : styles.outlined}`;
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {

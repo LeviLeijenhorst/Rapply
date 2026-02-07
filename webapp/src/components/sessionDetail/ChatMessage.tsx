@@ -325,20 +325,6 @@ export function ChatMessage({ role, text, isLoading }: Props) {
           ) : (
             <>
               <View style={styles.bubble}>
-                {isExportable ? (
-                  <View style={styles.exportRow}>
-                    <Pressable
-                      onPress={() => exportMessageToPdf(exportableText ?? displayText)}
-                      style={({ hovered }) => [styles.exportButton, hovered ? styles.exportButtonHovered : undefined]}
-                    >
-                      <Text isSemibold style={styles.exportButtonText}>
-                        Download als PDF
-                      </Text>
-                      <SharePdfIcon color={colors.textSecondary} size={18} />
-                    </Pressable>
-                  </View>
-                ) : null}
-
                 <View style={styles.formattedLines}>
                   {lines.map((line, lineIndex) => {
                     if (line.kind === 'empty') return <View key={`line-${lineIndex}`} style={styles.emptyLine} />
@@ -375,20 +361,30 @@ export function ChatMessage({ role, text, isLoading }: Props) {
               </View>
 
               <View style={styles.messageActionsRow}>
-                <View style={styles.actionStack}>
+                <Pressable
+                  onPress={() => {
+                    if (typeof navigator === 'undefined') return
+                    navigator.clipboard?.writeText(String(displayText || '')).then(() => {
+                      setShowCopyNotification(true)
+                      setTimeout(() => setShowCopyNotification(false), 3000)
+                    })
+                  }}
+                  style={({ hovered }) => [styles.actionButton, hovered ? styles.actionButtonHovered : undefined]}
+                >
+                  {showCopyNotification ? <CopiedIcon size={18} /> : <CopyIcon color="#8E8480" size={18} />}
+                </Pressable>
+
+                {isExportable ? (
                   <Pressable
-                    onPress={() => {
-                      if (typeof navigator === 'undefined') return
-                      navigator.clipboard?.writeText(String(displayText || '')).then(() => {
-                        setShowCopyNotification(true)
-                        setTimeout(() => setShowCopyNotification(false), 3000)
-                      })
-                    }}
-                    style={({ hovered }) => [styles.actionButton, hovered ? styles.actionButtonHovered : undefined]}
+                    onPress={() => exportMessageToPdf(exportableText ?? displayText)}
+                    style={({ hovered }) => [styles.exportButton, hovered ? styles.exportButtonHovered : undefined]}
                   >
-                    {showCopyNotification ? <CopiedIcon size={18} /> : <CopyIcon color="#8E8480" size={18} />}
+                    <Text isSemibold style={styles.exportButtonText}>
+                      Exporteer als PDF
+                    </Text>
+                    <SharePdfIcon color={colors.textSecondary} size={18} />
                   </Pressable>
-                </View>
+                ) : null}
               </View>
             </>
           )}
@@ -411,8 +407,7 @@ const styles = StyleSheet.create({
   assistantRowLoading: { alignItems: 'center' },
   assistantContent: { flex: 1 },
   bubble: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, gap: 12 },
-  exportRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
-  exportButton: { height: 28, borderRadius: 8, padding: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  exportButton: { height: 32, borderRadius: 8, padding: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   exportButtonHovered: { backgroundColor: colors.hoverBackground },
   exportButtonText: { fontSize: 12, lineHeight: 16, color: colors.textSecondary },
   formattedLines: { gap: 8 },
@@ -427,8 +422,7 @@ const styles = StyleSheet.create({
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   loadingText: { fontSize: 14, lineHeight: 20, color: colors.textSecondary },
   messageText: { fontSize: 14, lineHeight: 20, color: colors.text },
-  messageActionsRow: { marginTop: 8, flexDirection: 'row', alignItems: 'center', marginLeft: 12 },
-  actionStack: { alignItems: 'center', gap: 4 },
+  messageActionsRow: { marginTop: 8, flexDirection: 'row', alignItems: 'center', marginLeft: 12, gap: 8 },
   actionButton: { width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   actionButtonHovered: { backgroundColor: colors.hoverBackground },
   copyNotification: { alignItems: 'center' },

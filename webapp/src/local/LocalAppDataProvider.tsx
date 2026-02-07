@@ -34,6 +34,7 @@ import {
 
 type ContextValue = {
   data: LocalAppData
+  isAppDataLoaded: boolean
   reset: () => void
 
   createCoachee: (name: string) => string
@@ -72,14 +73,19 @@ type Props = {
 
 export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
   const [data, setData] = useState<LocalAppData>(() => loadLocalAppData())
+  const [isAppDataLoaded, setIsAppDataLoaded] = useState(() => !isAuthenticated)
 
   useEffect(() => {
     saveLocalAppData(data)
   }, [data])
 
   useEffect(() => {
-    if (!isAuthenticated) return
+    if (!isAuthenticated) {
+      setIsAppDataLoaded(true)
+      return
+    }
     let isActive = true
+    setIsAppDataLoaded(false)
     void (async () => {
       try {
         const remote = await readAppData()
@@ -97,6 +103,10 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         setData(remote)
       } catch (error) {
         console.error('[LocalAppDataProvider] Failed to load remote app data', error)
+      } finally {
+        if (isActive) {
+          setIsAppDataLoaded(true)
+        }
       }
     })()
     return () => {
@@ -141,6 +151,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
   const value = useMemo<ContextValue>(() => {
     return {
       data,
+      isAppDataLoaded,
       reset: () => setData(loadLocalAppData()),
 
       createCoachee: (name) => {
@@ -260,7 +271,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         runRemoteAction(setWrittenReportRemote(report))
       },
     }
-  }, [data])
+  }, [data, isAppDataLoaded])
 
   return <LocalAppDataContext.Provider value={value}>{children}</LocalAppDataContext.Provider>
 }

@@ -59,8 +59,10 @@ function buildTranscriptFromSegments(response: any): string {
       segment?.speaker !== undefined
         ? normalizeSpeakerLabel(segment.speaker)
         : segment?.speaker_id !== undefined
-          ? normalizeSpeakerLabel(`speaker_${Number(segment.speaker_id) + 1}`)
-          : "speaker_1"
+          ? normalizeSpeakerLabel(segment.speaker_id)
+          : segment?.speakerId !== undefined
+            ? normalizeSpeakerLabel(segment.speakerId)
+            : "speaker_1"
 
     lines.push(`[${formatTimestamp(start)}] ${speaker}: ${text}`)
   }
@@ -103,10 +105,6 @@ export async function runVoxtralTranscriptionFromEncryptedUpload(params: {
   form.append("model", model)
   form.append("diarize", "true")
   form.append("timestamp_granularities", "segment")
-  const languageCode = normalizeText(params.languageCode)
-  if (languageCode) {
-    form.append("language", languageCode)
-  }
 
   const response = await fetch("https://api.mistral.ai/v1/audio/transcriptions", {
     method: "POST",
@@ -124,13 +122,10 @@ export async function runVoxtralTranscriptionFromEncryptedUpload(params: {
 
   const json = textBody ? JSON.parse(textBody) : null
   const diarized = buildTranscriptFromSegments(json)
-  if (diarized) {
-    return diarized
+  const segmentsLength = Array.isArray(json?.segments) ? json.segments.length : null
+  console.log("[transcription:mistral] response", { hasSegments: segmentsLength !== null, segmentsLength })
+  if (!diarized) {
+    throw new Error("Mistral transcription did not return diarized segments")
   }
-
-  const text = pickText(json)
-  if (!text) {
-    throw new Error("No transcript returned")
-  }
-  return `[00:00.0] speaker_1: ${normalizeSpacing(text)}`
+  return diarized
 }

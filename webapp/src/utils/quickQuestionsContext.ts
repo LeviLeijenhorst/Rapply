@@ -38,3 +38,56 @@ export function buildCoacheeSummariesSystemMessages(params: {
   return [{ role: 'system', text }]
 }
 
+export function buildCoacheeTranscriptsSystemMessages(params: {
+  coacheeName: string
+  sessions: { title: string; createdAtUnixMs: number; transcript: string | null }[]
+  maxTotalCharacters?: number
+  maxTranscriptCharactersPerSession?: number
+  maxSessions?: number
+}): LocalChatMessage[] {
+  const maxTotalCharacters = Math.max(1000, params.maxTotalCharacters ?? 60000)
+  const maxTranscriptCharactersPerSession = Math.max(1000, params.maxTranscriptCharactersPerSession ?? 8000)
+  const maxSessions = Math.max(1, params.maxSessions ?? 50)
+
+  const sortedSessions = [...params.sessions].sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
+
+  const included: Array<{ title: string; dateLabel: string; transcript: string }> = []
+  let totalCharacters = 0
+  let isTruncated = false
+
+  for (const session of sortedSessions) {
+    if (included.length >= maxSessions) {
+      isTruncated = true
+      break
+    }
+    if (totalCharacters >= maxTotalCharacters) {
+      isTruncated = true
+      break
+    }
+    const transcript = normalizeText(session.transcript)
+    if (!transcript) continue
+
+    const clippedTranscript = transcript.length > maxTranscriptCharactersPerSession ? transcript.slice(0, maxTranscriptCharactersPerSession) : transcript
+    const nextTotal = totalCharacters + clippedTranscript.length
+    if (nextTotal > maxTotalCharacters) {
+      isTruncated = true
+      break
+    }
+
+    included.push({
+      title: normalizeText(session.title) || 'Sessie',
+      dateLabel: formatDateLabel(session.createdAtUnixMs),
+      transcript: clippedTranscript,
+    })
+    totalCharacters = nextTotal
+  }
+
+  const text = included.length
+    ? `Hier zijn transcripties van gesprekken met ${params.coacheeName}:\n\n${included
+        .map((session, index) => `${index + 1}. ${session.title} (${session.dateLabel})\n${session.transcript}`)
+        .join('\n\n')}${isTruncated ? '\n\nLet op: niet alle transcripties passen in de context. Oudere transcripties zijn weggelaten.' : ''}\n\nGebruik deze transcripties om de vragen te beantwoorden.`
+    : `Er zijn nog geen transcripties beschikbaar voor ${params.coacheeName}. Beantwoord vragen zo goed mogelijk op basis van wat de gebruiker typt.`
+
+  return [{ role: 'system', text }]
+}
+

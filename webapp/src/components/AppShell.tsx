@@ -24,6 +24,9 @@ import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { config } from '../config'
 import { CoacheeUpsertModal } from './coachees/CoacheeUpsertModal'
 import { EmptyPageMessage } from './EmptyPageMessage'
+import { AppLoadingScreen } from './AppLoadingScreen'
+import { PrivacyPolicyModal } from './settings/PrivacyPolicyModal'
+import { privacyPolicyNlText } from '../content/privacyPolicyNl'
 
 type AnchorPoint = { x: number; y: number }
 type OverlayScreenKey = 'archief'
@@ -80,7 +83,7 @@ export function AppShell({ onLogout }: Props) {
   const { width } = useWindowDimensions()
   const isTooSmall = width < 420
   const isSidebarCompact = width < 700
-  const { data, createCoachee } = useLocalAppData()
+  const { data, createCoachee, isAppDataLoaded } = useLocalAppData()
 
   const [selectedSidebarItemKey, setSelectedSidebarItemKey] = useState<SidebarItemKey>('coachees')
   const [selectedSessieId, setSelectedSessieId] = useState<string | null>(null)
@@ -99,6 +102,7 @@ export function AppShell({ onLogout }: Props) {
   const [isMyAccountModalOpen, setIsMyAccountModalOpen] = useState(false)
   const [isMySubscriptionModalOpen, setIsMySubscriptionModalOpen] = useState(false)
   const [isCoacheeModalOpen, setIsCoacheeModalOpen] = useState(false)
+  const [isPrivacyPolicyModalOpen, setIsPrivacyPolicyModalOpen] = useState(false)
   const [previousRoute, setPreviousRoute] = useState<RouteState | null>(null)
 
   const applyRoute = useCallback(
@@ -326,6 +330,9 @@ export function AppShell({ onLogout }: Props) {
   const hasBreadcrumbs = breadcrumbItems.length >= 2
 
   function renderMainContent() {
+    if (!isAppDataLoaded) {
+      return <AppLoadingScreen />
+    }
     if (overlayScreenKey === 'archief') {
       return <ArchiefScreen />
     }
@@ -542,6 +549,7 @@ export function AppShell({ onLogout }: Props) {
             onOpenPrivacy={() => {
               setIsSettingsMenuOpen(false)
               setSettingsMenuAnchorPoint(null)
+              setIsPrivacyPolicyModalOpen(true)
             }}
           />
 
@@ -583,6 +591,11 @@ export function AppShell({ onLogout }: Props) {
           />
 
           <MySubscriptionModal visible={isMySubscriptionModalOpen} onClose={() => setIsMySubscriptionModalOpen(false)} />
+          <PrivacyPolicyModal
+            visible={isPrivacyPolicyModalOpen}
+            text={privacyPolicyNlText}
+            onClose={() => setIsPrivacyPolicyModalOpen(false)}
+          />
           <CoacheeUpsertModal
             visible={isCoacheeModalOpen}
             mode="create"

@@ -18,7 +18,8 @@ import { typography } from '../theme/typography'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { completeChat, LocalChatMessage } from '../services/chat'
 import { ChatStateMessage, createChatMessageId } from '../utils/chatState'
-import { buildCoacheeSummariesSystemMessages } from '../utils/quickQuestionsContext'
+import { buildCoacheeSummariesSystemMessages, buildCoacheeTranscriptsSystemMessages } from '../utils/quickQuestionsContext'
+import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
 
 type SessionListItem = {
   id: string
@@ -64,6 +65,8 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
   const chatScrollRef = useRef<ScrollView | null>(null)
   const [menuSessionId, setMenuSessionId] = useState<string | null>(null)
   const [menuAnchorPoint, setMenuAnchorPoint] = useState<{ x: number; y: number } | null>(null)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null)
 
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const filteredSessions = sessions.filter((item) => item.title.toLowerCase().includes(normalizedQuery))
@@ -75,6 +78,7 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
     : ''
 
   const isMenuVisible = !!menuSessionId && !!menuAnchorPoint
+  const pendingDeleteSessionTitle = pendingDeleteSessionId ? data.sessions.find((item) => item.id === pendingDeleteSessionId)?.title : null
 
   const searchInputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
   const shouldShowQuickStart = chatMessages.length === 0
@@ -127,8 +131,13 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
         .filter((item) => item.coacheeId === coacheeId && item.kind !== 'notes')
         .map((item) => ({ title: item.title, createdAtUnixMs: item.createdAtUnixMs, summary: item.summary }))
 
+      const coacheeTranscriptSessions = data.sessions
+        .filter((item) => item.coacheeId === coacheeId && item.kind !== 'notes')
+        .map((item) => ({ title: item.title, createdAtUnixMs: item.createdAtUnixMs, transcript: item.transcript ?? null }))
+
       const responseText = await completeChat({
         messages: [
+          ...buildCoacheeTranscriptsSystemMessages({ coacheeName, sessions: coacheeTranscriptSessions }),
           ...buildCoacheeSummariesSystemMessages({ coacheeName, sessions: coacheeSessions }),
           ...nextChatMessages.map<LocalChatMessage>((message) => ({
             role: message.role,
@@ -335,7 +344,8 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
             isDanger: true,
             onPress: () => {
               if (!menuSessionId) return
-              deleteSession(menuSessionId)
+              setPendingDeleteSessionId(menuSessionId)
+              setIsDeleteModalOpen(true)
               setMenuSessionId(null)
               setMenuAnchorPoint(null)
             },
@@ -344,6 +354,21 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
         onClose={() => {
           setMenuSessionId(null)
           setMenuAnchorPoint(null)
+        }}
+      />
+
+      <ConfirmSessieDeleteModal
+        visible={isDeleteModalOpen}
+        sessieTitle={pendingDeleteSessionTitle}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setPendingDeleteSessionId(null)
+        }}
+        onConfirm={() => {
+          if (!pendingDeleteSessionId) return
+          deleteSession(pendingDeleteSessionId)
+          setIsDeleteModalOpen(false)
+          setPendingDeleteSessionId(null)
         }}
       />
     </View>

@@ -123,6 +123,83 @@ export async function loadLatestConversationTranscriptForCoachee(coacheeName: st
   return null
 }
 
+type ConversationTranscriptEntry = {
+  conversationId: string
+  title: string | null
+  transcript: string
+}
+
+function normalizeText(value: string | null | undefined) {
+  return String(value || "").trim()
+}
+
+export async function loadConversationTranscriptsForCoachee(params: {
+  coacheeName: string
+  excludeConversationId?: string
+  maxTotalCharacters?: number
+  maxTranscriptCharactersPerConversation?: number
+  maxConversations?: number
+}): Promise<{ entries: ConversationTranscriptEntry[]; isTruncated: boolean }> {
+  const name = params.coacheeName.trim()
+  const coacheeId = name ? slugifyId(name) : "loose_recordings"
+  const root = `CoachScribe/coachees/${coacheeId}`
+  const maxTotalCharacters = Math.max(1000, params.maxTotalCharacters ?? 60000)
+  const maxTranscriptCharactersPerConversation = Math.max(1000, params.maxTranscriptCharactersPerConversation ?? 8000)
+  const maxConversations = Math.max(1, params.maxConversations ?? 50)
+
+  const entries: ConversationTranscriptEntry[] = []
+  let totalCharacters = 0
+  let isTruncated = false
+
+  try {
+    const dirEntries = await listFiles(root)
+    const conversationIds = dirEntries
+      .filter((entry) => isConversationId(entry))
+      .filter((entry) => !params.excludeConversationId || entry !== params.excludeConversationId)
+      .sort((a, b) => Number(b) - Number(a))
+
+    for (const conversationId of conversationIds) {
+      if (entries.length >= maxConversations) {
+        isTruncated = true
+        break
+      }
+      if (totalCharacters >= maxTotalCharacters) {
+        isTruncated = true
+        break
+      }
+      try {
+        const files = await listFiles(`${root}/${conversationId}`)
+        if (!files.includes("transcript.txt.enc")) continue
+
+        const transcriptRaw = await readEncryptedFile(`${root}/${conversationId}`, "transcript.txt.enc")
+        const transcript = normalizeText(transcriptRaw)
+        if (!transcript) continue
+
+        let title: string | null = null
+        try {
+          if (files.includes("title.txt.enc")) {
+            const titleRaw = await readEncryptedFile(`${root}/${conversationId}`, "title.txt.enc")
+            const normalizedTitle = normalizeText(titleRaw)
+            title = normalizedTitle ? normalizedTitle : null
+          }
+        } catch {}
+
+        const clippedTranscript = clip(transcript, maxTranscriptCharactersPerConversation)
+        const nextTotal = totalCharacters + clippedTranscript.length
+        if (nextTotal > maxTotalCharacters) {
+          isTruncated = true
+          break
+        }
+
+        entries.push({ conversationId, title, transcript: clippedTranscript })
+        totalCharacters = nextTotal
+      } catch {}
+    }
+  } catch {}
+
+  return { entries, isTruncated }
+}
+
 export async function getTranscriptForConversation(coacheeName: string, conversationId: string) {
   const name = coacheeName.trim()
   const coacheeId = name ? slugifyId(name) : "loose_recordings"
@@ -147,33 +224,56 @@ export async function askAssistant(params: {
   userQuestion: string
   currentTranscript?: string
   previousSummaries: { conversationId: string; summary: string }[]
+  coacheeConversationTranscripts?: { conversationId: string; title?: string | null; transcript: string }[]
+  coacheeConversationTranscriptsTruncated?: boolean
 }): Promise<string> {
-  const { coacheeName, currentConversationId, userQuestion, currentTranscript, previousSummaries } = params
+  const {
+    coacheeName,
+    currentConversationId,
+    userQuestion,
+    currentTranscript,
+    previousSummaries,
+    coacheeConversationTranscripts,
+    coacheeConversationTranscriptsTruncated,
+  } = params
   const summariesList = previousSummaries
     .map((s) => `- ${s.conversationId}: ${clip(s.summary, 2000)}`)
     .join("\n")
   const availableIds = previousSummaries.map((s) => s.conversationId)
-  const hasCurrentTranscript = !!(String(currentConversationId || "").trim() && String(currentTranscript || "").trim())
-  const systemA = hasCurrentTranscript
-    ? `
-Je bent een Nederlandstalige AI-assistent voor coaches. Beantwoord vragen over dit gesprek en eerdere gesprekken met dezelfde coachee.
-Gebruik standaard:
-- De transcriptie van het huidige gesprek.
-- De samenvattingen van eerdere gesprekken.
-Vraag alleen de volledige transcriptie van een eerder gesprek op via de tool als dat nodig is voor een nauwkeurig antwoord.
-Respecteer de gebruikerstaal en wees beknopt, feitelijk en behulpzaam.`
-    : `
-Je bent een Nederlandstalige AI-assistent voor coaches. Beantwoord vragen over eerdere gesprekken met dezelfde coachee.
-Gebruik standaard:
-- De samenvattingen van gesprekken.
-Vraag alleen de volledige transcriptie van een gesprek op via de tool als dat nodig is voor een nauwkeurig antwoord.
-Respecteer de gebruikerstaal en wees beknopt, feitelijk en behulpzaam.`
-  const contextNow = hasCurrentTranscript
-    ? `Huidige transcriptie (${String(currentConversationId)}):\n${clip(currentTranscript || "", 20000)}`
+
+  const transcriptEntries = Array.isArray(coacheeConversationTranscripts) ? coacheeConversationTranscripts : []
+  const hasAnyTranscriptEntries = transcriptEntries.length > 0
+  const hasCurrentTranscript = !!normalizeText(currentConversationId) && !!normalizeText(currentTranscript)
+  const hasAnySummaries = previousSummaries.length > 0
+
+  const transcriptContextList = hasAnyTranscriptEntries
+    ? transcriptEntries
+        .map((entry, index) => {
+          const titlePart = normalizeText(entry.title) ? ` - ${normalizeText(entry.title)}` : ""
+          return `${index + 1}. ${entry.conversationId}${titlePart}\n${normalizeText(entry.transcript)}`
+        })
+        .join("\n\n")
     : ""
-  const contextPrev = `Beschikbare eerdere gesprekken:\n${availableIds.join(", ")}\nSamenvattingen:\n${summariesList}`
+
+  const systemA = `
+Je bent een Nederlandstalige AI-assistent voor coaches. Beantwoord vragen over gesprekken met ${coacheeName}.
+Gebruik de beschikbare transcripties en samenvattingen als context. Wees beknopt, feitelijk en behulpzaam.`
+
+  const contextPrev = hasAnySummaries
+    ? `Samenvattingen van gesprekken:\n${summariesList}`
+    : `Er zijn nog geen samenvattingen beschikbaar.`
+
+  const contextAllTranscripts = hasAnyTranscriptEntries
+    ? `Transcripties van gesprekken:\n\n${transcriptContextList}${coacheeConversationTranscriptsTruncated ? "\n\nLet op: niet alle transcripties passen in de context. Oudere transcripties zijn weggelaten." : ""}`
+    : `Er zijn nog geen transcripties beschikbaar.`
+
+  const contextNow = hasCurrentTranscript
+    ? `Huidige transcriptie (${String(currentConversationId)}):\n${clip(normalizeText(currentTranscript), 20000)}`
+    : ""
+
   const messages: any[] = [
     { role: "system", content: systemA },
+    { role: "system", content: contextAllTranscripts },
     { role: "system", content: contextPrev },
     ...(hasCurrentTranscript ? [{ role: "system", content: contextNow }] : []),
     { role: "user", content: userQuestion },

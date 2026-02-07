@@ -4,7 +4,6 @@ import { Animated, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimens
 import { AnimatedMainContent } from '../components/AnimatedMainContent'
 import { ChevronLeftIcon } from '../components/icons/ChevronLeftIcon'
 import { AanpassenIcon } from '../components/icons/AanpassenIcon'
-import { ShareTranscriptIcon } from '../components/icons/ShareTranscriptIcon'
 import { CoacheeAvatarIcon } from '../components/icons/CoacheeAvatarIcon'
 import { CalendarCircleIcon } from '../components/icons/CalendarCircleIcon'
 import { FullScreenOpenIcon } from '../components/icons/FullScreenOpenIcon'
@@ -20,7 +19,6 @@ import { ReportPanel } from '../components/sessionDetail/ReportPanel'
 import { NotesTabPanel } from '../components/sessionDetail/NotesTabPanel'
 import { TranscriptTabPanel } from '../components/sessionDetail/TranscriptTabPanel'
 import { TemplatePickerModal } from '../components/sessionDetail/TemplatePickerModal'
-import { ShareMenu } from '../components/sessionDetail/ShareMenu'
 import { EditSessieModal } from '../components/sessionDetail/EditSessieModal'
 import { WebPortal } from '../components/WebPortal'
 import { AnimatedDropdownPanel } from '../components/AnimatedDropdownPanel'
@@ -30,6 +28,8 @@ import { transcribeAudio } from '../services/transcription'
 import { loadAudioBlob } from '../local/audioBlobStore'
 import { ChatStateMessage, createChatMessageId } from '../utils/chatState'
 import { isUnassignedCoacheeName, unassignedCoacheeLabel } from '../utils/coachee'
+import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
+import { buildCoacheeTranscriptsSystemMessages } from '../utils/quickQuestionsContext'
 
 type Props = {
   sessionId: string
@@ -76,10 +76,10 @@ export function SessieDetailScreen({
   const [isTemplatePickerModalVisible, setIsTemplatePickerModalVisible] = useState(false)
   const [selectedTemplateKey, setSelectedTemplateKey] = useState('standaard')
   const [selectedTemplateLabel, setSelectedTemplateLabel] = useState('Standaard verslag')
-  const [isShareMenuVisible, setIsShareMenuVisible] = useState(false)
   const [isChatMaximized, setIsChatMaximized] = useState(false)
   const [isChatMaximizedRendered, setIsChatMaximizedRendered] = useState(false)
   const [writtenReportDraft, setWrittenReportDraft] = useState(writtenReportText)
+  const [isDeleteSessieModalVisible, setIsDeleteSessieModalVisible] = useState(false)
 
   const coacheeButtonRef = useRef<any>(null)
   const audioPlayerRef = useRef<AudioPlayerHandle | null>(null)
@@ -276,8 +276,16 @@ export function SessieDetailScreen({
     setIsChatSending(true)
 
     try {
+      const coacheeId = session?.coacheeId ?? null
+      const coacheeTranscriptSessions = coacheeId
+        ? data.sessions
+            .filter((item) => item.coacheeId === coacheeId && item.kind !== 'notes')
+            .map((item) => ({ title: item.title, createdAtUnixMs: item.createdAtUnixMs, transcript: item.transcript ?? null }))
+        : []
+
       const responseText = await completeChat({
         messages: [
+          ...buildCoacheeTranscriptsSystemMessages({ coacheeName: editableCoacheeName, sessions: coacheeTranscriptSessions }),
           systemMessage,
           ...nextChatMessages.map<LocalChatMessage>((message) => ({
             role: message.role,
@@ -437,17 +445,6 @@ export function SessieDetailScreen({
               ) : null}
               <Pressable
                 onPress={() => {
-                  setIsShareMenuVisible((value) => !value)
-                  setIsEditSessieModalVisible(false)
-                  setIsTemplatePickerModalVisible(false)
-                }}
-                style={({ hovered }) => [styles.secondaryActionButton, styles.secondaryActionButtonIconOnly, hovered ? styles.secondaryActionButtonHovered : undefined]}
-              >
-                {/* Share button */}
-                <ShareTranscriptIcon color="#656565" size={18} />
-              </Pressable>
-              <Pressable
-                onPress={() => {
                   setIsEditSessieModalVisible(true)
                 }}
                 style={({ hovered }) => [styles.secondaryActionButton, styles.secondaryActionButtonIconOnly, hovered ? styles.secondaryActionButtonHovered : undefined]}
@@ -455,13 +452,6 @@ export function SessieDetailScreen({
                 {/* Adjust button */}
                 <AanpassenIcon color="#656565" size={18} />
               </Pressable>
-              <ShareMenu
-                visible={isShareMenuVisible}
-                onClose={() => setIsShareMenuVisible(false)}
-                onSelectItem={() => {
-                  setIsShareMenuVisible(false)
-                }}
-              />
             </View>
           </View>
         </View>
@@ -622,8 +612,18 @@ export function SessieDetailScreen({
           }}
           onOpenNewCoachee={onOpenNewCoachee}
           onDelete={() => {
-            deleteSession(sessionId)
             setIsEditSessieModalVisible(false)
+            setIsDeleteSessieModalVisible(true)
+          }}
+        />
+
+        <ConfirmSessieDeleteModal
+          visible={isDeleteSessieModalVisible}
+          sessieTitle={editableSessionTitle}
+          onClose={() => setIsDeleteSessieModalVisible(false)}
+          onConfirm={() => {
+            deleteSession(sessionId)
+            setIsDeleteSessieModalVisible(false)
             onBack()
           }}
         />
@@ -727,26 +727,6 @@ export function SessieDetailScreen({
             ) : null}
             <Pressable
               onPress={() => {
-                setIsShareMenuVisible((value) => !value)
-                setIsEditSessieModalVisible(false)
-                setIsTemplatePickerModalVisible(false)
-              }}
-              style={({ hovered }) => [
-                styles.secondaryActionButton,
-                isHeaderActionButtonsCompact ? styles.secondaryActionButtonIconOnly : undefined,
-                hovered ? styles.secondaryActionButtonHovered : undefined,
-              ]}
-            >
-              {/* Share button */}
-              <ShareTranscriptIcon color="#656565" size={18} />
-              {!isHeaderActionButtonsCompact ? (
-                <Text isBold style={styles.secondaryActionText}>
-                  Delen
-                </Text>
-              ) : null}
-            </Pressable>
-            <Pressable
-              onPress={() => {
                 setIsEditSessieModalVisible(true)
               }}
               style={({ hovered }) => [
@@ -763,13 +743,6 @@ export function SessieDetailScreen({
                 </Text>
               ) : null}
             </Pressable>
-            <ShareMenu
-              visible={isShareMenuVisible}
-              onClose={() => setIsShareMenuVisible(false)}
-              onSelectItem={() => {
-                setIsShareMenuVisible(false)
-              }}
-            />
           </View>
         </View>
       </View>
@@ -934,8 +907,18 @@ export function SessieDetailScreen({
         newlyCreatedCoacheeName={newlyCreatedCoacheeName ?? null}
         onNewlyCreatedCoacheeHandled={onNewlyCreatedCoacheeHandled}
         onDelete={() => {
-          deleteSession(sessionId)
           setIsEditSessieModalVisible(false)
+          setIsDeleteSessieModalVisible(true)
+        }}
+      />
+
+      <ConfirmSessieDeleteModal
+        visible={isDeleteSessieModalVisible}
+        sessieTitle={editableSessionTitle}
+        onClose={() => setIsDeleteSessieModalVisible(false)}
+        onConfirm={() => {
+          deleteSession(sessionId)
+          setIsDeleteSessieModalVisible(false)
           onBack()
         }}
       />
