@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const serverDir = path.resolve(__dirname, "..")
 
-dotenv.config({ override: true, path: path.join(serverDir, ".env") })
+dotenv.config({ override: false, path: path.join(serverDir, ".env") })
 
 function requireString(name: string): string {
   const value = process.env[name]
