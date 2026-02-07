@@ -28,6 +28,7 @@ type SessionListItem = {
   timeLabel: string
   isReport: boolean
   createdAtUnixMs: number
+  transcriptionStatus: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
 }
 
 type Props = {
@@ -52,6 +53,7 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
         timeLabel: new Date(item.createdAtUnixMs).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
         isReport: item.kind === 'written',
         createdAtUnixMs: item.createdAtUnixMs,
+        transcriptionStatus: item.transcriptionStatus,
       }))
       .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
   }, [coacheeId, data.sessions])
@@ -137,7 +139,13 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
 
       const responseText = await completeChat({
         messages: [
-          ...buildCoacheeTranscriptsSystemMessages({ coacheeName, sessions: coacheeTranscriptSessions }),
+          ...buildCoacheeTranscriptsSystemMessages({
+            coacheeName,
+            sessions: coacheeTranscriptSessions,
+            maxTotalCharacters: 500000,
+            maxTranscriptCharactersPerSession: 200000,
+            maxSessions: 9999,
+          }),
           ...buildCoacheeSummariesSystemMessages({ coacheeName, sessions: coacheeSessions }),
           ...nextChatMessages.map<LocalChatMessage>((message) => ({
             role: message.role,
@@ -261,12 +269,15 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
 
                     {/* Sessions list */}
                     <ScrollView style={styles.sessionsScroll} contentContainerStyle={styles.sessionsScrollContent} showsVerticalScrollIndicator={false}>
-                      {filteredSessions.map((item) => (
+                      {filteredSessions.map((item) => {
+                        const isTranscriptionActive = item.transcriptionStatus === 'transcribing' || item.transcriptionStatus === 'generating'
+                        return (
                         <View key={item.id} style={styles.sessionsListItem}>
                           <SessieListItemCard
                             title={item.title}
                             dateTimeLabel={`${item.dateLabel}, ${item.timeLabel}`}
                             isReport={item.isReport}
+                            isTranscriptionActive={isTranscriptionActive}
                             onPress={() => onSelectSession(item.id)}
                             onPressEdit={() => onSelectSession(item.id)}
                             onPressMore={(anchorPoint) => {
@@ -276,7 +287,8 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
                             showCoachee={false}
                           />
                         </View>
-                      ))}
+                        )
+                      })}
                     </ScrollView>
                   </>
                 )}

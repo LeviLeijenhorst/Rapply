@@ -1,6 +1,7 @@
 export const colors = {
   pageBackground: '#F8F9F9',
   surface: '#FEFEFE',
+  assistantBubble: '#F2F2F2',
   border: '#E0E0E0',
   hoverBackground: 'rgba(38,52,63,0.02)',
   selected: '#BE0165',

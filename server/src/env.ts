@@ -35,6 +35,13 @@ function parseStringList(value: string): string | string[] {
   return parts.length <= 1 ? trimmed : parts
 }
 
+function normalizeEmailList(value: string | null): string[] {
+  if (!value) return []
+  const parsed = parseStringList(value)
+  if (Array.isArray(parsed)) return parsed
+  return parsed ? [parsed] : []
+}
+
 export const env = {
   runtimeEnvironment: optionalString("NODE_ENV") || "development",
   port: Number(optionalString("PORT") || "8787"),
@@ -61,5 +68,6 @@ export const env = {
   corsAllowedOrigins: optionalString("CORS_ALLOWED_ORIGINS"),
   rateLimitWindowMs: Number(optionalString("RATE_LIMIT_WINDOW_MS") || "60000"),
   rateLimitMaxRequests: Number(optionalString("RATE_LIMIT_MAX_REQUESTS") || "120"),
+  unlimitedTranscriptionEmails: normalizeEmailList(optionalString("UNLIMITED_TRANSCRIPTION_EMAILS")),
 }
 

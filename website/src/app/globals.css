@@ -15,6 +15,76 @@ body {
   box-sizing: border-box;
 }
 
+a[href],
+a[href] *,
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"] {
+  cursor: pointer !important;
+}
+
+a[href]:hover {
+  color: #bd0265;
+}
+
+.home .rectangle,
+.home .div,
+.home .text-wrapper,
+.home .text-wrapper-3,
+.home .line-arrow-right,
+.home .rectangle-25,
+.home .text-wrapper-44,
+.home .product-alle-vragen-item,
+.home .product-alle-vragen-item *,
+.veiligheid .rectangle,
+.veiligheid .text-wrapper,
+.veiligheid .line-arrow-right,
+.voor-wie .rectangle,
+.voor-wie .text-wrapper,
+.voor-wie .line-arrow-right,
+.voor-wie .rectangle-2,
+.voor-wie .text-wrapper-5,
+.voor-wie .product-alle-vragen-item,
+.voor-wie .product-alle-vragen-item *,
+.over-ons .rectangle,
+.over-ons .div,
+.over-ons .line-arrow-right,
+.over-ons .text-wrapper-17,
+.over-ons .text-wrapper-19,
+.over-ons .product-alle-vragen-item,
+.over-ons .product-alle-vragen-item *,
+.product .rectangle-3,
+.product .text-wrapper-4,
+.product .line-arrow-right,
+.product .rectangle-131,
+.product .text-wrapper-60,
+.product .product-alle-vragen-item,
+.product .product-alle-vragen-item *,
+.prijzen .maandelijks,
+.prijzen .maandelijks span,
+.prijzen .ellipse,
+.prijzen .rectangle-7,
+.prijzen .text-wrapper-12,
+.prijzen .rectangle-8,
+.prijzen .text-wrapper-13,
+.prijzen .rectangle-11,
+.prijzen .text-wrapper-18,
+.prijzen .rectangle-18,
+.prijzen .text-wrapper-36,
+.prijzen .product-alle-vragen-item,
+.prijzen .product-alle-vragen-item * {
+  cursor: pointer !important;
+}
+
+.home .product-alle-vragen-item:hover,
+.voor-wie .product-alle-vragen-item:hover,
+.over-ons .product-alle-vragen-item:hover,
+.product .product-alle-vragen-item:hover,
+.prijzen .product-alle-vragen-item:hover {
+  color: #bd0265 !important;
+}
+
 .skipLink {
   position: absolute;
   left: 12px;

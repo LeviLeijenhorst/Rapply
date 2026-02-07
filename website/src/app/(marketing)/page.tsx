@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function HomePage() {
   return (
     <div className="home">
@@ -125,7 +127,9 @@ export default function HomePage() {
       <img className="security" alt="" src="https://c.animaapp.com/mlbdpt1fNSvmz2/img/security.svg" />
       <img className="security-safe" alt="" src="https://c.animaapp.com/mlbdpt1fNSvmz2/img/security-safe.svg" />
       <div className="rectangle-18"></div>
-      <div className="text-wrapper-31">Meer informatie</div>
+      <Link className="text-wrapper-31" href="/veiligheid">
+        Meer informatie
+      </Link>
       <img className="line-arrow-right-5" alt="" src="https://c.animaapp.com/mlbdpt1fNSvmz2/img/line-arrow-right.svg" />
       <p className="text-wrapper-32">
         Gegevens worden opgeslagen op EU-gebaseerde servers, met controle over data-export en -verwijdering. Transparantie staat
@@ -144,10 +148,8 @@ export default function HomePage() {
       <div className="rectangle-19"></div>
       <img className="image-5" alt="" src="https://c.animaapp.com/mlbdpt1fNSvmz2/img/image-29.png" />
       <div className="group">
-        <img className="vector" alt="" src="https://c.animaapp.com/mlbdpt1fNSvmz2/img/vector-3.svg" />
-        <p className="coach-scribe">
-          <span className="text-wrapper-36">Coach</span> <span className="text-wrapper-37">Scribe</span>
-        </p>
+        <img className="vector" alt="Coachscribe logo" src="/assets/coachscribe-logo-icon.png" />
+        <img className="coach-scribe" alt="Coachscribe" src="/assets/coachscribe-logo-text.png" />
       </div>
       <div className="text-wrapper-38">Navigatie</div>
       <div className="text-wrapper-39">Connect</div>
@@ -194,25 +196,22 @@ export default function HomePage() {
       <div className="text-wrapper-54">Facebook</div>
       <img className="image-6" alt="" src="https://c.animaapp.com/mlbdpt1fNSvmz2/img/image-30.png" />
       <p className="product-alle-vragen">
-        <span className="text-wrapper-55">
-          Product
-          <br />
-          Alle vragen
-          <br />
-          Coaches
-          <br />
-          Veiligheid
-          <br />
-          Over Ons
-          <br />
-          Prijzen
-          <br />
-          Inloggen
-          <br />
-          Probeer Gratis
-          <br />
-        </span>
-        <span className="text-wrapper-56"></span>
+        <span className="text-wrapper-55 product-alle-vragen-item">Product</span>
+        <br />
+        <span className="text-wrapper-55 product-alle-vragen-item">Alle vragen</span>
+        <br />
+        <span className="text-wrapper-55 product-alle-vragen-item">Coaches</span>
+        <br />
+        <span className="text-wrapper-55 product-alle-vragen-item">Veiligheid</span>
+        <br />
+        <span className="text-wrapper-55 product-alle-vragen-item">Over Ons</span>
+        <br />
+        <span className="text-wrapper-55 product-alle-vragen-item">Prijzen</span>
+        <br />
+        <span className="text-wrapper-55 product-alle-vragen-item">Inloggen</span>
+        <br />
+        <span className="text-wrapper-55 product-alle-vragen-item">Probeer Gratis</span>
+        <br />
       </p>
       <div className="text-wrapper-57">Alle functies</div>
       <div className="check-wrapper">
@@ -260,27 +259,27 @@ export default function HomePage() {
       <div className="rectangle-28"></div>
       <div className="text-wrapper-67">Probeer Gratis</div>
       <div className="text-wrapper-68">Inloggen</div>
-      <a href="/product" style={{ textDecoration: "none" }}>
+      <Link href="/product" style={{ textDecoration: "none" }}>
         <div className="text-wrapper-69">Product</div>
-      </a>
-      <a href="/veiligheid" style={{ textDecoration: "none" }}>
+      </Link>
+      <Link href="/veiligheid" style={{ textDecoration: "none" }}>
         <div className="text-wrapper-70">Veiligheid</div>
-      </a>
-      <a href="/over-ons" style={{ textDecoration: "none" }}>
+      </Link>
+      <Link href="/over-ons" style={{ textDecoration: "none" }}>
         <div className="text-wrapper-71">Over Ons</div>
-      </a>
-      <a href="/prijzen" style={{ textDecoration: "none" }}>
+      </Link>
+      <Link href="/prijzen" style={{ textDecoration: "none" }}>
         <div className="text-wrapper-72">Prijzen</div>
-      </a>
-      <a href="/" style={{ textDecoration: "none" }}>
+      </Link>
+      <Link href="/" style={{ textDecoration: "none" }}>
         <div className="group-4">
           <img className="vector" alt="" src="/assets/coachscribe-logo-icon.png" />
           <img className="coach-scribe" alt="Coachscribe" src="/assets/coachscribe-logo-text.png" />
         </div>
-      </a>
-      <a href="/coaches" style={{ textDecoration: "none" }}>
+      </Link>
+      <Link href="/coaches" style={{ textDecoration: "none" }}>
         <div className="text-wrapper-73">Coaches</div>
-      </a>
+      </Link>
     </div>
   );
 }

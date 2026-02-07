@@ -49,7 +49,7 @@ function parseTimeLabelToSeconds(timeLabel: string) {
 }
 
 function parseTranscriptLine(line: string, index: number): ParsedTranscriptLine {
-  const timeMatch = line.match(/\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b/)
+  const timeMatch = line.match(/\b(\d{1,2}):(\d{2})(?::(\d{2}))?(?:[.,]\d{1,3})?\b/)
   const timeLabel = timeMatch ? timeMatch[0] : null
   const timeSeconds = timeLabel ? parseTimeLabelToSeconds(timeLabel) : null
   const lineWithoutTime = timeLabel ? line.replace(timeLabel, '').replace(/\[|\]/g, '').trim() : line.trim()
@@ -76,9 +76,12 @@ export function TranscriptTabPanel({
 }: Props) {
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
 
-  const isLoading = transcriptionStatus === 'transcribing' || transcriptionStatus === 'generating'
+  const hasTranscript = Boolean(transcript && transcript.trim())
+  const isTranscribing = transcriptionStatus === 'transcribing'
+  const isGenerating = transcriptionStatus === 'generating'
+  const isLoading = isTranscribing || (isGenerating && !hasTranscript)
   const hasError = transcriptionStatus === 'error'
-  const hasContent = transcriptionStatus === 'done' && transcript
+  const hasContent = hasTranscript && (transcriptionStatus === 'done' || transcriptionStatus === 'generating')
 
   const filteredTranscript = transcript && searchValue.trim() ? transcript.split('\n').filter((line) => line.toLowerCase().includes(searchValue.trim().toLowerCase())) : transcript?.split('\n') || []
 
@@ -110,7 +113,7 @@ export function TranscriptTabPanel({
             <View style={styles.loadingRow}>
               <ActivityIndicator size="small" color={colors.selected} />
               <Text style={styles.loadingText}>
-                {transcriptionStatus === 'transcribing' ? 'Transcriptie wordt gegenereerd...' : 'Verslag wordt gegenereerd...'}
+                {isTranscribing ? 'Transcriberen' : 'Verslag maken'}
               </Text>
             </View>
           </View>

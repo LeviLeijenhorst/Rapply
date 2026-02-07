@@ -15,6 +15,9 @@
   height: 48px;
   background-color: #bd0265;
   border-radius: 50px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  transition: box-shadow 160ms ease;
 }
 
 .voor-wie .text-wrapper {
@@ -118,6 +121,9 @@
   height: 48px;
   background-color: #bd0265;
   border-radius: 50px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  transition: box-shadow 160ms ease;
 }
 
 .voor-wie .text-wrapper-5 {
@@ -1170,6 +1176,23 @@
   height: 48px;
   background-color: #bd0265;
   border-radius: 50px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  transition: box-shadow 160ms ease;
+}
+
+.voor-wie .rectangle:hover,
+.voor-wie .rectangle-2:hover,
+.voor-wie .rectangle-23:hover {
+  box-shadow: inset 0 0 0 2px #ffffff;
+}
+
+.voor-wie .text-wrapper,
+.voor-wie .text-wrapper-5,
+.voor-wie .text-wrapper-48,
+.voor-wie .line-arrow-right,
+.voor-wie .line-arrow-right-2 {
+  pointer-events: none;
 }
 
 .voor-wie .text-wrapper-48 {
@@ -1741,12 +1764,15 @@
   cursor: pointer;
   box-sizing: border-box;
   border: 1px solid #bd0265;
-  transition: border-width 160ms ease;
+  transition: box-shadow 160ms ease;
 }
 
-.voor-wie .rectangle-28:hover,
+.voor-wie .rectangle-28:hover {
+  box-shadow: inset 0 0 0 2px #ffffff;
+}
+
 .voor-wie .rectangle-29:hover {
-  border-width: 2px;
+  box-shadow: inset 0 0 0 1px #bd0265;
 }
 
 .voor-wie .text-wrapper-66,
@@ -1758,6 +1784,11 @@
 .voor-wie .text-wrapper-72 {
   cursor: pointer;
   transition: color 160ms ease;
+}
+
+.voor-wie .text-wrapper-66,
+.voor-wie .text-wrapper-67 {
+  pointer-events: none;
 }
 
 .voor-wie .text-wrapper-66:hover,

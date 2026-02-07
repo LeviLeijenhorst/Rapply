@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function OverOnsPage() {
   return (
     <div className="over-ons">
@@ -10,7 +12,9 @@ export default function OverOnsPage() {
         bij de cliënt.
       </p>
       <div className="rectangle"></div>
-      <div className="div">Contact</div>
+      <a className="div" href="mailto:team@coachscribe.nl" style={{ textDecoration: "none" }}>
+        Contact
+      </a>
       <img className="line-arrow-right" alt="" src="https://c.animaapp.com/mlbeamz0V0IPkS/img/line-arrow-right.svg" />
       <img className="img" alt="" />
       <img className="play-circle" alt="" src="https://c.animaapp.com/mlbeamz0V0IPkS/img/play-circle.svg" />
@@ -101,10 +105,8 @@ export default function OverOnsPage() {
       <div className="rectangle-15"></div>
       <img className="image" alt="" src="https://c.animaapp.com/mlbeamz0V0IPkS/img/image-29.png" />
       <div className="group">
-        <img className="vector" alt="" src="https://c.animaapp.com/mlbeamz0V0IPkS/img/vector-3.svg" />
-        <p className="coach-scribe">
-          <span className="text-wrapper-20">Coach</span> <span className="text-wrapper-21">Scribe</span>
-        </p>
+        <img className="vector" alt="Coachscribe logo" src="/assets/coachscribe-logo-icon.png" />
+        <img className="coach-scribe" alt="Coachscribe" src="/assets/coachscribe-logo-text.png" />
       </div>
       <div className="text-wrapper-22">Navigatie</div>
       <div className="text-wrapper-23">Connect</div>
@@ -122,25 +124,22 @@ export default function OverOnsPage() {
       <div className="text-wrapper-28">Facebook</div>
       <img className="image-2" alt="" src="https://c.animaapp.com/mlbeamz0V0IPkS/img/image-30.png" />
       <p className="product-alle-vragen">
-        <span className="text-wrapper-29">
-          Product
-          <br />
-          Alle vragen
-          <br />
-          Coaches
-          <br />
-          Veiligheid
-          <br />
-          Over Ons
-          <br />
-          Prijzen
-          <br />
-          Inloggen
-          <br />
-          Probeer Gratis
-          <br />
-        </span>
-        <span className="text-wrapper-30"></span>
+        <span className="text-wrapper-29 product-alle-vragen-item">Product</span>
+        <br />
+        <span className="text-wrapper-29 product-alle-vragen-item">Alle vragen</span>
+        <br />
+        <span className="text-wrapper-29 product-alle-vragen-item">Coaches</span>
+        <br />
+        <span className="text-wrapper-29 product-alle-vragen-item">Veiligheid</span>
+        <br />
+        <span className="text-wrapper-29 product-alle-vragen-item">Over Ons</span>
+        <br />
+        <span className="text-wrapper-29 product-alle-vragen-item">Prijzen</span>
+        <br />
+        <span className="text-wrapper-29 product-alle-vragen-item">Inloggen</span>
+        <br />
+        <span className="text-wrapper-29 product-alle-vragen-item">Probeer Gratis</span>
+        <br />
       </p>
       <img className="image-3" alt="" src="https://c.animaapp.com/mlbeamz0V0IPkS/img/image-27.png" />
       <div className="text-wrapper-31">Instagram</div>
@@ -150,27 +149,27 @@ export default function OverOnsPage() {
       <div className="rectangle-18"></div>
       <div className="text-wrapper-32">Probeer Gratis</div>
       <div className="text-wrapper-33">Inloggen</div>
-      <a href="/product" style={{ textDecoration: "none" }}>
+      <Link href="/product" style={{ textDecoration: "none" }}>
         <div className="text-wrapper-34">Product</div>
-      </a>
-      <a href="/veiligheid" style={{ textDecoration: "none" }}>
+      </Link>
+      <Link href="/veiligheid" style={{ textDecoration: "none" }}>
         <div className="text-wrapper-35">Veiligheid</div>
-      </a>
-      <a href="/over-ons" style={{ textDecoration: "none" }}>
+      </Link>
+      <Link href="/over-ons" style={{ textDecoration: "none" }}>
         <div className="text-wrapper-36">Over Ons</div>
-      </a>
-      <a href="/prijzen" style={{ textDecoration: "none" }}>
+      </Link>
+      <Link href="/prijzen" style={{ textDecoration: "none" }}>
         <div className="text-wrapper-37">Prijzen</div>
-      </a>
-      <a href="/" style={{ textDecoration: "none" }}>
+      </Link>
+      <Link href="/" style={{ textDecoration: "none" }}>
         <div className="group-2">
           <img className="vector" alt="" src="/assets/coachscribe-logo-icon.png" />
           <img className="coach-scribe" alt="Coachscribe" src="/assets/coachscribe-logo-text.png" />
         </div>
-      </a>
-      <a href="/coaches" style={{ textDecoration: "none" }}>
+      </Link>
+      <Link href="/coaches" style={{ textDecoration: "none" }}>
         <div className="text-wrapper-38">Coaches</div>
-      </a>
+      </Link>
     </div>
   );
 }

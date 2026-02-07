@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function VeiligheidPage() {
   return (
     <div className="veiligheid">
@@ -51,27 +53,27 @@ export default function VeiligheidPage() {
       <div className="rectangle-8"></div>
       <div className="text-wrapper-12">Probeer Gratis</div>
       <div className="text-wrapper-13">Inloggen</div>
-      <a href="/product" style={{ textDecoration: "none" }}>
+      <Link href="/product" style={{ textDecoration: "none" }}>
         <div className="text-wrapper-14">Product</div>
-      </a>
-      <a href="/veiligheid" style={{ textDecoration: "none" }}>
+      </Link>
+      <Link href="/veiligheid" style={{ textDecoration: "none" }}>
         <div className="text-wrapper-15">Veiligheid</div>
-      </a>
-      <a href="/over-ons" style={{ textDecoration: "none" }}>
+      </Link>
+      <Link href="/over-ons" style={{ textDecoration: "none" }}>
         <div className="text-wrapper-16">Over Ons</div>
-      </a>
-      <a href="/prijzen" style={{ textDecoration: "none" }}>
+      </Link>
+      <Link href="/prijzen" style={{ textDecoration: "none" }}>
         <div className="text-wrapper-17">Prijzen</div>
-      </a>
-      <a href="/" style={{ textDecoration: "none" }}>
+      </Link>
+      <Link href="/" style={{ textDecoration: "none" }}>
         <div className="group">
           <img className="vector" alt="" src="/assets/coachscribe-logo-icon.png" />
           <img className="coach-scribe" alt="Coachscribe" src="/assets/coachscribe-logo-text.png" />
         </div>
-      </a>
-      <a href="/coaches" style={{ textDecoration: "none" }}>
+      </Link>
+      <Link href="/coaches" style={{ textDecoration: "none" }}>
         <div className="text-wrapper-20">Coaches</div>
-      </a>
+      </Link>
     </div>
   );
 }

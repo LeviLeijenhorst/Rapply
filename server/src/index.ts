@@ -8,10 +8,11 @@ import {
   requireAuthenticatedUser,
 } from "./auth"
 import { createCorsMiddleware, createRateLimitMiddleware, parseCorsAllowedOriginsFromEnv } from "./security"
+import { applyUnlimitedTranscriptionToBillingStatus, isUnlimitedTranscriptionEmail, unlimitedTranscriptionRemainingSeconds } from "./billing/unlimitedTranscription"
 import { ensureBillingUser, readBillingStatus } from "./billing/store"
 import { derivePlanStateFromRevenueCatSubscriber, derivePurchasedSecondsFromRevenueCatSubscriber, fetchRevenueCatSubscriber } from "./billing/revenuecat"
 import { randomBase64Url } from "./transcription/random"
-import { createUploadToken, consumeUploadToken, chargeSecondsIdempotent, refundSecondsIdempotent } from "./transcription/store"
+import { createUploadToken, consumeUploadToken, chargeSecondsIdempotent, recordTranscriptionOperationWithoutCharge, refundSecondsIdempotent } from "./transcription/store"
 import { createEncryptedUploadUrl, deleteEncryptedUpload, deleteEncryptedUploadsByPrefix, fetchEncryptedUploadStream, getEncryptedUploadSize } from "./transcription/storage"
 import { computeAudioDurationSecondsFromEncryptedUpload } from "./transcription/duration"
 import { runVoxtralTranscriptionFromEncryptedUpload } from "./transcription/voxtral"
@@ -737,12 +738,13 @@ app.post(
 
     await execute(`update public.billing_users set purchased_seconds = $1, updated_at = now() where user_id = $2`, [purchasedSecondsFromRevenueCat, user.userId])
 
-    const billingStatus = await readBillingStatus({
+    const billingStatusRaw = await readBillingStatus({
       userId: user.userId,
       planKey: planState.planKey,
       cycleStartMs: planState.cycleStartMs,
       cycleEndMs: planState.cycleEndMs,
     })
+    const billingStatus = isUnlimitedTranscriptionEmail(user.email) ? applyUnlimitedTranscriptionToBillingStatus(billingStatusRaw) : billingStatusRaw
 
     res.status(200).json({
       ok: true,
@@ -764,12 +766,13 @@ app.post(
 
     const subscriber = await fetchRevenueCatSubscriber(user.userId)
     const planState = derivePlanStateFromRevenueCatSubscriber(subscriber)
-    const billingStatus = await readBillingStatus({
+    const billingStatusRaw = await readBillingStatus({
       userId: user.userId,
       planKey: planState.planKey,
       cycleStartMs: planState.cycleStartMs,
       cycleEndMs: planState.cycleEndMs,
     })
+    const billingStatus = isUnlimitedTranscriptionEmail(user.email) ? applyUnlimitedTranscriptionToBillingStatus(billingStatusRaw) : billingStatusRaw
 
     res.status(200).json({
       planKey: planState.planKey,
@@ -790,12 +793,13 @@ app.post(
 
     const subscriber = await fetchRevenueCatSubscriber(user.userId)
     const planState = derivePlanStateFromRevenueCatSubscriber(subscriber)
-    const status = await readBillingStatus({
+    const statusRaw = await readBillingStatus({
       userId: user.userId,
       planKey: planState.planKey,
       cycleStartMs: planState.cycleStartMs,
       cycleEndMs: planState.cycleEndMs,
     })
+    const status = isUnlimitedTranscriptionEmail(user.email) ? applyUnlimitedTranscriptionToBillingStatus(statusRaw) : statusRaw
 
     const remainingSeconds = status.remainingSeconds
     const allowed = remainingSeconds > 0
@@ -874,32 +878,45 @@ app.post(
       const planState = derivePlanStateFromRevenueCatSubscriber(subscriber)
 
       let charge: { secondsCharged: number; remainingSecondsAfter: number }
-      try {
-        charge = await chargeSecondsIdempotent({
+      const isUnlimitedTranscription = isUnlimitedTranscriptionEmail(user.email)
+      if (isUnlimitedTranscription) {
+        charge = { secondsCharged: 0, remainingSecondsAfter: unlimitedTranscriptionRemainingSeconds }
+        await recordTranscriptionOperationWithoutCharge({
           userId: user.userId,
           operationId,
-          secondsToCharge,
           planKey: planState.planKey,
           cycleStartMs: planState.cycleStartMs,
           cycleEndMs: planState.cycleEndMs,
+          remainingSecondsAfter: unlimitedTranscriptionRemainingSeconds,
         })
-      } catch (e: any) {
-        const message = String(e?.message || e)
-        if (message === "Not enough seconds remaining") {
-          const status = await readBillingStatus({
+      } else {
+        try {
+          charge = await chargeSecondsIdempotent({
             userId: user.userId,
+            operationId,
+            secondsToCharge,
             planKey: planState.planKey,
             cycleStartMs: planState.cycleStartMs,
             cycleEndMs: planState.cycleEndMs,
           })
-          sendError(
-            res,
-            402,
-            `Not enough seconds remaining. Needed ${secondsToCharge}s, remaining ${status.remainingSeconds}s.`,
-          )
-          return
+        } catch (e: any) {
+          const message = String(e?.message || e)
+          if (message === "Not enough seconds remaining") {
+            const status = await readBillingStatus({
+              userId: user.userId,
+              planKey: planState.planKey,
+              cycleStartMs: planState.cycleStartMs,
+              cycleEndMs: planState.cycleEndMs,
+            })
+            sendError(
+              res,
+              402,
+              `Not enough seconds remaining. Needed ${secondsToCharge}s, remaining ${status.remainingSeconds}s.`,
+            )
+            return
+          }
+          throw e
         }
-        throw e
       }
 
       const apiKey = env.mistralApiKey

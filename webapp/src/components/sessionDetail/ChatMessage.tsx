@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   assistantRow: { width: '100%', flexDirection: 'row', alignItems: 'flex-start' },
   assistantRowLoading: { alignItems: 'center' },
   assistantContent: { flex: 1 },
-  bubble: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, gap: 12 },
+  bubble: { backgroundColor: colors.assistantBubble, borderRadius: 12, padding: 16, gap: 12 },
   exportButton: { height: 32, borderRadius: 8, padding: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   exportButtonHovered: { backgroundColor: colors.hoverBackground },
   exportButtonText: { fontSize: 12, lineHeight: 16, color: colors.textSecondary },

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
 
 import { colors } from '../../theme/colors'
 import { webTransitionSmooth } from '../../theme/webTransitions'
@@ -15,6 +15,7 @@ type Props = {
   dateTimeLabel: string
   coacheeName?: string
   isReport: boolean
+  isTranscriptionActive?: boolean
   onPress: () => void
   onPressEdit: () => void
   onPressMore: (anchorPoint: { x: number; y: number }) => void
@@ -26,6 +27,7 @@ export function SessieListItemCard({
   dateTimeLabel,
   coacheeName,
   isReport,
+  isTranscriptionActive = false,
   onPress,
   onPressEdit,
   onPressMore,
@@ -72,9 +74,12 @@ export function SessieListItemCard({
 
       {/* Session date and duration */}
       <View style={styles.dateColumn}>
-        <Text isBold style={styles.dateTime}>
-          {dateTimeLabel}
-        </Text>
+        <View style={styles.dateRow}>
+          <Text isBold style={styles.dateTime}>
+            {dateTimeLabel}
+          </Text>
+          {isTranscriptionActive ? <ActivityIndicator size="small" color={colors.selected} /> : null}
+        </View>
       </View>
 
       {/* Coachee */}
@@ -158,6 +163,11 @@ const styles = StyleSheet.create({
   dateColumn: {
     width: 200,
     gap: 4,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   dateTime: {
     fontSize: 14,

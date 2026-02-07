@@ -48,6 +48,7 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
           coacheeName,
           dateLabel: new Date(session.createdAtUnixMs).toLocaleDateString('nl-NL', { month: 'short', day: 'numeric', year: 'numeric' }),
           timeLabel: new Date(session.createdAtUnixMs).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
+          transcriptionStatus: session.transcriptionStatus,
         }
       })
       .filter((item) => {
@@ -162,6 +163,7 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
           ) : null}
           {filteredSessies.map((item) => {
             const isReport = item.title.toLowerCase().includes('verslag')
+            const isTranscriptionActive = item.transcriptionStatus === 'transcribing' || item.transcriptionStatus === 'generating'
             return (
               <View key={item.id} style={styles.listItem}>
                 <SessieListItemCard
@@ -169,6 +171,7 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
                   dateTimeLabel={`${item.dateLabel}, ${item.timeLabel}`}
                   coacheeName={item.coacheeName}
                   isReport={isReport}
+                  isTranscriptionActive={isTranscriptionActive}
                   onPress={() => onSelectSessie(item.id)}
                   onPressEdit={() => onSelectSessie(item.id)}
                   onPressMore={(anchorPoint) => {

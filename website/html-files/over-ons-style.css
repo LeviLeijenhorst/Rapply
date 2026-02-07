@@ -51,6 +51,9 @@
   height: 48px;
   background-color: #bd0265;
   border-radius: 50px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  transition: box-shadow 160ms ease;
 }
 
 .over-ons .div {
@@ -494,6 +497,21 @@
   height: 48px;
   background-color: #bd0265;
   border-radius: 50px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  transition: box-shadow 160ms ease;
+}
+
+.over-ons .rectangle:hover,
+.over-ons .rectangle-10:hover {
+  box-shadow: inset 0 0 0 2px #ffffff;
+}
+
+.over-ons .div,
+.over-ons .text-wrapper-17,
+.over-ons .line-arrow-right,
+.over-ons .line-arrow-right-2 {
+  pointer-events: none;
 }
 
 .over-ons .text-wrapper-17 {
@@ -1026,12 +1044,15 @@
   cursor: pointer;
   box-sizing: border-box;
   border: 1px solid #bd0265;
-  transition: border-width 160ms ease;
+  transition: box-shadow 160ms ease;
 }
 
-.over-ons .rectangle-17:hover,
+.over-ons .rectangle-17:hover {
+  box-shadow: inset 0 0 0 2px #ffffff;
+}
+
 .over-ons .rectangle-18:hover {
-  border-width: 2px;
+  box-shadow: inset 0 0 0 1px #bd0265;
 }
 
 .over-ons .text-wrapper-32,
@@ -1043,6 +1064,11 @@
 .over-ons .text-wrapper-38 {
   cursor: pointer;
   transition: color 160ms ease;
+}
+
+.over-ons .text-wrapper-32,
+.over-ons .text-wrapper-33 {
+  pointer-events: none;
 }
 
 .over-ons .text-wrapper-32:hover,

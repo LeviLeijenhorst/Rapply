@@ -22,14 +22,19 @@ a:hover {
   color: #bd0265;
 }
 
-.page-entry {
-  opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 360ms ease, transform 360ms ease;
-  will-change: opacity, transform;
+.page-load {
+  transform: translateY(-19px);
+  transition: transform 360ms ease;
+  will-change: transform;
 }
 
-.page-entry.page-entry-visible {
-  opacity: 1;
+.page-load.page-load-visible {
   transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-load {
+    transform: none;
+    transition: none;
+  }
 }

@@ -18,6 +18,23 @@ type Props = {
   onRetryTranscription?: () => void
 }
 
+function renderInlineText(text: string, textStyle: any) {
+  const parts = String(text || '').split('**')
+  return (
+    <Text style={textStyle}>
+      {parts.map((part, index) =>
+        index % 2 === 1 ? (
+          <Text key={`bold-${index}`} isBold>
+            {part}
+          </Text>
+        ) : (
+          <Text key={`text-${index}`}>{part}</Text>
+        ),
+      )}
+    </Text>
+  )
+}
+
 function renderSummaryWithHeadings(summary: string) {
   const lines = summary.replace(/\r/g, '').split('\n')
   const elements: React.ReactNode[] = []
@@ -39,11 +56,7 @@ function renderSummaryWithHeadings(summary: string) {
     if (headingMatch) {
       const rawText = headingMatch[1]
       const cleanText = rawText.replace(/^\s*#\s*/, '').trim()
-      elements.push(
-        <Text key={`h-${i}`} style={styles.sectionTitle}>
-          {cleanText}
-        </Text>,
-      )
+      elements.push(<View key={`h-${i}`}>{renderInlineText(cleanText, styles.sectionTitle)}</View>)
       continue
     }
 
@@ -65,7 +78,7 @@ function renderSummaryWithHeadings(summary: string) {
           {items.map((item, itemIndex) => (
             <View key={`li-${i}-${itemIndex}`} style={styles.bulletRow}>
               <Text style={styles.bulletSymbol}>•</Text>
-              <Text style={styles.bulletText}>{item}</Text>
+              <View style={styles.bulletTextContainer}>{renderInlineText(item, styles.bulletText)}</View>
             </View>
           ))}
         </View>,
@@ -74,11 +87,7 @@ function renderSummaryWithHeadings(summary: string) {
     }
 
     if (line.trim()) {
-      elements.push(
-        <Text key={`p-${i}`} style={styles.paragraph}>
-          {line}
-        </Text>,
-      )
+      elements.push(<View key={`p-${i}`}>{renderInlineText(line, styles.paragraph)}</View>)
     } else if (i < lines.length - 1) {
       elements.push(<View key={`spacer-${i}`} style={{ height: 8 }} />)
     }
@@ -90,9 +99,12 @@ function renderSummaryWithHeadings(summary: string) {
 export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary, transcriptionStatus, transcriptionError, onRetryTranscription }: Props) {
   const [showCopyNotification, setShowCopyNotification] = useState(false)
 
-  const isLoading = transcriptionStatus === 'transcribing' || transcriptionStatus === 'generating'
+  const hasSummary = Boolean(summary && summary.trim())
+  const isTranscribing = transcriptionStatus === 'transcribing'
+  const isGenerating = transcriptionStatus === 'generating'
   const hasError = transcriptionStatus === 'error'
-  const hasContent = transcriptionStatus === 'done' && summary
+  const shouldShowLoading = !hasSummary && !hasError
+  const loadingLabel = isTranscribing ? 'Transcriberen' : 'Verslag maken'
 
   const reportCopyText = summary || ''
 
@@ -119,13 +131,11 @@ export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary
       </View>
 
       <View style={styles.reportContent} id="report-panel-content">
-        {isLoading ? (
+        {shouldShowLoading ? (
           <View style={styles.loadingContainer}>
             <View style={styles.loadingRow}>
               <ActivityIndicator size="small" color={colors.selected} />
-              <Text style={styles.loadingText}>
-                {transcriptionStatus === 'transcribing' ? 'Transcriptie wordt gegenereerd...' : 'Verslag wordt gegenereerd...'}
-              </Text>
+              <Text style={styles.loadingText}>{loadingLabel}</Text>
             </View>
           </View>
         ) : hasError ? (
@@ -145,7 +155,7 @@ export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary
               </Pressable>
             ) : null}
           </View>
-        ) : hasContent ? (
+        ) : hasSummary ? (
           <View style={styles.summaryContent}>
             {renderSummaryWithHeadings(summary || '')}
           </View>
@@ -264,15 +274,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   bulletSymbol: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 22,
     color: colors.text,
   },
   bulletText: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 22,
     color: colors.text,
+  },
+  bulletTextContainer: {
+    flex: 1,
   },
   actionsRow: {
     flexDirection: 'row',

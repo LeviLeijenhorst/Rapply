@@ -288,7 +288,13 @@ export function SessieDetailScreen({
 
       const responseText = await completeChat({
         messages: [
-          ...buildCoacheeTranscriptsSystemMessages({ coacheeName: editableCoacheeName, sessions: coacheeTranscriptSessions }),
+          ...buildCoacheeTranscriptsSystemMessages({
+            coacheeName: editableCoacheeName,
+            sessions: coacheeTranscriptSessions,
+            maxTotalCharacters: 500000,
+            maxTranscriptCharactersPerSession: 200000,
+            maxSessions: 9999,
+          }),
           systemMessage,
           ...nextChatMessages.map<LocalChatMessage>((message) => ({
             role: message.role,
@@ -351,13 +357,27 @@ export function SessieDetailScreen({
         mimeType: decrypted.mimeType,
         languageCode: 'nl',
       })
-
-      updateSession(sessionId, {
-        transcript,
-        summary,
-        transcriptionStatus: 'done',
-        transcriptionError: null,
-      })
+      const cleanedSummary = String(summary || '').trim()
+      if (cleanedSummary) {
+        updateSession(sessionId, {
+          transcript,
+          summary: cleanedSummary,
+          transcriptionStatus: 'done',
+          transcriptionError: null,
+        })
+      } else {
+        updateSession(sessionId, {
+          transcript,
+          transcriptionStatus: 'generating',
+          transcriptionError: null,
+        })
+        const generatedSummary = await generateSummary({ transcript, templateKey: selectedTemplateKey })
+        updateSession(sessionId, {
+          summary: generatedSummary,
+          transcriptionStatus: 'done',
+          transcriptionError: null,
+        })
+      }
     } catch (error) {
       console.error('[SessieDetailScreen] Transcription retry failed:', error)
       const rawMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -372,11 +392,10 @@ export function SessieDetailScreen({
   async function generateReportForTemplate(templateKey: string) {
     if (session?.transcriptionStatus === 'transcribing' || session?.transcriptionStatus === 'generating') return
 
-    updateSession(sessionId, { transcriptionStatus: 'generating', transcriptionError: null })
-
     try {
       let transcript = String(session?.transcript || '').trim()
       if (!transcript) {
+        updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null })
         if (!session?.audioBlobId) {
           throw new Error('Geen audio beschikbaar om een transcript te maken.')
         }
@@ -397,6 +416,7 @@ export function SessieDetailScreen({
         updateSession(sessionId, { transcript })
       }
 
+      updateSession(sessionId, { transcriptionStatus: 'generating', transcriptionError: null })
       const summary = await generateSummary({ transcript, templateKey })
       updateSession(sessionId, {
         summary,

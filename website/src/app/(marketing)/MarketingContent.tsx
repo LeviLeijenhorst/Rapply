@@ -1,53 +1,66 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 
 type MarketingContentProps = {
   children: React.ReactNode;
 };
 
 export function MarketingContent({ children }: MarketingContentProps) {
-  const [isReady, setIsReady] = useState(false);
+  const pathname = usePathname();
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const animatedElementsRef = useRef<HTMLElement[]>([]);
 
   useEffect(() => {
-    const images = Array.from(document.images);
-
-    if (images.length === 0) {
-      setIsReady(true);
+    const container = containerRef.current;
+    if (!container) {
       return;
     }
 
-    let remaining = 0;
+    const rootElement = container.firstElementChild;
+    if (!(rootElement instanceof HTMLElement)) {
+      console.log("page-load: no root element");
+      return;
+    }
 
-    const handleImageReady = () => {
-      remaining -= 1;
-      if (remaining <= 0) {
-        setIsReady(true);
-      }
-    };
-
-    images.forEach((image) => {
-      if (image.complete) {
-        return;
-      }
-
-      remaining += 1;
-      image.addEventListener("load", handleImageReady);
-      image.addEventListener("error", handleImageReady);
+    animatedElementsRef.current.forEach((element) => {
+      element.classList.remove("page-load");
+      element.classList.remove("page-load-visible");
     });
 
-    if (remaining === 0) {
-      setIsReady(true);
-      return;
-    }
+    const nextElements = Array.from(rootElement.children).filter((element): element is HTMLElement => {
+      return element instanceof HTMLElement;
+    });
+
+    const elementsToAnimate = nextElements.filter((element) => {
+      const style = window.getComputedStyle(element);
+      return style.position !== "fixed";
+    });
+
+    console.log("page-load", {
+      pathname,
+      rootChildren: nextElements.length,
+      animated: elementsToAnimate.length,
+    });
+
+    elementsToAnimate.forEach((element) => {
+      element.classList.add("page-load");
+      element.classList.remove("page-load-visible");
+    });
+
+    animatedElementsRef.current = elementsToAnimate;
+
+    const requestId = window.requestAnimationFrame(() => {
+      elementsToAnimate.forEach((element) => {
+        element.classList.add("page-load-visible");
+      });
+    });
 
     return () => {
-      images.forEach((image) => {
-        image.removeEventListener("load", handleImageReady);
-        image.removeEventListener("error", handleImageReady);
-      });
+      window.cancelAnimationFrame(requestId);
     };
-  }, []);
+  }, [pathname]);
 
-  return <div className={`page-entry ${isReady ? "page-entry-visible" : ""}`}>{children}</div>;
+  return <div ref={containerRef}>{children}</div>;
 }

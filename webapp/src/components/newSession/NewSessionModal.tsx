@@ -10,6 +10,7 @@ import { useLocalAppData } from '../../local/LocalAppDataProvider'
 import { useE2ee } from '../../e2ee/E2eeProvider'
 import { createAudioBlobRemote } from '../../services/audioBlobs'
 import { transcribeAudio } from '../../services/transcription'
+import { generateSummary } from '../../services/summary'
 import { colors } from '../../theme/colors'
 import { webTransitionSmooth, webTransitionSlow } from '../../theme/webTransitions'
 import { Text } from '../Text'
@@ -468,13 +469,27 @@ export function NewSessionModal({
           mimeType: nextAudioForTranscription.mimeType,
           languageCode: 'nl',
         })
-
-        updateSession(createdSessionId, {
-          transcript,
-          summary,
-          transcriptionStatus: 'done',
-          transcriptionError: null,
-        })
+        const cleanedSummary = String(summary || '').trim()
+        if (cleanedSummary) {
+          updateSession(createdSessionId, {
+            transcript,
+            summary: cleanedSummary,
+            transcriptionStatus: 'done',
+            transcriptionError: null,
+          })
+        } else {
+          updateSession(createdSessionId, {
+            transcript,
+            transcriptionStatus: 'generating',
+            transcriptionError: null,
+          })
+          const generatedSummary = await generateSummary({ transcript, templateKey: 'standaard' })
+          updateSession(createdSessionId, {
+            summary: generatedSummary,
+            transcriptionStatus: 'done',
+            transcriptionError: null,
+          })
+        }
       } catch (error) {
         console.error('[NewSessionModal] Transcription failed:', error)
         const rawMessage = error instanceof Error ? error.message : 'Unknown error'

@@ -75,6 +75,47 @@ export type ChargeResult = {
   remainingSecondsAfter: number
 }
 
+export async function recordTranscriptionOperationWithoutCharge(params: {
+  userId: string
+  operationId: string
+  planKey: PlanKey | null
+  cycleStartMs: number | null
+  cycleEndMs: number | null
+  remainingSecondsAfter: number
+}): Promise<void> {
+  const { userId, operationId, planKey, cycleStartMs, cycleEndMs, remainingSecondsAfter } = params
+  const cycleKey = buildCycleKey(cycleStartMs, cycleEndMs)
+
+  await execute(
+    `
+    insert into public.transcription_operations (
+      operation_id,
+      user_id,
+      status,
+      seconds_charged,
+      charged_cycle_seconds,
+      charged_non_expiring_seconds,
+      remaining_seconds_after,
+      plan_key,
+      cycle_key,
+      charged_at
+    )
+    values ($1, $2, 'charged', $3, $4, $5, $6, $7, $8, now())
+    on conflict (operation_id) do update
+      set user_id = excluded.user_id,
+          status = excluded.status,
+          seconds_charged = excluded.seconds_charged,
+          charged_cycle_seconds = excluded.charged_cycle_seconds,
+          charged_non_expiring_seconds = excluded.charged_non_expiring_seconds,
+          remaining_seconds_after = excluded.remaining_seconds_after,
+          plan_key = excluded.plan_key,
+          cycle_key = excluded.cycle_key,
+          charged_at = now()
+    `,
+    [operationId, userId, 0, 0, 0, remainingSecondsAfter, planKey, cycleKey],
+  )
+}
+
 export async function chargeSecondsIdempotent(params: {
   userId: string
   operationId: string
