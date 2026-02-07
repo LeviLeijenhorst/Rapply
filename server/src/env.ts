@@ -56,6 +56,7 @@ export const env = {
   azureSpeechKey: optionalString("AZURE_SPEECH_KEY") || "",
   azureSpeechRegion: optionalString("AZURE_SPEECH_REGION") || "",
   mistralApiKey: optionalString("MISTRAL_API_KEY") || "",
+  mistralChatModel: optionalString("MISTRAL_CHAT_MODEL") || "mistral-small-latest",
   mistralTranscriptionModel: optionalString("MISTRAL_TRANSCRIPTION_MODEL") || "voxtral-mini-latest",
   corsAllowedOrigins: optionalString("CORS_ALLOWED_ORIGINS"),
   rateLimitWindowMs: Number(optionalString("RATE_LIMIT_WINDOW_MS") || "60000"),

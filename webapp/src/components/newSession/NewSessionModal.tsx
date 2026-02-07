@@ -6,8 +6,9 @@ import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { useBrowserAudioRecorder } from '../../hooks/useBrowserAudioRecorder'
 import { useLiveAudioWaveformBars } from '../../hooks/useLiveAudioWaveformBars'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
-import { loadAudioBlob, saveAudioBlob } from '../../local/audioBlobStore'
 import { useLocalAppData } from '../../local/LocalAppDataProvider'
+import { useE2ee } from '../../e2ee/E2eeProvider'
+import { createAudioBlobRemote } from '../../services/audioBlobs'
 import { transcribeAudio } from '../../services/transcription'
 import { colors } from '../../theme/colors'
 import { webTransitionSmooth, webTransitionSlow } from '../../theme/webTransitions'
@@ -59,6 +60,7 @@ export function NewSessionModal({
 }: Props) {
   const isReducedMotionEnabled = useReducedMotion()
   const { data, createSession, updateSession } = useLocalAppData()
+  const e2ee = useE2ee()
   const recorder = useBrowserAudioRecorder()
 
   const [isRendered, setIsRendered] = useState(visible)
@@ -84,6 +86,7 @@ export function NewSessionModal({
   const [audioBlobId, setAudioBlobId] = useState<string | null>(null)
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null)
   const [isSavingAudio, setIsSavingAudio] = useState(false)
+  const [audioForTranscription, setAudioForTranscription] = useState<{ blob: Blob; mimeType: string } | null>(null)
   const { height: windowHeight } = useWindowDimensions()
 
   const backdropOpacity = useRef(new Animated.Value(0)).current
@@ -105,6 +108,7 @@ export function NewSessionModal({
     setAudioBlobId(null)
     setAudioPreviewUrl(null)
     setIsSavingAudio(false)
+    setAudioForTranscription(null)
     setIsMinimized(false)
     setIsCloseWarningVisible(false)
     setIsUploadDragActive(false)
@@ -404,8 +408,15 @@ export function NewSessionModal({
     if (!selectedAudioFile) return
     setIsSavingAudio(true)
     try {
-      const nextId = await saveAudioBlob({ blob: selectedAudioFile, mimeType: selectedAudioFile.type || 'audio/mpeg' })
+      const mimeType = selectedAudioFile.type || 'audio/mpeg'
+      const encryptedBlob = await e2ee.encryptAudioBlobForStorage({ audioBlob: selectedAudioFile, mimeType })
+      const created = await createAudioBlobRemote({ audioBlob: encryptedBlob, mimeType: 'application/octet-stream' })
+      const nextId = String(created.audioBlobId || '').trim()
+      if (!nextId) {
+        throw new Error('Geen audio id teruggekregen van de server.')
+      }
       setAudioBlobId(nextId)
+      setAudioForTranscription({ blob: selectedAudioFile, mimeType })
       setAudioPreviewUrl(URL.createObjectURL(selectedAudioFile))
       setStep('recorded')
     } catch (error) {
@@ -421,6 +432,7 @@ export function NewSessionModal({
     setAudioBlobId(null)
     setSelectedAudioFile(null)
     setIsSavingAudio(false)
+    setAudioForTranscription(null)
     onClose()
   }
 
@@ -431,6 +443,7 @@ export function NewSessionModal({
   async function createAndOpenSession(values: { kind: 'recording' | 'upload' }) {
     if (!audioBlobId) return
     if (isSavingAudio) return
+    if (!audioForTranscription) return
 
     const createdSessionId = createSession({
       coacheeId: selectedCoachee?.id ?? null,
@@ -444,20 +457,15 @@ export function NewSessionModal({
 
     updateSession(createdSessionId, { transcriptionStatus: 'transcribing' })
 
-    const nextAudioBlobId = audioBlobId
+    const nextAudioForTranscription = audioForTranscription
     onOpenSession(createdSessionId)
     handleClose()
 
     void (async () => {
       try {
-        const audioData = await loadAudioBlob(nextAudioBlobId)
-        if (!audioData) {
-          throw new Error('Failed to load audio')
-        }
-
         const { transcript, summary } = await transcribeAudio({
-          audioBlob: audioData.blob,
-          mimeType: audioData.mimeType,
+          audioBlob: nextAudioForTranscription.blob,
+          mimeType: nextAudioForTranscription.mimeType,
           languageCode: 'nl',
         })
 
@@ -502,8 +510,16 @@ export function NewSessionModal({
     setIsSavingAudio(true)
     ;(async () => {
       try {
-        const nextId = await saveAudioBlob({ blob: recorder.recordedBlob as Blob, mimeType: recorder.recordedMimeType as string })
+        const blob = recorder.recordedBlob as Blob
+        const mimeType = recorder.recordedMimeType as string
+        const encryptedBlob = await e2ee.encryptAudioBlobForStorage({ audioBlob: blob, mimeType })
+        const created = await createAudioBlobRemote({ audioBlob: encryptedBlob, mimeType: 'application/octet-stream' })
+        const nextId = String(created.audioBlobId || '').trim()
+        if (!nextId) {
+          throw new Error('Geen audio id teruggekregen van de server.')
+        }
         setAudioBlobId(nextId)
+        setAudioForTranscription({ blob, mimeType })
         setAudioPreviewUrl(URL.createObjectURL(recorder.recordedBlob as Blob))
         setStep('recorded')
       } catch (error) {

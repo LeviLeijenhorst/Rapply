@@ -6,7 +6,8 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts"
+    "start": "tsx src/index.ts",
+    "init-db": "tsx scripts/initDb.ts"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.28.0",

@@ -1,7 +1,7 @@
 import { env } from "../env"
 import { completeAzureOpenAiChat, type ChatMessage } from "../ai/azureOpenAi"
 
-function normalizeText(value: string) {
+function normalizeText(value: unknown) {
   return String(value || "").trim()
 }
 

@@ -2,6 +2,7 @@ export type Coachee = {
   id: string
   name: string
   createdAtUnixMs: number
+  updatedAtUnixMs: number
   isArchived: boolean
 }
 
@@ -12,6 +13,7 @@ export type Session = {
   coacheeId: string | null
   title: string
   createdAtUnixMs: number
+  updatedAtUnixMs: number
   kind: SessionKind
   audioBlobId: string | null
   uploadFileName: string | null

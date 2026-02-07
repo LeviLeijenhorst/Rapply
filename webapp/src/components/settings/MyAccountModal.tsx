@@ -10,6 +10,8 @@ import { TrashIcon } from '../icons/TrashIcon'
 import { MijnAccountIcon } from '../icons/MijnAccountIcon'
 import { LogoutIcon } from '../icons/LogoutIcon'
 import { focusAndSelectAll } from '../../utils/textInput'
+import { useE2ee } from '../../e2ee/E2eeProvider'
+import { e2eeApprovePairing, e2eeListDevices, e2eeRevokeDevice } from '../../services/e2ee'
 
 type Props = {
   visible: boolean
@@ -34,9 +36,16 @@ export function MyAccountModal({
   isManagedByEntra = false,
   entraAccountUrl = 'https://myaccount.microsoft.com/',
 }: Props) {
+  const e2ee = useE2ee()
   const [name, setName] = useState(initialName)
   const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState('')
+  const [devices, setDevices] = useState<
+    { deviceId: string; publicKeyJwk: JsonWebKey; pairingExpiresAtMs: number | null; approvedAtMs: number | null; revokedAtMs: number | null; createdAtMs: number }[]
+  >([])
+  const [e2eeStatus, setE2eeStatus] = useState<string | null>(null)
+  const [rotatedRecoveryKey, setRotatedRecoveryKey] = useState<string | null>(null)
+  const [isE2eeBusy, setIsE2eeBusy] = useState(false)
 
   const nameInputRef = useRef<TextInput | null>(null)
   const emailInputRef = useRef<TextInput | null>(null)
@@ -47,6 +56,16 @@ export function MyAccountModal({
     setName(initialName)
     setEmail(initialEmail)
     setPassword(isManagedByEntra ? '********' : 'password')
+    setE2eeStatus(null)
+    setRotatedRecoveryKey(null)
+    setIsE2eeBusy(false)
+
+    void e2eeListDevices()
+      .then((result) => setDevices(result.devices))
+      .catch((error) => {
+        console.error('[MyAccountModal] Failed to load devices', error)
+        setDevices([])
+      })
   }, [initialEmail, initialName, isManagedByEntra, visible])
 
   if (!visible) return null
@@ -122,6 +141,112 @@ export function MyAccountModal({
           secureTextEntry
           isEditable={!isManagedByEntra}
         />
+
+        {/* Recovery key */}
+        <View style={styles.e2eeCard}>
+          {/* Recovery key */}
+          <Text isSemibold style={styles.e2eeTitle}>
+            Herstelcode
+          </Text>
+          <Text style={styles.e2eeText}>
+            Met de herstelcode kun je je versleutelde data terugkrijgen als je al je apparaten kwijtraakt. Bewaar hem op een veilige plek.
+          </Text>
+          {rotatedRecoveryKey ? (
+            <View style={styles.e2eeCodeBox}>
+              <Text isSemibold style={styles.e2eeCodeText}>
+                {rotatedRecoveryKey}
+              </Text>
+            </View>
+          ) : null}
+          <Pressable
+            onPress={() => {
+              if (isE2eeBusy) return
+              setIsE2eeBusy(true)
+              setE2eeStatus(null)
+              void e2ee
+                .rotateRecoveryKey()
+                .then((key) => {
+                  setRotatedRecoveryKey(key)
+                  const blob = new Blob([`${key}\n`], { type: 'text/plain;charset=utf-8' })
+                  const url = URL.createObjectURL(blob)
+                  const link = document.createElement('a')
+                  link.href = url
+                  link.download = 'coachscribe-herstelcode.txt'
+                  document.body.appendChild(link)
+                  link.click()
+                  link.remove()
+                  URL.revokeObjectURL(url)
+                })
+                .catch((error) => setE2eeStatus(error instanceof Error ? error.message : 'Herstelcode roteren mislukt'))
+                .finally(() => setIsE2eeBusy(false))
+            }}
+            style={({ hovered }) => [styles.e2eeButton, hovered ? styles.e2eeButtonHovered : undefined, isE2eeBusy ? styles.e2eeButtonDisabled : undefined]}
+            disabled={isE2eeBusy}
+          >
+            <Text isBold style={styles.e2eeButtonText}>
+              Nieuwe herstelcode maken
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Devices */}
+        <View style={styles.e2eeCard}>
+          {/* Devices */}
+          <Text isSemibold style={styles.e2eeTitle}>
+            Apparaten
+          </Text>
+          {devices
+            .filter((device) => !device.revokedAtMs)
+            .map((device) => {
+              const now = Date.now()
+              const canApprove = device.approvedAtMs === null && typeof device.pairingExpiresAtMs === 'number' && device.pairingExpiresAtMs > now
+              return (
+                <View key={device.deviceId} style={styles.deviceRow}>
+                  {/* Device info */}
+                  <View style={styles.deviceInfo}>
+                    <Text style={styles.deviceIdText}>{device.deviceId}</Text>
+                    <Text style={styles.deviceMetaText}>{device.approvedAtMs ? 'Goedgekeurd' : canApprove ? 'Wacht op goedkeuring' : 'Niet gekoppeld'}</Text>
+                  </View>
+                  {canApprove ? (
+                    <Pressable
+                      onPress={() => {
+                        if (isE2eeBusy) return
+                        setIsE2eeBusy(true)
+                        setE2eeStatus(null)
+                        void e2ee
+                          .wrapUserDataKeyForDevicePublicKeyJwk(device.publicKeyJwk)
+                          .then((wrapped) => e2eeApprovePairing({ deviceId: device.deviceId, wrappedUserDataKeyForDevice: wrapped }))
+                          .then(() => e2eeListDevices().then((result) => setDevices(result.devices)))
+                          .catch((error) => setE2eeStatus(error instanceof Error ? error.message : 'Goedkeuren mislukt'))
+                          .finally(() => setIsE2eeBusy(false))
+                      }}
+                      style={({ hovered }) => [styles.smallPrimaryButton, hovered ? styles.smallPrimaryButtonHovered : undefined, isE2eeBusy ? styles.e2eeButtonDisabled : undefined]}
+                      disabled={isE2eeBusy}
+                    >
+                      <Text isBold style={styles.smallPrimaryButtonText}>Goedkeuren</Text>
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      onPress={() => {
+                        if (isE2eeBusy) return
+                        setIsE2eeBusy(true)
+                        setE2eeStatus(null)
+                        void e2eeRevokeDevice({ deviceId: device.deviceId })
+                          .then(() => e2eeListDevices().then((result) => setDevices(result.devices)))
+                          .catch((error) => setE2eeStatus(error instanceof Error ? error.message : 'Intrekken mislukt'))
+                          .finally(() => setIsE2eeBusy(false))
+                      }}
+                      style={({ hovered }) => [styles.smallSecondaryButton, hovered ? styles.smallSecondaryButtonHovered : undefined, isE2eeBusy ? styles.e2eeButtonDisabled : undefined]}
+                      disabled={isE2eeBusy}
+                    >
+                      <Text isBold style={styles.smallSecondaryButtonText}>Intrekken</Text>
+                    </Pressable>
+                  )}
+                </View>
+              )
+            })}
+          {e2eeStatus ? <Text style={styles.e2eeStatusText}>{e2eeStatus}</Text> : null}
+        </View>
 
         {/* Top actions */}
         <View style={styles.topActionsRow}>
@@ -299,6 +424,120 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: colors.textStrong,
+  },
+  e2eeCard: {
+    width: '100%',
+    borderRadius: 12,
+    backgroundColor: colors.pageBackground,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    gap: 12,
+  },
+  e2eeTitle: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+  },
+  e2eeText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.text,
+  },
+  e2eeCodeBox: {
+    width: '100%',
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+  },
+  e2eeCodeText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textStrong,
+  },
+  e2eeButton: {
+    width: '100%',
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  e2eeButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  e2eeButtonDisabled: {
+    opacity: 0.6,
+  },
+  e2eeButtonText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+  },
+  deviceRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  deviceInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  deviceIdText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textStrong,
+  },
+  deviceMetaText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.text,
+  },
+  smallPrimaryButton: {
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.selected,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smallPrimaryButtonHovered: {
+    backgroundColor: '#A50058',
+  },
+  smallPrimaryButtonText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#FFFFFF',
+  },
+  smallSecondaryButton: {
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smallSecondaryButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  smallSecondaryButtonText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textStrong,
+  },
+  e2eeStatusText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.selected,
   },
   field: {
     width: '100%',

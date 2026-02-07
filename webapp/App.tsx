@@ -10,6 +10,7 @@ import { AuthScreenLayout } from './src/auth/components/AuthScreenLayout'
 import { LocalAppDataProvider } from './src/local/LocalAppDataProvider'
 import { clearEntraLocalTokens, getStoredAccessToken } from './src/auth/entraAuth'
 import { navigate } from './src/auth/router/webRouter'
+import { E2eeProvider } from './src/e2ee/E2eeProvider'
 
 export default function App() {
   const [areFontsLoaded] = useFonts({
@@ -47,30 +48,32 @@ export default function App() {
       {/* App status bar */}
       <StatusBar style="auto" />
       {/* App shell */}
-      <LocalAppDataProvider isAuthenticated={isAuthenticated}>
-        {isLoggingOut ? (
-          <AuthScreenLayout>
-            <AuthLoadingScreen message="Bezig met uitloggen..." />
-          </AuthScreenLayout>
-        ) : isAuthenticated ? (
-          <AppErrorBoundary onReset={() => setIsAuthenticated(false)}>
-            <AppShell
-              onLogout={() => {
-                if (logoutTimeoutRef.current) {
-                  clearTimeout(logoutTimeoutRef.current)
-                }
-                setIsLoggingOut(true)
-                clearEntraLocalTokens()
-                setIsAuthenticated(false)
-                navigate('/inloggen', { replace: true })
-                logoutTimeoutRef.current = setTimeout(() => setIsLoggingOut(false), 300)
-              }}
-            />
-          </AppErrorBoundary>
-        ) : (
-          <AuthFlow onAuthenticated={() => setIsAuthenticated(true)} />
-        )}
-      </LocalAppDataProvider>
+      <E2eeProvider isAuthenticated={isAuthenticated}>
+        <LocalAppDataProvider isAuthenticated={isAuthenticated}>
+          {isLoggingOut ? (
+            <AuthScreenLayout>
+              <AuthLoadingScreen message="Bezig met uitloggen..." />
+            </AuthScreenLayout>
+          ) : isAuthenticated ? (
+            <AppErrorBoundary onReset={() => setIsAuthenticated(false)}>
+              <AppShell
+                onLogout={() => {
+                  if (logoutTimeoutRef.current) {
+                    clearTimeout(logoutTimeoutRef.current)
+                  }
+                  setIsLoggingOut(true)
+                  clearEntraLocalTokens()
+                  setIsAuthenticated(false)
+                  navigate('/inloggen', { replace: true })
+                  logoutTimeoutRef.current = setTimeout(() => setIsLoggingOut(false), 300)
+                }}
+              />
+            </AppErrorBoundary>
+          ) : (
+            <AuthFlow onAuthenticated={() => setIsAuthenticated(true)} />
+          )}
+        </LocalAppDataProvider>
+      </E2eeProvider>
     </>
   )
 }

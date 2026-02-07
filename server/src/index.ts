@@ -1,5 +1,6 @@
 import express, { type Request, type Response } from "express"
 import crypto from "crypto"
+import { decodeJwt } from "jose"
 import { env } from "./env"
 import { asyncHandler, sendError } from "./http"
 import {
@@ -19,6 +20,8 @@ import { generateSummaryWithAzureOpenAi } from "./summary/azureOpenAiSummary"
 import { completeChatWithAzureOpenAi } from "./chat/azureOpenAiChat"
 import { execute } from "./db"
 import { updateUserDisplayName } from "./users"
+import { createAudioBlob, readAudioBlob } from "./audioBlobs"
+import * as e2ee from "./e2ee"
 import {
   createCoachee,
   createNote,
@@ -46,6 +49,50 @@ app.use(
   createCorsMiddleware({
     runtimeEnvironment: env.runtimeEnvironment,
     allowedOrigins: corsAllowedOrigins,
+  }),
+)
+
+app.post(
+  "/audio-blobs",
+  express.raw({ type: "*/*", limit: "50mb" }),
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const mimeType = String(req.headers["content-type"] || "").trim() || "application/octet-stream"
+    const body = req.body
+    if (!Buffer.isBuffer(body) || body.length === 0) {
+      sendError(res, 400, "Missing audio bytes")
+      return
+    }
+
+    const created = await createAudioBlob({
+      userId: user.userId,
+      mimeType,
+      bytes: body,
+      createdAtUnixMs: Date.now(),
+    })
+
+    res.status(200).json({ audioBlobId: created.id })
+  }),
+)
+
+app.get(
+  "/audio-blobs/:id",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const id = String(req.params?.id || "").trim()
+    if (!id) {
+      sendError(res, 400, "Missing id")
+      return
+    }
+
+    const result = await readAudioBlob({ userId: user.userId, id })
+    if (!result) {
+      sendError(res, 404, "Audio not found")
+      return
+    }
+
+    res.setHeader("Content-Type", result.mimeType)
+    res.status(200).send(result.bytes)
   }),
 )
 
@@ -113,6 +160,172 @@ app.post(
   asyncHandler(async (req, res) => {
     const user = await requireAuthenticatedUser(req)
     res.status(200).json({ userId: user.userId, email: user.email, displayName: user.displayName, entraUserId: user.entraUserId })
+  }),
+)
+
+app.post(
+  "/e2ee/device/register",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const payload = req.body || {}
+    const deviceId = readId(payload.deviceId, "deviceId")
+    const publicKeyJwk = payload.publicKeyJwk
+    if (!publicKeyJwk) {
+      sendError(res, 400, "Missing publicKeyJwk")
+      return
+    }
+
+    await e2ee.registerDevice({ userId: user.userId, deviceId, publicKeyJwk, createdAtUnixMs: Date.now() })
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/e2ee/bootstrap",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const payload = req.body || {}
+    const deviceId = readId(payload.deviceId, "deviceId")
+    const result = await e2ee.bootstrap({ userId: user.userId, deviceId })
+    res.status(200).json({
+      e2eeEnabled: result.e2eeEnabled,
+      wrappedUserDataKeyForDevice: result.wrappedUserDataKeyForDevice,
+      recoveryKeyUpdatedAtMs: result.recoveryKeyUpdatedAtMs,
+    })
+  }),
+)
+
+app.post(
+  "/e2ee/setup",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const payload = req.body || {}
+    const deviceId = readId(payload.deviceId, "deviceId")
+    const wrappedUserDataKeyForDevice = readText(payload.wrappedUserDataKeyForDevice, "wrappedUserDataKeyForDevice")
+    const wrappedUserDataKeyForRecovery = readText(payload.wrappedUserDataKeyForRecovery, "wrappedUserDataKeyForRecovery")
+
+    await e2ee.setupE2ee({
+      userId: user.userId,
+      deviceId,
+      wrappedUserDataKeyForDevice,
+      wrappedUserDataKeyForRecovery,
+      nowUnixMs: Date.now(),
+    })
+
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/e2ee/recovery/wrapped-user-data-key",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const result = await e2ee.readRecoveryWrappedKey({ userId: user.userId })
+    if (!result) {
+      sendError(res, 404, "E2EE not set up")
+      return
+    }
+    res.status(200).json(result)
+  }),
+)
+
+app.post(
+  "/e2ee/device-key/set",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const payload = req.body || {}
+    const deviceId = readId(payload.deviceId, "deviceId")
+    const wrappedUserDataKeyForDevice = readText(payload.wrappedUserDataKeyForDevice, "wrappedUserDataKeyForDevice")
+
+    await e2ee.setWrappedUserDataKeyForDevice({
+      userId: user.userId,
+      deviceId,
+      wrappedUserDataKeyForDevice,
+      nowUnixMs: Date.now(),
+    })
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/e2ee/recovery/rotate",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const payload = req.body || {}
+    const wrappedUserDataKeyForRecovery = readText(payload.wrappedUserDataKeyForRecovery, "wrappedUserDataKeyForRecovery")
+    await e2ee.rotateRecoveryWrappedKey({ userId: user.userId, wrappedUserDataKeyForRecovery, nowUnixMs: Date.now() })
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/e2ee/pairing/request",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const payload = req.body || {}
+    const deviceId = readId(payload.deviceId, "deviceId")
+    const expiresAtMs = Date.now() + 10 * 60_000
+    await e2ee.requestPairing({ userId: user.userId, deviceId, expiresAtUnixMs: expiresAtMs })
+    res.status(200).json({ expiresAtMs })
+  }),
+)
+
+function requireRecentLogin(req: Request) {
+  const authHeader = String(req.headers.authorization || "")
+  const match = authHeader.match(/^Bearer\s+(.+)$/i)
+  const token = match ? String(match[1] || "").trim() : ""
+  if (!token) {
+    throw new Error("Missing Authorization header")
+  }
+  const payload = decodeJwt(token) as any
+  const issuedAtSeconds = typeof payload?.iat === "number" ? payload.iat : null
+  if (!issuedAtSeconds) {
+    throw new Error("Missing iat in token")
+  }
+  const nowSeconds = Math.floor(Date.now() / 1000)
+  const ageSeconds = nowSeconds - issuedAtSeconds
+  if (ageSeconds > 30 * 60) {
+    throw new Error("Recent login required")
+  }
+}
+
+app.post(
+  "/e2ee/pairing/approve",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+
+    try {
+      requireRecentLogin(req)
+    } catch (error) {
+      sendError(res, 401, error instanceof Error ? error.message : "Recent login required")
+      return
+    }
+
+    const payload = req.body || {}
+    const deviceId = readId(payload.deviceId, "deviceId")
+    const wrappedUserDataKeyForDevice = readText(payload.wrappedUserDataKeyForDevice, "wrappedUserDataKeyForDevice")
+    await e2ee.approvePairing({ userId: user.userId, deviceId, wrappedUserDataKeyForDevice, nowUnixMs: Date.now() })
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/e2ee/devices/list",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const devices = await e2ee.listDevices({ userId: user.userId })
+    res.status(200).json({ devices })
+  }),
+)
+
+app.post(
+  "/e2ee/devices/revoke",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const payload = req.body || {}
+    const deviceId = readId(payload.deviceId, "deviceId")
+    await e2ee.revokeDevice({ userId: user.userId, deviceId, nowUnixMs: Date.now() })
+    res.status(200).json({ ok: true })
   }),
 )
 

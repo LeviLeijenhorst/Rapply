@@ -1,7 +1,8 @@
 import React, { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { colors } from '../../theme/colors'
-import { loadAudioBlob } from '../../local/audioBlobStore'
+import { useE2ee } from '../../e2ee/E2eeProvider'
+import { loadAudioBlobRemote } from '../../services/audioBlobs'
 
 type Props = {
   audioBlobId: string | null
@@ -13,6 +14,7 @@ export type AudioPlayerHandle = {
 
 export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(function AudioPlayerCard({ audioBlobId }, ref) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const e2ee = useE2ee()
 
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
 
@@ -39,13 +41,15 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
       }
 
       try {
-        const result = await loadAudioBlob(audioBlobId)
+        const result = await loadAudioBlobRemote(audioBlobId)
         if (isCancelled) return
         if (!result) {
           setAudioUrl(null)
           return
         }
-        const nextUrl = URL.createObjectURL(result.blob)
+        const decrypted = await e2ee.decryptAudioBlobFromStorage(result.blob)
+        if (isCancelled) return
+        const nextUrl = URL.createObjectURL(decrypted.audioBlob)
         setAudioUrl(nextUrl)
       } catch (error) {
         console.error('[AudioPlayerCard] Failed to load audio blob', error)

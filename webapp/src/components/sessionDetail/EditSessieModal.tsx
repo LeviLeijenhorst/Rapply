@@ -246,12 +246,6 @@ export function EditSessieModal({
                     setIsCoacheeMenuOpen(false)
                     onOpenNewCoachee()
                   }}
-                  onMouseDown={(event) => {
-                    event.stopPropagation()
-                  }}
-                  onMouseEnter={() => {
-                    setIsCoacheeMenuOpen(true)
-                  }}
                   style={({ hovered }) => [
                     styles.menuItem,
                     styles.menuItemAdd,

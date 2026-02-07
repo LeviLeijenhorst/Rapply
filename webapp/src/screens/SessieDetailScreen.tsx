@@ -24,8 +24,10 @@ import { WebPortal } from '../components/WebPortal'
 import { AnimatedDropdownPanel } from '../components/AnimatedDropdownPanel'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { completeChat, LocalChatMessage } from '../services/chat'
+import { generateSummary } from '../services/summary'
 import { transcribeAudio } from '../services/transcription'
-import { loadAudioBlob } from '../local/audioBlobStore'
+import { useE2ee } from '../e2ee/E2eeProvider'
+import { loadAudioBlobRemote } from '../services/audioBlobs'
 import { ChatStateMessage, createChatMessageId } from '../utils/chatState'
 import { isUnassignedCoacheeName, unassignedCoacheeLabel } from '../utils/coachee'
 import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
@@ -61,6 +63,7 @@ export function SessieDetailScreen({
   const isHeaderActionButtonsCompact = width < 990
   const hideDate = width < 930
   const { data, deleteSession, setWrittenReport, updateSession } = useLocalAppData()
+  const e2ee = useE2ee()
   const session = data.sessions.find((item) => item.id === sessionId) ?? null
   const isWrittenSession = session?.kind === 'written'
   const writtenReportText = data.writtenReports.find((report) => report.sessionId === sessionId)?.text ?? ''
@@ -337,14 +340,15 @@ export function SessieDetailScreen({
     updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null })
 
     try {
-      const audioData = await loadAudioBlob(session.audioBlobId)
+      const audioData = await loadAudioBlobRemote(session.audioBlobId)
       if (!audioData) {
         throw new Error('Failed to load audio')
       }
+      const decrypted = await e2ee.decryptAudioBlobFromStorage(audioData.blob)
 
       const { transcript, summary } = await transcribeAudio({
-        audioBlob: audioData.blob,
-        mimeType: audioData.mimeType,
+        audioBlob: decrypted.audioBlob,
+        mimeType: decrypted.mimeType,
         languageCode: 'nl',
       })
 
@@ -376,13 +380,14 @@ export function SessieDetailScreen({
         if (!session?.audioBlobId) {
           throw new Error('Geen audio beschikbaar om een transcript te maken.')
         }
-        const audioData = await loadAudioBlob(session.audioBlobId)
+        const audioData = await loadAudioBlobRemote(session.audioBlobId)
         if (!audioData) {
           throw new Error('Failed to load audio')
         }
+        const decrypted = await e2ee.decryptAudioBlobFromStorage(audioData.blob)
         const transcription = await transcribeAudio({
-          audioBlob: audioData.blob,
-          mimeType: audioData.mimeType,
+          audioBlob: decrypted.audioBlob,
+          mimeType: decrypted.mimeType,
           languageCode: 'nl',
         })
         transcript = String(transcription.transcript || '').trim()
@@ -1050,12 +1055,6 @@ export function SessieDetailScreen({
                   event.stopPropagation()
                   setIsCoacheeMenuOpen(false)
                   onOpenNewCoachee()
-                }}
-                onMouseDown={(event) => {
-                  event.stopPropagation()
-                }}
-                onMouseEnter={() => {
-                  setIsCoacheeMenuOpen(true)
                 }}
                 style={({ hovered }) => [
                   styles.coacheeMenuRow,

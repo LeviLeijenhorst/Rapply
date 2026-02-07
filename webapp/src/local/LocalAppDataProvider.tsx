@@ -31,6 +31,7 @@ import {
   updateNoteRemote,
   updateSessionRemote,
 } from '../services/appData'
+import { useOptionalE2ee } from '../e2ee/E2eeProvider'
 
 type ContextValue = {
   data: LocalAppData
@@ -72,29 +73,98 @@ type Props = {
 }
 
 export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
+  const e2ee = useOptionalE2ee()
   const [data, setData] = useState<LocalAppData>(() => loadLocalAppData())
   const [isAppDataLoaded, setIsAppDataLoaded] = useState(() => !isAuthenticated)
 
   useEffect(() => {
-    saveLocalAppData(data)
-  }, [data])
+    if (!isAuthenticated) {
+      saveLocalAppData(data)
+    }
+  }, [data, isAuthenticated])
+
+  async function decryptRemoteData(remote: LocalAppData): Promise<LocalAppData> {
+    if (!e2ee) return remote
+
+    const coachees: Coachee[] = []
+    for (const coachee of remote.coachees) {
+      coachees.push({ ...coachee, name: await e2ee.decryptText(coachee.name) })
+    }
+
+    const sessions: Session[] = []
+    for (const session of remote.sessions) {
+      sessions.push({
+        ...session,
+        title: await e2ee.decryptText(session.title),
+        uploadFileName: session.uploadFileName ? await e2ee.decryptText(session.uploadFileName) : null,
+        transcript: session.transcript ? await e2ee.decryptText(session.transcript) : null,
+        summary: session.summary ? await e2ee.decryptText(session.summary) : null,
+        transcriptionError: session.transcriptionError ? await e2ee.decryptText(session.transcriptionError) : null,
+      })
+    }
+
+    const notes: Note[] = []
+    for (const note of remote.notes) {
+      notes.push({ ...note, text: await e2ee.decryptText(note.text) })
+    }
+
+    const writtenReports: WrittenReport[] = []
+    for (const report of remote.writtenReports) {
+      writtenReports.push({ ...report, text: await e2ee.decryptText(report.text) })
+    }
+
+    return { coachees, sessions, notes, writtenReports }
+  }
+
+  async function encryptCoachee(coachee: Coachee): Promise<Coachee> {
+    if (!e2ee) return coachee
+    return { ...coachee, name: await e2ee.encryptText(coachee.name) }
+  }
+
+  async function encryptSession(session: Session): Promise<Session> {
+    if (!e2ee) return session
+    return {
+      ...session,
+      title: await e2ee.encryptText(session.title),
+      uploadFileName: session.uploadFileName ? await e2ee.encryptText(session.uploadFileName) : null,
+      transcript: session.transcript ? await e2ee.encryptText(session.transcript) : null,
+      summary: session.summary ? await e2ee.encryptText(session.summary) : null,
+      transcriptionError: session.transcriptionError ? await e2ee.encryptText(session.transcriptionError) : null,
+    }
+  }
+
+  async function encryptNote(note: Note): Promise<Note> {
+    if (!e2ee) return note
+    return { ...note, text: await e2ee.encryptText(note.text) }
+  }
+
+  async function encryptWrittenReport(report: WrittenReport): Promise<WrittenReport> {
+    if (!e2ee) return report
+    return { ...report, text: await e2ee.encryptText(report.text) }
+  }
 
   useEffect(() => {
     if (!isAuthenticated) {
       setIsAppDataLoaded(true)
       return
     }
+    if (!e2ee) {
+      setIsAppDataLoaded(false)
+      return
+    }
     let isActive = true
     setIsAppDataLoaded(false)
     void (async () => {
       try {
-        const remote = await readAppData()
+        const remoteRaw = await readAppData()
+        const remote = await decryptRemoteData(remoteRaw)
         if (!isActive) return
         if (isEmptyAppData(remote)) {
           const localSnapshot = loadLocalAppData()
           if (!isEmptyAppData(localSnapshot)) {
             await seedRemoteFromLocal(localSnapshot)
-            const seeded = await readAppData()
+            const seededRaw = await readAppData()
+            const seeded = await decryptRemoteData(seededRaw)
             if (!isActive) return
             setData(seeded)
             return
@@ -112,11 +182,12 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
     return () => {
       isActive = false
     }
-  }, [isAuthenticated])
+  }, [e2ee, isAuthenticated])
 
   async function refreshFromServer() {
     try {
-      const remote = await readAppData()
+      const remoteRaw = await readAppData()
+      const remote = await decryptRemoteData(remoteRaw)
       setData(remote)
     } catch (error) {
       console.error('[LocalAppDataProvider] Failed to refresh remote app data', error)
@@ -135,16 +206,16 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
 
   async function seedRemoteFromLocal(localSnapshot: LocalAppData) {
     for (const coachee of localSnapshot.coachees) {
-      await createCoacheeRemote(coachee)
+      await createCoacheeRemote(await encryptCoachee(coachee))
     }
     for (const session of localSnapshot.sessions) {
-      await createSessionRemote(session)
+      await createSessionRemote(await encryptSession(session))
     }
     for (const note of localSnapshot.notes) {
-      await createNoteRemote(note)
+      await createNoteRemote(await encryptNote(note))
     }
     for (const report of localSnapshot.writtenReports) {
-      await setWrittenReportRemote(report)
+      await setWrittenReportRemote(await encryptWrittenReport(report))
     }
   }
 
@@ -166,13 +237,16 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           isArchived: false,
         }
         setData((previous) => createCoachee(previous, coachee))
-        runRemoteAction(createCoacheeRemote(coachee))
+        if (e2ee) {
+          runRemoteAction(encryptCoachee(coachee).then(createCoacheeRemote))
+        }
         return coachee.id
       },
       updateCoacheeName: (coacheeId, name) => {
         const updatedAtUnixMs = Date.now()
         setData((previous) => updateCoacheeName(previous, coacheeId, name))
-        runRemoteAction(updateCoacheeRemote({ id: coacheeId, name: name.trim(), updatedAtUnixMs }))
+        if (!e2ee) return
+        runRemoteAction(e2ee.encryptText(name.trim()).then((encrypted) => updateCoacheeRemote({ id: coacheeId, name: encrypted, updatedAtUnixMs })))
       },
       archiveCoachee: (coacheeId) => {
         const updatedAtUnixMs = Date.now()
@@ -211,24 +285,38 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           const result = createSession(previous, session)
           return result.data
         })
-        runRemoteAction(createSessionRemote(session))
+        if (e2ee) {
+          runRemoteAction(encryptSession(session).then(createSessionRemote))
+        }
         return session.id
       },
       updateSession: (sessionId, values) => {
         const updatedAtUnixMs = Date.now()
         setData((previous) => updateSession(previous, sessionId, values))
-        runRemoteAction(
-          updateSessionRemote({
+        if (!e2ee) return
+        void (async () => {
+          const encryptedTitle = typeof values.title === 'string' ? await e2ee.encryptText(values.title) : undefined
+          const encryptedTranscript = values.transcript === undefined ? undefined : values.transcript === null ? null : await e2ee.encryptText(values.transcript)
+          const encryptedSummary = values.summary === undefined ? undefined : values.summary === null ? null : await e2ee.encryptText(values.summary)
+          const encryptedError =
+            values.transcriptionError === undefined
+              ? undefined
+              : values.transcriptionError === null
+                ? null
+                : await e2ee.encryptText(values.transcriptionError)
+          await updateSessionRemote({
             id: sessionId,
             updatedAtUnixMs,
             coacheeId: values.coacheeId,
-            title: values.title,
-            transcript: values.transcript,
-            summary: values.summary,
+            title: encryptedTitle,
+            transcript: encryptedTranscript,
+            summary: encryptedSummary,
             transcriptionStatus: values.transcriptionStatus,
-            transcriptionError: values.transcriptionError,
-          }),
-        )
+            transcriptionError: encryptedError,
+          })
+        })()
+          .then(refreshFromServer)
+          .catch((error: unknown) => console.error('[LocalAppDataProvider] Remote update failed', error))
       },
       deleteSession: (sessionId) => {
         setData((previous) => deleteSession(previous, sessionId))
@@ -250,12 +338,15 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           const result = createNote(previous, note)
           return result.data
         })
-        runRemoteAction(createNoteRemote(note))
+        if (e2ee) {
+          runRemoteAction(encryptNote(note).then(createNoteRemote))
+        }
       },
       updateNote: (noteId, text) => {
         const updatedAtUnixMs = Date.now()
         setData((previous) => updateNote(previous, noteId, text))
-        runRemoteAction(updateNoteRemote({ id: noteId, text: text.trim(), updatedAtUnixMs }))
+        if (!e2ee) return
+        runRemoteAction(e2ee.encryptText(text.trim()).then((encrypted) => updateNoteRemote({ id: noteId, text: encrypted, updatedAtUnixMs })))
       },
       deleteNote: (noteId) => {
         setData((previous) => deleteNote(previous, noteId))
@@ -268,10 +359,12 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         const trimmedText = text.trim()
         if (!trimmedText) return
         const report: WrittenReport = { sessionId, text: trimmedText, updatedAtUnixMs }
-        runRemoteAction(setWrittenReportRemote(report))
+        if (e2ee) {
+          runRemoteAction(encryptWrittenReport(report).then(setWrittenReportRemote))
+        }
       },
     }
-  }, [data, isAppDataLoaded])
+  }, [data, e2ee, isAppDataLoaded])
 
   return <LocalAppDataContext.Provider value={value}>{children}</LocalAppDataContext.Provider>
 }
