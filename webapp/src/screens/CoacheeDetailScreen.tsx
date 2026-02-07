@@ -270,14 +270,13 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
                     {/* Sessions list */}
                     <ScrollView style={styles.sessionsScroll} contentContainerStyle={styles.sessionsScrollContent} showsVerticalScrollIndicator={false}>
                       {filteredSessions.map((item) => {
-                        const isTranscriptionActive = item.transcriptionStatus === 'transcribing' || item.transcriptionStatus === 'generating'
                         return (
                         <View key={item.id} style={styles.sessionsListItem}>
                           <SessieListItemCard
                             title={item.title}
                             dateTimeLabel={`${item.dateLabel}, ${item.timeLabel}`}
                             isReport={item.isReport}
-                            isTranscriptionActive={isTranscriptionActive}
+                            transcriptionStatus={item.transcriptionStatus}
                             onPress={() => onSelectSession(item.id)}
                             onPressEdit={() => onSelectSession(item.id)}
                             onPressMore={(anchorPoint) => {

@@ -15,7 +15,7 @@ type Props = {
   dateTimeLabel: string
   coacheeName?: string
   isReport: boolean
-  isTranscriptionActive?: boolean
+  transcriptionStatus?: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
   onPress: () => void
   onPressEdit: () => void
   onPressMore: (anchorPoint: { x: number; y: number }) => void
@@ -27,7 +27,7 @@ export function SessieListItemCard({
   dateTimeLabel,
   coacheeName,
   isReport,
-  isTranscriptionActive = false,
+  transcriptionStatus = 'idle',
   onPress,
   onPressEdit,
   onPressMore,
@@ -35,6 +35,8 @@ export function SessieListItemCard({
 }: Props) {
   const menuWidth = 220
   const moreButtonRef = useRef<any>(null)
+  const isTranscriptionActive = transcriptionStatus === 'transcribing' || transcriptionStatus === 'generating'
+  const transcriptionLabel = transcriptionStatus === 'transcribing' ? 'Transcript wordt gemaakt' : 'Verslag wordt gemaakt'
 
   function getMenuAnchorPointFromEvent(event: any): { x: number; y: number } {
     const rectFromRef = moreButtonRef.current?.getBoundingClientRect?.()
@@ -70,16 +72,19 @@ export function SessieListItemCard({
         <Text numberOfLines={1} isBold style={styles.title}>
           {title}
         </Text>
+        {isTranscriptionActive ? (
+          <View style={styles.transcriptionStatus}>
+            <ActivityIndicator size="small" color={colors.selected} />
+            <Text style={styles.transcriptionStatusText}>{transcriptionLabel}</Text>
+          </View>
+        ) : null}
       </View>
 
       {/* Session date and duration */}
       <View style={styles.dateColumn}>
-        <View style={styles.dateRow}>
-          <Text isBold style={styles.dateTime}>
-            {dateTimeLabel}
-          </Text>
-          {isTranscriptionActive ? <ActivityIndicator size="small" color={colors.selected} /> : null}
-        </View>
+        <Text isBold style={styles.dateTime}>
+          {dateTimeLabel}
+        </Text>
       </View>
 
       {/* Coachee */}
@@ -160,14 +165,19 @@ const styles = StyleSheet.create({
     color: colors.text,
     flex: 1,
   },
-  dateColumn: {
-    width: 200,
-    gap: 4,
-  },
-  dateRow: {
+  transcriptionStatus: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  transcriptionStatusText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
+  },
+  dateColumn: {
+    width: 200,
+    gap: 4,
   },
   dateTime: {
     fontSize: 14,

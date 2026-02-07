@@ -113,7 +113,7 @@ export function TranscriptTabPanel({
             <View style={styles.loadingRow}>
               <ActivityIndicator size="small" color={colors.selected} />
               <Text style={styles.loadingText}>
-                {isTranscribing ? 'Transcriberen' : 'Verslag maken'}
+                {isTranscribing ? 'Transcript wordt gemaakt' : 'Verslag wordt gemaakt'}
               </Text>
             </View>
           </View>

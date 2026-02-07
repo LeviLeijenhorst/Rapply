@@ -31,7 +31,7 @@ import { loadAudioBlobRemote } from '../services/audioBlobs'
 import { ChatStateMessage, createChatMessageId } from '../utils/chatState'
 import { isUnassignedCoacheeName, unassignedCoacheeLabel } from '../utils/coachee'
 import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
-import { buildCoacheeTranscriptsSystemMessages } from '../utils/quickQuestionsContext'
+import { buildCoacheeTranscriptsSystemMessages, buildConversationTranscriptSystemMessages } from '../utils/quickQuestionsContext'
 
 type Props = {
   sessionId: string
@@ -285,16 +285,19 @@ export function SessieDetailScreen({
             .filter((item) => item.coacheeId === coacheeId && item.kind !== 'notes')
             .map((item) => ({ title: item.title, createdAtUnixMs: item.createdAtUnixMs, transcript: item.transcript ?? null }))
         : []
-
-      const responseText = await completeChat({
-        messages: [
-          ...buildCoacheeTranscriptsSystemMessages({
+      const transcriptSystemMessages = coacheeId
+        ? buildCoacheeTranscriptsSystemMessages({
             coacheeName: editableCoacheeName,
             sessions: coacheeTranscriptSessions,
             maxTotalCharacters: 500000,
             maxTranscriptCharactersPerSession: 200000,
             maxSessions: 9999,
-          }),
+          })
+        : buildConversationTranscriptSystemMessages({ transcript: session?.transcript ?? null })
+
+      const responseText = await completeChat({
+        messages: [
+          ...transcriptSystemMessages,
           systemMessage,
           ...nextChatMessages.map<LocalChatMessage>((message) => ({
             role: message.role,
@@ -343,7 +346,7 @@ export function SessieDetailScreen({
     if (!session?.audioBlobId) return
     if (session?.transcriptionStatus === 'transcribing' || session?.transcriptionStatus === 'generating') return
 
-    updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null })
+    updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null, summary: null })
 
     try {
       const audioData = await loadAudioBlobRemote(session.audioBlobId)
@@ -370,6 +373,7 @@ export function SessieDetailScreen({
           transcript,
           transcriptionStatus: 'generating',
           transcriptionError: null,
+          summary: null,
         })
         const generatedSummary = await generateSummary({ transcript, templateKey: selectedTemplateKey })
         updateSession(sessionId, {
@@ -395,7 +399,7 @@ export function SessieDetailScreen({
     try {
       let transcript = String(session?.transcript || '').trim()
       if (!transcript) {
-        updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null })
+        updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null, summary: null })
         if (!session?.audioBlobId) {
           throw new Error('Geen audio beschikbaar om een transcript te maken.')
         }
@@ -416,7 +420,7 @@ export function SessieDetailScreen({
         updateSession(sessionId, { transcript })
       }
 
-      updateSession(sessionId, { transcriptionStatus: 'generating', transcriptionError: null })
+      updateSession(sessionId, { transcriptionStatus: 'generating', transcriptionError: null, summary: null })
       const summary = await generateSummary({ transcript, templateKey })
       updateSession(sessionId, {
         summary,

@@ -163,7 +163,6 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
           ) : null}
           {filteredSessies.map((item) => {
             const isReport = item.title.toLowerCase().includes('verslag')
-            const isTranscriptionActive = item.transcriptionStatus === 'transcribing' || item.transcriptionStatus === 'generating'
             return (
               <View key={item.id} style={styles.listItem}>
                 <SessieListItemCard
@@ -171,7 +170,7 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
                   dateTimeLabel={`${item.dateLabel}, ${item.timeLabel}`}
                   coacheeName={item.coacheeName}
                   isReport={isReport}
-                  isTranscriptionActive={isTranscriptionActive}
+                  transcriptionStatus={item.transcriptionStatus}
                   onPress={() => onSelectSessie(item.id)}
                   onPressEdit={() => onSelectSessie(item.id)}
                   onPressMore={(anchorPoint) => {
