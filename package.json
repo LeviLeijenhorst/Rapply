@@ -1,4 +1,9 @@
 {
+  "private": true,
+  "scripts": {
+    "postinstall": "npm --prefix server install",
+    "start": "npm --prefix server start"
+  },
   "devDependencies": {
     "supabase": "^2.72.8"
   }
