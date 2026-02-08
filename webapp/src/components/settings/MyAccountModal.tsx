@@ -270,7 +270,7 @@ export function MyAccountModal({
             </View>
           </Pressable>
         </View>
-      </View>
+      </ScrollView>
 
       {/* Modal footer */}
       <View style={styles.footer}>
@@ -291,7 +291,6 @@ export function MyAccountModal({
             </Text>
           </Pressable>
         ) : null}
-      </ScrollView>
     </AnimatedOverlayModal>
   )
 }
