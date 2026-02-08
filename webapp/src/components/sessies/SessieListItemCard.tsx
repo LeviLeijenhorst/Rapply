@@ -63,28 +63,35 @@ export function SessieListItemCard({
   return (
     <Pressable onPress={onPress} style={({ hovered }) => [styles.card, webTransitionSmooth, hovered ? styles.cardHovered : undefined]}>
       {/* Session row */}
-      <View style={styles.titleColumn}>
-        {/* Session icon */}
-        <View style={styles.iconContainer}>
-          {isReport ? <StandaardVerslagIcon color={colors.selected} size={20} /> : <MicrophoneSmallIcon color={colors.selected} size={20} />}
-        </View>
-        {/* Session title */}
-        <Text numberOfLines={1} isBold style={styles.title}>
-          {title}
-        </Text>
-        {isTranscriptionActive ? (
-          <View style={styles.transcriptionStatus}>
-            <ActivityIndicator size="small" color={colors.selected} />
-            <Text style={styles.transcriptionStatusText}>{transcriptionLabel}</Text>
+      <View style={styles.sessionInfoRow}>
+        <View style={styles.titleColumn}>
+          {/* Session icon */}
+          <View style={styles.iconContainer}>
+            {isReport ? <StandaardVerslagIcon color={colors.selected} size={20} /> : <MicrophoneSmallIcon color={colors.selected} size={20} />}
           </View>
-        ) : null}
-      </View>
+          {/* Session title */}
+          <Text numberOfLines={1} isBold style={styles.title}>
+            {title}
+          </Text>
+        </View>
 
-      {/* Session date and duration */}
-      <View style={styles.dateColumn}>
-        <Text isBold style={styles.dateTime}>
-          {dateTimeLabel}
-        </Text>
+        {isTranscriptionActive ? (
+          <View style={styles.statusColumn}>
+            <View style={styles.transcriptionStatus}>
+              <ActivityIndicator size="small" color={colors.selected} />
+              <Text style={styles.transcriptionStatusText}>{transcriptionLabel}</Text>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.statusColumn} />
+        )}
+
+        {/* Session date and duration */}
+        <View style={styles.dateColumn}>
+          <Text isBold style={styles.dateTime}>
+            {dateTimeLabel}
+          </Text>
+        </View>
       </View>
 
       {/* Coachee */}
@@ -137,7 +144,7 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     gap: 12,
     width: '100%',
     height: 72,
@@ -152,18 +159,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  sessionInfoRow: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   titleColumn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    flex: 1,
+    maxWidth: 320,
     minWidth: 0,
+    flexShrink: 1,
   },
   title: {
     fontSize: 16,
     lineHeight: 20,
     color: colors.text,
+    flexShrink: 1,
+  },
+  statusColumn: {
     flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   transcriptionStatus: {
     flexDirection: 'row',

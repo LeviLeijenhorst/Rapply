@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Linking, Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { colors } from '../../theme/colors'
@@ -93,7 +93,7 @@ export function MyAccountModal({
       </View>
 
       {/* Modal body */}
-      <View style={styles.body}>
+      <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
         {isManagedByEntra ? (
           <View style={styles.entraNoticeCard}>
             {/* Entra notice */}
@@ -291,7 +291,7 @@ export function MyAccountModal({
             </Text>
           </Pressable>
         ) : null}
-      </View>
+      </ScrollView>
     </AnimatedOverlayModal>
   )
 }
@@ -340,6 +340,7 @@ const styles = StyleSheet.create({
   container: {
     width: 920,
     maxWidth: '90vw',
+    maxHeight: '90vh',
     backgroundColor: colors.surface,
     borderRadius: 16,
     ...( { boxShadow: '0 20px 60px rgba(0,0,0,0.3)' } as any ),
@@ -390,6 +391,11 @@ const styles = StyleSheet.create({
   },
   body: {
     width: '100%',
+    flexGrow: 1,
+    flexShrink: 1,
+    minHeight: 0,
+  },
+  bodyContent: {
     padding: 24,
     gap: 16,
   },

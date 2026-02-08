@@ -129,6 +129,18 @@ export function NewSessionModal({
     if (visible) setIsRendered(true)
   }, [visible])
 
+  useEffect(() => {
+    if (!visible) return
+    if (typeof window === 'undefined') return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      handleClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [handleClose, visible])
+
   const activeCoachees = useMemo(() => data.coachees.filter((c) => !c.isArchived), [data.coachees])
 
   useEffect(() => {
