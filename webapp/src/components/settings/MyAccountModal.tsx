@@ -291,6 +291,7 @@ export function MyAccountModal({
             </Text>
           </Pressable>
         ) : null}
+        </View>
     </AnimatedOverlayModal>
   )
 }
