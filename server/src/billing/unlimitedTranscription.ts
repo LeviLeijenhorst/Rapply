@@ -8,9 +8,11 @@ function normalizeEmail(value: string): string {
 }
 
 export function isUnlimitedTranscriptionEmail(email: string | null): boolean {
-  if (!email) return false
-  const normalizedEmail = normalizeEmail(email)
-  return env.unlimitedTranscriptionEmails.some((allowedEmail) => normalizeEmail(allowedEmail) === normalizedEmail)
+  const normalizedEmail = email ? normalizeEmail(email) : ""
+  const allowedEmails = env.unlimitedTranscriptionEmails.map((allowedEmail) => normalizeEmail(allowedEmail))
+  const isAllowed = !!email && allowedEmails.includes(normalizedEmail)
+  console.log("[billing] unlimited transcription check", { email, normalizedEmail, allowedEmails, isAllowed })
+  return isAllowed
 }
 
 export function applyUnlimitedTranscriptionToBillingStatus(status: BillingStatus): BillingStatus {
