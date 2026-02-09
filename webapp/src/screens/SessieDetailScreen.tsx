@@ -29,6 +29,11 @@ import { transcribeAudio } from '../services/transcription'
 import { useE2ee } from '../e2ee/E2eeProvider'
 import { loadAudioBlobRemote } from '../services/audioBlobs'
 import { ChatStateMessage, createChatMessageId } from '../utils/chatState'
+import {
+  clearQuickQuestionsChatForSession,
+  loadQuickQuestionsChatForSession,
+  saveQuickQuestionsChatForSession,
+} from '../local/quickQuestionsChatStore'
 import { isUnassignedCoacheeName, unassignedCoacheeLabel } from '../utils/coachee'
 import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
 import { buildCoacheeTranscriptsSystemMessages, buildConversationTranscriptSystemMessages } from '../utils/quickQuestionsContext'
@@ -67,6 +72,7 @@ export function SessieDetailScreen({
   const session = data.sessions.find((item) => item.id === sessionId) ?? null
   const isWrittenSession = session?.kind === 'written'
   const writtenReportText = data.writtenReports.find((report) => report.sessionId === sessionId)?.text ?? ''
+  const hasTranscript = Boolean(session?.transcript && session.transcript.trim())
 
   const [activeTabKey, setActiveTabKey] = useState<ConversationTabKey>('snelleVragen')
   const [composerText, setComposerText] = useState('')
@@ -77,14 +83,33 @@ export function SessieDetailScreen({
   const [editableSessionTitle, setEditableSessionTitle] = useState(title)
   const [isEditSessieModalVisible, setIsEditSessieModalVisible] = useState(false)
   const [isTemplatePickerModalVisible, setIsTemplatePickerModalVisible] = useState(false)
-  const [selectedTemplateKey, setSelectedTemplateKey] = useState('standaard')
-  const [selectedTemplateLabel, setSelectedTemplateLabel] = useState('Standaard verslag')
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [isChatMaximized, setIsChatMaximized] = useState(false)
   const [isChatMaximizedRendered, setIsChatMaximizedRendered] = useState(false)
   const [writtenReportDraft, setWrittenReportDraft] = useState(writtenReportText)
   const [isDeleteSessieModalVisible, setIsDeleteSessieModalVisible] = useState(false)
 
   const coacheeButtonRef = useRef<any>(null)
+  const templates = data.templates ?? []
+  const defaultTemplateId = useMemo(() => {
+    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'standaard verslag')
+    return (standardTemplate ?? templates[0])?.id ?? null
+  }, [templates])
+  const selectedTemplate = useMemo(() => templates.find((template) => template.id === selectedTemplateId) ?? null, [selectedTemplateId, templates])
+  const summaryTemplate = useMemo(() => {
+    if (!selectedTemplate) return undefined
+    const sections = selectedTemplate.sections
+      .map((section, index) => {
+        const title = section.title.trim()
+        const description = section.description.trim()
+        if (!title && !description) return null
+        return { title: title || `Onderdeel ${index + 1}`, description }
+      })
+      .filter((section): section is { title: string; description: string } => Boolean(section))
+    if (sections.length === 0) return undefined
+    return { name: selectedTemplate.name, sections }
+  }, [selectedTemplate])
+  const selectedTemplateLabel = selectedTemplate?.name ?? 'Template'
   const audioPlayerRef = useRef<AudioPlayerHandle | null>(null)
   const chatScrollRef = useRef<ScrollView | null>(null)
   const [isCoacheeMenuOpen, setIsCoacheeMenuOpen] = useState(false)
@@ -102,6 +127,7 @@ export function SessieDetailScreen({
   const chatOverlayOpacity = useRef(new Animated.Value(0)).current
   const chatOverlayScale = useRef(new Animated.Value(0.98)).current
   const previousMessageCountRef = useRef(chatMessages.length)
+  const shouldSkipChatSaveRef = useRef(false)
 
   const coacheeMenuEstimatedHeight = useMemo(() => {
     const rowCount = activeCoacheeNames.length + 1
@@ -139,6 +165,12 @@ export function SessieDetailScreen({
     setIsCoacheeMenuOpen(false)
     onNewlyCreatedCoacheeHandled?.()
   }, [data.coachees, newlyCreatedCoacheeName, onNewlyCreatedCoacheeHandled, sessionId, updateSession])
+
+  useEffect(() => {
+    if (!defaultTemplateId) return
+    if (selectedTemplateId && templates.some((template) => template.id === selectedTemplateId)) return
+    setSelectedTemplateId(defaultTemplateId)
+  }, [defaultTemplateId, selectedTemplateId, templates])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -201,10 +233,19 @@ export function SessieDetailScreen({
   }, [coacheeMenuEstimatedHeight, coacheeMenuPosition, isCoacheeMenuOpen])
 
   useEffect(() => {
-    setChatMessages([])
+    shouldSkipChatSaveRef.current = true
+    setChatMessages(loadQuickQuestionsChatForSession(sessionId))
     setComposerText('')
     setIsChatSending(false)
   }, [sessionId])
+
+  useEffect(() => {
+    if (shouldSkipChatSaveRef.current) {
+      shouldSkipChatSaveRef.current = false
+      return
+    }
+    saveQuickQuestionsChatForSession(sessionId, chatMessages)
+  }, [chatMessages, sessionId])
 
   useEffect(() => {
     if (isChatMaximized) {
@@ -250,7 +291,12 @@ export function SessieDetailScreen({
     setChatMessages([])
     setComposerText('')
     setIsChatSending(false)
+    clearQuickQuestionsChatForSession(sessionId)
     scrollChatToEnd()
+  }
+
+  function handleTranscriptMentionPress(seconds: number) {
+    audioPlayerRef.current?.seekToSeconds(seconds)
   }
 
   async function sendChatMessage(messageText: string) {
@@ -262,7 +308,7 @@ export function SessieDetailScreen({
     const systemMessage: LocalChatMessage = {
       role: 'system',
       text:
-        'Je antwoord moet duidelijk en beknopt zijn. Als het antwoord geschikt is om als PDF te downloaden, zet dan alleen de gewenste inhoud tussen deze twee regels. Gebruik exact deze regels op een eigen regel: ' +
+        'Je antwoord moet duidelijk en beknopt zijn. Gebruik nooit labels zoals "speaker_3". Als je een spreker moet noemen, zeg dan "coachee", "coach" of "de spreker". Als je verwijst naar een specifiek moment in het transcript, schrijf het dan als [[timestamp=MM:SS|hier]] en gebruik dat alleen voor klikbare tijdstippen. Als het antwoord geschikt is om als PDF te downloaden, zet dan alleen de gewenste inhoud tussen deze twee regels. Gebruik exact deze regels op een eigen regel: ' +
         `${pdfStartToken} en ${pdfEndToken}. ` +
         'Plaats geen andere tekst tussen die regels dan de inhoud die in de PDF hoort. Zet alle overige uitleg buiten die blokken.',
     }
@@ -375,7 +421,7 @@ export function SessieDetailScreen({
           transcriptionError: null,
           summary: null,
         })
-        const generatedSummary = await generateSummary({ transcript, templateKey: selectedTemplateKey })
+        const generatedSummary = await generateSummary({ transcript, template: summaryTemplate })
         updateSession(sessionId, {
           summary: generatedSummary,
           transcriptionStatus: 'done',
@@ -393,8 +439,22 @@ export function SessieDetailScreen({
     }
   }
 
-  async function generateReportForTemplate(templateKey: string) {
+  async function generateReportForTemplate(templateId: string) {
     if (session?.transcriptionStatus === 'transcribing' || session?.transcriptionStatus === 'generating') return
+    const template = templates.find((item) => item.id === templateId) ?? null
+    const templateForSummary = template
+      ? {
+          name: template.name,
+          sections: template.sections
+            .map((section, index) => {
+              const title = section.title.trim()
+              const description = section.description.trim()
+              if (!title && !description) return null
+              return { title: title || `Onderdeel ${index + 1}`, description }
+            })
+            .filter((section): section is { title: string; description: string } => Boolean(section)),
+        }
+      : undefined
 
     try {
       let transcript = String(session?.transcript || '').trim()
@@ -421,7 +481,10 @@ export function SessieDetailScreen({
       }
 
       updateSession(sessionId, { transcriptionStatus: 'generating', transcriptionError: null, summary: null })
-      const summary = await generateSummary({ transcript, templateKey })
+      const summary = await generateSummary({
+        transcript,
+        template: templateForSummary && templateForSummary.sections.length > 0 ? templateForSummary : undefined,
+      })
       updateSession(sessionId, {
         summary,
         transcriptionStatus: 'done',
@@ -505,14 +568,15 @@ export function SessieDetailScreen({
               <AudioPlayerCard ref={audioPlayerRef} audioBlobId={session?.audioBlobId ?? null} />
               {/* Report */}
               <View style={styles.reportCard}>
-                <ReportPanel
+                  <ReportPanel
                   templateLabel={selectedTemplateLabel}
                   onPressTemplate={() => setIsTemplatePickerModalVisible(true)}
                   isCompact
                   summary={session?.summary ?? null}
+                    hasTranscript={hasTranscript}
                   transcriptionStatus={session?.transcriptionStatus ?? 'idle'}
                   transcriptionError={session?.transcriptionError ?? null}
-                  onRetryTranscription={() => generateReportForTemplate(selectedTemplateKey)}
+                  onRetryTranscription={() => (selectedTemplateId ? generateReportForTemplate(selectedTemplateId) : null)}
                 />
               </View>
               {/* Active tab content */}
@@ -563,9 +627,16 @@ export function SessieDetailScreen({
                         ) : (
                           <>
                             {chatMessages.map((message) => (
-                              <ChatMessage key={message.id} role={message.role} text={message.text} />
+                              <ChatMessage
+                                key={message.id}
+                                role={message.role}
+                                text={message.text}
+                                onTranscriptMentionPress={handleTranscriptMentionPress}
+                              />
                             ))}
-                            {isChatSending ? <ChatMessage role="assistant" text="" isLoading /> : null}
+                            {isChatSending ? (
+                              <ChatMessage role="assistant" text="" isLoading onTranscriptMentionPress={handleTranscriptMentionPress} />
+                            ) : null}
                           </>
                         )}
                       </ScrollView>
@@ -611,17 +682,10 @@ export function SessieDetailScreen({
           visible={isEditSessieModalVisible}
           initialSessionTitle={editableSessionTitle}
           initialCoacheeName={editableCoacheeName}
-          initialTemplateKey={selectedTemplateKey}
+          initialTemplateKey={selectedTemplateId ?? ''}
           initialTemplateLabel={selectedTemplateLabel}
           coacheeOptions={activeCoacheeNames}
-          templateOptions={[
-            { key: 'standaard', label: 'Standaard verslag' },
-            { key: 'soap', label: 'SOAP' },
-            { key: 'intake', label: 'Intakegesprek' },
-            { key: 'voorbereiding', label: 'Voorbereiding' },
-            { key: 'themas', label: "Thema's" },
-            { key: 'gespreksplan', label: 'Gespreksplan' },
-          ]}
+          templateOptions={templates.map((template) => ({ key: template.id, label: template.name }))}
           isTemplateChangeAllowed={!isWrittenSession}
           onClose={() => setIsEditSessieModalVisible(false)}
           onApply={(values) => {
@@ -635,8 +699,7 @@ export function SessieDetailScreen({
             onChangeCoachee(nextCoacheeId)
             setEditableSessionTitle(values.sessionTitle)
             setEditableCoacheeName(values.coacheeName)
-            setSelectedTemplateKey(values.templateKey)
-            setSelectedTemplateLabel(values.templateLabel)
+            setSelectedTemplateId(values.templateKey)
             setIsEditSessieModalVisible(false)
           }}
           onOpenNewCoachee={onOpenNewCoachee}
@@ -659,25 +722,13 @@ export function SessieDetailScreen({
 
         <TemplatePickerModal
           visible={isTemplatePickerModalVisible}
-          selectedTemplateKey={selectedTemplateKey}
+          templates={templates.map((template) => ({ id: template.id, name: template.name }))}
+          selectedTemplateId={selectedTemplateId}
           onClose={() => setIsTemplatePickerModalVisible(false)}
-          onContinue={(templateKey) => {
-            setSelectedTemplateKey(templateKey)
-            const nextLabel =
-              templateKey === 'standaard'
-                ? 'Standaard verslag'
-                : templateKey === 'soap'
-                  ? 'SOAP'
-                  : templateKey === 'intake'
-                    ? 'Intakegesprek'
-                    : templateKey === 'voorbereiding'
-                      ? 'Voorbereiding'
-                      : templateKey === 'themas'
-                        ? "Thema's"
-                        : 'Gespreksplan'
-            setSelectedTemplateLabel(nextLabel)
+          onContinue={(templateId) => {
+            setSelectedTemplateId(templateId)
             setIsTemplatePickerModalVisible(false)
-            void generateReportForTemplate(templateKey)
+            void generateReportForTemplate(templateId)
           }}
         />
 
@@ -804,9 +855,10 @@ export function SessieDetailScreen({
                     onPressTemplate={() => setIsTemplatePickerModalVisible(true)}
                     isCompact={isCompactLayout}
                     summary={session?.summary ?? null}
+                    hasTranscript={hasTranscript}
                     transcriptionStatus={session?.transcriptionStatus ?? 'idle'}
                     transcriptionError={session?.transcriptionError ?? null}
-                    onRetryTranscription={() => generateReportForTemplate(selectedTemplateKey)}
+                    onRetryTranscription={() => (selectedTemplateId ? generateReportForTemplate(selectedTemplateId) : null)}
                   />
                 </View>
               </ScrollView>
@@ -861,9 +913,16 @@ export function SessieDetailScreen({
                         ) : (
                           <>
                             {chatMessages.map((message) => (
-                              <ChatMessage key={message.id} role={message.role} text={message.text} />
+                              <ChatMessage
+                                key={message.id}
+                                role={message.role}
+                                text={message.text}
+                                onTranscriptMentionPress={handleTranscriptMentionPress}
+                              />
                             ))}
-                            {isChatSending ? <ChatMessage role="assistant" text="" isLoading /> : null}
+                            {isChatSending ? (
+                              <ChatMessage role="assistant" text="" isLoading onTranscriptMentionPress={handleTranscriptMentionPress} />
+                            ) : null}
                           </>
                         )}
                       </ScrollView>
@@ -905,17 +964,10 @@ export function SessieDetailScreen({
         visible={isEditSessieModalVisible}
         initialSessionTitle={editableSessionTitle}
         initialCoacheeName={editableCoacheeName}
-        initialTemplateKey={selectedTemplateKey}
+        initialTemplateKey={selectedTemplateId ?? ''}
         initialTemplateLabel={selectedTemplateLabel}
         coacheeOptions={activeCoacheeNames}
-        templateOptions={[
-          { key: 'standaard', label: 'Standaard verslag' },
-          { key: 'soap', label: 'SOAP' },
-          { key: 'intake', label: 'Intakegesprek' },
-          { key: 'voorbereiding', label: 'Voorbereiding' },
-          { key: 'themas', label: "Thema's" },
-          { key: 'gespreksplan', label: 'Gespreksplan' },
-        ]}
+        templateOptions={templates.map((template) => ({ key: template.id, label: template.name }))}
         isTemplateChangeAllowed={!isWrittenSession}
         onClose={() => setIsEditSessieModalVisible(false)}
         onApply={(values) => {
@@ -928,8 +980,7 @@ export function SessieDetailScreen({
           })
           setEditableSessionTitle(values.sessionTitle)
           setEditableCoacheeName(values.coacheeName)
-          setSelectedTemplateKey(values.templateKey)
-          setSelectedTemplateLabel(values.templateLabel)
+          setSelectedTemplateId(values.templateKey)
           setIsEditSessieModalVisible(false)
         }}
         onOpenNewCoachee={onOpenNewCoachee}
@@ -954,25 +1005,13 @@ export function SessieDetailScreen({
 
       <TemplatePickerModal
         visible={isTemplatePickerModalVisible}
-        selectedTemplateKey={selectedTemplateKey}
+        templates={templates.map((template) => ({ id: template.id, name: template.name }))}
+        selectedTemplateId={selectedTemplateId}
         onClose={() => setIsTemplatePickerModalVisible(false)}
-        onContinue={(templateKey) => {
-          setSelectedTemplateKey(templateKey)
-          const nextLabel =
-            templateKey === 'standaard'
-              ? 'Standaard verslag'
-              : templateKey === 'soap'
-                ? 'SOAP'
-                : templateKey === 'intake'
-                  ? 'Intakegesprek'
-                  : templateKey === 'voorbereiding'
-                    ? 'Voorbereiding'
-                    : templateKey === 'themas'
-                      ? "Thema's"
-                      : 'Gespreksplan'
-          setSelectedTemplateLabel(nextLabel)
+        onContinue={(templateId) => {
+          setSelectedTemplateId(templateId)
           setIsTemplatePickerModalVisible(false)
-          void generateReportForTemplate(templateKey)
+          void generateReportForTemplate(templateId)
         }}
       />
 
@@ -1017,9 +1056,16 @@ export function SessieDetailScreen({
                   ) : (
                     <>
                       {chatMessages.map((message) => (
-                        <ChatMessage key={message.id} role={message.role} text={message.text} />
+                        <ChatMessage
+                          key={message.id}
+                          role={message.role}
+                          text={message.text}
+                          onTranscriptMentionPress={handleTranscriptMentionPress}
+                        />
                       ))}
-                      {isChatSending ? <ChatMessage role="assistant" text="" isLoading /> : null}
+                      {isChatSending ? (
+                        <ChatMessage role="assistant" text="" isLoading onTranscriptMentionPress={handleTranscriptMentionPress} />
+                      ) : null}
                     </>
                   )}
                 </ScrollView>

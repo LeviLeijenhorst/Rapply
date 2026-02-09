@@ -1,65 +1,25 @@
 import React, { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 
-import { TemplateEditModal, TemplateEditModalTemplate } from '../components/templates/TemplateEditModal'
+import { TemplateEditModal } from '../components/templates/TemplateEditModal'
 import { SearchIcon } from '../components/icons/SearchIcon'
 import { Text } from '../components/Text'
 import { colors } from '../theme/colors'
+import { TemplateNotSavedIcon } from '../components/icons/TemplateNotSavedIcon'
+import { TemplateSavedIcon } from '../components/icons/TemplateSavedIcon'
+import { useLocalAppData } from '../local/LocalAppDataProvider'
 
-type TemplateCategoryKey = 'loopbaancoach' | 'leefstijlcoach' | 'businesscoach' | 'budgetcoach' | 'overige'
-
-type TemplateCategory = {
-  key: TemplateCategoryKey
-  label: string
-  iconLabel: string
-}
-
-type Template = TemplateEditModalTemplate & {
-  id: string
-  categoryKey: TemplateCategoryKey
-}
-
-const templateCategories: TemplateCategory[] = [
-  { key: 'loopbaancoach', label: 'Loopbaancoach', iconLabel: '1' },
-  { key: 'leefstijlcoach', label: 'Leefstijlcoach', iconLabel: '2' },
-  { key: 'businesscoach', label: 'Business coach', iconLabel: '3' },
-  { key: 'budgetcoach', label: 'Budgetcoach', iconLabel: '4' },
-  { key: 'overige', label: 'Overige', iconLabel: '5' },
-]
-
-const initialTemplates: Template[] = [
-  {
-    id: 'template-standaard',
-    name: 'Standaard verslag',
-    categoryKey: 'loopbaancoach',
-    sections: [
-      { id: 'section-1', title: 'Samenvatting', description: 'Een korte samenvatting van de sessie met de belangrijkste punten die relevant zijn voor een loopbaan coach.' },
-      { id: 'section-2', title: 'Bulletpoints', description: 'Bulletpoints zodat je in 1 oogopslag kan zien wat de belangrijkste punten zijn' },
-      { id: 'section-3', title: 'Actiepunten', description: 'De belangrijkste actiepunten op een rij.' },
-    ],
-  },
-  {
-    id: 'template-soap',
-    name: 'SOAP',
-    categoryKey: 'loopbaancoach',
-    sections: [{ id: 'section-1', title: 'SOAP', description: 'Subjective, Objective, Assesment and Plan.' }],
-  },
-  {
-    id: 'template-intake',
-    name: 'Intake',
-    categoryKey: 'loopbaancoach',
-    sections: [{ id: 'section-1', title: 'Intake', description: 'Automatische antwoorden op standaard intake vragen zoals hulpvraag, achtergrond en verwachtingen' }],
-  },
-]
+type SavedFilterKey = 'all' | 'saved'
 
 export function TemplatesScreen() {
-  const [activeCategoryKey, setActiveCategoryKey] = useState<TemplateCategoryKey>('loopbaancoach')
-  const [templates, setTemplates] = useState<Template[]>(initialTemplates)
+  const { data, createTemplate, updateTemplate, toggleTemplateSaved } = useLocalAppData()
   const [searchText, setSearchText] = useState('')
+  const [activeSavedFilter, setActiveSavedFilter] = useState<SavedFilterKey>('all')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
 
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
+  const templates = data.templates ?? []
 
   const editingTemplate = useMemo(() => {
     if (!editingTemplateId) return null
@@ -69,73 +29,48 @@ export function TemplatesScreen() {
   const visibleTemplates = useMemo(() => {
     const normalizedQuery = searchText.trim().toLowerCase()
     return templates
-      .filter((template) => template.categoryKey === activeCategoryKey)
+      .filter((template) => (activeSavedFilter === 'saved' ? template.isSaved : true))
       .filter((template) => (normalizedQuery.length === 0 ? true : template.name.toLowerCase().includes(normalizedQuery)))
-  }, [activeCategoryKey, searchText, templates])
+  }, [activeSavedFilter, searchText, templates])
 
   return (
     <View style={styles.container}>
       {/* Page header */}
-      <View style={styles.headerRow}>
-        {/* Page title */}
-        <Text isSemibold style={styles.headerTitle}>
-          Templates
-        </Text>
-        {/* Header actions */}
-        <View style={styles.headerActions}>
-          {/* Search input */}
-          <View style={styles.searchInputContainer}>
-            <SearchIcon color="#656565" size={18} />
-            <TextInput
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="Zoek templates..."
-              placeholderTextColor="#656565"
-              style={[styles.searchInput, inputWebStyle]}
-            />
-          </View>
-          <Pressable
-            style={({ hovered }) => [styles.headerButton, styles.addButton, hovered ? styles.addButtonHovered : undefined]}
-            onPress={() => setIsCreateModalOpen(true)}
-          >
-            {/* Create template */}
-            <Text numberOfLines={1} isBold style={styles.addButtonText}>
-              + Template maken
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* Category tabs */}
-      <View style={styles.categoryTabsRow}>
-        {templateCategories.map((category) => {
-          const isSelected = category.key === activeCategoryKey
-          return (
+      <View style={styles.headerArea}>
+        <View style={styles.headerRow}>
+          {/* Page title */}
+          <Text isSemibold style={styles.headerTitle}>
+            Templates
+          </Text>
+          {/* Header actions */}
+          <View style={styles.headerActions}>
+            {/* Search input */}
+            <View style={styles.searchInputContainer}>
+              <SearchIcon color="#656565" size={18} />
+              <TextInput
+                value={searchText}
+                onChangeText={setSearchText}
+                placeholder="Zoek templates..."
+                placeholderTextColor="#656565"
+                style={[styles.searchInput, inputWebStyle]}
+              />
+            </View>
             <Pressable
-              key={category.key}
-              onPress={() => setActiveCategoryKey(category.key)}
-              style={({ hovered }) => [
-                styles.categoryTab,
-                isSelected ? styles.categoryTabSelected : styles.categoryTabUnselected,
-                hovered && !isSelected ? styles.categoryTabHovered : undefined,
-              ]}
+              style={({ hovered }) => [styles.headerButton, styles.addButton, hovered ? styles.addButtonHovered : undefined]}
+              onPress={() => setIsCreateModalOpen(true)}
             >
-              {/* Category tab */}
-              <View style={styles.categoryTabContent}>
-                {/* Category icon placeholder */}
-                <View style={[styles.categoryIcon, isSelected ? styles.categoryIconSelected : styles.categoryIconUnselected]}>
-                  <Text isBold style={[styles.categoryIconText, isSelected ? styles.categoryIconTextSelected : styles.categoryIconTextUnselected]}>
-                    {category.iconLabel}
-                  </Text>
-                </View>
-                {/* Category label */}
-                <Text isBold style={[styles.categoryLabel, isSelected ? styles.categoryLabelSelected : styles.categoryLabelUnselected]}>
-                  {category.label}
-                </Text>
-              </View>
+              {/* Create template */}
+              <Text numberOfLines={1} isBold style={styles.addButtonText}>
+                + Template maken
+              </Text>
             </Pressable>
-          )
-        })}
+          </View>
+        </View>
+        {/* Template filters */}
+        <View style={styles.filtersRow}>
+          <FilterChip label="Alle templates" isSelected={activeSavedFilter === 'all'} onPress={() => setActiveSavedFilter('all')} />
+          <FilterChip label="Opgeslagen" isSelected={activeSavedFilter === 'saved'} onPress={() => setActiveSavedFilter('saved')} />
+        </View>
       </View>
 
       {/* Templates grid */}
@@ -143,40 +78,30 @@ export function TemplatesScreen() {
         <View style={styles.gridRow}>
           {visibleTemplates.map((template) => (
             <View key={template.id} style={styles.gridItem}>
+              {(() => {
+                const sections = Array.isArray(template.sections) ? template.sections : []
+                const description = sections[0]?.description ?? ''
+                return (
               <TemplateCard
                 title={template.name}
-                description={template.sections[0]?.description ?? ''}
+                description={description}
+                isSaved={template.isSaved}
                 onPress={() => setEditingTemplateId(template.id)}
+                onToggleSaved={() => toggleTemplateSaved(template.id)}
               />
+                )
+              })()}
             </View>
           ))}
         </View>
       </View>
 
-      {/* Beta message */}
-      <View style={styles.betaArea}>
-        <Text isBold style={styles.betaText}>
-          Templates zit nog in de Beta versie,{'\n'}lijkt het je leuk om input te geven? neem contact op!
-        </Text>
-        <Pressable style={({ hovered }) => [styles.contactButton, hovered ? styles.contactButtonHovered : undefined]} onPress={() => undefined}>
-          {/* Contact button */}
-          <Text isBold style={styles.contactButtonText}>
-            Contact
-          </Text>
-        </Pressable>
-      </View>
-
       <TemplateEditModal
         visible={isCreateModalOpen}
         mode="create"
-        categoryOptions={templateCategories.map((category) => ({ key: category.key, label: category.label }))}
         onClose={() => setIsCreateModalOpen(false)}
         onSave={(template) => {
-          const id = `template-${Date.now()}`
-          setTemplates((previousTemplates) => [
-            ...previousTemplates,
-            { ...template, id, categoryKey: template.categoryKey as TemplateCategoryKey },
-          ])
+          createTemplate(template)
           setIsCreateModalOpen(false)
         }}
       />
@@ -188,22 +113,14 @@ export function TemplatesScreen() {
           editingTemplate
             ? {
                 name: editingTemplate.name,
-                categoryKey: editingTemplate.categoryKey,
                 sections: editingTemplate.sections,
               }
             : undefined
         }
-        categoryOptions={templateCategories.map((category) => ({ key: category.key, label: category.label }))}
         onClose={() => setEditingTemplateId(null)}
         onSave={(template) => {
           if (!editingTemplateId) return
-          setTemplates((previousTemplates) =>
-            previousTemplates.map((item) =>
-              item.id === editingTemplateId
-                ? { ...item, name: template.name, categoryKey: template.categoryKey as TemplateCategoryKey, sections: template.sections }
-                : item,
-            ),
-          )
+          updateTemplate(editingTemplateId, { name: template.name, sections: template.sections })
           setEditingTemplateId(null)
         }}
       />
@@ -211,21 +128,60 @@ export function TemplatesScreen() {
   )
 }
 
-type TemplateCardProps = {
-  title: string
-  description: string
+type FilterChipProps = {
+  label: string
+  isSelected: boolean
   onPress: () => void
 }
 
-function TemplateCard({ title, description, onPress }: TemplateCardProps) {
+function FilterChip({ label, isSelected, onPress }: FilterChipProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ hovered }) => [
+        styles.filterChip,
+        isSelected ? styles.filterChipSelected : styles.filterChipUnselected,
+        hovered ? (isSelected ? styles.filterChipSelectedHovered : styles.filterChipHovered) : undefined,
+      ]}
+    >
+      {/* Filter chip */}
+      <Text isSemibold style={[styles.filterChipText, isSelected ? styles.filterChipTextSelected : styles.filterChipTextUnselected]}>
+        {label}
+      </Text>
+    </Pressable>
+  )
+}
+
+type TemplateCardProps = {
+  title: string
+  description: string
+  isSaved: boolean
+  onPress: () => void
+  onToggleSaved: () => void
+}
+
+function TemplateCard({ title, description, isSaved, onPress, onToggleSaved }: TemplateCardProps) {
   return (
     <Pressable onPress={onPress} style={({ hovered }) => [styles.templateCard, hovered ? styles.templateCardHovered : undefined]}>
       {/* Template card */}
       <View style={styles.templateCardContent}>
-        {/* Template title */}
-        <Text isBold style={styles.templateCardTitle}>
-          {title}
-        </Text>
+        {/* Template header */}
+        <View style={styles.templateCardHeader}>
+          {/* Template title */}
+          <Text isBold style={styles.templateCardTitle}>
+            {title}
+          </Text>
+          <Pressable
+            onPress={(event) => {
+              ;(event as any)?.stopPropagation?.()
+              onToggleSaved()
+            }}
+            style={({ hovered }) => [styles.templateCardSaveButton, hovered ? styles.templateCardSaveButtonHovered : undefined]}
+          >
+            {/* Template saved toggle */}
+            {isSaved ? <TemplateSavedIcon color={colors.selected} size={22} /> : <TemplateNotSavedIcon color={colors.textStrong} size={22} />}
+          </Pressable>
+        </View>
         {/* Template description */}
         <Text style={styles.templateCardDescription}>{description}</Text>
       </View>
@@ -237,6 +193,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     gap: 16,
+  },
+  headerArea: {
+    width: '100%',
+    gap: 12,
   },
   headerRow: {
     flexDirection: 'row',
@@ -293,69 +253,44 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: colors.selected,
   },
-  categoryTabsRow: {
+  filtersRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  categoryTab: {
-    height: 40,
+  filterChip: {
+    height: 36,
     borderRadius: 12,
     padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  categoryTabSelected: {
+  filterChipSelected: {
     backgroundColor: colors.selected,
     borderWidth: 1,
     borderColor: colors.selected,
   },
-  categoryTabUnselected: {
+  filterChipUnselected: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  categoryTabHovered: {
+  filterChipHovered: {
     backgroundColor: colors.hoverBackground,
   },
-  categoryTabContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+  filterChipSelectedHovered: {
+    backgroundColor: '#A50058',
   },
-  categoryIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  categoryIconSelected: {
-    backgroundColor: '#FFFFFF',
-  },
-  categoryIconUnselected: {
-    backgroundColor: '#FFE5F6',
-  },
-  categoryIconText: {
-    fontSize: 12,
-    lineHeight: 14,
-  },
-  categoryIconTextSelected: {
-    color: colors.selected,
-  },
-  categoryIconTextUnselected: {
-    color: colors.selected,
-  },
-  categoryLabel: {
+  filterChipText: {
     fontSize: 14,
     lineHeight: 18,
   },
-  categoryLabelSelected: {
+  filterChipTextSelected: {
     color: '#FFFFFF',
   },
-  categoryLabelUnselected: {
-    color: colors.selected,
+  filterChipTextUnselected: {
+    color: colors.textStrong,
   },
   gridArea: {
     flex: 1,
@@ -386,6 +321,22 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 8,
   },
+  templateCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  templateCardSaveButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  templateCardSaveButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
   templateCardTitle: {
     fontSize: 18,
     lineHeight: 22,
@@ -396,35 +347,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: colors.textSecondary,
   },
-  betaArea: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    padding: 24,
-  },
-  betaText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.selected,
-    textAlign: 'center',
-  },
-  contactButton: {
-    height: 40,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 2,
-    borderColor: colors.selected,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 200,
-  },
-  contactButtonHovered: {
-    backgroundColor: 'rgba(190,1,101,0.08)',
-  },
-  contactButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.selected,
-  },
 })
+

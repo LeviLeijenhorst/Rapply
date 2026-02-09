@@ -18,6 +18,11 @@ import { typography } from '../theme/typography'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { completeChat, LocalChatMessage } from '../services/chat'
 import { ChatStateMessage, createChatMessageId } from '../utils/chatState'
+import {
+  clearQuickQuestionsChatForCoachee,
+  loadQuickQuestionsChatForCoachee,
+  saveQuickQuestionsChatForCoachee,
+} from '../local/quickQuestionsChatStore'
 import { buildCoacheeSummariesSystemMessages, buildCoacheeTranscriptsSystemMessages } from '../utils/quickQuestionsContext'
 import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
 
@@ -86,6 +91,7 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
   const shouldShowQuickStart = chatMessages.length === 0
   const shouldShowClearChat = chatMessages.length > 0
   const previousMessageCountRef = useRef(chatMessages.length)
+  const shouldSkipChatSaveRef = useRef(false)
 
   useEffect(() => {
     const id = setTimeout(() => searchInputRef.current?.focus(), 0)
@@ -93,10 +99,19 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
   }, [activeTabKey])
 
   useEffect(() => {
-    setChatMessages([])
+    shouldSkipChatSaveRef.current = true
+    setChatMessages(loadQuickQuestionsChatForCoachee(coacheeId))
     setComposerText('')
     setIsChatSending(false)
   }, [coacheeId])
+
+  useEffect(() => {
+    if (shouldSkipChatSaveRef.current) {
+      shouldSkipChatSaveRef.current = false
+      return
+    }
+    saveQuickQuestionsChatForCoachee(coacheeId, chatMessages)
+  }, [chatMessages, coacheeId])
 
   function scrollChatToEnd() {
     const scrollView = chatScrollRef.current
@@ -110,6 +125,7 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
     setChatMessages([])
     setComposerText('')
     setIsChatSending(false)
+    clearQuickQuestionsChatForCoachee(coacheeId)
     scrollChatToEnd()
   }
 

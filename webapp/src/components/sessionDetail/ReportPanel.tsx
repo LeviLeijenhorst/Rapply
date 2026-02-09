@@ -6,13 +6,13 @@ import { colors } from '../../theme/colors'
 import { StandaardVerslagIcon } from '../icons/StandaardVerslagIcon'
 import { CopyIcon } from '../icons/CopyIcon'
 import { CopiedIcon } from '../icons/CopiedIcon'
-import { ShareTranscriptIcon } from '../icons/ShareTranscriptIcon'
 
 type Props = {
   templateLabel: string
   onPressTemplate: () => void
   isCompact?: boolean
   summary: string | null
+  hasTranscript: boolean
   transcriptionStatus: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
   transcriptionError: string | null
   onRetryTranscription?: () => void
@@ -96,7 +96,7 @@ function renderSummaryWithHeadings(summary: string) {
   return elements
 }
 
-export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary, transcriptionStatus, transcriptionError, onRetryTranscription }: Props) {
+export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary, hasTranscript, transcriptionStatus, transcriptionError, onRetryTranscription }: Props) {
   const [showCopyNotification, setShowCopyNotification] = useState(false)
 
   const hasSummary = Boolean(summary && summary.trim())
@@ -104,7 +104,7 @@ export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary
   const isGenerating = transcriptionStatus === 'generating'
   const hasError = transcriptionStatus === 'error'
   const shouldShowLoading = !hasSummary && !hasError
-  const loadingLabel = isTranscribing ? 'Transcript wordt gemaakt' : 'Verslag wordt gemaakt'
+  const loadingLabel = !hasTranscript || isTranscribing ? 'Transcript wordt gegenereerd' : 'Verslag wordt gegenereerd'
 
   const reportCopyText = summary || ''
 
@@ -177,26 +177,6 @@ export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary
             style={({ hovered }) => [styles.actionButton, hovered ? styles.actionButtonHovered : undefined]}
           >
             {showCopyNotification ? <CopiedIcon size={18} /> : <CopyIcon color="#8E8480" size={18} />}
-          </Pressable>
-          <Pressable
-            onPress={async () => {
-              if (typeof window === 'undefined' || !summary) return
-              const { default: jsPDF } = await import('jspdf')
-              const { default: html2canvas } = await import('html2canvas')
-              const input = document.getElementById('report-panel-content')
-              if (!input) return
-              const canvas = await html2canvas(input)
-              const imgData = canvas.toDataURL('image/png')
-              const pdf = new jsPDF()
-              const imgProps = pdf.getImageProperties(imgData)
-              const pdfWidth = pdf.internal.pageSize.getWidth()
-              const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
-              pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
-              pdf.save('verslag.pdf')
-            }}
-            style={({ hovered }) => [styles.actionButton, hovered ? styles.actionButtonHovered : undefined, !summary ? styles.actionButtonDisabled : undefined]}
-          >
-            <ShareTranscriptIcon color="#8E8480" size={18} />
           </Pressable>
         </View>
       </View>
@@ -274,13 +254,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   bulletSymbol: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 17,
+    lineHeight: 24,
     color: colors.text,
   },
   bulletText: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 17,
+    lineHeight: 24,
     color: colors.text,
   },
   bulletTextContainer: {

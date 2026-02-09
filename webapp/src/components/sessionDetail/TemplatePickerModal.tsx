@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
@@ -7,38 +7,29 @@ import { Text } from '../Text'
 import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
 import { SearchIcon } from '../icons/SearchIcon'
 
-type TemplateOption = {
-  key: string
-  label: string
-}
-
 type Props = {
   visible: boolean
-  selectedTemplateKey: string
+  templates: { id: string; name: string }[]
+  selectedTemplateId: string | null
   onClose: () => void
-  onContinue: (templateKey: string) => void
+  onContinue: (templateId: string) => void
 }
 
-const templates: TemplateOption[] = [
-  { key: 'standaard', label: 'Standaard verslag' },
-  { key: 'soap', label: 'SOAP' },
-  { key: 'intake', label: 'Intakegesprek' },
-  { key: 'voorbereiding', label: 'Voorbereiding' },
-  { key: 'themas', label: "Thema's" },
-  { key: 'gespreksplan', label: 'Gespreksplan' },
-]
-
-export function TemplatePickerModal({ visible, selectedTemplateKey, onClose, onContinue }: Props) {
+export function TemplatePickerModal({ visible, templates, selectedTemplateId, onClose, onContinue }: Props) {
   const [searchText, setSearchText] = useState('')
-  const [activeTemplateKey, setActiveTemplateKey] = useState(selectedTemplateKey)
+  const [activeTemplateId, setActiveTemplateId] = useState(selectedTemplateId)
 
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
 
   const filteredTemplates = useMemo(() => {
     const query = searchText.trim().toLowerCase()
     if (query.length === 0) return templates
-    return templates.filter((template) => template.label.toLowerCase().includes(query))
-  }, [searchText])
+    return templates.filter((template) => template.name.toLowerCase().includes(query))
+  }, [searchText, templates])
+
+  useEffect(() => {
+    setActiveTemplateId(selectedTemplateId)
+  }, [selectedTemplateId, visible])
 
   if (!visible) return null
 
@@ -73,11 +64,11 @@ export function TemplatePickerModal({ visible, selectedTemplateKey, onClose, onC
           <View style={styles.listCard}>
             <ScrollView style={styles.listScroll} contentContainerStyle={styles.listScrollContent} showsVerticalScrollIndicator={false}>
               {filteredTemplates.map((template) => {
-                const isSelected = template.key === activeTemplateKey
+                const isSelected = template.id === activeTemplateId
                 return (
                   <Pressable
-                    key={template.key}
-                    onPress={() => setActiveTemplateKey(template.key)}
+                    key={template.id}
+                    onPress={() => setActiveTemplateId(template.id)}
                     style={({ hovered }) => [
                       styles.templateRow,
                       isSelected ? styles.templateRowSelected : styles.templateRowUnselected,
@@ -86,7 +77,7 @@ export function TemplatePickerModal({ visible, selectedTemplateKey, onClose, onC
                   >
                     {/* Template row */}
                     <Text isSemibold={isSelected} style={styles.templateRowText}>
-                      {template.label}
+                      {template.name}
                     </Text>
                   </Pressable>
                 )
@@ -104,7 +95,7 @@ export function TemplatePickerModal({ visible, selectedTemplateKey, onClose, onC
             </Text>
           </Pressable>
           <Pressable
-            onPress={() => onContinue(activeTemplateKey)}
+            onPress={() => (activeTemplateId ? onContinue(activeTemplateId) : null)}
             style={({ hovered }) => [styles.footerPrimaryButton, hovered ? styles.footerPrimaryButtonHovered : undefined]}
           >
             {/* Continue */}
@@ -200,12 +191,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   templateRowSelected: {
-    borderWidth: 2,
-    borderColor: colors.selected,
+    backgroundColor: '#FFE5F6',
   },
   templateRowUnselected: {
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: 'transparent',
   },
   templateRowHovered: {
     backgroundColor: colors.hoverBackground,

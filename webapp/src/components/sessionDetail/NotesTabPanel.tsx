@@ -7,6 +7,7 @@ import { typography } from '../../theme/typography'
 import { useLocalAppData } from '../../local/LocalAppDataProvider'
 import { TrashIcon } from '../icons/TrashIcon'
 import { EditActionIcon } from '../icons/EditActionIcon'
+import { ConfirmNoteDeleteModal } from '../notes/ConfirmNoteDeleteModal'
 
 type Props = {
   sessionId?: string
@@ -29,6 +30,7 @@ export function NotesTabPanel({
   const [createdSessionId, setCreatedSessionId] = useState<string | null>(null)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState('')
+  const [notePendingDeleteId, setNotePendingDeleteId] = useState<string | null>(null)
   const noteInputRef = useRef<TextInput | null>(null)
   const editingInputRef = useRef<TextInput | null>(null)
 
@@ -43,6 +45,45 @@ export function NotesTabPanel({
 
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
   const scrollContentStyle = useMemo(() => [styles.scrollContent, { paddingHorizontal: contentHorizontalPadding }], [contentHorizontalPadding])
+  const notePendingDeleteText = notePendingDeleteId ? notes.find((note) => note.id === notePendingDeleteId)?.text ?? null : null
+
+  const saveEditingNote = () => {
+    const trimmed = editingText.trim()
+    if (!trimmed || !editingNoteId) return
+    updateNote(editingNoteId, trimmed)
+    setEditingNoteId(null)
+    setEditingText('')
+  }
+
+  const saveNewNote = () => {
+    const trimmed = draftText.trim()
+    if (!trimmed) return
+    let targetSessionId = activeSessionId
+    if (!targetSessionId && coacheeIdForNewNotes) {
+      const createdId = createSession({
+        coacheeId: coacheeIdForNewNotes,
+        title: 'Notities',
+        kind: 'notes',
+        audioBlobId: null,
+        uploadFileName: null,
+      })
+      if (!createdId) return
+      setCreatedSessionId(createdId)
+      targetSessionId = createdId
+    }
+    if (!targetSessionId) return
+    createNote(targetSessionId, trimmed)
+    setIsCreating(false)
+    setDraftText('')
+  }
+
+  const handleControlEnter = (event: any, onSave: () => void) => {
+    const key = event?.nativeEvent?.key
+    const isControlPressed = Boolean(event?.nativeEvent?.ctrlKey)
+    if (key !== 'Enter' || !isControlPressed) return
+    event?.preventDefault?.()
+    onSave()
+  }
 
   useEffect(() => {
     if (!isCreating) {
@@ -84,6 +125,7 @@ export function NotesTabPanel({
                       }}
                       value={editingText}
                       onChangeText={setEditingText}
+                      onKeyDown={(event) => handleControlEnter(event, saveEditingNote)}
                       placeholder="Schrijf een notitie..."
                       placeholderTextColor={colors.textSecondary}
                       multiline
@@ -105,11 +147,7 @@ export function NotesTabPanel({
                     </Pressable>
                     <Pressable
                       onPress={() => {
-                        const trimmed = editingText.trim()
-                        if (!trimmed) return
-                        updateNote(note.id, trimmed)
-                        setEditingNoteId(null)
-                        setEditingText('')
+                        saveEditingNote()
                       }}
                       style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined, editingText.trim().length === 0 ? styles.primaryButtonDisabled : undefined]}
                     >
@@ -132,7 +170,7 @@ export function NotesTabPanel({
                       <EditActionIcon color={colors.textSecondary} size={16} />
                     </Pressable>
                     <Pressable
-                      onPress={() => deleteNote(note.id)}
+                      onPress={() => setNotePendingDeleteId(note.id)}
                       style={({ hovered }) => [styles.noteActionButton, hovered ? styles.noteActionButtonHovered : undefined]}
                     >
                       <TrashIcon color={colors.selected} size={16} />
@@ -156,6 +194,7 @@ export function NotesTabPanel({
                 }}
                 value={draftText}
                 onChangeText={setDraftText}
+                onKeyDown={(event) => handleControlEnter(event, saveNewNote)}
                 placeholder="Schrijf een notitie..."
                 placeholderTextColor={colors.textSecondary}
                 multiline
@@ -178,25 +217,7 @@ export function NotesTabPanel({
               </Pressable>
               <Pressable
                 onPress={() => {
-                  const trimmed = draftText.trim()
-                  if (!trimmed) return
-                  let targetSessionId = activeSessionId
-                  if (!targetSessionId && coacheeIdForNewNotes) {
-                    const createdId = createSession({
-                      coacheeId: coacheeIdForNewNotes,
-                      title: 'Notities',
-                      kind: 'notes',
-                      audioBlobId: null,
-                      uploadFileName: null,
-                    })
-                    if (!createdId) return
-                    setCreatedSessionId(createdId)
-                    targetSessionId = createdId
-                  }
-                  if (!targetSessionId) return
-                  createNote(targetSessionId, trimmed)
-                  setIsCreating(false)
-                  setDraftText('')
+                  saveNewNote()
                 }}
                 disabled={draftText.trim().length === 0}
                 style={({ hovered }) => [
@@ -226,6 +247,17 @@ export function NotesTabPanel({
           </Pressable>
         )}
       </ScrollView>
+
+      <ConfirmNoteDeleteModal
+        visible={Boolean(notePendingDeleteId)}
+        noteText={notePendingDeleteText}
+        onClose={() => setNotePendingDeleteId(null)}
+        onConfirm={() => {
+          if (!notePendingDeleteId) return
+          deleteNote(notePendingDeleteId)
+          setNotePendingDeleteId(null)
+        }}
+      />
     </View>
   )
 }

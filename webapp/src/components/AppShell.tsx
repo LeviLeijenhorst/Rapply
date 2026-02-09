@@ -27,6 +27,7 @@ import { EmptyPageMessage } from './EmptyPageMessage'
 import { AppLoadingScreen } from './AppLoadingScreen'
 import { PrivacyPolicyModal } from './settings/PrivacyPolicyModal'
 import { privacyPolicyNlText } from '../content/privacyPolicyNl'
+import { useBillingUsage } from '../hooks/useBillingUsage'
 
 type AnchorPoint = { x: number; y: number }
 type OverlayScreenKey = 'archief'
@@ -84,6 +85,7 @@ export function AppShell({ onLogout }: Props) {
   const isTooSmall = width < 420
   const isSidebarCompact = width < 700
   const { data, createCoachee, isAppDataLoaded } = useLocalAppData()
+  const { usedMinutes, totalMinutes } = useBillingUsage()
 
   const [selectedSidebarItemKey, setSelectedSidebarItemKey] = useState<SidebarItemKey>('coachees')
   const [selectedSessieId, setSelectedSessieId] = useState<string | null>(null)
@@ -447,11 +449,8 @@ export function AppShell({ onLogout }: Props) {
       {/* Top navigation bar */}
       <Navbar
         onLogout={onLogout}
-        onOpenSubscription={() => {
-          setIsMySubscriptionModalOpen(true)
-          setIsSettingsMenuOpen(false)
-          setSettingsMenuAnchorPoint(null)
-        }}
+        usedMinutes={usedMinutes}
+        totalMinutes={totalMinutes}
       />
       {hasBreadcrumbs ? (
         <View style={[styles.breadcrumbContainer, isSidebarCompact ? styles.breadcrumbContainerCompact : undefined]}>
@@ -527,11 +526,6 @@ export function AppShell({ onLogout }: Props) {
               setIsSettingsMenuOpen(false)
               setSettingsMenuAnchorPoint(null)
               setIsMyAccountModalOpen(true)
-            }}
-            onOpenSubscription={() => {
-              setIsSettingsMenuOpen(false)
-              setSettingsMenuAnchorPoint(null)
-              setIsMySubscriptionModalOpen(true)
             }}
             onOpenArchive={() => {
               setIsSettingsMenuOpen(false)

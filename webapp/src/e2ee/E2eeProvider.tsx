@@ -278,7 +278,7 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
           {/* Recovery required */}
           <View style={styles.card}>
             <Text isBold style={styles.title}>
-              Herstelcode nodig
+              CoachScribe-code nodig
             </Text>
             <Text style={styles.bodyText}>
               Dit apparaat heeft nog geen toegang tot je versleutelde data. Vul je herstelcode in om dit apparaat toe te voegen.

@@ -1,6 +1,6 @@
 import { createDefaultLocalAppData } from './defaultData'
 import { readJsonFromLocalStorage, writeJsonToLocalStorage } from './localStorageJson'
-import { Coachee, LocalAppData, Note, Session, SessionKind, WrittenReport } from './types'
+import { Coachee, LocalAppData, Note, Session, SessionKind, Template, WrittenReport } from './types'
 
 const storageKey = 'coachscribe.localAppData.v2'
 
@@ -23,7 +23,7 @@ function isMockLocalData(data: LocalAppData) {
 export function loadLocalAppData(): LocalAppData {
   const stored = readJsonFromLocalStorage<LocalAppData>(storageKey)
   if (stored.ok) {
-    if (!isMockLocalData(stored.value)) return stored.value
+    if (!isMockLocalData(stored.value)) return normalizeLocalAppData(stored.value)
   }
   const initial = createDefaultLocalAppData()
   writeJsonToLocalStorage(storageKey, initial)
@@ -32,6 +32,12 @@ export function loadLocalAppData(): LocalAppData {
 
 export function saveLocalAppData(data: LocalAppData) {
   writeJsonToLocalStorage(storageKey, data)
+}
+
+function normalizeLocalAppData(data: LocalAppData): LocalAppData {
+  if (Array.isArray(data.templates)) return data
+  const fallback = createDefaultLocalAppData()
+  return { ...data, templates: fallback.templates }
 }
 
 export function createCoachee(data: LocalAppData, coachee: Coachee): LocalAppData {
@@ -135,3 +141,30 @@ export function setWrittenReport(data: LocalAppData, sessionId: string, text: st
   return { ...data, writtenReports: [nextReport, ...without] }
 }
 
+export function createTemplate(data: LocalAppData, template: Template): { data: LocalAppData; templateId: string } {
+  return { data: { ...data, templates: [template, ...data.templates] }, templateId: template.id }
+}
+
+export function updateTemplate(
+  data: LocalAppData,
+  templateId: string,
+  values: { name?: string; sections?: Template['sections']; isSaved?: boolean; updatedAtUnixMs: number },
+): LocalAppData {
+  return {
+    ...data,
+    templates: data.templates.map((template) => {
+      if (template.id !== templateId) return template
+      return {
+        ...template,
+        ...(typeof values.name === 'string' ? { name: values.name.trim() } : {}),
+        ...(values.sections ? { sections: values.sections } : {}),
+        ...(typeof values.isSaved === 'boolean' ? { isSaved: values.isSaved } : {}),
+        updatedAtUnixMs: values.updatedAtUnixMs,
+      }
+    }),
+  }
+}
+
+export function deleteTemplate(data: LocalAppData, templateId: string): LocalAppData {
+  return { ...data, templates: data.templates.filter((template) => template.id !== templateId) }
+}

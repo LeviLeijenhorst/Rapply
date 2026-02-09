@@ -17,18 +17,23 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
   const e2ee = useE2ee()
 
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const pendingSeekSecondsRef = useRef<number | null>(null)
 
   useImperativeHandle(
     ref,
     () => ({
       seekToSeconds: (seconds: number) => {
         const audio = audioRef.current
-        if (!audio) return
         if (!Number.isFinite(seconds)) return
-        audio.currentTime = Math.max(0, seconds)
+        const safeSeconds = Math.max(0, seconds)
+        if (!audio || !audioUrl) {
+          pendingSeekSecondsRef.current = safeSeconds
+          return
+        }
+        audio.currentTime = safeSeconds
       },
     }),
-    [],
+    [audioUrl],
   )
 
   useEffect(() => {
@@ -77,10 +82,22 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
     audio.load()
   }, [audioUrl])
 
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    const onLoadedMetadata = () => {
+      if (pendingSeekSecondsRef.current === null) return
+      audio.currentTime = pendingSeekSecondsRef.current
+      pendingSeekSecondsRef.current = null
+    }
+    audio.addEventListener('loadedmetadata', onLoadedMetadata)
+    return () => audio.removeEventListener('loadedmetadata', onLoadedMetadata)
+  }, [audioUrl])
+
   return (
     <View style={styles.card}>
       {/* Audio player */}
-      <audio ref={audioRef} src={audioUrl ?? undefined} preload="metadata" controls style={{ width: '100%' }} />
+      <audio ref={audioRef} src={audioUrl ?? undefined} preload="auto" controls style={{ width: '100%' }} />
     </View>
   )
 })

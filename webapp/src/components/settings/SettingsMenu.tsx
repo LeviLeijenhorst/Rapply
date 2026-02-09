@@ -2,12 +2,13 @@ import React from 'react'
 
 import { PopoverMenu } from '../PopoverMenu'
 import { MijnAccountIcon } from '../icons/MijnAccountIcon'
-import { MijnAbonnementIcon } from '../icons/MijnAbonnementIcon'
 import { DeelCoachScribeIcon } from '../icons/DeelCoachScribeIcon'
 import { ContactIcon } from '../icons/ContactIcon'
 import { PrivacyIcon } from '../icons/PrivacyIcon'
 import { ArchiefMenuIcon } from '../icons/ArchiefMenuIcon'
-import { SubscriptionBadgeIcon } from '../icons/SubscriptionBadgeIcon'
+import { SettingsIcon } from '../icons/SettingsIcon'
+import { colors } from '../../theme/colors'
+import { useThemeMode } from '../../theme/ThemeProvider'
 
 type AnchorPoint = { x: number; y: number }
 
@@ -16,7 +17,6 @@ type Props = {
   anchorPoint: AnchorPoint | null
   onClose: () => void
   onOpenAccount: () => void
-  onOpenSubscription: () => void
   onOpenArchive: () => void
   onOpenContact: () => void
   onOpenShare: () => void
@@ -28,53 +28,58 @@ export function SettingsMenu({
   anchorPoint,
   onClose,
   onOpenAccount,
-  onOpenSubscription,
   onOpenArchive,
   onOpenContact,
   onOpenShare,
   onOpenPrivacy,
 }: Props) {
+  const { mode, toggleMode } = useThemeMode()
+  const themeBadgeLabel = mode === 'dark' ? 'Aan' : 'Uit'
+  const menuIconColor = colors.textSecondary
+
   const items = [
     {
       key: 'account',
       label: 'Mijn account',
-      icon: <MijnAccountIcon />,
+      icon: <MijnAccountIcon color={menuIconColor} />,
       onPress: onOpenAccount,
     },
     {
-      key: 'subscription',
-      label: 'Mijn abonnement',
-      badgeLabel: 'Basis',
-      badgeIcon: <SubscriptionBadgeIcon />,
-      icon: <MijnAbonnementIcon />,
-      onPress: onOpenSubscription,
+      key: 'theme',
+      label: 'Donkere modus',
+      icon: <SettingsIcon color={menuIconColor} size={18} />,
+      badgeLabel: themeBadgeLabel,
+      onPress: () => {
+        toggleMode()
+        onClose()
+      },
     },
     {
       key: 'archive',
       label: 'Archief',
-      icon: <ArchiefMenuIcon />,
+      icon: <ArchiefMenuIcon color={menuIconColor} />,
       onPress: onOpenArchive,
     },
     {
       key: 'contact',
       label: 'Contact',
-      icon: <ContactIcon />,
+      icon: <ContactIcon color={menuIconColor} />,
       onPress: onOpenContact,
     },
     {
       key: 'share',
       label: 'Deel CoachScribe',
-      icon: <DeelCoachScribeIcon />,
+      icon: <DeelCoachScribeIcon color={menuIconColor} />,
       onPress: onOpenShare,
     },
     {
       key: 'privacy',
       label: 'Privacy beleid',
-      icon: <PrivacyIcon />,
+      icon: <PrivacyIcon color={menuIconColor} />,
       onPress: onOpenPrivacy,
     },
   ]
 
-  return <PopoverMenu visible={visible} anchorPoint={anchorPoint} placement="above" width={320} estimatedHeight={320} items={items} onClose={onClose} />
+  return <PopoverMenu visible={visible} anchorPoint={anchorPoint} placement="above" width={320} estimatedHeight={360} items={items} onClose={onClose} />
 }
 

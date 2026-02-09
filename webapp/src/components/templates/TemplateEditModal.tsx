@@ -1,20 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
-import { AnimatedDropdownPanel } from '../AnimatedDropdownPanel'
 import { colors } from '../../theme/colors'
 import { Text } from '../Text'
-import { ChevronDownIcon } from '../icons/ChevronDownIcon'
 import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
 import { PlusIcon } from '../icons/PlusIcon'
+import { TemplateEditIcon } from '../icons/TemplateEditIcon'
 
 type TemplateEditStep = 'details' | 'content'
-
-export type TemplateEditModalCategoryOption = {
-  key: string
-  label: string
-}
 
 export type TemplateEditModalSection = {
   id: string
@@ -24,7 +18,6 @@ export type TemplateEditModalSection = {
 
 export type TemplateEditModalTemplate = {
   name: string
-  categoryKey: string
   sections: TemplateEditModalSection[]
 }
 
@@ -32,47 +25,34 @@ type Props = {
   visible: boolean
   mode: 'create' | 'edit'
   template?: TemplateEditModalTemplate
-  categoryOptions: TemplateEditModalCategoryOption[]
   onClose: () => void
   onSave: (template: TemplateEditModalTemplate) => void
 }
 
-function createEmptyTemplate(categoryOptions: TemplateEditModalCategoryOption[]): TemplateEditModalTemplate {
-  const firstCategoryKey = categoryOptions[0]?.key ?? 'overige'
+function createEmptyTemplate(): TemplateEditModalTemplate {
   return {
     name: 'Custom template #1',
-    categoryKey: firstCategoryKey,
     sections: [{ id: `section-${Date.now()}`, title: '', description: '' }],
   }
 }
 
-function getCategoryLabel(categoryOptions: TemplateEditModalCategoryOption[], categoryKey: string) {
-  return categoryOptions.find((option) => option.key === categoryKey)?.label ?? ''
-}
-
-export function TemplateEditModal({ visible, mode, template, categoryOptions, onClose, onSave }: Props) {
+export function TemplateEditModal({ visible, mode, template, onClose, onSave }: Props) {
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
 
   const initialStep = mode === 'create' ? 'details' : 'content'
 
   const [step, setStep] = useState<TemplateEditStep>(initialStep)
-  const [activeTemplate, setActiveTemplate] = useState<TemplateEditModalTemplate>(() => createEmptyTemplate(categoryOptions))
-  const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false)
+  const [activeTemplate, setActiveTemplate] = useState<TemplateEditModalTemplate>(() => createEmptyTemplate())
 
   useEffect(() => {
     if (!visible) return
     setStep(initialStep)
-    setIsCategoryPickerOpen(false)
     if (mode === 'edit' && template) {
       setActiveTemplate(template)
       return
     }
-    setActiveTemplate(createEmptyTemplate(categoryOptions))
-  }, [categoryOptions, initialStep, mode, template, visible])
-
-  const isAnyDropdownOpen = isCategoryPickerOpen
-
-  const categoryLabel = useMemo(() => getCategoryLabel(categoryOptions, activeTemplate.categoryKey), [activeTemplate.categoryKey, categoryOptions])
+    setActiveTemplate(createEmptyTemplate())
+  }, [initialStep, mode, template, visible])
 
   if (!visible) return null
 
@@ -84,11 +64,9 @@ export function TemplateEditModal({ visible, mode, template, categoryOptions, on
         {/* Modal header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            {/* Header icon placeholder */}
+            {/* Header icon */}
             <View style={styles.headerIcon}>
-              <Text isBold style={styles.headerIconText}>
-                1
-              </Text>
+              <TemplateEditIcon color={colors.selected} size={20} />
             </View>
             {/* Header title */}
             <Text isBold style={styles.headerTitle}>
@@ -103,13 +81,6 @@ export function TemplateEditModal({ visible, mode, template, categoryOptions, on
 
         {/* Modal body */}
         <View style={styles.body}>
-          {isAnyDropdownOpen ? (
-            <Pressable
-              onPress={() => setIsCategoryPickerOpen(false)}
-              style={styles.dropdownDismissOverlay}
-            />
-          ) : null}
-
           {/* Details form */}
           <View style={styles.formArea}>
             {mode === 'create' && step === 'details' ? (
@@ -129,117 +100,28 @@ export function TemplateEditModal({ visible, mode, template, categoryOptions, on
                     />
                   </View>
                 </View>
-
-                {/* Category field */}
-                <View style={styles.field}>
-                  {/* Field label */}
-                  <Text style={styles.fieldLabel}>Categorie</Text>
-                  {/* Field input */}
-                  <View style={[styles.dropdownArea, isCategoryPickerOpen ? styles.dropdownAreaRaised : undefined]}>
-                    <Pressable
-                      onPress={() => setIsCategoryPickerOpen((value) => !value)}
-                      style={({ hovered }) => [styles.dropdownField, hovered ? styles.dropdownFieldHovered : undefined]}
-                    >
-                      {/* Dropdown field */}
-                      <Text isSemibold style={styles.dropdownValueText}>
-                        {categoryLabel}
-                      </Text>
-                      <View style={styles.dropdownSpacer} />
-                      <ChevronDownIcon color={colors.textStrong} size={20} />
-                    </Pressable>
-
-                    <AnimatedDropdownPanel visible={isCategoryPickerOpen} style={styles.dropdownPanel}>
-                      <ScrollView showsVerticalScrollIndicator={false} style={styles.dropdownScroll} contentContainerStyle={styles.dropdownScrollContent}>
-                        {categoryOptions.map((option, index) => {
-                          const isFirst = index === 0
-                          const isLast = index === categoryOptions.length - 1
-                          return (
-                            <Pressable
-                              key={option.key}
-                              onPress={() => {
-                                setActiveTemplate((previousTemplate) => ({ ...previousTemplate, categoryKey: option.key }))
-                                setIsCategoryPickerOpen(false)
-                              }}
-                              style={({ hovered }) => [
-                                styles.dropdownItem,
-                                isFirst ? styles.dropdownItemTop : undefined,
-                                isLast ? styles.dropdownItemBottom : undefined,
-                                hovered ? styles.dropdownItemHovered : undefined,
-                              ]}
-                            >
-                              {/* Dropdown item */}
-                              <Text style={styles.dropdownItemText}>{option.label}</Text>
-                            </Pressable>
-                          )
-                        })}
-                      </ScrollView>
-                    </AnimatedDropdownPanel>
-                  </View>
-                </View>
               </View>
             ) : null}
 
             {/* Content editor */}
             {step === 'content' ? (
               <View style={styles.contentArea}>
-                {/* Template name and category */}
-                <View style={styles.contentHeaderFields}>
-                  {/* Name field */}
-                  <View style={styles.textField}>
+                {/* Template header fields */}
+                <View style={styles.compactFieldsRow}>
+                  {/* Template name */}
+                  <View style={styles.compactField}>
                     <TextInput
                       value={activeTemplate.name}
                       onChangeText={(name) => setActiveTemplate((previousTemplate) => ({ ...previousTemplate, name }))}
                       placeholder="Template naam..."
                       placeholderTextColor="#656565"
-                      style={[styles.textFieldInput, inputWebStyle]}
+                      style={[styles.compactFieldInput, inputWebStyle]}
                     />
-                  </View>
-
-                  {/* Category field */}
-                  <View style={[styles.dropdownArea, isCategoryPickerOpen ? styles.dropdownAreaRaised : undefined]}>
-                    <Pressable
-                      onPress={() => setIsCategoryPickerOpen((value) => !value)}
-                      style={({ hovered }) => [styles.dropdownFieldSmall, hovered ? styles.dropdownFieldHovered : undefined]}
-                    >
-                      {/* Dropdown field */}
-                      <Text isSemibold style={styles.dropdownValueText}>
-                        {categoryLabel}
-                      </Text>
-                      <View style={styles.dropdownSpacer} />
-                      <ChevronDownIcon color={colors.textStrong} size={20} />
-                    </Pressable>
-
-                    <AnimatedDropdownPanel visible={isCategoryPickerOpen} style={styles.dropdownPanelSmall}>
-                      <ScrollView showsVerticalScrollIndicator={false} style={styles.dropdownScroll} contentContainerStyle={styles.dropdownScrollContent}>
-                        {categoryOptions.map((option, index) => {
-                          const isFirst = index === 0
-                          const isLast = index === categoryOptions.length - 1
-                          return (
-                            <Pressable
-                              key={option.key}
-                              onPress={() => {
-                                setActiveTemplate((previousTemplate) => ({ ...previousTemplate, categoryKey: option.key }))
-                                setIsCategoryPickerOpen(false)
-                              }}
-                              style={({ hovered }) => [
-                                styles.dropdownItem,
-                                isFirst ? styles.dropdownItemTop : undefined,
-                                isLast ? styles.dropdownItemBottom : undefined,
-                                hovered ? styles.dropdownItemHovered : undefined,
-                              ]}
-                            >
-                              {/* Dropdown item */}
-                              <Text style={styles.dropdownItemText}>{option.label}</Text>
-                            </Pressable>
-                          )
-                        })}
-                      </ScrollView>
-                    </AnimatedDropdownPanel>
                   </View>
                 </View>
 
                 {/* Sections */}
-                <ScrollView showsVerticalScrollIndicator={false} style={styles.sectionsScroll} contentContainerStyle={styles.sectionsScrollContent}>
+                <ScrollView showsVerticalScrollIndicator style={styles.sectionsScroll} contentContainerStyle={styles.sectionsScrollContent}>
                   {activeTemplate.sections.map((section, index) => (
                     <View key={section.id} style={styles.sectionCard}>
                       {/* Section title */}
@@ -352,11 +234,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerIconText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.selected,
-  },
   headerTitle: {
     fontSize: 24,
     lineHeight: 28,
@@ -377,9 +254,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     ...( { overflow: 'hidden' } as any ),
-  },
-  dropdownDismissOverlay: {
-    ...( { position: 'absolute', inset: 0, zIndex: 10 } as any ),
   },
   formArea: {
     flex: 1,
@@ -402,7 +276,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 56,
     borderRadius: 12,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.pageBackground,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
@@ -415,101 +289,24 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: colors.textStrong,
   },
-  dropdownArea: {
+  compactFieldsRow: {
     width: '100%',
-    position: 'relative',
-    zIndex: 1,
-  },
-  dropdownAreaRaised: {
-    zIndex: 20,
-  },
-  dropdownField: {
-    width: '100%',
-    height: 56,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: 12,
   },
-  dropdownFieldSmall: {
-    width: 220,
+  compactField: {
+    flex: 1,
     height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
+    borderRadius: 10,
+    backgroundColor: colors.pageBackground,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dropdownFieldHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  dropdownValueText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-  },
-  dropdownSpacer: {
-    flex: 1,
-  },
-  dropdownPanel: {
-    width: '100%',
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 64,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 0,
-    ...( { boxShadow: '0 8px 20px rgba(0,0,0,0.12)' } as any ),
-    maxHeight: 240,
-    overflow: 'hidden',
-  },
-  dropdownPanelSmall: {
-    width: 220,
-    position: 'absolute',
-    left: 0,
-    top: 48,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 0,
-    ...( { boxShadow: '0 8px 20px rgba(0,0,0,0.12)' } as any ),
-    maxHeight: 240,
-    overflow: 'hidden',
-  },
-  dropdownScroll: {
-    width: '100%',
-  },
-  dropdownScrollContent: {
-    gap: 0,
-    padding: 0,
-  },
-  dropdownItem: {
-    width: '100%',
-    height: 48,
-    paddingHorizontal: 24,
     justifyContent: 'center',
   },
-  dropdownItemTop: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  dropdownItemBottom: {
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-  },
-  dropdownItemHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  dropdownItemText: {
+  compactFieldInput: {
+    width: '100%',
+    padding: 0,
     fontSize: 14,
     lineHeight: 18,
     color: colors.textStrong,
@@ -518,12 +315,6 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     gap: 16,
-  },
-  contentHeaderFields: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
   },
   sectionsScroll: {
     flex: 1,
@@ -553,14 +344,15 @@ const styles = StyleSheet.create({
     width: '100%',
     minHeight: 92,
     borderRadius: 12,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.pageBackground,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
+    padding: 0,
   },
   sectionDescriptionInput: {
     width: '100%',
-    padding: 0,
+    flex: 1,
+    padding: 16,
     fontSize: 14,
     lineHeight: 18,
     color: colors.textStrong,

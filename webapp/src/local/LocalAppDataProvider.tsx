@@ -5,9 +5,11 @@ import {
   createCoachee,
   createNote,
   createSession,
+  createTemplate,
   deleteCoachee,
   deleteNote,
   deleteSession,
+  deleteTemplate,
   loadLocalAppData,
   restoreCoachee,
   saveLocalAppData,
@@ -17,19 +19,23 @@ import {
   updateSession,
 } from './localAppDataStore'
 import { createId } from './createId'
-import { Coachee, LocalAppData, Note, Session, SessionKind, WrittenReport } from './types'
+import { Coachee, LocalAppData, Note, Session, SessionKind, Template, TemplateSection, WrittenReport } from './types'
 import {
   createCoacheeRemote,
   createNoteRemote,
   createSessionRemote,
+  createTemplateRemote,
   deleteCoacheeRemote,
   deleteNoteRemote,
   deleteSessionRemote,
+  deleteTemplateRemote,
   readAppData,
+  readDefaultTemplates,
   setWrittenReportRemote,
   updateCoacheeRemote,
   updateNoteRemote,
   updateSessionRemote,
+  updateTemplateRemote,
 } from '../services/appData'
 import { useOptionalE2ee } from '../e2ee/E2eeProvider'
 
@@ -63,6 +69,11 @@ type ContextValue = {
   deleteNote: (noteId: string) => void
 
   setWrittenReport: (sessionId: string, text: string) => void
+
+  createTemplate: (values: { name: string; sections: TemplateSection[] }) => string
+  updateTemplate: (templateId: string, values: { name?: string; sections?: TemplateSection[] }) => void
+  deleteTemplate: (templateId: string) => void
+  toggleTemplateSaved: (templateId: string) => void
 }
 
 const LocalAppDataContext = createContext<ContextValue | null>(null)
@@ -84,7 +95,10 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
   }, [data, isAuthenticated])
 
   async function decryptRemoteData(remote: LocalAppData): Promise<LocalAppData> {
-    if (!e2ee) return remote
+    if (!e2ee) {
+      const templates = Array.isArray(remote.templates) ? remote.templates : []
+      return { ...remote, templates }
+    }
 
     const coachees: Coachee[] = []
     for (const coachee of remote.coachees) {
@@ -113,7 +127,13 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
       writtenReports.push({ ...report, text: await e2ee.decryptText(report.text) })
     }
 
-    return { coachees, sessions, notes, writtenReports }
+    const templates: Template[] = []
+    const remoteTemplates = Array.isArray(remote.templates) ? remote.templates : []
+    for (const template of remoteTemplates) {
+      templates.push(await decryptTemplate(template))
+    }
+
+    return { coachees, sessions, notes, writtenReports, templates }
   }
 
   async function encryptCoachee(coachee: Coachee): Promise<Coachee> {
@@ -143,6 +163,32 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
     return { ...report, text: await e2ee.encryptText(report.text) }
   }
 
+  async function decryptTemplate(template: Template): Promise<Template> {
+    if (!e2ee) return template
+    const sections: TemplateSection[] = []
+    for (const section of template.sections) {
+      sections.push({
+        ...section,
+        title: await e2ee.decryptText(section.title),
+        description: await e2ee.decryptText(section.description),
+      })
+    }
+    return { ...template, name: await e2ee.decryptText(template.name), sections }
+  }
+
+  async function encryptTemplate(template: Template): Promise<Template> {
+    if (!e2ee) return template
+    const sections: TemplateSection[] = []
+    for (const section of template.sections) {
+      sections.push({
+        ...section,
+        title: await e2ee.encryptText(section.title),
+        description: await e2ee.encryptText(section.description),
+      })
+    }
+    return { ...template, name: await e2ee.encryptText(template.name), sections }
+  }
+
   useEffect(() => {
     if (!isAuthenticated) {
       setIsAppDataLoaded(true)
@@ -163,6 +209,23 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           const localSnapshot = loadLocalAppData()
           if (!isEmptyAppData(localSnapshot)) {
             await seedRemoteFromLocal(localSnapshot)
+            const seededRaw = await readAppData()
+            const seeded = await decryptRemoteData(seededRaw)
+            if (!isActive) return
+            setData(seeded)
+            return
+          }
+        }
+        if (remote.templates.length === 0) {
+          const defaults = await readDefaultTemplates()
+          if (defaults.templates.length > 0) {
+            for (const template of defaults.templates) {
+              if (e2ee) {
+                await createTemplateRemote(await encryptTemplate(template))
+              } else {
+                await createTemplateRemote(template)
+              }
+            }
             const seededRaw = await readAppData()
             const seeded = await decryptRemoteData(seededRaw)
             if (!isActive) return
@@ -201,7 +264,13 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
   }
 
   function isEmptyAppData(next: LocalAppData) {
-    return next.coachees.length === 0 && next.sessions.length === 0 && next.notes.length === 0 && next.writtenReports.length === 0
+    return (
+      next.coachees.length === 0 &&
+      next.sessions.length === 0 &&
+      next.notes.length === 0 &&
+      next.writtenReports.length === 0 &&
+      next.templates.length === 0
+    )
   }
 
   async function seedRemoteFromLocal(localSnapshot: LocalAppData) {
@@ -217,7 +286,11 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
     for (const report of localSnapshot.writtenReports) {
       await setWrittenReportRemote(await encryptWrittenReport(report))
     }
+    for (const template of localSnapshot.templates) {
+      await createTemplateRemote(await encryptTemplate(template))
+    }
   }
+
 
   const value = useMemo<ContextValue>(() => {
     return {
@@ -362,6 +435,83 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         if (e2ee) {
           runRemoteAction(encryptWrittenReport(report).then(setWrittenReportRemote))
         }
+      },
+
+      createTemplate: (values) => {
+        const trimmedName = values.name.trim()
+        if (!trimmedName) return ''
+        const now = Date.now()
+        const template: Template = {
+          id: createId('template'),
+          name: trimmedName,
+          sections: values.sections,
+          isSaved: false,
+          createdAtUnixMs: now,
+          updatedAtUnixMs: now,
+        }
+        setData((previous) => {
+          const result = createTemplate(previous, template)
+          return result.data
+        })
+        if (e2ee) {
+          runRemoteAction(encryptTemplate(template).then(createTemplateRemote))
+        }
+        return template.id
+      },
+      updateTemplate: (templateId, values) => {
+        const updatedAtUnixMs = Date.now()
+        setData((previous) => ({
+          ...previous,
+          templates: previous.templates.map((template) => {
+            if (template.id !== templateId) return template
+            return {
+              ...template,
+              ...(typeof values.name === 'string' ? { name: values.name.trim() } : {}),
+              ...(values.sections ? { sections: values.sections } : {}),
+              updatedAtUnixMs,
+            }
+          }),
+        }))
+        if (!e2ee) return
+        void (async () => {
+          const template = data.templates.find((item) => item.id === templateId)
+          if (!template) return
+          const nextTemplate: Template = {
+            ...template,
+            ...(typeof values.name === 'string' ? { name: values.name } : {}),
+            ...(values.sections ? { sections: values.sections } : {}),
+            updatedAtUnixMs,
+          }
+          await updateTemplateRemote(await encryptTemplate(nextTemplate))
+        })()
+          .then(refreshFromServer)
+          .catch((error: unknown) => console.error('[LocalAppDataProvider] Remote update failed', error))
+      },
+      deleteTemplate: (templateId) => {
+        setData((previous) => deleteTemplate(previous, templateId))
+        runRemoteAction(deleteTemplateRemote(templateId))
+      },
+      toggleTemplateSaved: (templateId) => {
+        const updatedAtUnixMs = Date.now()
+        setData((previous) => {
+          const template = previous.templates.find((item) => item.id === templateId)
+          if (!template) return previous
+          return {
+            ...previous,
+            templates: previous.templates.map((item) =>
+              item.id === templateId ? { ...item, isSaved: !item.isSaved, updatedAtUnixMs } : item,
+            ),
+          }
+        })
+        if (!e2ee) return
+        void (async () => {
+          const template = data.templates.find((item) => item.id === templateId)
+          if (!template) return
+          const nextTemplate: Template = { ...template, isSaved: !template.isSaved, updatedAtUnixMs }
+          await updateTemplateRemote(await encryptTemplate(nextTemplate))
+        })()
+          .then(refreshFromServer)
+          .catch((error: unknown) => console.error('[LocalAppDataProvider] Remote update failed', error))
       },
     }
   }, [data, e2ee, isAppDataLoaded])

@@ -1,4 +1,4 @@
-import { LocalAppData } from './types'
+﻿import { LocalAppData } from './types'
 
 export function createDefaultLocalAppData(): LocalAppData {
   return {
@@ -6,6 +6,6 @@ export function createDefaultLocalAppData(): LocalAppData {
     sessions: [],
     notes: [],
     writtenReports: [],
+    templates: [],
   }
 }
-

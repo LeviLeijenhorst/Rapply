@@ -70,7 +70,7 @@ export function NewSessionModal({
   const [isCoacheeOpen, setIsCoacheeOpen] = useState(false)
   const [selectedCoacheeId, setSelectedCoacheeId] = useState<string | null>(null)
   const [isReportTypeOpen, setIsReportTypeOpen] = useState(false)
-  const [selectedReportTypeLabel, setSelectedReportTypeLabel] = useState('Standaard verslag')
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [sessionTitle, setSessionTitle] = useState('Sessie #3 (naamloos)')
   const [selectedAudioFile, setSelectedAudioFile] = useState<File | null>(null)
   const [isUploadDragActive, setIsUploadDragActive] = useState(false)
@@ -81,6 +81,7 @@ export function NewSessionModal({
   const isUploadDragActiveRef = useRef(false)
   const coacheeTriggerRef = useRef<any>(null)
   const reportTypeTriggerRef = useRef<any>(null)
+  const pendingSessionIdRef = useRef<string | null>(null)
   const [coacheeDropdownMaxHeight, setCoacheeDropdownMaxHeight] = useState<number | null>(null)
   const [reportTypeDropdownMaxHeight, setReportTypeDropdownMaxHeight] = useState<number | null>(null)
 
@@ -89,6 +90,20 @@ export function NewSessionModal({
   const [isSavingAudio, setIsSavingAudio] = useState(false)
   const [audioForTranscription, setAudioForTranscription] = useState<{ blob: Blob; mimeType: string } | null>(null)
   const { height: windowHeight } = useWindowDimensions()
+  const templates = data.templates ?? []
+  const defaultTemplateId = useMemo(() => {
+    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'standaard verslag')
+    return (standardTemplate ?? templates[0])?.id ?? null
+  }, [templates])
+  const selectedTemplate = useMemo(() => templates.find((template) => template.id === selectedTemplateId) ?? null, [selectedTemplateId, templates])
+  const summaryTemplate = useMemo(() => {
+    if (!selectedTemplate) return undefined
+    const sections = selectedTemplate.sections
+      .map((section) => ({ title: section.title.trim(), description: section.description }))
+      .filter((section) => section.title.length > 0)
+    if (sections.length === 0) return undefined
+    return { name: selectedTemplate.name, sections }
+  }, [selectedTemplate])
 
   const backdropOpacity = useRef(new Animated.Value(0)).current
   const modalOpacity = useRef(new Animated.Value(0)).current
@@ -103,7 +118,7 @@ export function NewSessionModal({
     setIsCoacheeOpen(false)
     setIsReportTypeOpen(false)
     setSelectedCoacheeId(null)
-    setSelectedReportTypeLabel('Standaard verslag')
+    setSelectedTemplateId(defaultTemplateId)
     setSessionTitle('Sessie #3 (naamloos)')
     setSelectedAudioFile(null)
     setAudioBlobId(null)
@@ -115,6 +130,7 @@ export function NewSessionModal({
     setIsUploadDragActive(false)
     setCoacheeDropdownMaxHeight(null)
     setReportTypeDropdownMaxHeight(null)
+    pendingSessionIdRef.current = null
   }, [visible])
 
   useEffect(() => {
@@ -123,6 +139,12 @@ export function NewSessionModal({
       URL.revokeObjectURL(audioPreviewUrl)
     }
   }, [audioPreviewUrl])
+
+  useEffect(() => {
+    if (!defaultTemplateId) return
+    if (selectedTemplateId && templates.some((template) => template.id === selectedTemplateId)) return
+    setSelectedTemplateId(defaultTemplateId)
+  }, [defaultTemplateId, selectedTemplateId, templates])
 
 
   useEffect(() => {
@@ -419,9 +441,13 @@ export function NewSessionModal({
 
   async function saveSelectedFileToAudioStore() {
     if (!selectedAudioFile) return
+    if (isSavingAudio) return
     setIsSavingAudio(true)
+    const mimeType = selectedAudioFile.type || 'audio/mpeg'
+    setAudioForTranscription({ blob: selectedAudioFile, mimeType })
+    setAudioPreviewUrl(URL.createObjectURL(selectedAudioFile))
+    setStep('recorded')
     try {
-      const mimeType = selectedAudioFile.type || 'audio/mpeg'
       const encryptedBlob = await e2ee.encryptAudioBlobForStorage({ audioBlob: selectedAudioFile, mimeType })
       const created = await createAudioBlobRemote({ audioBlob: encryptedBlob, mimeType: 'application/octet-stream' })
       const nextId = String(created.audioBlobId || '').trim()
@@ -429,9 +455,6 @@ export function NewSessionModal({
         throw new Error('Geen audio id teruggekregen van de server.')
       }
       setAudioBlobId(nextId)
-      setAudioForTranscription({ blob: selectedAudioFile, mimeType })
-      setAudioPreviewUrl(URL.createObjectURL(selectedAudioFile))
-      setStep('recorded')
     } catch (error) {
       console.error('[NewSessionModal] Failed to save uploaded audio file', error)
     } finally {
@@ -454,19 +477,20 @@ export function NewSessionModal({
   }
 
   async function createAndOpenSession(values: { kind: 'recording' | 'upload' }) {
-    if (!audioBlobId) return
-    if (isSavingAudio) return
     if (!audioForTranscription) return
 
     const createdSessionId = createSession({
       coacheeId: selectedCoachee?.id ?? null,
       title: sessionTitle,
       kind: values.kind,
-      audioBlobId,
+      audioBlobId: audioBlobId ?? null,
       uploadFileName: values.kind === 'upload' ? selectedAudioFile?.name ?? null : null,
     })
 
     if (!createdSessionId) return
+    if (!audioBlobId) {
+      pendingSessionIdRef.current = createdSessionId
+    }
 
     updateSession(createdSessionId, { transcriptionStatus: 'transcribing' })
 
@@ -495,7 +519,10 @@ export function NewSessionModal({
             transcriptionStatus: 'generating',
             transcriptionError: null,
           })
-          const generatedSummary = await generateSummary({ transcript, templateKey: 'standaard' })
+          const generatedSummary = await generateSummary({
+            transcript,
+            template: summaryTemplate,
+          })
           updateSession(createdSessionId, {
             summary: generatedSummary,
             transcriptionStatus: 'done',
@@ -513,6 +540,14 @@ export function NewSessionModal({
       }
     })()
   }
+
+  useEffect(() => {
+    if (!audioBlobId) return
+    const pendingSessionId = pendingSessionIdRef.current
+    if (!pendingSessionId) return
+    updateSession(pendingSessionId, { audioBlobId })
+    pendingSessionIdRef.current = null
+  }, [audioBlobId, updateSession])
 
   useEffect(() => {
     if (!visible) return
@@ -931,7 +966,7 @@ export function NewSessionModal({
                   {/* Report type */}
                   <VerslagSchrijvenIcon />
                   <Text isSemibold style={styles.infoRowText}>
-                    {selectedReportTypeLabel}
+                    {selectedTemplate?.name ?? 'Template'}
                   </Text>
                   <View style={styles.infoRowSpacer} />
                   <ChevronDownIcon color={colors.textStrong} size={20} />
@@ -943,14 +978,14 @@ export function NewSessionModal({
                   style={[styles.reportTypePanel, { maxHeight: reportTypeDropdownMaxHeight ?? defaultDropdownMaxHeight }]}
                 >
                   <ScrollView style={styles.reportTypeList} contentContainerStyle={styles.reportTypeListContent} showsVerticalScrollIndicator={false}>
-                    {['Standaard verslag', 'Voorbereiding', "Thema's", 'Gespreksplan'].map((label, index, items) => {
+                    {templates.map((template, index, items) => {
                       const isFirst = index === 0
                       const isLast = index === items.length - 1
                       return (
                         <Pressable
-                          key={label}
+                          key={template.id}
                           onPress={() => {
-                            setSelectedReportTypeLabel(label)
+                            setSelectedTemplateId(template.id)
                             setIsReportTypeOpen(false)
                           }}
                           style={({ hovered }) => [
@@ -961,7 +996,7 @@ export function NewSessionModal({
                           ]}
                         >
                           {/* Report type item */}
-                          <Text style={styles.reportTypeItemText}>{label}</Text>
+                          <Text style={styles.reportTypeItemText}>{template.name}</Text>
                         </Pressable>
                       )
                     })}
@@ -1047,11 +1082,11 @@ export function NewSessionModal({
                   styles.footerButtonRight,
                   step === 'upload' && !selectedAudioFile ? styles.primaryButtonDisabled : undefined,
                   !selectedOption && step === 'select' ? styles.primaryButtonDisabled : undefined,
-                  step === 'recorded' && isSavingAudio ? styles.primaryButtonDisabled : undefined,
-                  hovered && (step === 'select' ? !!selectedOption : step === 'upload' ? !!selectedAudioFile : step === 'recorded' ? !!audioBlobId : false)
+                  hovered &&
+                    (step === 'select' ? !!selectedOption : step === 'upload' ? !!selectedAudioFile : step === 'recorded' ? !!audioForTranscription : false)
                     ? styles.footerButtonPrimaryHovered
                     : undefined,
-                  pressed && !(step === 'upload' && !selectedAudioFile) && !(!selectedOption && step === 'select') && !(step === 'recorded' && isSavingAudio)
+                  pressed && !(step === 'upload' && !selectedAudioFile) && !(!selectedOption && step === 'select')
                     ? styles.footerButtonPrimaryPressed
                     : undefined,
                 ]}

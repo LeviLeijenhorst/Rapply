@@ -1,5 +1,5 @@
 import { callSecureApi } from './secureApi'
-import type { Coachee, LocalAppData, Note, Session, WrittenReport } from '../local/types'
+import type { Coachee, LocalAppData, Note, Session, Template, WrittenReport } from '../local/types'
 
 export async function readAppData(): Promise<LocalAppData> {
   return callSecureApi<LocalAppData>('/app-data', {})
@@ -52,4 +52,20 @@ export async function deleteNoteRemote(id: string): Promise<void> {
 
 export async function setWrittenReportRemote(report: WrittenReport): Promise<void> {
   await callSecureApi('/written-reports/set', { report })
+}
+
+export async function createTemplateRemote(template: Template): Promise<void> {
+  await callSecureApi('/templates/create', { template })
+}
+
+export async function updateTemplateRemote(template: Template): Promise<void> {
+  await callSecureApi('/templates/update', { template })
+}
+
+export async function deleteTemplateRemote(id: string): Promise<void> {
+  await callSecureApi('/templates/delete', { id })
+}
+
+export async function readDefaultTemplates(): Promise<{ templates: Template[] }> {
+  return callSecureApi('/templates/defaults', {})
 }

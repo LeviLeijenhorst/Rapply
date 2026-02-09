@@ -8,10 +8,11 @@ import { Text } from './Text'
 
 type Props = {
   onLogout: () => void
-  onOpenSubscription: () => void
+  usedMinutes: number
+  totalMinutes: number
 }
 
-export function Navbar({ onLogout, onOpenSubscription }: Props) {
+export function Navbar({ onLogout, usedMinutes, totalMinutes }: Props) {
   const { width } = useWindowDimensions()
   const hideUsage = width < 600
 
@@ -29,10 +30,10 @@ export function Navbar({ onLogout, onOpenSubscription }: Props) {
         <View style={styles.rightActions}>
           {/* Usage indicator */}
           {!hideUsage ? (
-            <Pressable onPress={onOpenSubscription} style={({ hovered }) => [styles.usagePressable, hovered ? styles.usagePressableHovered : undefined]}>
+            <View style={styles.usageContainer}>
               {/* Usage indicator */}
-              <UsageIndicator usedMinutes={24} availableMinutes={60} planLabel="Basis" />
-            </Pressable>
+              <UsageIndicator usedMinutes={usedMinutes} totalMinutes={totalMinutes} />
+            </View>
           ) : null}
           <Pressable onPress={onLogout} style={({ hovered }) => [styles.logoutButton, hovered ? styles.logoutButtonHovered : undefined]}>
             {/* Logout */}
@@ -94,11 +95,8 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: colors.textStrong,
   },
-  usagePressable: {
+  usageContainer: {
     borderRadius: 12,
-  },
-  usagePressableHovered: {
-    opacity: 0.9,
   },
 })
 

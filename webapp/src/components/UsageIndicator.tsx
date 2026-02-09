@@ -3,16 +3,14 @@ import { StyleSheet, View } from 'react-native'
 
 import { colors } from '../theme/colors'
 import { MicrophoneSmallIcon } from './icons/MicrophoneSmallIcon'
-import { SubscriptionPlanPill } from './SubscriptionPlanPill'
 import { Text } from './Text'
 
 type Props = {
   usedMinutes: number
-  availableMinutes: number
-  planLabel: string
+  totalMinutes: number
 }
 
-export function UsageIndicator({ usedMinutes, availableMinutes, planLabel }: Props) {
+export function UsageIndicator({ usedMinutes, totalMinutes }: Props) {
   return (
     <View style={styles.container}>
       {/* Usage indicator left content */}
@@ -21,11 +19,9 @@ export function UsageIndicator({ usedMinutes, availableMinutes, planLabel }: Pro
         <MicrophoneSmallIcon color={colors.selected} size={20} />
         {/* Usage text */}
         <Text style={styles.usageText}>
-          Gebruikt: {usedMinutes}/{availableMinutes} minuten
+          Gebruikt: {usedMinutes}/{totalMinutes} minuten
         </Text>
       </View>
-      {/* Subscription plan pill */}
-      <SubscriptionPlanPill label={planLabel} />
     </View>
   )
 }

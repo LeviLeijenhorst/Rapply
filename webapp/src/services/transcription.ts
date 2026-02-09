@@ -65,30 +65,46 @@ function writeWavHeader(view: DataView, dataLength: number, channelCount: number
   view.setUint32(40, dataLength, true)
 }
 
-function encodeWav(audioBuffer: AudioBuffer): ArrayBuffer {
+function mixToMono(audioBuffer: AudioBuffer): Float32Array {
   const channelCount = audioBuffer.numberOfChannels
+  const frameCount = audioBuffer.length
+  const mixed = new Float32Array(frameCount)
+  if (channelCount === 1) {
+    mixed.set(audioBuffer.getChannelData(0))
+    return mixed
+  }
+  const channels: Float32Array[] = []
+  for (let channelIndex = 0; channelIndex < channelCount; channelIndex += 1) {
+    channels.push(audioBuffer.getChannelData(channelIndex))
+  }
+  for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
+    let sum = 0
+    for (let channelIndex = 0; channelIndex < channelCount; channelIndex += 1) {
+      sum += channels[channelIndex][frameIndex]
+    }
+    mixed[frameIndex] = sum / channelCount
+  }
+  return mixed
+}
+
+function encodeWav(audioBuffer: AudioBuffer): ArrayBuffer {
   const sampleRate = audioBuffer.sampleRate
   const frameCount = audioBuffer.length
   const bytesPerSample = 2
+  const channelCount = 1
   const dataLength = frameCount * channelCount * bytesPerSample
   const buffer = new ArrayBuffer(44 + dataLength)
   const view = new DataView(buffer)
 
   writeWavHeader(view, dataLength, channelCount, sampleRate)
 
-  const channels: Float32Array[] = []
-  for (let channelIndex = 0; channelIndex < channelCount; channelIndex += 1) {
-    channels.push(audioBuffer.getChannelData(channelIndex))
-  }
-
+  const mono = mixToMono(audioBuffer)
   let offset = 44
   for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
-    for (let channelIndex = 0; channelIndex < channelCount; channelIndex += 1) {
-      const sample = Math.max(-1, Math.min(1, channels[channelIndex][frameIndex]))
-      const intSample = sample < 0 ? sample * 32768 : sample * 32767
-      view.setInt16(offset, intSample, true)
-      offset += 2
-    }
+    const sample = Math.max(-1, Math.min(1, mono[frameIndex]))
+    const intSample = sample < 0 ? sample * 32768 : sample * 32767
+    view.setInt16(offset, intSample, true)
+    offset += 2
   }
 
   return buffer
@@ -112,7 +128,7 @@ async function convertWebmToWav(blob: Blob): Promise<Blob> {
 
 async function normalizeAudioForTranscription(params: { audioBlob: Blob; mimeType: string }) {
   const { audioBlob, mimeType } = params
-  if (!mimeType.startsWith('audio/webm')) {
+  if (mimeType.startsWith('audio/wav')) {
     return { audioBlob, mimeType }
   }
   const converted = await convertWebmToWav(audioBlob)
@@ -185,14 +201,12 @@ export async function transcribeAudio(params: {
       throw new Error(`Upload failed: ${uploadResponse.status} ${errorText}`)
     }
 
-    const preferProvider = normalized.audioBlob.size >= 10 * 1024 * 1024 ? 'mistral' : undefined
     const result = (await callSecureApi('/transcription/start', {
       operationId,
       uploadToken,
       keyBase64,
       language_code: languageCode,
       mime_type: normalized.mimeType,
-      prefer_provider: preferProvider,
     })) as {
       transcript?: string
       text?: string

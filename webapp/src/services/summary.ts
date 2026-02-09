@@ -4,10 +4,15 @@ type GenerateSummaryResponse = {
   summary?: string
 }
 
-export async function generateSummary(params: { transcript: string; templateKey: string }): Promise<string> {
+type SummaryTemplate = {
+  name: string
+  sections: { title: string; description: string }[]
+}
+
+export async function generateSummary(params: { transcript: string; template?: SummaryTemplate }): Promise<string> {
   const response = await callSecureApi<GenerateSummaryResponse>('/summary/generate', {
     transcript: params.transcript,
-    template_key: params.templateKey,
+    template: params.template,
   })
 
   const summary = String(response.summary || '').trim()

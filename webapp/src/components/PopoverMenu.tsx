@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   rowText: {
     fontSize: 14,
     lineHeight: 18,
-    color: '#656565',
+    color: colors.textSecondary,
     flex: 1,
   },
   rowTextDanger: {
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   badge: {
     height: 24,
     borderRadius: 8,
-    backgroundColor: '#FFE5F6',
+    backgroundColor: colors.badgeBackground,
     borderWidth: 1,
     borderColor: colors.selected,
     paddingHorizontal: 8,

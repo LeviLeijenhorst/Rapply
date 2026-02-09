@@ -67,6 +67,12 @@ export function EditSessieModal({
     return selected?.label ?? templateLabel
   }, [templateKey, templateLabel, templateOptions])
 
+  const closeModal = () => {
+    setIsCoacheeMenuOpen(false)
+    setIsTemplateMenuOpen(false)
+    onClose()
+  }
+
   useEffect(() => {
     if (!visible) return
     setSessionTitle(initialSessionTitle)
@@ -90,6 +96,18 @@ export function EditSessieModal({
     const id = setTimeout(() => sessionTitleInputRef.current?.focus(), 120)
     return () => clearTimeout(id)
   }, [visible])
+
+  useEffect(() => {
+    if (!visible) return
+    if (typeof window === 'undefined') return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      closeModal()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [closeModal, visible])
 
   useEffect(() => {
     if (!visible) return
@@ -134,7 +152,7 @@ export function EditSessieModal({
           setIsTemplateMenuOpen(false)
           return
         }
-        onClose()
+        closeModal()
       }}
       contentContainerStyle={styles.container}
     >
@@ -159,11 +177,7 @@ export function EditSessieModal({
           </Pressable>
 
           <Pressable
-            onPress={() => {
-              setIsCoacheeMenuOpen(false)
-              setIsTemplateMenuOpen(false)
-              onClose()
-            }}
+            onPress={closeModal}
             style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}
           >
             {/* Close */}
@@ -317,11 +331,7 @@ export function EditSessieModal({
             </Text>
           </Pressable>
           <Pressable
-            onPress={() => {
-              setIsCoacheeMenuOpen(false)
-              setIsTemplateMenuOpen(false)
-              onClose()
-            }}
+            onPress={closeModal}
             style={({ hovered }) => [styles.footerSecondaryButton, hovered ? styles.footerSecondaryButtonHovered : undefined]}
           >
             {/* Cancel */}

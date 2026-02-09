@@ -5,6 +5,7 @@ import { FormattedText } from '../FormattedText'
 import { Text } from '../Text'
 import { colors } from '../../theme/colors'
 import { SearchIcon } from '../icons/SearchIcon'
+import { parseTimeLabelToSeconds } from '../../utils/time'
 
 type TranscriptLine = {
   speakerName: string
@@ -34,18 +35,6 @@ type ParsedTranscriptLine = {
   speakerKey: string
   messageText: string
   timeSeconds: number | null
-}
-
-function parseTimeLabelToSeconds(timeLabel: string) {
-  const timeParts = timeLabel.split(':').map((value) => Number(value))
-  if (timeParts.some((value) => Number.isNaN(value))) return null
-  if (timeParts.length === 2) {
-    return timeParts[0] * 60 + timeParts[1]
-  }
-  if (timeParts.length === 3) {
-    return timeParts[0] * 3600 + timeParts[1] * 60 + timeParts[2]
-  }
-  return null
 }
 
 function parseTranscriptLine(line: string, index: number): ParsedTranscriptLine {
@@ -105,16 +94,14 @@ export function TranscriptTabPanel({
       <ScrollView
         style={[styles.list, shouldFillAvailableHeight ? styles.listFill : styles.listAuto]}
         contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator
       >
         {isLoading ? (
           <View style={styles.loadingContainer}>
             {/* Loading message */}
             <View style={styles.loadingRow}>
               <ActivityIndicator size="small" color={colors.selected} />
-              <Text style={styles.loadingText}>
-                {isTranscribing ? 'Transcript wordt gemaakt' : 'Verslag wordt gemaakt'}
-              </Text>
+            <Text style={styles.loadingText}>Transcript wordt gegenereerd</Text>
             </View>
           </View>
         ) : hasError ? (
@@ -142,7 +129,6 @@ export function TranscriptTabPanel({
               return (
                 <Pressable
                   key={line.id}
-                  disabled={!isSeekEnabled}
                   onPress={() => {
                     if (!isSeekEnabled || line.timeSeconds === null) return
                     onSeekToSeconds?.(line.timeSeconds)
@@ -151,8 +137,8 @@ export function TranscriptTabPanel({
                     styles.row,
                     styles.messageRow,
                     isFirstSpeaker ? styles.messageRowPrimary : styles.messageRowSecondary,
-                    isSeekEnabled ? styles.messageRowClickable : undefined,
-                    isSeekEnabled && hovered ? styles.messageRowHovered : undefined,
+                    styles.messageRowClickable,
+                    hovered ? styles.messageRowHovered : undefined,
                   ]}
                 >
                   {/* Transcript line */}

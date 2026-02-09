@@ -37,10 +37,26 @@ export type WrittenReport = {
   updatedAtUnixMs: number
 }
 
+export type TemplateSection = {
+  id: string
+  title: string
+  description: string
+}
+
+export type Template = {
+  id: string
+  name: string
+  sections: TemplateSection[]
+  isSaved: boolean
+  createdAtUnixMs: number
+  updatedAtUnixMs: number
+}
+
 export type LocalAppData = {
   coachees: Coachee[]
   sessions: Session[]
   notes: Note[]
   writtenReports: WrittenReport[]
+  templates: Template[]
 }
 

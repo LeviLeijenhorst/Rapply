@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Image, Pressable, StyleSheet, View } from 'react-native'
 
 import { AuthCard } from '../components/AuthCard'
+import { CoachscribeLogo } from '../../components/CoachscribeLogo'
 import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon'
 import { Text } from '../../components/Text'
 import { colors } from '../../theme/colors'
@@ -13,10 +14,7 @@ type Props = {
 
 export function AuthEntryScreen({ mode, onStartLogin }: Props) {
   const [hasAgreedToPolicy, setHasAgreedToPolicy] = useState(false)
-  const illustrationSource =
-    mode === 'registreren'
-      ? require('../../../assets/authhuman_2.png')
-      : require('../../../assets/authhuman_1.png')
+  const illustrationSource = require('../../../assets/authhumans_1.png')
 
   async function startLogin() {
     try {
@@ -33,23 +31,39 @@ export function AuthEntryScreen({ mode, onStartLogin }: Props) {
 
   return (
     <AuthCard>
-      {/* Authentication panels */}
-      <View style={styles.panelsRow}>
-        {/* Left panel */}
-        <View style={styles.leftPanel}>
-          {/* Welcome title */}
-          <Text isBold style={styles.titleText}>
-            Welkom
-          </Text>
-          {/* Illustration */}
+      {/* Welcome layout */}
+      <View style={styles.layoutRow}>
+        {/* Branding panel */}
+        <View style={styles.brandingPanel}>
+          {/* Brand header */}
+          <View style={styles.brandHeader}>
+            {/* Brand logo */}
+            <CoachscribeLogo />
+            {/* Brand tagline */}
+            <Text style={styles.brandTagline}>Focus je op wat er echt toe doet</Text>
+          </View>
+          {/* Welcome illustration */}
           <View style={styles.illustrationContainer}>
             <Image source={illustrationSource} resizeMode="contain" style={styles.illustrationImage} />
           </View>
         </View>
 
-        {/* Right panel */}
-        <View style={styles.rightPanel}>
-          <View style={styles.rightPanelContent}>
+        {/* Welcome panel */}
+        <View style={styles.welcomePanel}>
+          {/* Welcome content */}
+          <View style={styles.welcomeContent}>
+            {/* Welcome title */}
+            <Text isBold style={styles.welcomeTitle}>
+              Welkom
+            </Text>
+            {/* Welcome description */}
+            <Text style={styles.welcomeParagraph}>
+              CoachScribe helpt coaches bij de verslaglegging van hun sessies en het bewaren van het overzicht.
+            </Text>
+            {/* Welcome description */}
+            <Text style={styles.welcomeParagraph}>
+              Gesprekken worden veilig vastgelegd en georganiseerd, zodat jij je volledig kunt richten op de cliënt.
+            </Text>
             {/* Continue button */}
             <Pressable
               onPress={isActionDisabled ? undefined : startLogin}
@@ -69,7 +83,7 @@ export function AuthEntryScreen({ mode, onStartLogin }: Props) {
                 {hasAgreedToPolicy ? <CheckmarkIcon color={colors.selected} width={14} height={12} /> : null}
               </View>
               <Text style={styles.checkboxText}>
-                Ik ga akkoord met de privacy policy en gebruikersovereenkomst.
+                Ik ga akkoord met de privacy policy en gebruikersovereenkomst
               </Text>
             </Pressable>
           </View>
@@ -80,12 +94,12 @@ export function AuthEntryScreen({ mode, onStartLogin }: Props) {
 }
 
 const styles = StyleSheet.create({
-  panelsRow: {
+  layoutRow: {
     width: '100%',
     flexDirection: 'row',
     minHeight: 560,
   },
-  leftPanel: {
+  brandingPanel: {
     flexGrow: 1,
     flexShrink: 1,
     flexBasis: 0,
@@ -93,13 +107,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 48,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     gap: 24,
   },
-  titleText: {
-    fontSize: 40,
-    lineHeight: 44,
-    color: colors.selected,
+  brandHeader: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  brandTagline: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#1C0E0A',
     textAlign: 'center',
   },
   illustrationContainer: {
@@ -108,10 +128,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   illustrationImage: {
-    width: 360,
-    height: 300,
+    width: 420,
+    height: 320,
   },
-  rightPanel: {
+  welcomePanel: {
     flexGrow: 1,
     flexShrink: 1,
     flexBasis: 0,
@@ -121,14 +141,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rightPanelContent: {
+  welcomeContent: {
     width: '100%',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
     gap: 24,
   },
+  welcomeTitle: {
+    fontSize: 44,
+    lineHeight: 52,
+    color: '#FFFFFF',
+    textAlign: 'left',
+  },
+  welcomeParagraph: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#FFFFFF',
+    textAlign: 'left',
+  },
   actionButton: {
-    width: 400,
+    width: '100%',
     maxWidth: '100%',
     height: 48,
     borderRadius: 6,
@@ -149,7 +181,7 @@ const styles = StyleSheet.create({
     color: colors.selected,
   },
   checkboxRow: {
-    width: 400,
+    width: '100%',
     maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
