@@ -9,41 +9,59 @@ import {
 } from "./auth"
 import { createCorsMiddleware, createRateLimitMiddleware, parseCorsAllowedOriginsFromEnv } from "./security"
 import { applyUnlimitedTranscriptionToBillingStatus, isUnlimitedTranscriptionEmail, unlimitedTranscriptionRemainingSeconds } from "./billing/unlimitedTranscription"
+import { applyTestTranscriptionToBillingStatus, getTestTranscriptionTotalSeconds, isTestTranscriptionEmail } from "./billing/testTranscription"
 import { ensureBillingUser, readBillingStatus } from "./billing/store"
 import { derivePlanStateFromRevenueCatSubscriber, derivePurchasedSecondsFromRevenueCatSubscriber, fetchRevenueCatSubscriber } from "./billing/revenuecat"
 import { randomBase64Url } from "./transcription/random"
-import { createUploadToken, consumeUploadToken, chargeSecondsIdempotent, recordTranscriptionOperationWithoutCharge, refundSecondsIdempotent } from "./transcription/store"
+import { createUploadToken, consumeUploadToken, chargeSecondsIdempotent, refundSecondsIdempotent } from "./transcription/store"
 import { createEncryptedUploadUrl, deleteEncryptedUpload, deleteEncryptedUploadsByPrefix, fetchEncryptedUploadStream, getEncryptedUploadSize } from "./transcription/storage"
 import { computeAudioDurationSecondsFromEncryptedUpload } from "./transcription/duration"
 import { runVoxtralTranscriptionFromEncryptedUpload } from "./transcription/voxtral"
 import { runAzureSpeechTranscriptionFromEncryptedUpload } from "./transcription/azureSpeechTranscription"
-import { generateSummaryWithAzureOpenAi } from "./summary/azureOpenAiSummary"
+import { generateSummary } from "./summary/summary"
 import { completeChatWithAzureOpenAi } from "./chat/azureOpenAiChat"
-import { execute } from "./db"
+import { execute, getDatabaseConnectionInfo, testDatabaseConnection } from "./db"
 import { updateUserDisplayName } from "./users"
 import { createAudioBlob, readAudioBlob } from "./audioBlobs"
 import * as e2ee from "./e2ee"
+import { createDefaultTemplates } from "./templates/defaultTemplates"
 import {
   createCoachee,
   createNote,
   createSession,
+  createTemplate,
   deleteCoachee,
   deleteNote,
   deleteSession,
+  deleteTemplate,
   readAppData,
   setWrittenReport,
   updateCoachee,
   updateNote,
   updateSession,
+  updateTemplate,
   type Coachee,
   type Note,
   type Session,
+  type Template,
   type WrittenReport,
 } from "./appData"
 
 const app = express()
 
 app.set("trust proxy", true)
+
+const databaseConnectionInfo = getDatabaseConnectionInfo()
+console.log("[db] configured", databaseConnectionInfo)
+testDatabaseConnection()
+  .then(() => {
+    console.log("[db] connection ok")
+  })
+  .catch((error: any) => {
+    const message = String(error?.message || error || "")
+    const stack = typeof error?.stack === "string" ? error.stack : null
+    console.log("[db] connection failed", { message, stack })
+  })
 
 const corsAllowedOrigins = parseCorsAllowedOriginsFromEnv(env.corsAllowedOrigins)
 app.use(
@@ -578,6 +596,44 @@ app.post(
 )
 
 app.post(
+  "/templates/create",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const template = readTemplate(req.body?.template)
+    await createTemplate(user.userId, template)
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/templates/update",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const template = readTemplate(req.body?.template)
+    await updateTemplate(user.userId, template)
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/templates/delete",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const id = readId(req.body?.id, "id")
+    await deleteTemplate(user.userId, id)
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/templates/defaults",
+  asyncHandler(async (_req, res) => {
+    const templates = createDefaultTemplates()
+    res.status(200).json({ templates })
+  }),
+)
+
+app.post(
   "/written-reports/set",
   asyncHandler(async (req, res) => {
     const user = await requireAuthenticatedUser(req)
@@ -618,14 +674,14 @@ app.post(
     await requireAuthenticatedUser(req)
 
     const transcript = typeof req.body?.transcript === "string" ? req.body.transcript : ""
-    const templateKey = typeof req.body?.template_key === "string" ? req.body.template_key.trim() : ""
+    const template = readSummaryTemplate(req.body?.template)
 
     if (!String(transcript || "").trim()) {
       sendError(res, 400, "Missing transcript")
       return
     }
 
-    const summary = await generateSummaryWithAzureOpenAi({ transcript, templateKey })
+    const summary = await generateSummary({ transcript, template })
     res.status(200).json({ summary })
   }),
 )
@@ -744,7 +800,13 @@ app.post(
       cycleStartMs: planState.cycleStartMs,
       cycleEndMs: planState.cycleEndMs,
     })
-    const billingStatus = isUnlimitedTranscriptionEmail(user.email) ? applyUnlimitedTranscriptionToBillingStatus(billingStatusRaw) : billingStatusRaw
+    const isUnlimitedTranscription = isUnlimitedTranscriptionEmail(user.email)
+    const isTestTranscription = isTestTranscriptionEmail(user.email)
+    const billingStatus = isUnlimitedTranscription
+      ? applyUnlimitedTranscriptionToBillingStatus(billingStatusRaw)
+      : isTestTranscription
+        ? applyTestTranscriptionToBillingStatus(billingStatusRaw)
+        : billingStatusRaw
 
     res.status(200).json({
       ok: true,
@@ -772,7 +834,13 @@ app.post(
       cycleStartMs: planState.cycleStartMs,
       cycleEndMs: planState.cycleEndMs,
     })
-    const billingStatus = isUnlimitedTranscriptionEmail(user.email) ? applyUnlimitedTranscriptionToBillingStatus(billingStatusRaw) : billingStatusRaw
+    const isUnlimitedTranscription = isUnlimitedTranscriptionEmail(user.email)
+    const isTestTranscription = isTestTranscriptionEmail(user.email)
+    const billingStatus = isUnlimitedTranscription
+      ? applyUnlimitedTranscriptionToBillingStatus(billingStatusRaw)
+      : isTestTranscription
+        ? applyTestTranscriptionToBillingStatus(billingStatusRaw)
+        : billingStatusRaw
 
     res.status(200).json({
       planKey: planState.planKey,
@@ -799,7 +867,13 @@ app.post(
       cycleStartMs: planState.cycleStartMs,
       cycleEndMs: planState.cycleEndMs,
     })
-    const status = isUnlimitedTranscriptionEmail(user.email) ? applyUnlimitedTranscriptionToBillingStatus(statusRaw) : statusRaw
+    const isUnlimitedTranscription = isUnlimitedTranscriptionEmail(user.email)
+    const isTestTranscription = isTestTranscriptionEmail(user.email)
+    const status = isUnlimitedTranscription
+      ? applyUnlimitedTranscriptionToBillingStatus(statusRaw)
+      : isTestTranscription
+        ? applyTestTranscriptionToBillingStatus(statusRaw)
+        : statusRaw
 
     const remainingSeconds = status.remainingSeconds
     const allowed = remainingSeconds > 0
@@ -879,59 +953,48 @@ app.post(
 
       let charge: { secondsCharged: number; remainingSecondsAfter: number }
       const isUnlimitedTranscription = isUnlimitedTranscriptionEmail(user.email)
-      if (isUnlimitedTranscription) {
-        charge = { secondsCharged: 0, remainingSecondsAfter: unlimitedTranscriptionRemainingSeconds }
-        await recordTranscriptionOperationWithoutCharge({
+      const isTestTranscription = isTestTranscriptionEmail(user.email)
+      const testTranscriptionTotalSeconds = isTestTranscription ? getTestTranscriptionTotalSeconds() : 0
+      const unlimitedTotalSeconds = isUnlimitedTranscription ? unlimitedTranscriptionRemainingSeconds : 0
+      const nonExpiringTotalSecondsOverride =
+        unlimitedTotalSeconds > 0 ? unlimitedTotalSeconds : testTranscriptionTotalSeconds > 0 ? testTranscriptionTotalSeconds : undefined
+      try {
+        charge = await chargeSecondsIdempotent({
           userId: user.userId,
           operationId,
+          secondsToCharge,
           planKey: planState.planKey,
           cycleStartMs: planState.cycleStartMs,
           cycleEndMs: planState.cycleEndMs,
-          remainingSecondsAfter: unlimitedTranscriptionRemainingSeconds,
+          nonExpiringTotalSecondsOverride,
         })
-      } else {
-        try {
-          charge = await chargeSecondsIdempotent({
+      } catch (e: any) {
+        const message = String(e?.message || e)
+        if (message === "Not enough seconds remaining") {
+          const status = await readBillingStatus({
             userId: user.userId,
-            operationId,
-            secondsToCharge,
             planKey: planState.planKey,
             cycleStartMs: planState.cycleStartMs,
             cycleEndMs: planState.cycleEndMs,
           })
-        } catch (e: any) {
-          const message = String(e?.message || e)
-          if (message === "Not enough seconds remaining") {
-            const status = await readBillingStatus({
-              userId: user.userId,
-              planKey: planState.planKey,
-              cycleStartMs: planState.cycleStartMs,
-              cycleEndMs: planState.cycleEndMs,
-            })
-            sendError(
-              res,
-              402,
-              `Not enough seconds remaining. Needed ${secondsToCharge}s, remaining ${status.remainingSeconds}s.`,
-            )
-            return
-          }
-          throw e
+          sendError(
+            res,
+            402,
+            `Not enough seconds remaining. Needed ${secondsToCharge}s, remaining ${status.remainingSeconds}s.`,
+          )
+          return
         }
+        throw e
       }
 
       const apiKey = env.mistralApiKey
       const azureSpeechKey = env.azureSpeechKey
       const azureSpeechRegion = env.azureSpeechRegion
-      const mustUseMistral = durationSeconds >= 600 || uploadBytes >= 10 * 1024 * 1024
       transcriptionProvider = apiKey ? "mistral" : azureSpeechKey && azureSpeechRegion ? "azure-speech" : "none"
       console.log("[transcription] start", { operationId, durationSeconds, uploadBytes, mimeType, provider: transcriptionProvider })
 
       if (preferProvider === "mistral" && !apiKey) {
         throw new Error("Mistral transcription was requested but MISTRAL_API_KEY is missing.")
-      }
-
-      if (mustUseMistral && !apiKey) {
-        throw new Error("Long audio requires Mistral transcription. Configure MISTRAL_API_KEY.")
       }
 
       let transcript = ""
@@ -967,7 +1030,7 @@ app.post(
         throw new Error("No transcription provider is configured")
       }
 
-      const summary = await generateSummaryWithAzureOpenAi({ transcript })
+      const summary = await generateSummary({ transcript })
 
       await execute(
         `
@@ -1033,8 +1096,15 @@ app.use((err: any, _req: any, res: any, _next: any) => {
 app.listen(env.port, () => {
   const hasMistralApiKey = !!env.mistralApiKey
   const transcriptionModel = env.mistralTranscriptionModel
+  const hasAzureOpenAiEndpoint = !!String(env.azureOpenAiEndpoint || "").trim()
+  const hasAzureOpenAiKey = !!String(env.azureOpenAiKey || "").trim()
+  const hasAzureOpenAiChatDeployment = !!String(env.azureOpenAiChatDeployment || "").trim()
+  const hasAzureOpenAiSummaryDeployment = !!String(env.azureOpenAiSummaryDeployment || "").trim()
   console.log(`[server] listening on http://127.0.0.1:${env.port}`)
   console.log(`[server] mistral configured: ${hasMistralApiKey ? "yes" : "no"}; model: ${transcriptionModel}`)
+  console.log(`[server] azure openai configured: ${hasAzureOpenAiEndpoint && hasAzureOpenAiKey ? "yes" : "no"}`)
+  console.log(`[server] azure openai chat deployment: ${hasAzureOpenAiChatDeployment ? "yes" : "no"}`)
+  console.log(`[server] azure openai summary deployment: ${hasAzureOpenAiSummaryDeployment ? "yes" : "no"}`)
 })
 
 function readId(value: unknown, fieldName: string): string {
@@ -1139,4 +1209,51 @@ function readWrittenReport(value: unknown): WrittenReport {
     text: readText(payload.text, "writtenReport.text"),
     updatedAtUnixMs,
   }
+}
+
+function readTemplateSection(value: unknown, index: number): Template["sections"][number] {
+  const payload = (value || {}) as any
+  return {
+    id: readId(payload.id, `template.sections[${index}].id`),
+    title: readText(payload.title, `template.sections[${index}].title`),
+    description: readOptionalText(payload.description, true) ?? "",
+  }
+}
+
+function readTemplate(value: unknown): Template {
+  const payload = (value || {}) as any
+  const createdAtUnixMs = readUnixMs(payload.createdAtUnixMs, "template.createdAtUnixMs")
+  const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs ?? payload.createdAtUnixMs, "template.updatedAtUnixMs")
+  if (!Array.isArray(payload.sections)) {
+    throw new Error("Missing template.sections")
+  }
+  return {
+    id: readId(payload.id, "template.id"),
+    name: readText(payload.name, "template.name"),
+    sections: payload.sections.map((section: unknown, index: number) => readTemplateSection(section, index)),
+    isSaved: typeof payload.isSaved === "boolean" ? payload.isSaved : false,
+    createdAtUnixMs,
+    updatedAtUnixMs,
+  }
+}
+
+type SummaryTemplate = {
+  name: string
+  sections: { title: string; description: string }[]
+}
+
+function readSummaryTemplate(value: unknown): SummaryTemplate | undefined {
+  if (!value) return undefined
+  const payload = (value || {}) as any
+  if (!Array.isArray(payload.sections)) return undefined
+  const name = typeof payload.name === "string" ? payload.name.trim() : ""
+  const rawSections: { title?: unknown; description?: unknown }[] = payload.sections
+  const sections: { title: string; description: string }[] = rawSections
+    .map((section) => ({
+      title: typeof section?.title === "string" ? section.title.trim() : "",
+      description: readOptionalText(section?.description, true) ?? "",
+    }))
+    .filter((section) => section.title.length > 0)
+  if (!sections.length) return undefined
+  return { name: name || "Template", sections }
 }

@@ -17,7 +17,7 @@ function safeClampTranscript(transcript: string) {
   return trimmed
 }
 
-export async function generateSummaryWithMistral(params: { transcript: string; templateKey?: string }): Promise<string> {
+export async function generateSummaryWithMistral(params: { transcript: string; templateKey?: string; template?: { name: string; sections: { title: string; description: string }[] } }): Promise<string> {
   const transcript = safeClampTranscript(params.transcript)
 
   const templateKeyRaw = normalizeText(params.templateKey)
@@ -38,8 +38,9 @@ export async function generateSummaryWithMistral(params: { transcript: string; t
     "Maak belangrijke woorden vetgedrukt door ze te omringen met **. Gebruik dit spaarzaam: maximaal 1 tot 3 vetgedrukte woorden per bullet point."
 
   const baseIntro = "Maak een korte, bruikbare samenvatting."
-  const structure =
-    templateKey === "soap"
+  const structure = params.template?.sections?.length
+    ? buildTemplateStructure(params.template)
+    : templateKey === "soap"
       ? "Gebruik deze structuur:\n" +
         "### Subjectief\n- ...\n" +
         "### Objectief\n- ...\n" +
@@ -97,5 +98,13 @@ export async function generateSummaryWithMistral(params: { transcript: string; t
     throw new Error("Summary generation failed")
   }
   return summary
+}
+
+function buildTemplateStructure(template: { name: string; sections: { title: string; description: string }[] }) {
+  const sectionGuide = template.sections
+    .map((section) => `- ${section.title}: ${normalizeText(section.description) || "Geen extra toelichting."}`)
+    .join("\n")
+  const structure = template.sections.map((section) => `### ${section.title}\n- ...`).join("\n")
+  return `Gebruik de structuur van het template "${normalizeText(template.name) || "Template"}".\n\nUitleg per onderdeel:\n${sectionGuide}\n\nStructuur:\n${structure}\n`
 }
 

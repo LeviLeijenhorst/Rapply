@@ -123,8 +123,9 @@ export async function chargeSecondsIdempotent(params: {
   planKey: PlanKey | null
   cycleStartMs: number | null
   cycleEndMs: number | null
+  nonExpiringTotalSecondsOverride?: number
 }): Promise<ChargeResult> {
-  const { userId, operationId, secondsToCharge, planKey, cycleStartMs, cycleEndMs } = params
+  const { userId, operationId, secondsToCharge, planKey, cycleStartMs, cycleEndMs, nonExpiringTotalSecondsOverride } = params
 
   const seconds = clampNonNegative(secondsToCharge)
   if (seconds <= 0) {
@@ -163,7 +164,10 @@ export async function chargeSecondsIdempotent(params: {
   const currentCycleUsedSeconds = cycleKey ? clampNonNegative(cycleUsedSecondsByKey[cycleKey] ?? 0) : 0
 
   const cycleRemainingSeconds = cycleKey ? Math.max(0, includedSeconds - currentCycleUsedSeconds) : 0
-  const nonExpiringTotalSeconds = freeSeconds + purchasedSeconds
+  let nonExpiringTotalSeconds = freeSeconds + purchasedSeconds
+  if (typeof nonExpiringTotalSecondsOverride === "number" && Number.isFinite(nonExpiringTotalSecondsOverride) && nonExpiringTotalSecondsOverride > 0) {
+    nonExpiringTotalSeconds = Math.floor(nonExpiringTotalSecondsOverride)
+  }
   const nonExpiringRemainingSeconds = Math.max(0, nonExpiringTotalSeconds - nonExpiringUsedSeconds)
 
   const maxChargeable = cycleRemainingSeconds + nonExpiringRemainingSeconds

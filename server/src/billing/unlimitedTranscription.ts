@@ -1,7 +1,7 @@
 import { env } from "../env"
 import type { BillingStatus } from "./store"
 
-export const unlimitedTranscriptionRemainingSeconds = Number.MAX_SAFE_INTEGER
+export const unlimitedTranscriptionRemainingSeconds = 2_000_000_000
 
 function normalizeEmail(value: string): string {
   return value.trim().toLowerCase()

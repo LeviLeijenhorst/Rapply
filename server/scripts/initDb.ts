@@ -38,7 +38,15 @@ async function main() {
   })
 
   const sqlDir = path.resolve(__dirname, "..", "sql")
-  const sqlFilesInOrder = ["001_init.sql", "002_entra_external_id.sql", "002_remove_transcript.sql", "003_app_data.sql", "004_audio_blobs.sql", "005_e2ee.sql"].map((name) =>
+  const sqlFilesInOrder = [
+    "001_init.sql",
+    "002_entra_external_id.sql",
+    "002_remove_transcript.sql",
+    "003_app_data.sql",
+    "004_audio_blobs.sql",
+    "005_e2ee.sql",
+    "006_templates.sql",
+  ].map((name) =>
     path.join(sqlDir, name),
   )
 

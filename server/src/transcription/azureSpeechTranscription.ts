@@ -59,6 +59,67 @@ function normalizeLanguage(value: string) {
   return trimmed
 }
 
+async function requestFastTranscription(params: {
+  region: string
+  key: string
+  locale: string
+  audioBuffer: Buffer
+  contentType: string
+}): Promise<any> {
+  const url = `https://${params.region}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version=2025-10-15`
+  const definition = {
+    locales: [params.locale],
+    profanityFilterMode: "Masked",
+    diarization: {
+      maxSpeakers: 6,
+      enabled: true,
+    },
+  }
+  const formData = new FormData()
+  const audioBytes = new Uint8Array(params.audioBuffer)
+  const audioBlob = new Blob([audioBytes], { type: params.contentType })
+  formData.append("audio", audioBlob, "audio.wav")
+  formData.append("definition", JSON.stringify(definition))
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Ocp-Apim-Subscription-Key": params.key,
+    },
+    body: formData,
+  })
+  const responseText = await response.text().catch(() => "")
+  if (!response.ok) {
+    throw new Error(
+      `Azure Speech fast transcription failed: status=${response.status}; response=${responseText || response.statusText}`,
+    )
+  }
+  return responseText ? JSON.parse(responseText) : null
+}
+
+function extractTranscript(resultJson: any): { text: string; isDiarized: boolean } {
+  const phrases = Array.isArray(resultJson?.phrases) ? resultJson.phrases : []
+  const diarizedLines = phrases
+    .map((item: any) => {
+      const speakerRaw = item?.speaker
+      const speakerNumber = Number.isFinite(Number(speakerRaw)) ? Number(speakerRaw) + 1 : null
+      const speaker = speakerNumber ? `speaker_${speakerNumber}` : ""
+      const text = normalizeSpacing(String(item?.text || ""))
+      if (!speaker || !text) return null
+      return `${speaker}: ${text}`
+    })
+    .filter(Boolean)
+  if (diarizedLines.length) {
+    return { text: diarizedLines.join("\n"), isDiarized: true }
+  }
+  const combined = Array.isArray(resultJson?.combinedPhrases)
+    ? resultJson.combinedPhrases
+        .map((item: any) => normalizeSpacing(String(item?.text || "")))
+        .filter(Boolean)
+        .join(" ")
+    : ""
+  return { text: combined, isDiarized: false }
+}
+
 export async function runAzureSpeechTranscriptionFromEncryptedUpload(params: {
   encryptedStream: NodeJS.ReadableStream
   keyBase64: string
@@ -75,59 +136,32 @@ export async function runAzureSpeechTranscriptionFromEncryptedUpload(params: {
   }
 
   const { encryptedStream, keyBase64, mimeType, languageCode } = params
+  const contentType = normalizeText(mimeType).toLowerCase()
+  if (!contentType.startsWith("audio/wav")) {
+    throw new Error("Azure Speech transcription requires audio/wav")
+  }
 
   const aesKey = ensureValidAesKey(keyBase64)
   const decryptedAudioStream = encryptedStream.pipe(new Csa1DecryptStream(aesKey))
 
-  const maxBytes = 200 * 1024 * 1024
+  const maxBytes = 250 * 1024 * 1024
   const audioBuffer = await readStreamToBuffer(decryptedAudioStream, maxBytes)
-
-  const contentType = normalizeText(mimeType) || "audio/mpeg"
-  const language = normalizeLanguage(languageCode)
-  const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${encodeURIComponent(
-    language,
-  )}`
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Ocp-Apim-Subscription-Key": key,
-      "Content-Type": contentType,
-      Accept: "application/json",
-    },
-    body: audioBuffer as any,
-  })
-
-  const textBody = await response.text().catch(() => "")
-  if (!response.ok) {
-    const preview = textBody ? textBody.slice(0, 200) : ""
+  const locale = normalizeLanguage(languageCode)
+  const resultJson = await requestFastTranscription({ region, key, locale, audioBuffer, contentType: "audio/wav" })
+  const transcriptResult = extractTranscript(resultJson)
+  if (!transcriptResult.text) {
+    const preview = safeJsonPreview(resultJson)
+    const keys = safeObjectKeys(resultJson)
     throw new Error(
-      "Azure Speech transcription failed: " +
-        `status=${response.status}; ` +
-        `contentType=${contentType}; ` +
-        `audioBytes=${audioBuffer.length}; ` +
-        `response=${preview || response.statusText || "Unknown error"}`,
+      "No transcript returned. " +
+        "Keys=" +
+        (keys.length ? keys.join(",") : "none") +
+        "; Preview=" +
+        (preview || "empty"),
     )
   }
-
-  const json: any = textBody ? JSON.parse(textBody) : null
-  const displayText = normalizeSpacing(String(json?.DisplayText || ""))
-  if (displayText) {
-    return `[00:00.0] speaker_1: ${displayText}`
+  if (transcriptResult.isDiarized) {
+    return transcriptResult.text
   }
-
-  const responseKeys = safeObjectKeys(json)
-  const recognitionStatus = normalizeText(String(json?.RecognitionStatus || ""))
-  const preview = safeJsonPreview(json)
-  throw new Error(
-    "No transcript returned. " +
-      "Status=" +
-      (recognitionStatus || "missing") +
-      "; ContentType=" +
-      contentType +
-      "; Keys=" +
-      (responseKeys.length ? responseKeys.join(",") : "none") +
-      "; Preview=" +
-      (preview || "empty"),
-  )
+  return `[00:00.0] speaker_1: ${transcriptResult.text}`
 }

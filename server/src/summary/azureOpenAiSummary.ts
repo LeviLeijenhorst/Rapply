@@ -17,7 +17,7 @@ function safeClampTranscript(transcript: string) {
   return trimmed
 }
 
-export async function generateSummaryWithAzureOpenAi(params: { transcript: string; templateKey?: string }): Promise<string> {
+export async function generateSummaryWithAzureOpenAi(params: { transcript: string; templateKey?: string; template?: { name: string; sections: { title: string; description: string }[] } }): Promise<string> {
   const deployment = String(env.azureOpenAiSummaryDeployment || "").trim()
   if (!deployment) {
     throw new Error("Azure OpenAI summary deployment is not configured")
@@ -42,8 +42,9 @@ export async function generateSummaryWithAzureOpenAi(params: { transcript: strin
     "Gebruik alleen Markdown met kopjes die beginnen met '### ' en bullet points die beginnen met '- '."
 
   const baseIntro = "Maak een korte, bruikbare samenvatting."
-  const structure =
-    templateKey === "soap"
+  const structure = params.template?.sections?.length
+    ? buildTemplateStructure(params.template)
+    : templateKey === "soap"
       ? "Gebruik deze structuur:\n" +
         "### Subjectief\n- ...\n" +
         "### Objectief\n- ...\n" +
@@ -100,4 +101,12 @@ export async function generateSummaryWithAzureOpenAi(params: { transcript: strin
     throw new Error("Summary generation failed")
   }
   return summary
+}
+
+function buildTemplateStructure(template: { name: string; sections: { title: string; description: string }[] }) {
+  const sectionGuide = template.sections
+    .map((section) => `- ${section.title}: ${normalizeText(section.description) || "Geen extra toelichting."}`)
+    .join("\n")
+  const structure = template.sections.map((section) => `### ${section.title}\n- ...`).join("\n")
+  return `Gebruik de structuur van het template "${normalizeText(template.name) || "Template"}".\n\nUitleg per onderdeel:\n${sectionGuide}\n\nStructuur:\n${structure}\n`
 }

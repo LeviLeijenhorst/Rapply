@@ -1,4 +1,5 @@
-import { execute, queryMany } from "./db"
+import { execute, queryMany, queryOne } from "./db"
+import { createDefaultTemplates } from "./templates/defaultTemplates"
 
 export type Coachee = {
   id: string
@@ -39,11 +40,27 @@ export type WrittenReport = {
   updatedAtUnixMs: number
 }
 
+export type TemplateSection = {
+  id: string
+  title: string
+  description: string
+}
+
+export type Template = {
+  id: string
+  name: string
+  sections: TemplateSection[]
+  isSaved: boolean
+  createdAtUnixMs: number
+  updatedAtUnixMs: number
+}
+
 export type AppData = {
   coachees: Coachee[]
   sessions: Session[]
   notes: Note[]
   writtenReports: WrittenReport[]
+  templates: Template[]
 }
 
 export async function readAppData(userId: string): Promise<AppData> {
@@ -115,6 +132,54 @@ export async function readAppData(userId: string): Promise<AppData> {
     [userId],
   )
 
+  const templates = await queryMany<{
+    id: string
+    name: string
+    sections_json: unknown
+    is_saved: boolean
+    created_at_unix_ms: number
+    updated_at_unix_ms: number
+  }>(
+    `
+    select id, name, sections_json, is_saved, created_at_unix_ms, updated_at_unix_ms
+    from public.templates
+    where user_id = $1
+    order by created_at_unix_ms desc
+    `,
+    [userId],
+  )
+
+  const e2eeUser = await queryOne<{ user_id: string }>("select user_id from public.e2ee_users where user_id = $1", [userId])
+  const isE2eeEnabled = !!e2eeUser
+
+  let templateData: Template[] = []
+  if (templates.length === 0) {
+    if (!isE2eeEnabled) {
+      const defaults = createDefaultTemplates()
+      for (const template of defaults) {
+        await createTemplate(userId, template)
+      }
+      templateData = defaults
+    }
+  } else {
+    templateData = templates.map((row) => {
+      const sections =
+        Array.isArray(row.sections_json)
+          ? (row.sections_json as TemplateSection[])
+          : typeof row.sections_json === "string"
+            ? (JSON.parse(row.sections_json) as TemplateSection[])
+            : []
+      return {
+        id: row.id,
+        name: row.name,
+        sections,
+        isSaved: row.is_saved,
+        createdAtUnixMs: Number(row.created_at_unix_ms),
+        updatedAtUnixMs: Number(row.updated_at_unix_ms),
+      }
+    })
+  }
+
   return {
     coachees: coachees.map((row) => ({
       id: row.id,
@@ -149,6 +214,7 @@ export async function readAppData(userId: string): Promise<AppData> {
       text: row.text,
       updatedAtUnixMs: Number(row.updated_at_unix_ms),
     })),
+    templates: templateData,
   }
 }
 
@@ -345,4 +411,45 @@ export async function setWrittenReport(userId: string, report: WrittenReport): P
     `,
     [report.sessionId, userId, report.text, report.updatedAtUnixMs],
   )
+}
+
+export async function createTemplate(userId: string, template: Template): Promise<void> {
+  await execute(
+    `
+    insert into public.templates (id, user_id, name, sections_json, is_saved, created_at_unix_ms, updated_at_unix_ms)
+    values ($1, $2, $3, $4::jsonb, $5, $6, $7)
+    on conflict (id) do update
+      set name = excluded.name,
+          sections_json = excluded.sections_json,
+          is_saved = excluded.is_saved,
+          updated_at_unix_ms = excluded.updated_at_unix_ms
+    `,
+    [
+      template.id,
+      userId,
+      template.name,
+      JSON.stringify(template.sections),
+      template.isSaved,
+      template.createdAtUnixMs,
+      template.updatedAtUnixMs,
+    ],
+  )
+}
+
+export async function updateTemplate(userId: string, template: Template): Promise<void> {
+  await execute(
+    `
+    update public.templates
+    set name = $1,
+        sections_json = $2::jsonb,
+        is_saved = $3,
+        updated_at_unix_ms = $4
+    where user_id = $5 and id = $6
+    `,
+    [template.name, JSON.stringify(template.sections), template.isSaved, template.updatedAtUnixMs, userId, template.id],
+  )
+}
+
+export async function deleteTemplate(userId: string, id: string): Promise<void> {
+  await execute(`delete from public.templates where user_id = $1 and id = $2`, [userId, id])
 }

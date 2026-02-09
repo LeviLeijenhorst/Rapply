@@ -41,4 +41,3 @@ export async function createUploadUrl(params: { blobName: string; expiresInSecon
     },
   }
 }
-

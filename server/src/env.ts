@@ -25,6 +25,17 @@ function optionalBooleanFromString(value: string | null): boolean | null {
   return null
 }
 
+function optionalNumberFromString(value: string | null): number | null {
+  if (!value) return null
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return null
+  return numeric
+}
+
+function optionalNumber(name: string): number | null {
+  return optionalNumberFromString(optionalString(name))
+}
+
 function parseStringList(value: string): string | string[] {
   const trimmed = String(value || "").trim()
   if (!trimmed) return ""
@@ -64,10 +75,13 @@ export const env = {
   azureSpeechRegion: optionalString("AZURE_SPEECH_REGION") || "",
   mistralApiKey: optionalString("MISTRAL_API_KEY") || "",
   mistralChatModel: optionalString("MISTRAL_CHAT_MODEL") || "mistral-small-latest",
+  mistralSummaryModel: optionalString("MISTRAL_SUMMARY_MODEL") || "mistral-small-latest",
   mistralTranscriptionModel: optionalString("MISTRAL_TRANSCRIPTION_MODEL") || "voxtral-mini-latest",
   corsAllowedOrigins: optionalString("CORS_ALLOWED_ORIGINS"),
   rateLimitWindowMs: Number(optionalString("RATE_LIMIT_WINDOW_MS") || "60000"),
   rateLimitMaxRequests: Number(optionalString("RATE_LIMIT_MAX_REQUESTS") || "120"),
   unlimitedTranscriptionEmails: normalizeEmailList(optionalString("UNLIMITED_TRANSCRIPTION_EMAILS")),
+  testTranscriptionEmails: normalizeEmailList(optionalString("TEST_TRANSCRIPTION_EMAILS")),
+  testTranscriptionTotalHours: optionalNumber("TEST_TRANSCRIPTION_TOTAL_HOURS") ?? 80,
 }
 
