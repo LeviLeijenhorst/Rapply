@@ -217,20 +217,24 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           }
         }
         if (remote.templates.length === 0) {
-          const defaults = await readDefaultTemplates()
-          if (defaults.templates.length > 0) {
-            for (const template of defaults.templates) {
-              if (e2ee) {
-                await createTemplateRemote(await encryptTemplate(template))
-              } else {
-                await createTemplateRemote(template)
+          try {
+            const defaults = await readDefaultTemplates()
+            if (defaults.templates.length > 0) {
+              for (const template of defaults.templates) {
+                if (e2ee) {
+                  await createTemplateRemote(await encryptTemplate(template))
+                } else {
+                  await createTemplateRemote(template)
+                }
               }
+              const seededRaw = await readAppData()
+              const seeded = await decryptRemoteData(seededRaw)
+              if (!isActive) return
+              setData(seeded)
+              return
             }
-            const seededRaw = await readAppData()
-            const seeded = await decryptRemoteData(seededRaw)
-            if (!isActive) return
-            setData(seeded)
-            return
+          } catch (error) {
+            console.warn("[LocalAppDataProvider] Failed to load default templates", error)
           }
         }
         setData(remote)
