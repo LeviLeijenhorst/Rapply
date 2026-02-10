@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -18,16 +18,43 @@ const navigationLinks = [
 
 export default function NavigationBar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 12);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <header className="fixed left-0 top-0 z-50 w-full font-inter">
       {/* Navigation bar container */}
-      <div className="relative mx-auto w-full max-w-6xl px-6 pb-8 pt-8 md:px-10">
+      <div
+        className={`relative mx-auto w-full transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          isScrolled
+            ? "max-w-full px-0 pb-0 pt-0"
+            : "max-w-6xl px-6 pb-8 pt-8 md:px-10"
+        }`}
+      >
         {/* Navigation bar top accent */}
-        <div className="absolute left-6 right-6 top-0 h-[72px] bg-transparent md:left-10 md:right-10" />
+        <div
+          className={`absolute left-6 right-6 top-0 h-[72px] bg-transparent transition-opacity duration-300 md:left-10 md:right-10 ${
+            isScrolled ? "opacity-0" : "opacity-100"
+          }`}
+        />
         {/* Navigation bar surface */}
-        <div className="relative flex h-20 w-full items-center justify-between gap-6 rounded-full bg-white px-4 shadow-[0_4px_16px_rgba(0,0,0,0.18)] md:px-8">
+        <div
+          className={`relative flex w-full items-center justify-between gap-6 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            isScrolled
+              ? "h-20 rounded-none bg-white/70 px-4 shadow-[0_8px_24px_rgba(0,0,0,0.14)] backdrop-blur-xl md:px-10"
+              : "h-20 rounded-full bg-white/75 px-4 shadow-[0_4px_16px_rgba(0,0,0,0.18)] backdrop-blur-xl md:px-8"
+          }`}
+        >
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3">
             {/* Logo icon */}

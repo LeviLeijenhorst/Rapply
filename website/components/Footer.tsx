@@ -3,9 +3,6 @@ import Link from "next/link";
 import logoIcon from "@/home/coachscribe-logo-icon.svg";
 import logoText from "@/home/coachscribe-logo-text.svg";
 import linkedinIcon from "@/home/LinkedIn.svg";
-import tiktokIcon from "@/home/TikTok.svg";
-import facebookIcon from "@/home/Facebook.svg";
-import instagramIcon from "@/home/Instagram.svg";
 
 const navigationLinks = [
   { label: "Product", destination: "/product" },
@@ -17,29 +14,6 @@ const navigationLinks = [
   { label: "Probeer Gratis", destination: "https://app.coachscribe.nl" },
 ];
 
-const socialLinks = [
-  {
-    label: "LinkedIn",
-    destination: "https://www.linkedin.com",
-    icon: linkedinIcon,
-  },
-  {
-    label: "TikTok",
-    destination: "https://www.tiktok.com",
-    icon: tiktokIcon,
-  },
-  {
-    label: "Facebook",
-    destination: "https://www.facebook.com",
-    icon: facebookIcon,
-  },
-  {
-    label: "Instagram",
-    destination: "https://www.instagram.com",
-    icon: instagramIcon,
-  },
-];
-
 export default function Footer() {
   return (
     <footer className="w-full bg-[linear-gradient(135deg,rgba(169,217,243,0.5)_0%,rgba(237,194,217,0.5)_100%)] font-inter text-black">
@@ -48,7 +22,7 @@ export default function Footer() {
         {/* Footer content */}
         <div className="grid w-full grid-cols-1 gap-12 lg:grid-cols-[1fr_auto] lg:gap-10">
           {/* Footer brand */}
-          <div className="flex w-full flex-col gap-6">
+          <div className="flex w-full max-w-[560px] flex-col gap-6 lg:max-w-[50%]">
             {/* Brand logo */}
             <div className="flex items-center gap-3">
               {/* Brand logo icon */}
@@ -78,36 +52,23 @@ export default function Footer() {
             >
               contact@coachscribe.nl
             </a>
+            <a
+              href="https://www.linkedin.com/company/110146544"
+              className="flex w-fit items-center gap-3 text-sm font-normal transition-colors hover:text-[#BD0265]"
+              rel="noreferrer"
+              target="_blank"
+            >
+              <Image
+                src={linkedinIcon}
+                alt="LinkedIn icon"
+                width={22}
+                height={22}
+                className="h-[22px] w-[22px] object-contain"
+              />
+              <span>LinkedIn</span>
+            </a>
           </div>
-          <div className="flex w-full flex-col gap-12 lg:flex-row-reverse lg:justify-self-end lg:gap-16">
-            {/* Footer social */}
-            <div className="flex w-full flex-col gap-4 lg:items-end">
-              {/* Social title */}
-              <h2 className="text-base font-semibold">Connect</h2>
-              {/* Social links */}
-              <div className="flex flex-col gap-3 text-sm font-normal lg:items-end">
-                {socialLinks.map((socialLink) => (
-                  <a
-                    key={socialLink.label}
-                    href={socialLink.destination}
-                    className="flex w-fit items-center gap-3 transition-colors hover:text-[#BD0265] lg:flex-row-reverse"
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    {/* Social icon */}
-                    <Image
-                      src={socialLink.icon}
-                      alt={`${socialLink.label} icon`}
-                      width={22}
-                      height={22}
-                      className="h-[22px] w-[22px] object-contain"
-                    />
-                    {/* Social label */}
-                    <span>{socialLink.label}</span>
-                  </a>
-                ))}
-              </div>
-            </div>
+          <div className="flex w-full flex-col gap-12 lg:justify-self-end">
             {/* Footer navigation */}
             <div className="flex w-full flex-col gap-4 lg:items-end">
               {/* Navigation title */}
@@ -144,12 +105,6 @@ export default function Footer() {
               className="w-fit underline transition-colors hover:text-[#BD0265]"
             >
               Gebruikersovereenkomst
-            </Link>
-            <Link
-              href="/verwerkersovereenkomst"
-              className="basis-full w-fit underline transition-colors hover:text-[#BD0265] sm:basis-auto"
-            >
-              Verwerkersovereenkomst
             </Link>
           </div>
         </div>
