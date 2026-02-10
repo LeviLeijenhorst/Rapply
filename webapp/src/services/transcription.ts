@@ -4,6 +4,21 @@ const TRANSCRIPTION_PREFLIGHT_TIMEOUT_MS = 30_000
 const TRANSCRIPTION_UPLOAD_TIMEOUT_MS = 4 * 60_000
 const TRANSCRIPTION_START_TIMEOUT_MS = 8 * 60_000
 const TRANSCRIPTION_OPERATION_TIMEOUT_MS = 15 * 60_000
+const AZURE_SPEECH_MAX_AUDIO_BYTES = 250 * 1024 * 1024
+const AZURE_WAV_TARGET_SAMPLE_RATE = 16_000
+
+function mapTranscriptionErrorMessage(rawMessage: string): string {
+  const normalized = String(rawMessage || '').toLowerCase()
+  const indicatesNoSpeech =
+    normalized.includes('no transcript returned') ||
+    normalized.includes('end-of-stream') ||
+    (normalized.includes('combinedphrases') && normalized.includes('phrases'))
+
+  if (indicatesNoSpeech) {
+    return 'Er is geen spraak gedetecteerd in deze opname. Probeer opnieuw en spreek duidelijk in de microfoon.'
+  }
+  return rawMessage
+}
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null
@@ -132,7 +147,31 @@ function mixToMono(audioBuffer: AudioBuffer): Float32Array {
 
 function encodeWav(audioBuffer: AudioBuffer): ArrayBuffer {
   const sampleRate = audioBuffer.sampleRate
-  const frameCount = audioBuffer.length
+  const mono = mixToMono(audioBuffer)
+  return encodeMonoPcm16Wav(mono, sampleRate)
+}
+
+function resampleMonoLinear(params: { source: Float32Array; sourceSampleRate: number; targetSampleRate: number }): Float32Array {
+  const { source, sourceSampleRate, targetSampleRate } = params
+  if (targetSampleRate === sourceSampleRate) return source
+
+  const ratio = sourceSampleRate / targetSampleRate
+  const targetLength = Math.max(1, Math.floor(source.length / ratio))
+  const output = new Float32Array(targetLength)
+
+  for (let index = 0; index < targetLength; index += 1) {
+    const position = index * ratio
+    const leftIndex = Math.floor(position)
+    const rightIndex = Math.min(source.length - 1, leftIndex + 1)
+    const blend = position - leftIndex
+    output[index] = source[leftIndex] * (1 - blend) + source[rightIndex] * blend
+  }
+
+  return output
+}
+
+function encodeMonoPcm16Wav(samples: Float32Array, sampleRate: number): ArrayBuffer {
+  const frameCount = samples.length
   const bytesPerSample = 2
   const channelCount = 1
   const dataLength = frameCount * channelCount * bytesPerSample
@@ -141,10 +180,9 @@ function encodeWav(audioBuffer: AudioBuffer): ArrayBuffer {
 
   writeWavHeader(view, dataLength, channelCount, sampleRate)
 
-  const mono = mixToMono(audioBuffer)
   let offset = 44
   for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
-    const sample = Math.max(-1, Math.min(1, mono[frameIndex]))
+    const sample = Math.max(-1, Math.min(1, samples[frameIndex]))
     const intSample = sample < 0 ? sample * 32768 : sample * 32767
     view.setInt16(offset, intSample, true)
     offset += 2
@@ -153,7 +191,7 @@ function encodeWav(audioBuffer: AudioBuffer): ArrayBuffer {
   return buffer
 }
 
-async function convertWebmToWav(blob: Blob): Promise<Blob> {
+async function convertToOptimizedWav(blob: Blob, targetSampleRate = AZURE_WAV_TARGET_SAMPLE_RATE): Promise<Blob> {
   const AudioContextConstructor = window.AudioContext || (window as any).webkitAudioContext
   if (!AudioContextConstructor) {
     throw new Error('Audio conversion is not supported in this browser.')
@@ -162,7 +200,13 @@ async function convertWebmToWav(blob: Blob): Promise<Blob> {
   const audioContext = new AudioContextConstructor()
   try {
     const audioBuffer = await decodeAudioBuffer(audioContext, arrayBuffer)
-    const wavBuffer = encodeWav(audioBuffer)
+    const mono = mixToMono(audioBuffer)
+    const resampled = resampleMonoLinear({
+      source: mono,
+      sourceSampleRate: audioBuffer.sampleRate,
+      targetSampleRate: targetSampleRate > 0 ? targetSampleRate : audioBuffer.sampleRate,
+    })
+    const wavBuffer = encodeMonoPcm16Wav(resampled, targetSampleRate > 0 ? targetSampleRate : audioBuffer.sampleRate)
     return new Blob([wavBuffer], { type: 'audio/wav' })
   } finally {
     await audioContext.close()
@@ -204,8 +248,19 @@ async function normalizeAudioForTranscription(params: { audioBlob: Blob; mimeTyp
     return { audioBlob, mimeType: outputMimeType }
   }
 
-  const converted = await convertWebmToWav(audioBlob)
-  return { audioBlob: converted, mimeType: 'audio/wav' }
+  try {
+    const converted = await convertToOptimizedWav(audioBlob, AZURE_WAV_TARGET_SAMPLE_RATE)
+    return { audioBlob: converted, mimeType: 'audio/wav' }
+  } catch (error) {
+    if (requiresWav) {
+      throw new Error('Audio kon niet worden omgezet naar WAV voor transcriptie.')
+    }
+    // Some browsers cannot decode certain recorder formats (e.g. webm/mp4) via decodeAudioData.
+    // Fallback to original compressed audio so server-side processing can continue.
+    console.warn('[transcription] WAV conversion failed, falling back to original audio', error)
+    const fallbackMimeType = mimeType === 'video/webm' ? 'audio/webm' : mimeType || 'application/octet-stream'
+    return { audioBlob, mimeType: fallbackMimeType }
+  }
 }
 
 export async function transcribeAudio(params: {
@@ -233,6 +288,9 @@ export async function transcribeAudio(params: {
         const preflightProvider = String(preflight.transcriptionProvider || '').trim().toLowerCase()
         const requiresWav = preflight.requiresWav === undefined ? preflightProvider !== 'mistral' : Boolean(preflight.requiresWav)
         const normalized = await normalizeAudioForTranscription({ audioBlob, mimeType, requiresWav })
+        if (preflightProvider === 'azure-speech' && normalized.audioBlob.size > AZURE_SPEECH_MAX_AUDIO_BYTES) {
+          throw new Error('Audio bestand is te groot voor transcriptie met de huidige provider.')
+        }
         console.log('[transcription] starting', {
           mimeType: normalized.mimeType,
           audioSize: normalized.audioBlob.size,
@@ -319,7 +377,8 @@ export async function transcribeAudio(params: {
         return { transcript, summary }
       } catch (error) {
         console.error('[transcription] failed', error)
-        throw error
+        const rawMessage = error instanceof Error ? error.message : String(error || 'Transcriptie mislukt')
+        throw new Error(mapTranscriptionErrorMessage(rawMessage))
       }
     })(),
     TRANSCRIPTION_OPERATION_TIMEOUT_MS,

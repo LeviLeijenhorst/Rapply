@@ -72,3 +72,13 @@ export async function deleteTemplateRemote(id: string): Promise<void> {
 export async function readDefaultTemplates(): Promise<{ templates: Template[] }> {
   return callSecureApi('/templates/defaults', {})
 }
+
+export async function updatePracticeSettingsRemote(params: {
+  practiceName?: string
+  website?: string
+  tintColor?: string
+  logoDataUrl?: string | null
+  updatedAtUnixMs: number
+}): Promise<void> {
+  await callSecureApi('/practice-settings/update', params)
+}

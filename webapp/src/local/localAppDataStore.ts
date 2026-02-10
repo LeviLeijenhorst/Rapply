@@ -35,9 +35,20 @@ export function saveLocalAppData(data: LocalAppData) {
 }
 
 function normalizeLocalAppData(data: LocalAppData): LocalAppData {
-  if (Array.isArray(data.templates)) return data
   const fallback = createDefaultLocalAppData()
-  return { ...data, templates: fallback.templates }
+  return {
+    ...data,
+    templates: Array.isArray(data.templates) ? data.templates : fallback.templates,
+    practiceSettings: data.practiceSettings
+      ? {
+          practiceName: typeof data.practiceSettings.practiceName === 'string' ? data.practiceSettings.practiceName : '',
+          website: typeof data.practiceSettings.website === 'string' ? data.practiceSettings.website : '',
+          tintColor: typeof data.practiceSettings.tintColor === 'string' ? data.practiceSettings.tintColor : '#BE0165',
+          logoDataUrl: typeof data.practiceSettings.logoDataUrl === 'string' ? data.practiceSettings.logoDataUrl : null,
+          updatedAtUnixMs: Number.isFinite(data.practiceSettings.updatedAtUnixMs) ? Number(data.practiceSettings.updatedAtUnixMs) : 0,
+        }
+      : fallback.practiceSettings,
+  }
 }
 
 export function createCoachee(data: LocalAppData, coachee: Coachee): LocalAppData {
@@ -175,4 +186,21 @@ export function updateTemplate(
 
 export function deleteTemplate(data: LocalAppData, templateId: string): LocalAppData {
   return { ...data, templates: data.templates.filter((template) => template.id !== templateId) }
+}
+
+export function updatePracticeSettings(
+  data: LocalAppData,
+  values: { practiceName?: string; website?: string; tintColor?: string; logoDataUrl?: string | null; updatedAtUnixMs: number },
+): LocalAppData {
+  return {
+    ...data,
+    practiceSettings: {
+      ...data.practiceSettings,
+      ...(values.practiceName !== undefined ? { practiceName: values.practiceName.trim() } : {}),
+      ...(values.website !== undefined ? { website: values.website.trim() } : {}),
+      ...(values.tintColor !== undefined ? { tintColor: values.tintColor } : {}),
+      ...(values.logoDataUrl !== undefined ? { logoDataUrl: values.logoDataUrl } : {}),
+      updatedAtUnixMs: values.updatedAtUnixMs,
+    },
+  }
 }

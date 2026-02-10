@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 type RecorderStatus = 'idle' | 'requesting' | 'recording' | 'paused' | 'stopping' | 'ready' | 'error'
-const recordingChunkDurationMilliseconds = 2000
+const recordingChunkDurationMilliseconds = 250
 type ChunkHandler = (chunk: { blob: Blob; durationSeconds: number }) => void
 
 function formatUnknownError(error: unknown) {
@@ -14,15 +14,24 @@ function chooseMimeType() {
   if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') {
     return ''
   }
+  const canPlayMimeType = (mimeType: string) => {
+    if (typeof document === 'undefined') return true
+    const audio = document.createElement('audio')
+    const result = audio.canPlayType(mimeType)
+    return result === 'probably' || result === 'maybe'
+  }
 
   const candidates = [
+    'audio/mp4',
     'audio/webm;codecs=opus',
     'audio/webm',
     'audio/ogg;codecs=opus',
     'audio/ogg',
-    'audio/mp4',
   ]
 
+  for (const candidate of candidates) {
+    if (MediaRecorder.isTypeSupported(candidate) && canPlayMimeType(candidate)) return candidate
+  }
   for (const candidate of candidates) {
     if (MediaRecorder.isTypeSupported(candidate)) return candidate
   }
@@ -49,7 +58,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
   const elapsedBeforePauseMillisecondsRef = useRef<number>(0)
   const lastChunkTimestampMillisecondsRef = useRef<number | null>(null)
   const lastChunkDurationSecondsRef = useRef<number>(recordingChunkDurationMilliseconds / 1000)
-  const lastMimeTypeRef = useRef<string>('audio/webm')
+  const lastMimeTypeRef = useRef<string>('')
   const stopReasonRef = useRef<'none' | 'pause' | 'stop'>('none')
   const ignoreNextStopRef = useRef(false)
   const onChunkRef = useRef<ChunkHandler | null>(null)
@@ -128,7 +137,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
     lastChunkTimestampMillisecondsRef.current = null
     recordedChunksRef.current = []
     recordedChunkDurationsSecondsRef.current = []
-    lastMimeTypeRef.current = 'audio/webm'
+    lastMimeTypeRef.current = ''
   }
 
   function clearRecordedOutput() {
@@ -141,7 +150,8 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
   }
 
   function buildRecordedBlob() {
-    const mimeType = lastMimeTypeRef.current || chosenMimeType || 'audio/webm'
+    const firstChunkMimeType = recordedChunksRef.current.find((chunk) => typeof chunk.type === 'string' && chunk.type.trim().length > 0)?.type || ''
+    const mimeType = lastMimeTypeRef.current || firstChunkMimeType || chosenMimeType || 'audio/mp4'
     const blob = new Blob(recordedChunksRef.current, { type: mimeType })
     setRecordedBlob(blob)
     setRecordedMimeType(mimeType)
@@ -177,10 +187,18 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
 
       const recorder = chosenMimeType ? new MediaRecorder(stream, { mimeType: chosenMimeType }) : new MediaRecorder(stream)
       mediaRecorderRef.current = recorder
-      lastMimeTypeRef.current = recorder.mimeType || chosenMimeType || 'audio/webm'
+      lastMimeTypeRef.current = recorder.mimeType || chosenMimeType || ''
+      console.log('[useBrowserAudioRecorder] MediaRecorder init', {
+        requestedMimeType: chosenMimeType || '(default)',
+        actualMimeType: recorder.mimeType || '(empty)',
+      })
 
       recorder.ondataavailable = (event) => {
         if (!event.data || event.data.size <= 0) return
+        if (event.data.type && event.data.type.trim().length > 0) {
+          lastMimeTypeRef.current = event.data.type
+          setActiveMimeType(event.data.type)
+        }
         recordedChunksRef.current.push(event.data)
         const nowMilliseconds = performance.now()
         const lastTimestampMilliseconds = lastChunkTimestampMillisecondsRef.current ?? nowMilliseconds
@@ -209,7 +227,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
         startTimeMillisecondsRef.current = performance.now()
         lastChunkTimestampMillisecondsRef.current = performance.now()
         lastChunkDurationSecondsRef.current = recordingChunkDurationMilliseconds / 1000
-        setActiveMimeType(lastMimeTypeRef.current || chosenMimeType || 'audio/webm')
+        setActiveMimeType(lastMimeTypeRef.current || chosenMimeType || null)
         startTimer()
         setStatus('recording')
       }
@@ -234,10 +252,15 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
           return
         }
 
-        buildRecordedBlob()
+        // Allow any trailing dataavailable callback to flush before composing the final blob.
+        window.setTimeout(() => {
+          buildRecordedBlob()
+        }, 0)
       }
 
-      recorder.start(recordingChunkDurationMilliseconds)
+      // Avoid timeslice chunk fragmentation because some containers (notably mp4)
+      // are not safely reconstructable via simple blob concatenation.
+      recorder.start()
     } catch (error) {
       console.error('[useBrowserAudioRecorder] Failed to start', error)
       setStatus('error')
@@ -288,6 +311,9 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
     }
     setStatus('stopping')
     stopReasonRef.current = 'stop'
+    try {
+      recorder.requestData()
+    } catch {}
     recorder.stop()
   }
 
@@ -308,7 +334,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
     elapsedBeforePauseMillisecondsRef.current = 0
     lastChunkTimestampMillisecondsRef.current = null
     stopReasonRef.current = 'none'
-    lastMimeTypeRef.current = 'audio/webm'
+    lastMimeTypeRef.current = ''
     setElapsedSeconds(0)
     setRecordedBlob(null)
     setRecordedMimeType(null)
@@ -346,4 +372,3 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
     reset,
   }
 }
-

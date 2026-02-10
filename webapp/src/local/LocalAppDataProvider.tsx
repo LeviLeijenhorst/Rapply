@@ -14,12 +14,13 @@ import {
   restoreCoachee,
   saveLocalAppData,
   setWrittenReport,
+  updatePracticeSettings,
   updateCoacheeName,
   updateNote,
   updateSession,
 } from './localAppDataStore'
 import { createId } from './createId'
-import { Coachee, LocalAppData, Note, Session, SessionKind, Template, TemplateSection, WrittenReport } from './types'
+import { Coachee, LocalAppData, Note, PracticeSettings, Session, SessionKind, Template, TemplateSection, WrittenReport } from './types'
 import {
   createCoacheeRemote,
   createNoteRemote,
@@ -36,6 +37,7 @@ import {
   updateNoteRemote,
   updateSessionRemote,
   updateTemplateRemote,
+  updatePracticeSettingsRemote,
 } from '../services/appData'
 import { useOptionalE2ee } from '../e2ee/E2eeProvider'
 
@@ -57,6 +59,8 @@ type ContextValue = {
     audioBlobId: string | null
     audioDurationSeconds: number | null
     uploadFileName: string | null
+    transcriptionStatus?: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
+    transcriptionError?: string | null
   }) => string
   updateSession: (
     sessionId: string,
@@ -84,6 +88,7 @@ type ContextValue = {
   updateTemplate: (templateId: string, values: { name?: string; sections?: TemplateSection[] }) => void
   deleteTemplate: (templateId: string) => void
   toggleTemplateSaved: (templateId: string) => void
+  updatePracticeSettings: (values: { practiceName?: string; website?: string; tintColor?: string; logoDataUrl?: string | null }) => void
 }
 
 const LocalAppDataContext = createContext<ContextValue | null>(null)
@@ -93,7 +98,7 @@ type Props = {
   isAuthenticated: boolean
 }
 
-const STALE_TRANSCRIPTION_TIMEOUT_MS = 20 * 60 * 1000
+const STALE_TRANSCRIPTION_TIMEOUT_MS = 5 * 60 * 1000
 const STALE_TRANSCRIPTION_ERROR_MESSAGE = 'Transcriptie duurt te lang of is onderbroken. Probeer opnieuw.'
 
 export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
@@ -102,52 +107,78 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
   const [isAppDataLoaded, setIsAppDataLoaded] = useState(() => !isAuthenticated)
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      saveLocalAppData(data)
-    }
-  }, [data, isAuthenticated])
+    saveLocalAppData(data)
+  }, [data])
 
   async function decryptRemoteData(remote: LocalAppData): Promise<LocalAppData> {
     if (!e2ee) {
       const templates = Array.isArray(remote.templates) ? remote.templates : []
-      return { ...remote, templates }
+      return { ...remote, templates, practiceSettings: remote.practiceSettings }
+    }
+
+    const decryptTextCompat = async (value: string): Promise<string> => {
+      if (!value) return value
+      try {
+        return await e2ee.decryptText(value)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        const name = typeof error === 'object' && error !== null && 'name' in error ? String((error as { name?: unknown }).name ?? '') : ''
+        const isLegacyPlaintext =
+          message === 'Ongeldige versleuteling' ||
+          name === 'InvalidCharacterError' ||
+          message.includes('Failed to execute \'atob\'') ||
+          message.includes('not correctly encoded')
+        if (isLegacyPlaintext) {
+          // Backward compatibility for legacy plaintext values stored before E2EE was enabled.
+          return value
+        }
+        throw error
+      }
     }
 
     const coachees: Coachee[] = []
     for (const coachee of remote.coachees) {
-      coachees.push({ ...coachee, name: await e2ee.decryptText(coachee.name) })
+      coachees.push({ ...coachee, name: await decryptTextCompat(coachee.name) })
     }
 
     const sessions: Session[] = []
     for (const session of remote.sessions) {
       sessions.push({
         ...session,
-        title: await e2ee.decryptText(session.title),
-        uploadFileName: session.uploadFileName ? await e2ee.decryptText(session.uploadFileName) : null,
-        transcript: session.transcript ? await e2ee.decryptText(session.transcript) : null,
-        summary: session.summary ? await e2ee.decryptText(session.summary) : null,
-        transcriptionError: session.transcriptionError ? await e2ee.decryptText(session.transcriptionError) : null,
+        title: await decryptTextCompat(session.title),
+        uploadFileName: session.uploadFileName ? await decryptTextCompat(session.uploadFileName) : null,
+        transcript: session.transcript ? await decryptTextCompat(session.transcript) : null,
+        summary: session.summary ? await decryptTextCompat(session.summary) : null,
+        transcriptionError: session.transcriptionError ? await decryptTextCompat(session.transcriptionError) : null,
         audioDurationSeconds: typeof session.audioDurationSeconds === 'number' ? session.audioDurationSeconds : null,
       })
     }
 
     const notes: Note[] = []
     for (const note of remote.notes) {
-      notes.push({ ...note, text: await e2ee.decryptText(note.text) })
+      notes.push({ ...note, text: await decryptTextCompat(note.text) })
     }
 
     const writtenReports: WrittenReport[] = []
     for (const report of remote.writtenReports) {
-      writtenReports.push({ ...report, text: await e2ee.decryptText(report.text) })
+      writtenReports.push({ ...report, text: await decryptTextCompat(report.text) })
     }
 
     const templates: Template[] = []
     const remoteTemplates = Array.isArray(remote.templates) ? remote.templates : []
     for (const template of remoteTemplates) {
-      templates.push(await decryptTemplate(template))
+      templates.push(await decryptTemplate(template, decryptTextCompat))
     }
 
-    return { coachees, sessions, notes, writtenReports, templates }
+    const practiceSettings: PracticeSettings = {
+      practiceName: await decryptTextCompat(remote.practiceSettings.practiceName),
+      website: await decryptTextCompat(remote.practiceSettings.website),
+      tintColor: await decryptTextCompat(remote.practiceSettings.tintColor),
+      logoDataUrl: remote.practiceSettings.logoDataUrl ? await decryptTextCompat(remote.practiceSettings.logoDataUrl) : null,
+      updatedAtUnixMs: remote.practiceSettings.updatedAtUnixMs,
+    }
+
+    return { coachees, sessions, notes, writtenReports, templates, practiceSettings }
   }
 
   async function encryptCoachee(coachee: Coachee): Promise<Coachee> {
@@ -177,17 +208,17 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
     return { ...report, text: await e2ee.encryptText(report.text) }
   }
 
-  async function decryptTemplate(template: Template): Promise<Template> {
+  async function decryptTemplate(template: Template, decryptTextCompat: (value: string) => Promise<string>): Promise<Template> {
     if (!e2ee) return template
     const sections: TemplateSection[] = []
     for (const section of template.sections) {
       sections.push({
         ...section,
-        title: await e2ee.decryptText(section.title),
-        description: await e2ee.decryptText(section.description),
+        title: await decryptTextCompat(section.title),
+        description: await decryptTextCompat(section.description),
       })
     }
-    return { ...template, name: await e2ee.decryptText(template.name), sections }
+    return { ...template, name: await decryptTextCompat(template.name), sections }
   }
 
   async function encryptTemplate(template: Template): Promise<Template> {
@@ -201,6 +232,17 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
       })
     }
     return { ...template, name: await e2ee.encryptText(template.name), sections }
+  }
+
+  async function encryptPracticeSettings(practiceSettings: PracticeSettings): Promise<PracticeSettings> {
+    if (!e2ee) return practiceSettings
+    return {
+      practiceName: await e2ee.encryptText(practiceSettings.practiceName),
+      website: await e2ee.encryptText(practiceSettings.website),
+      tintColor: await e2ee.encryptText(practiceSettings.tintColor),
+      logoDataUrl: practiceSettings.logoDataUrl ? await e2ee.encryptText(practiceSettings.logoDataUrl) : null,
+      updatedAtUnixMs: practiceSettings.updatedAtUnixMs,
+    }
   }
 
   useEffect(() => {
@@ -254,6 +296,8 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         setData(remote)
       } catch (error) {
         console.error('[LocalAppDataProvider] Failed to load remote app data', error)
+        // Keep/restore a local snapshot so data remains visible when remote sync fails.
+        setData(loadLocalAppData())
       } finally {
         if (isActive) {
           setIsAppDataLoaded(true)
@@ -307,6 +351,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
     for (const template of localSnapshot.templates) {
       await createTemplateRemote(await encryptTemplate(template))
     }
+    await updatePracticeSettingsRemote(await encryptPracticeSettings(localSnapshot.practiceSettings))
   }
 
 
@@ -368,8 +413,8 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           uploadFileName: values.uploadFileName,
           transcript: null,
           summary: null,
-          transcriptionStatus: 'idle',
-          transcriptionError: null,
+          transcriptionStatus: values.transcriptionStatus ?? 'idle',
+          transcriptionError: values.transcriptionError ?? null,
           createdAtUnixMs: now,
           updatedAtUnixMs: now,
         }
@@ -533,6 +578,27 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           if (!template) return
           const nextTemplate: Template = { ...template, isSaved: !template.isSaved, updatedAtUnixMs }
           await updateTemplateRemote(await encryptTemplate(nextTemplate))
+        })()
+          .then(refreshFromServer)
+          .catch((error: unknown) => console.error('[LocalAppDataProvider] Remote update failed', error))
+      },
+      updatePracticeSettings: (values) => {
+        const updatedAtUnixMs = Date.now()
+        setData((previous) => updatePracticeSettings(previous, { ...values, updatedAtUnixMs }))
+        if (!e2ee) return
+        void (async () => {
+          const encryptedPracticeName = values.practiceName !== undefined ? await e2ee.encryptText(values.practiceName.trim()) : undefined
+          const encryptedWebsite = values.website !== undefined ? await e2ee.encryptText(values.website.trim()) : undefined
+          const encryptedTintColor = values.tintColor !== undefined ? await e2ee.encryptText(values.tintColor) : undefined
+          const encryptedLogoDataUrl =
+            values.logoDataUrl === undefined ? undefined : values.logoDataUrl === null ? null : await e2ee.encryptText(values.logoDataUrl)
+          await updatePracticeSettingsRemote({
+            practiceName: encryptedPracticeName,
+            website: encryptedWebsite,
+            tintColor: encryptedTintColor,
+            logoDataUrl: encryptedLogoDataUrl,
+            updatedAtUnixMs,
+          })
         })()
           .then(refreshFromServer)
           .catch((error: unknown) => console.error('[LocalAppDataProvider] Remote update failed', error))

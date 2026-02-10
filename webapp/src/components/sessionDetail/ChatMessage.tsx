@@ -7,6 +7,7 @@ import { CopyIcon } from '../icons/CopyIcon'
 import { CopiedIcon } from '../icons/CopiedIcon'
 import { SharePdfIcon } from '../icons/SharePdfIcon'
 import { parseTimeLabelToSeconds } from '../../utils/time'
+import { useLocalAppData } from '../../local/LocalAppDataProvider'
 
 type Props = {
   role: 'user' | 'assistant'
@@ -53,6 +54,25 @@ type DocumentSegment = {
 type DocumentLine = {
   kind: 'header' | 'bullet' | 'divider' | 'text' | 'empty'
   segments: DocumentSegment[]
+}
+
+type PdfPracticeSettings = {
+  practiceName: string
+  website: string
+  tintColor: string
+  logoDataUrl: string | null
+}
+
+function parseHexColorToRgb(value: string, fallback: { r: number; g: number; b: number }) {
+  const text = String(value || '').trim()
+  const match = text.match(/^#([0-9a-fA-F]{6})$/)
+  if (!match) return fallback
+  const hex = match[1]
+  return {
+    r: Number.parseInt(hex.slice(0, 2), 16),
+    g: Number.parseInt(hex.slice(2, 4), 16),
+    b: Number.parseInt(hex.slice(4, 6), 16),
+  }
 }
 
 function buildMentionTokens(text: string): MentionToken[] {
@@ -215,6 +235,7 @@ function addFooters(
   marginRight: number,
   footerFontSize: number,
   websiteLabel: string,
+  practiceName: string,
 ) {
   const pageCount = document.getNumberOfPages()
   for (let i = 1; i <= pageCount; i++) {
@@ -232,6 +253,10 @@ function addFooters(
     document.text(pageLabel, pageWidth - marginRight - pageLabelWidth, pageHeight - 28)
     const websiteWidth = document.getTextWidth(websiteLabel)
     document.text(websiteLabel, pageWidth - marginRight - websiteWidth, pageHeight - 12)
+    const combinedFooter = [practiceName, websiteLabel].filter((value) => String(value || '').trim().length > 0).join(' | ')
+    if (combinedFooter) {
+      document.text(combinedFooter, marginLeft, pageHeight - 12)
+    }
   }
 }
 
@@ -282,7 +307,7 @@ async function convertSvgToPngDataUrl(svgText: string, width: number, height: nu
   })
 }
 
-async function exportMessageToPdf(messageText: string, reportTitle?: string) {
+async function exportMessageToPdf(messageText: string, reportTitle: string | undefined, practiceSettings: PdfPracticeSettings) {
   if (typeof window === 'undefined') return
   const { default: jsPDF } = await import('jspdf')
 
@@ -306,7 +331,7 @@ async function exportMessageToPdf(messageText: string, reportTitle?: string) {
   const dateFontSize = 10
   const footerFontSize = 9
 
-  const brandColor = { r: 190, g: 1, b: 101 }
+  const brandColor = parseHexColorToRgb(practiceSettings.tintColor, { r: 190, g: 1, b: 101 })
   const textColor = { r: 38, g: 52, b: 63 }
   const strongTextColor = { r: 29, g: 10, b: 0 }
 
@@ -340,7 +365,8 @@ async function exportMessageToPdf(messageText: string, reportTitle?: string) {
         </g>
       </svg>
     `
-  const logoDataUrl = await convertSvgToPngDataUrl(logoSvg, 159, 24, 4)
+  const generatedLogoDataUrl = await convertSvgToPngDataUrl(logoSvg, 159, 24, 4)
+  const logoDataUrl = practiceSettings.logoDataUrl || generatedLogoDataUrl
 
   const ensureSpace = (needed: number) => {
     if (cursorY + needed <= footerLineY - 12) return
@@ -443,7 +469,15 @@ async function exportMessageToPdf(messageText: string, reportTitle?: string) {
     })
   })
 
-  addFooters(doc, footerLineY, marginLeft, marginRight, footerFontSize, 'www.coachscribe.nl')
+  addFooters(
+    doc,
+    footerLineY,
+    marginLeft,
+    marginRight,
+    footerFontSize,
+    String(practiceSettings.website || '').trim(),
+    String(practiceSettings.practiceName || '').trim(),
+  )
   doc.save(buildPdfFileName(title))
 }
 
@@ -459,6 +493,16 @@ function parseChatLine(line: string): ChatLine {
 }
 
 export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, exportTitle }: Props) {
+  const { data } = useLocalAppData()
+  const pdfPracticeSettings = useMemo<PdfPracticeSettings>(
+    () => ({
+      practiceName: data.practiceSettings.practiceName,
+      website: data.practiceSettings.website,
+      tintColor: data.practiceSettings.tintColor,
+      logoDataUrl: data.practiceSettings.logoDataUrl,
+    }),
+    [data.practiceSettings.logoDataUrl, data.practiceSettings.practiceName, data.practiceSettings.tintColor, data.practiceSettings.website],
+  )
   const isAssistant = role === 'assistant'
   const [showCopyNotification, setShowCopyNotification] = useState(false)
   const exportableText = extractExportableText(text)
@@ -530,7 +574,7 @@ export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, e
 
                 {isExportable ? (
                   <Pressable
-                    onPress={() => exportMessageToPdf(exportableText ?? displayText, exportTitle)}
+                    onPress={() => exportMessageToPdf(exportableText ?? displayText, exportTitle, pdfPracticeSettings)}
                     style={({ hovered }) => [styles.exportButton, hovered ? styles.exportButtonHovered : undefined]}
                   >
                     <Text isSemibold style={styles.exportButtonText}>

@@ -53,11 +53,19 @@ export type Template = {
   updatedAtUnixMs: number
 }
 
+export type PracticeSettings = {
+  practiceName: string
+  website: string
+  tintColor: string
+  logoDataUrl: string | null
+  updatedAtUnixMs: number
+}
+
 export type LocalAppData = {
   coachees: Coachee[]
   sessions: Session[]
   notes: Note[]
   writtenReports: WrittenReport[]
   templates: Template[]
+  practiceSettings: PracticeSettings
 }
-

@@ -103,7 +103,7 @@ export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary
   const isTranscribing = transcriptionStatus === 'transcribing'
   const isGenerating = transcriptionStatus === 'generating'
   const hasError = transcriptionStatus === 'error'
-  const shouldShowLoading = !hasSummary && !hasError
+  const shouldShowLoading = (isTranscribing || isGenerating) && !hasError
   const loadingLabel = !hasTranscript || isTranscribing ? 'Transcript wordt gegenereerd' : 'Verslag wordt gegenereerd'
 
   const reportCopyText = summary || ''

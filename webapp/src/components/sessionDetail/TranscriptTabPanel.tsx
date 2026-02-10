@@ -70,7 +70,7 @@ export function TranscriptTabPanel({
   const isGenerating = transcriptionStatus === 'generating'
   const isLoading = isTranscribing || (isGenerating && !hasTranscript)
   const hasError = transcriptionStatus === 'error'
-  const hasContent = hasTranscript && (transcriptionStatus === 'done' || transcriptionStatus === 'generating')
+  const hasContent = hasTranscript && !isLoading && !hasError
 
   const filteredTranscript = transcript && searchValue.trim() ? transcript.split('\n').filter((line) => line.toLowerCase().includes(searchValue.trim().toLowerCase())) : transcript?.split('\n') || []
 

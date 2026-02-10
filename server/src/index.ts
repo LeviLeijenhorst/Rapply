@@ -22,7 +22,9 @@ import { generateSummary } from "./summary/summary"
 import { completeChatWithAzureOpenAi } from "./chat/azureOpenAiChat"
 import { execute, getDatabaseConnectionInfo, testDatabaseConnection } from "./db"
 import { updateUserDisplayName } from "./users"
+import { deleteEntraUserById } from "./entraGraph"
 import { createAudioBlob, readAudioBlob } from "./audioBlobs"
+import { createAudioStream, createAudioStreamChunk, readAudioStreamChunk, readAudioStreamManifest, updateAudioStreamDetails } from "./audioStreams"
 import * as e2ee from "./e2ee"
 import { createDefaultTemplates } from "./templates/defaultTemplates"
 import {
@@ -40,6 +42,7 @@ import {
   updateNote,
   updateSession,
   updateTemplate,
+  updatePracticeSettings,
   type Coachee,
   type Note,
   type Session,
@@ -73,7 +76,7 @@ app.use(
 
 app.post(
   "/audio-blobs",
-  express.raw({ type: "*/*", limit: "50mb" }),
+  express.raw({ type: "*/*", limit: "1024mb" }),
   asyncHandler(async (req, res) => {
     const user = await requireAuthenticatedUser(req)
     const mimeType = String(req.headers["content-type"] || "").trim() || "application/octet-stream"
@@ -116,6 +119,93 @@ app.get(
 )
 
 app.use(express.json({ limit: "2mb" }))
+
+app.post(
+  "/audio-streams",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const payload = req.body || {}
+    const mimeType = readText(payload.mimeType, "mimeType")
+    const created = await createAudioStream({ userId: user.userId, mimeType, createdAtUnixMilliseconds: Date.now() })
+    res.status(200).json({ audioStreamId: created.id })
+  }),
+)
+
+app.patch(
+  "/audio-streams/:id",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const id = readId(req.params?.id, "id")
+    const payload = req.body || {}
+    const totalDurationMilliseconds = readRequiredNumber(payload.totalDurationMilliseconds, "totalDurationMilliseconds")
+    const chunkCount = readRequiredNumber(payload.chunkCount, "chunkCount")
+    await updateAudioStreamDetails({ userId: user.userId, id, totalDurationMilliseconds, chunkCount })
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/audio-streams/:id/chunks",
+  express.raw({ type: "*/*", limit: "50mb" }),
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const id = readId(req.params?.id, "id")
+    const chunkIndex = readRequiredNumber(req.headers["x-chunk-index"], "chunkIndex")
+    const startMilliseconds = readRequiredNumber(req.headers["x-start-milliseconds"], "startMilliseconds")
+    const durationMilliseconds = readRequiredNumber(req.headers["x-duration-milliseconds"], "durationMilliseconds")
+    const body = req.body
+    if (!Buffer.isBuffer(body) || body.length === 0) {
+      sendError(res, 400, "Missing chunk bytes")
+      return
+    }
+    await createAudioStreamChunk({
+      userId: user.userId,
+      audioStreamId: id,
+      chunkIndex,
+      startMilliseconds,
+      durationMilliseconds,
+      bytes: body,
+      createdAtUnixMilliseconds: Date.now(),
+    })
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.get(
+  "/audio-streams/:id/manifest",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const id = readId(req.params?.id, "id")
+    const result = await readAudioStreamManifest({ userId: user.userId, id })
+    if (!result) {
+      sendError(res, 404, "Audio not found")
+      return
+    }
+    res.status(200).json({
+      audioStreamId: result.id,
+      mimeType: result.mimeType,
+      totalDurationMilliseconds: result.totalDurationMilliseconds,
+      chunkCount: result.chunkCount,
+      chunks: result.chunks,
+    })
+  }),
+)
+
+app.get(
+  "/audio-streams/:id/chunks/:chunkIndex",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const id = readId(req.params?.id, "id")
+    const chunkIndex = readRequiredNumber(req.params?.chunkIndex, "chunkIndex")
+    const result = await readAudioStreamChunk({ userId: user.userId, id, chunkIndex })
+    if (!result) {
+      sendError(res, 404, "Audio not found")
+      return
+    }
+    res.setHeader("Content-Type", "application/octet-stream")
+    res.status(200).send(result.bytes)
+  }),
+)
 
 const rateLimitWindowMs = Number.isFinite(env.rateLimitWindowMs) ? env.rateLimitWindowMs : 60_000
 const rateLimitMaxRequests = Number.isFinite(env.rateLimitMaxRequests) ? env.rateLimitMaxRequests : 120
@@ -543,6 +633,9 @@ app.post(
       updatedAtUnixMs,
       coacheeId: payload.coacheeId === null ? null : readOptionalId(payload.coacheeId),
       title: readOptionalText(payload.title),
+      audioBlobId: readOptionalText(payload.audioBlobId, true),
+      audioDurationSeconds: readOptionalNumber(payload.audioDurationSeconds),
+      uploadFileName: readOptionalText(payload.uploadFileName, true),
       transcript: readOptionalText(payload.transcript, true),
       summary: readOptionalText(payload.summary, true),
       transcriptionStatus: readOptionalTranscriptionStatus(payload.transcriptionStatus),
@@ -639,6 +732,23 @@ app.post(
     const user = await requireAuthenticatedUser(req)
     const report = readWrittenReport(req.body?.report)
     await setWrittenReport(user.userId, report)
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/practice-settings/update",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const payload = req.body || {}
+    const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs, "updatedAtUnixMs")
+    await updatePracticeSettings(user.userId, {
+      practiceName: readOptionalText(payload.practiceName, true),
+      website: readOptionalText(payload.website, true),
+      tintColor: readOptionalText(payload.tintColor, true),
+      logoDataUrl: readOptionalText(payload.logoDataUrl, true),
+      updatedAtUnixMs,
+    })
     res.status(200).json({ ok: true })
   }),
 )
@@ -772,6 +882,15 @@ app.post(
   asyncHandler(async (req, res) => {
     const user = await requireAuthenticatedUser(req)
 
+    try {
+      await deleteEntraUserById(user.entraUserId)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.log("[account/delete] Entra deletion failed", { userId: user.userId, entraUserId: user.entraUserId, message })
+      sendError(res, 502, "Kon Entra account niet verwijderen")
+      return
+    }
+
     await deleteEncryptedUploadsByPrefix({ prefix: `${user.userId}/` })
 
     await execute(`delete from public.users where id = $1`, [user.userId])
@@ -877,8 +996,12 @@ app.post(
 
     const remainingSeconds = status.remainingSeconds
     const allowed = remainingSeconds > 0
+    const mistralKeyPresent = !!env.mistralApiKey
+    const azureSpeechConfigured = !!env.azureSpeechKey && !!env.azureSpeechRegion
+    const transcriptionProvider = mistralKeyPresent ? "mistral" : azureSpeechConfigured ? "azure-speech" : "none"
+    const requiresWav = transcriptionProvider === "azure-speech"
     if (!allowed) {
-      res.status(200).json({ allowed: false, remainingSeconds, planKey: status.planKey })
+      res.status(200).json({ allowed: false, remainingSeconds, planKey: status.planKey, transcriptionProvider, requiresWav })
       return
     }
 
@@ -897,6 +1020,8 @@ app.post(
       uploadUrl: upload.uploadUrl,
       uploadHeaders: upload.uploadHeaders,
       uploadTokenExpiresAtMs: token.expiresAtMs,
+      transcriptionProvider,
+      requiresWav,
     })
   }),
 )
@@ -906,6 +1031,7 @@ app.post(
   rateLimitTranscription,
   asyncHandler(async (req, res) => {
     const user = await requireAuthenticatedUser(req)
+    const startedAtMs = Date.now()
 
     const operationId = typeof req.body?.operationId === "string" ? req.body.operationId.trim() : ""
     const uploadToken = typeof req.body?.uploadToken === "string" ? req.body.uploadToken.trim() : ""
@@ -913,6 +1039,7 @@ app.post(
     const languageCode = typeof req.body?.language_code === "string" ? req.body.language_code.trim() : "nl"
     const mimeType = typeof req.body?.mime_type === "string" ? req.body.mime_type.trim() : "audio/m4a"
     const preferProvider = typeof req.body?.prefer_provider === "string" ? req.body.prefer_provider.trim() : ""
+    const includeSummary = req.body?.include_summary !== false
 
     if (!operationId) {
       sendError(res, 400, "Missing operationId")
@@ -932,9 +1059,16 @@ app.post(
     let transcriptionProvider = "unknown"
     const mistralKeyPresent = !!env.mistralApiKey
     const azureSpeechConfigured = !!env.azureSpeechKey && !!env.azureSpeechRegion
+    let tokenMs = 0
+    let durationMs = 0
+    let billingMs = 0
+    let transcriptionMs = 0
+    let summaryMs = 0
 
     try {
+      const tokenStartedAtMs = Date.now()
       const consumed = await consumeUploadToken({ userId: user.userId, uploadToken, operationId })
+      tokenMs = Date.now() - tokenStartedAtMs
       uploadPath = consumed.uploadPath
 
       const expectedPrefix = `${user.userId}/`
@@ -943,11 +1077,14 @@ app.post(
         return
       }
 
+      const durationStartedAtMs = Date.now()
       const durationStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
       const durationSeconds = await computeAudioDurationSecondsFromEncryptedUpload({ encryptedStream: durationStream, keyBase64, mimeType })
       const uploadBytes = await getEncryptedUploadSize({ blobName: uploadPath })
       const secondsToCharge = Math.max(1, Math.ceil(durationSeconds))
+      durationMs = Date.now() - durationStartedAtMs
 
+      const billingStartedAtMs = Date.now()
       const subscriber = await fetchRevenueCatSubscriber(user.userId)
       const planState = derivePlanStateFromRevenueCatSubscriber(subscriber)
 
@@ -986,6 +1123,7 @@ app.post(
         }
         throw e
       }
+      billingMs = Date.now() - billingStartedAtMs
 
       const apiKey = env.mistralApiKey
       const azureSpeechKey = env.azureSpeechKey
@@ -999,6 +1137,7 @@ app.post(
 
       let transcript = ""
       if (apiKey && preferProvider === "mistral") {
+        const transcriptionStartedAtMs = Date.now()
         const transcriptionStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
         transcript = await runVoxtralTranscriptionFromEncryptedUpload({
           encryptedStream: transcriptionStream,
@@ -1008,7 +1147,9 @@ app.post(
           apiKey,
           model: env.mistralTranscriptionModel,
         })
+        transcriptionMs = Date.now() - transcriptionStartedAtMs
       } else if (apiKey) {
+        const transcriptionStartedAtMs = Date.now()
         const transcriptionStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
         transcript = await runVoxtralTranscriptionFromEncryptedUpload({
           encryptedStream: transcriptionStream,
@@ -1018,7 +1159,9 @@ app.post(
           apiKey,
           model: env.mistralTranscriptionModel,
         })
+        transcriptionMs = Date.now() - transcriptionStartedAtMs
       } else if (azureSpeechKey && azureSpeechRegion) {
+        const transcriptionStartedAtMs = Date.now()
         const transcriptionStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
         transcript = await runAzureSpeechTranscriptionFromEncryptedUpload({
           encryptedStream: transcriptionStream,
@@ -1026,11 +1169,26 @@ app.post(
           mimeType,
           languageCode: languageCode || "nl",
         })
+        transcriptionMs = Date.now() - transcriptionStartedAtMs
       } else {
         throw new Error("No transcription provider is configured")
       }
 
-      const summary = await generateSummary({ transcript })
+      let summary = ""
+      if (includeSummary) {
+        const summaryStartedAtMs = Date.now()
+        summary = await generateSummary({ transcript })
+        summaryMs = Date.now() - summaryStartedAtMs
+      }
+      console.log("[transcription] timing", {
+        operationId,
+        tokenMs,
+        durationMs,
+        billingMs,
+        transcriptionMs,
+        summaryMs,
+        totalMs: Date.now() - startedAtMs,
+      })
 
       await execute(
         `
@@ -1129,12 +1287,28 @@ function readText(value: unknown, fieldName: string): string {
   return text
 }
 
+function readRequiredNumber(value: unknown, fieldName: string): number {
+  const numeric = typeof value === "number" ? value : Number(value)
+  if (!Number.isFinite(numeric)) {
+    throw new Error(`Missing ${fieldName}`)
+  }
+  return Number(numeric)
+}
+
 function readOptionalText(value: unknown, allowEmpty = false): string | null | undefined {
   if (value === undefined) return undefined
   if (value === null) return null
   const text = typeof value === "string" ? value.trim() : ""
   if (!text && !allowEmpty) return null
   return text
+}
+
+function readOptionalNumber(value: unknown): number | null | undefined {
+  if (value === undefined) return undefined
+  if (value === null) return null
+  const numeric = typeof value === "number" ? value : Number(value)
+  if (!Number.isFinite(numeric)) return null
+  return Number(numeric)
 }
 
 function readUnixMs(value: unknown, fieldName: string): number {
@@ -1178,6 +1352,7 @@ function readSession(value: unknown): Session {
     title: readText(payload.title, "session.title"),
     kind,
     audioBlobId: readOptionalText(payload.audioBlobId, true) ?? null,
+    audioDurationSeconds: readOptionalNumber(payload.audioDurationSeconds) ?? null,
     uploadFileName: readOptionalText(payload.uploadFileName, true) ?? null,
     transcript: readOptionalText(payload.transcript, true) ?? null,
     summary: readOptionalText(payload.summary, true) ?? null,

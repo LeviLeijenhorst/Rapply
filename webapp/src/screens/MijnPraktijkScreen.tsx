@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native'
 
 import { CoachscribeWordmarkIcon } from '../components/icons/CoachscribeWordmarkIcon'
@@ -6,67 +6,77 @@ import { PracticeColorIcon } from '../components/icons/PracticeColorIcon'
 import { PracticeEditFieldIcon } from '../components/icons/PracticeEditFieldIcon'
 import { PracticeExportIcon } from '../components/icons/PracticeExportIcon'
 import { Text } from '../components/Text'
+import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { colors } from '../theme/colors'
 
-const PRESET_COLORS = ['#BE0165', '#9B59B6', '#2E86DE', '#0FA958', '#E67E22', '#D63447', '#1D0A00', '#656565']
+const PRESET_COLORS = ['#BE0165', '#A50058', '#7E0056', '#D63447', '#E67E22', '#0FA958', '#2E86DE', '#1D0A00']
+
+function normalizeHexColor(value: string) {
+  const trimmed = String(value || '').trim()
+  if (!/^#[0-9a-fA-F]{6}$/.test(trimmed)) return '#BE0165'
+  return trimmed.toUpperCase()
+}
+
+async function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Bestand kon niet worden gelezen.'))
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.readAsDataURL(file)
+  })
+}
 
 export function MijnPraktijkScreen() {
-  const [praktijkNaam, setPraktijkNaam] = useState('')
-  const [website, setWebsite] = useState('')
-  const [tintColor, setTintColor] = useState('#BE0165')
-  const [logoPreviewUri, setLogoPreviewUri] = useState<string | null>(null)
-  const [logoFileName, setLogoFileName] = useState<string | null>(null)
+  const { data, updatePracticeSettings } = useLocalAppData()
+  const settings = data.practiceSettings
+
+  const [practiceNameDraft, setPracticeNameDraft] = useState(settings.practiceName)
+  const [websiteDraft, setWebsiteDraft] = useState(settings.website)
+  const [tintColorDraft, setTintColorDraft] = useState(normalizeHexColor(settings.tintColor || '#BE0165'))
   const [isDragActive, setIsDragActive] = useState(false)
   const [isColorMenuOpen, setIsColorMenuOpen] = useState(false)
+  const [colorMenuAnchor, setColorMenuAnchor] = useState<{ x: number; y: number } | null>(null)
+
   const logoDropAreaRef = useRef<View | null>(null)
   const colorMenuTriggerRef = useRef<View | null>(null)
-  const colorMenuRef = useRef<View | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
   const hiddenFileInputStyle = useMemo(() => ({ position: 'absolute', opacity: 0, width: 0, height: 0 }), [])
-  const colorInputStyle = useMemo(
-    () => ({ width: 42, height: 30, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer' }),
-    [],
-  )
+  const browserColorInputStyle = useMemo(() => ({ width: 44, height: 32, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }), [])
 
   const footerLine = useMemo(() => {
-    const parts = [praktijkNaam.trim(), website.trim()].filter((part) => part.length > 0)
-    if (parts.length === 0) return ''
+    const parts = [practiceNameDraft.trim(), websiteDraft.trim()].filter((part) => part.length > 0)
     return parts.join(' | ')
-  }, [praktijkNaam, website])
-
-  const handleLogoFileSelected = useCallback(
-    (file: File | null) => {
-      if (!file) return
-      if (!file.type.startsWith('image/')) return
-      if (logoPreviewUri) {
-        URL.revokeObjectURL(logoPreviewUri)
-      }
-      const nextUri = URL.createObjectURL(file)
-      setLogoPreviewUri(nextUri)
-      setLogoFileName(file.name)
-    },
-    [logoPreviewUri],
-  )
+  }, [practiceNameDraft, websiteDraft])
 
   useEffect(() => {
-    return () => {
-      if (!logoPreviewUri) return
-      URL.revokeObjectURL(logoPreviewUri)
-    }
-  }, [logoPreviewUri])
+    setPracticeNameDraft(settings.practiceName)
+    setWebsiteDraft(settings.website)
+    setTintColorDraft(normalizeHexColor(settings.tintColor || '#BE0165'))
+  }, [settings.practiceName, settings.website, settings.tintColor])
 
   useEffect(() => {
     if (!isColorMenuOpen) return
     if (typeof document === 'undefined') return
+
     const onMouseDown = (event: MouseEvent) => {
       const target = event.target as Node | null
       const triggerElement = colorMenuTriggerRef.current as any
-      const menuElement = colorMenuRef.current as any
-      if (triggerElement?.contains?.(target) || menuElement?.contains?.(target)) return
+      const menuElement = document.getElementById('practice-color-menu')
+      if (triggerElement?.contains?.(target) || menuElement?.contains(target)) return
       setIsColorMenuOpen(false)
     }
+
     document.addEventListener('mousedown', onMouseDown)
     return () => document.removeEventListener('mousedown', onMouseDown)
+  }, [isColorMenuOpen])
+
+  useEffect(() => {
+    if (!isColorMenuOpen) return
+    const trigger = colorMenuTriggerRef.current as any
+    const rect = trigger?.getBoundingClientRect?.()
+    if (!rect) return
+    setColorMenuAnchor({ x: rect.left, y: rect.bottom + 8 })
   }, [isColorMenuOpen])
 
   useEffect(() => {
@@ -103,13 +113,12 @@ export function MijnPraktijkScreen() {
     }
 
     const onDrop = (event: DragEvent) => {
-      const inside = isInsideDropArea(event)
-      if (!inside) return
+      if (!isInsideDropArea(event)) return
       event.preventDefault()
       event.stopPropagation()
       setIsDragActive(false)
       const droppedFile = extractFileFromDragEvent(event)
-      handleLogoFileSelected(droppedFile)
+      void handleLogoFileSelected(droppedFile)
     }
 
     window.addEventListener('dragover', onDragOver, true)
@@ -120,7 +129,29 @@ export function MijnPraktijkScreen() {
       window.removeEventListener('dragleave', onDragLeave, true)
       window.removeEventListener('drop', onDrop, true)
     }
-  }, [handleLogoFileSelected])
+  }, [])
+
+  function persistPracticeName(nextValue: string) {
+    updatePracticeSettings({ practiceName: nextValue })
+  }
+
+  function persistWebsite(nextValue: string) {
+    updatePracticeSettings({ website: nextValue })
+  }
+
+  function persistTintColor(nextColor: string) {
+    const normalized = normalizeHexColor(nextColor)
+    setTintColorDraft(normalized)
+    updatePracticeSettings({ tintColor: normalized })
+  }
+
+  async function handleLogoFileSelected(file: File | null) {
+    if (!file) return
+    if (!file.type.startsWith('image/')) return
+    const dataUrl = await readFileAsDataUrl(file)
+    if (!dataUrl) return
+    updatePracticeSettings({ logoDataUrl: dataUrl })
+  }
 
   return (
     <View style={styles.container}>
@@ -129,8 +160,18 @@ export function MijnPraktijkScreen() {
       </Text>
 
       <View style={styles.formSection}>
-        <LabeledInput label="Naam praktijk" value={praktijkNaam} onChangeText={setPraktijkNaam} />
-        <LabeledInput label="Website" value={website} onChangeText={setWebsite} />
+        <LabeledInput
+          label="Naam praktijk"
+          value={practiceNameDraft}
+          onChangeText={setPracticeNameDraft}
+          onBlur={() => persistPracticeName(practiceNameDraft)}
+        />
+        <LabeledInput
+          label="Website"
+          value={websiteDraft}
+          onChangeText={setWebsiteDraft}
+          onBlur={() => persistWebsite(websiteDraft)}
+        />
 
         <View style={styles.logoColorRow}>
           <View style={styles.logoColumn}>
@@ -138,13 +179,13 @@ export function MijnPraktijkScreen() {
               Logo
             </Text>
             <View ref={logoDropAreaRef} style={[styles.logoUploadBox, isDragActive ? styles.logoUploadBoxActive : undefined]}>
-              <Pressable style={({ hovered }) => [styles.logoUploadPressable, hovered ? styles.logoUploadPressableHovered : undefined]} onPress={() => fileInputRef.current?.click()}>
-                {logoPreviewUri ? (
+              <Pressable
+                style={({ hovered }) => [styles.logoUploadPressable, hovered ? styles.logoUploadPressableHovered : undefined]}
+                onPress={() => fileInputRef.current?.click()}
+              >
+                {settings.logoDataUrl ? (
                   <View style={styles.logoPreviewWrap}>
-                    <Image source={{ uri: logoPreviewUri }} resizeMode="contain" style={styles.logoPreviewImage} />
-                    <Text numberOfLines={1} style={styles.logoFileName}>
-                      {logoFileName}
-                    </Text>
+                    <Image source={{ uri: settings.logoDataUrl }} resizeMode="contain" style={styles.logoPreviewImage} />
                   </View>
                 ) : (
                   <View style={styles.logoUploadCenter}>
@@ -158,7 +199,7 @@ export function MijnPraktijkScreen() {
                 type="file"
                 accept="image/*"
                 onChange={(event) => {
-                  handleLogoFileSelected(event.currentTarget.files?.[0] ?? null)
+                  void handleLogoFileSelected(event.currentTarget.files?.[0] ?? null)
                   event.currentTarget.value = ''
                 }}
                 style={hiddenFileInputStyle as any}
@@ -174,28 +215,10 @@ export function MijnPraktijkScreen() {
               <Pressable
                 ref={colorMenuTriggerRef}
                 onPress={() => setIsColorMenuOpen((current) => !current)}
-                style={({ hovered }) => [styles.colorCard, { backgroundColor: tintColor }, hovered ? styles.colorCardHovered : undefined]}
+                style={({ hovered }) => [styles.colorCard, { backgroundColor: tintColorDraft }, hovered ? styles.colorCardHovered : undefined]}
               >
                 <PracticeColorIcon />
               </Pressable>
-              {isColorMenuOpen ? (
-                <View ref={colorMenuRef} style={styles.colorMenu}>
-                  <View style={styles.colorSwatchGrid}>
-                    {PRESET_COLORS.map((color) => (
-                      <Pressable key={color} onPress={() => setTintColor(color)} style={[styles.colorSwatch, { backgroundColor: color }, tintColor === color ? styles.colorSwatchSelected : undefined]} />
-                    ))}
-                  </View>
-                  <View style={styles.customColorRow}>
-                    <Text style={styles.customColorLabel}>Eigen kleur</Text>
-                    <input
-                      type="color"
-                      value={tintColor}
-                      onChange={(event) => setTintColor(event.currentTarget.value)}
-                      style={colorInputStyle as any}
-                    />
-                  </View>
-                </View>
-              ) : null}
             </View>
           </View>
         </View>
@@ -207,15 +230,15 @@ export function MijnPraktijkScreen() {
           <View style={styles.documentCard}>
             <View style={styles.documentHeader}>
               <View style={styles.documentHeaderText}>
-                <Text isBold style={[styles.documentTitle, { color: tintColor }]}>Titel van het verslag</Text>
+                <Text isBold style={[styles.documentTitle, { color: tintColorDraft }]}>Titel van het verslag</Text>
                 <Text style={styles.documentDate}>07/02/2026</Text>
               </View>
               <View style={styles.documentLogoSlot}>
-                {logoPreviewUri ? <Image source={{ uri: logoPreviewUri }} resizeMode="contain" style={styles.documentLogoImage} /> : <CoachscribeWordmarkIcon />}
+                {settings.logoDataUrl ? <Image source={{ uri: settings.logoDataUrl }} resizeMode="contain" style={styles.documentLogoImage} /> : <CoachscribeWordmarkIcon />}
               </View>
             </View>
 
-            <View style={[styles.documentDivider, { backgroundColor: tintColor }]} />
+            <View style={[styles.documentDivider, { backgroundColor: tintColorDraft }]} />
 
             <View style={styles.documentBody}>
               <Text isBold style={styles.documentSectionTitle}>
@@ -234,6 +257,49 @@ export function MijnPraktijkScreen() {
           </View>
         </View>
       </View>
+
+      {isColorMenuOpen && colorMenuAnchor ? (
+        <View
+          id="practice-color-menu"
+          style={[
+            styles.colorMenuFixed,
+            {
+              ...( { left: colorMenuAnchor.x, top: colorMenuAnchor.y } as any ),
+            },
+          ]}
+        >
+          <View style={styles.colorSwatchGrid}>
+            {PRESET_COLORS.map((color) => (
+              <Pressable
+                key={color}
+                onPress={() => persistTintColor(color)}
+                style={[styles.colorSwatch, { backgroundColor: color }, tintColorDraft === color ? styles.colorSwatchSelected : undefined]}
+              />
+            ))}
+          </View>
+          <View style={styles.customColorRow}>
+            <Text style={styles.customColorLabel}>Alle kleuren</Text>
+            <input
+              type="color"
+              value={tintColorDraft}
+              onChange={(event) => persistTintColor(event.currentTarget.value)}
+              style={browserColorInputStyle as any}
+            />
+          </View>
+          <TextInput
+            value={tintColorDraft}
+            onChangeText={(nextValue) => {
+              setTintColorDraft(nextValue)
+              if (/^#[0-9a-fA-F]{6}$/.test(nextValue)) {
+                persistTintColor(nextValue)
+              }
+            }}
+            placeholder="#BE0165"
+            placeholderTextColor="#656565"
+            style={styles.hexInput}
+          />
+        </View>
+      ) : null}
     </View>
   )
 }
@@ -242,10 +308,10 @@ type LabeledInputProps = {
   label: string
   value: string
   onChangeText: (value: string) => void
-  placeholder?: string
+  onBlur: () => void
 }
 
-function LabeledInput({ label, value, onChangeText, placeholder }: LabeledInputProps) {
+function LabeledInput({ label, value, onChangeText, onBlur }: LabeledInputProps) {
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
 
   return (
@@ -254,7 +320,7 @@ function LabeledInput({ label, value, onChangeText, placeholder }: LabeledInputP
         {label}
       </Text>
       <View style={styles.inputRow}>
-        <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#656565" style={[styles.input, inputWebStyle]} />
+        <TextInput value={value} onChangeText={onChangeText} onBlur={onBlur} placeholderTextColor="#656565" style={[styles.input, inputWebStyle]} />
         <PracticeEditFieldIcon />
       </View>
     </View>
@@ -265,6 +331,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     gap: 14,
+    ...( { overflow: 'visible' } as any ),
   },
   headerTitle: {
     fontSize: 24,
@@ -357,17 +424,11 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    padding: 16,
   },
   logoPreviewImage: {
     width: '100%',
-    height: 130,
-  },
-  logoFileName: {
-    fontSize: 12,
-    lineHeight: 16,
-    color: '#656565',
-    maxWidth: '100%',
+    height: '100%',
   },
   colorPickerWrap: {
     width: '100%',
@@ -384,18 +445,15 @@ const styles = StyleSheet.create({
   colorCardHovered: {
     opacity: 0.93,
   },
-  colorMenu: {
-    position: 'absolute',
-    top: 228,
-    left: 0,
-    width: 300,
+  colorMenuFixed: {
+    ...( { position: 'fixed', zIndex: 10000, width: 280 } as any ),
     borderRadius: 16,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
+    padding: 14,
     gap: 12,
-    ...( { boxShadow: '0 14px 32px rgba(0,0,0,0.16)', zIndex: 20 } as any ),
+    ...( { boxShadow: '0 14px 32px rgba(0,0,0,0.16)' } as any ),
   },
   colorSwatchGrid: {
     flexDirection: 'row',
@@ -424,6 +482,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: colors.textStrong,
+  },
+  hexInput: {
+    width: '100%',
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 10,
+    fontSize: 13,
+    lineHeight: 16,
+    color: colors.textStrong,
+    ...( { outlineStyle: 'none', outlineWidth: 0 } as any ),
   },
   previewSection: {
     gap: 8,

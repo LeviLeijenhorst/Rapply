@@ -17,6 +17,7 @@ export type Session = {
   title: string
   kind: SessionKind
   audioBlobId: string | null
+  audioDurationSeconds: number | null
   uploadFileName: string | null
   transcript: string | null
   summary: string | null
@@ -61,6 +62,15 @@ export type AppData = {
   notes: Note[]
   writtenReports: WrittenReport[]
   templates: Template[]
+  practiceSettings: PracticeSettings
+}
+
+export type PracticeSettings = {
+  practiceName: string
+  website: string
+  tintColor: string
+  logoDataUrl: string | null
+  updatedAtUnixMs: number
 }
 
 export async function readAppData(userId: string): Promise<AppData> {
@@ -86,6 +96,7 @@ export async function readAppData(userId: string): Promise<AppData> {
     title: string
     kind: SessionKind
     audio_blob_id: string | null
+    audio_duration_seconds: number | null
     upload_file_name: string | null
     transcript: string | null
     summary: string | null
@@ -95,7 +106,7 @@ export async function readAppData(userId: string): Promise<AppData> {
     updated_at_unix_ms: number
   }>(
     `
-    select id, coachee_id, title, kind, audio_blob_id, upload_file_name, transcript, summary, transcription_status, transcription_error, created_at_unix_ms, updated_at_unix_ms
+    select id, coachee_id, title, kind, audio_blob_id, audio_duration_seconds, upload_file_name, transcript, summary, transcription_status, transcription_error, created_at_unix_ms, updated_at_unix_ms
     from public.coachee_sessions
     where user_id = $1
     order by created_at_unix_ms desc
@@ -149,6 +160,36 @@ export async function readAppData(userId: string): Promise<AppData> {
     [userId],
   )
 
+  let practiceSettingsRow: {
+    practice_name: string
+    website: string
+    tint_color: string
+    logo_data_url: string | null
+    updated_at_unix_ms: number
+  } | null = null
+
+  try {
+    practiceSettingsRow = await queryOne<{
+      practice_name: string
+      website: string
+      tint_color: string
+      logo_data_url: string | null
+      updated_at_unix_ms: number
+    }>(
+      `
+      select practice_name, website, tint_color, logo_data_url, updated_at_unix_ms
+      from public.practice_settings
+      where user_id = $1
+      `,
+      [userId],
+    )
+  } catch (error: any) {
+    // Keep app-data loading resilient on older local DBs that do not yet have practice_settings.
+    if (String(error?.code || '') !== '42P01') {
+      throw error
+    }
+  }
+
   const e2eeUser = await queryOne<{ user_id: string }>("select user_id from public.e2ee_users where user_id = $1", [userId])
   const isE2eeEnabled = !!e2eeUser
 
@@ -194,6 +235,7 @@ export async function readAppData(userId: string): Promise<AppData> {
       title: row.title,
       kind: row.kind,
       audioBlobId: row.audio_blob_id,
+      audioDurationSeconds: row.audio_duration_seconds !== null ? Number(row.audio_duration_seconds) : null,
       uploadFileName: row.upload_file_name,
       transcript: row.transcript,
       summary: row.summary,
@@ -215,6 +257,13 @@ export async function readAppData(userId: string): Promise<AppData> {
       updatedAtUnixMs: Number(row.updated_at_unix_ms),
     })),
     templates: templateData,
+    practiceSettings: {
+      practiceName: practiceSettingsRow?.practice_name ?? "",
+      website: practiceSettingsRow?.website ?? "",
+      tintColor: practiceSettingsRow?.tint_color ?? "#BE0165",
+      logoDataUrl: practiceSettingsRow?.logo_data_url ?? null,
+      updatedAtUnixMs: Number(practiceSettingsRow?.updated_at_unix_ms ?? 0),
+    },
   }
 }
 
@@ -271,15 +320,16 @@ export async function createSession(userId: string, session: Session): Promise<v
   await execute(
     `
     insert into public.coachee_sessions (
-      id, user_id, coachee_id, title, kind, audio_blob_id, upload_file_name, transcript, summary,
+      id, user_id, coachee_id, title, kind, audio_blob_id, audio_duration_seconds, upload_file_name, transcript, summary,
       transcription_status, transcription_error, created_at_unix_ms, updated_at_unix_ms
     )
-    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
     on conflict (id) do update
       set coachee_id = excluded.coachee_id,
           title = excluded.title,
           kind = excluded.kind,
           audio_blob_id = excluded.audio_blob_id,
+          audio_duration_seconds = excluded.audio_duration_seconds,
           upload_file_name = excluded.upload_file_name,
           transcript = excluded.transcript,
           summary = excluded.summary,
@@ -294,6 +344,7 @@ export async function createSession(userId: string, session: Session): Promise<v
       session.title,
       session.kind,
       session.audioBlobId,
+      session.audioDurationSeconds,
       session.uploadFileName,
       session.transcript,
       session.summary,
@@ -311,6 +362,9 @@ export async function updateSession(
     id: string
     coacheeId?: string | null
     title?: string | null
+    audioBlobId?: string | null
+    audioDurationSeconds?: number | null
+    uploadFileName?: string | null
     transcript?: string | null
     summary?: string | null
     transcriptionStatus?: Session["transcriptionStatus"]
@@ -333,6 +387,21 @@ export async function updateSession(
   if (typeof params.title === "string") {
     updates.push(`title = $${index++}`)
     values.push(params.title)
+  }
+
+  if (params.audioBlobId !== undefined) {
+    updates.push(`audio_blob_id = $${index++}`)
+    values.push(params.audioBlobId)
+  }
+
+  if (params.audioDurationSeconds !== undefined) {
+    updates.push(`audio_duration_seconds = $${index++}`)
+    values.push(params.audioDurationSeconds)
+  }
+
+  if (params.uploadFileName !== undefined) {
+    updates.push(`upload_file_name = $${index++}`)
+    values.push(params.uploadFileName)
   }
 
   if (params.transcript !== undefined) {
@@ -452,4 +521,62 @@ export async function updateTemplate(userId: string, template: Template): Promis
 
 export async function deleteTemplate(userId: string, id: string): Promise<void> {
   await execute(`delete from public.templates where user_id = $1 and id = $2`, [userId, id])
+}
+
+export async function updatePracticeSettings(
+  userId: string,
+  params: { practiceName?: string | null; website?: string | null; tintColor?: string | null; logoDataUrl?: string | null; updatedAtUnixMs: number },
+): Promise<void> {
+  let current: {
+    practice_name: string
+    website: string
+    tint_color: string
+    logo_data_url: string | null
+  } | null = null
+
+  try {
+    current = await queryOne<{
+      practice_name: string
+      website: string
+      tint_color: string
+      logo_data_url: string | null
+    }>(
+      `
+      select practice_name, website, tint_color, logo_data_url
+      from public.practice_settings
+      where user_id = $1
+      `,
+      [userId],
+    )
+  } catch (error: any) {
+    if (String(error?.code || '') === '42P01') {
+      // Older local DB without migration: skip write instead of breaking unrelated app features.
+      return
+    }
+    throw error
+  }
+
+  const practiceName = params.practiceName === undefined ? current?.practice_name ?? "" : params.practiceName ?? ""
+  const website = params.website === undefined ? current?.website ?? "" : params.website ?? ""
+  const tintColor = params.tintColor === undefined ? current?.tint_color ?? "#BE0165" : params.tintColor ?? "#BE0165"
+  const logoDataUrl = params.logoDataUrl === undefined ? current?.logo_data_url ?? null : params.logoDataUrl
+
+  try {
+    await execute(
+      `
+      insert into public.practice_settings (user_id, practice_name, website, tint_color, logo_data_url, updated_at_unix_ms)
+      values ($1, $2, $3, $4, $5, $6)
+      on conflict (user_id) do update
+        set practice_name = excluded.practice_name,
+            website = excluded.website,
+            tint_color = excluded.tint_color,
+            logo_data_url = excluded.logo_data_url,
+            updated_at_unix_ms = excluded.updated_at_unix_ms
+      `,
+      [userId, practiceName, website, tintColor, logoDataUrl, params.updatedAtUnixMs],
+    )
+  } catch (error: any) {
+    if (String(error?.code || '') === '42P01') return
+    throw error
+  }
 }

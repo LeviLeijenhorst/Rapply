@@ -28,6 +28,7 @@ import { VerslagSchrijvenIcon } from '../icons/VerslagSchrijvenIcon'
 import { SendSquareIcon } from '../icons/SendSquareIcon'
 import { FolderOpenIcon } from '../icons/FolderOpenIcon'
 import { unassignedCoacheeLabel } from '../../utils/coachee'
+import { AudioPlayerCard } from '../sessionDetail/AudioPlayerCard'
 
 type Step = 'select' | 'upload' | 'recording' | 'recorded'
 type OptionKey = 'gesprek' | 'verslag' | 'upload' | 'schrijven'
@@ -47,6 +48,48 @@ function formatTimeLabel(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+}
+
+async function readAudioDurationSeconds(blob: Blob): Promise<number | null> {
+  if (typeof window === 'undefined') return null
+  const audio = document.createElement('audio')
+  const objectUrl = URL.createObjectURL(blob)
+  audio.preload = 'metadata'
+  audio.src = objectUrl
+
+  try {
+    const duration = await new Promise<number | null>((resolve) => {
+      let isResolved = false
+      const timeoutId = window.setTimeout(() => {
+        if (isResolved) return
+        isResolved = true
+        resolve(null)
+      }, 6000)
+
+      const cleanup = () => {
+        window.clearTimeout(timeoutId)
+        audio.removeAttribute('src')
+      }
+
+      audio.onloadedmetadata = () => {
+        if (isResolved) return
+        isResolved = true
+        const nextDuration = Number.isFinite(audio.duration) ? Math.max(0, Math.round(audio.duration)) : null
+        cleanup()
+        resolve(nextDuration)
+      }
+
+      audio.onerror = () => {
+        if (isResolved) return
+        isResolved = true
+        cleanup()
+        resolve(null)
+      }
+    })
+    return duration
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
 }
 
 export function NewSessionModal({
@@ -87,6 +130,7 @@ export function NewSessionModal({
 
   const [audioBlobId, setAudioBlobId] = useState<string | null>(null)
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null)
+  const [audioDurationSeconds, setAudioDurationSeconds] = useState<number | null>(null)
   const [isSavingAudio, setIsSavingAudio] = useState(false)
   const [audioForTranscription, setAudioForTranscription] = useState<{ blob: Blob; mimeType: string } | null>(null)
   const { height: windowHeight } = useWindowDimensions()
@@ -123,6 +167,7 @@ export function NewSessionModal({
     setSelectedAudioFile(null)
     setAudioBlobId(null)
     setAudioPreviewUrl(null)
+    setAudioDurationSeconds(null)
     setIsSavingAudio(false)
     setAudioForTranscription(null)
     setIsMinimized(false)
@@ -444,6 +489,8 @@ export function NewSessionModal({
     if (isSavingAudio) return
     setIsSavingAudio(true)
     const mimeType = selectedAudioFile.type || 'audio/mpeg'
+    const detectedDurationSeconds = await readAudioDurationSeconds(selectedAudioFile)
+    setAudioDurationSeconds(detectedDurationSeconds)
     setAudioForTranscription({ blob: selectedAudioFile, mimeType })
     setAudioPreviewUrl(URL.createObjectURL(selectedAudioFile))
     setStep('recorded')
@@ -484,7 +531,11 @@ export function NewSessionModal({
       title: sessionTitle,
       kind: values.kind,
       audioBlobId: audioBlobId ?? null,
+      audioDurationSeconds:
+        values.kind === 'recording' ? Math.max(0, recorder.elapsedSeconds) : (Number.isFinite(audioDurationSeconds) ? audioDurationSeconds : null),
       uploadFileName: values.kind === 'upload' ? selectedAudioFile?.name ?? null : null,
+      transcriptionStatus: 'transcribing',
+      transcriptionError: null,
     })
 
     if (!createdSessionId) return
@@ -492,18 +543,22 @@ export function NewSessionModal({
       pendingSessionIdRef.current = createdSessionId
     }
 
-    updateSession(createdSessionId, { transcriptionStatus: 'transcribing' })
-
     const nextAudioForTranscription = audioForTranscription
     onOpenSession(createdSessionId)
     handleClose()
 
     void (async () => {
       try {
+        console.log('[transcription][new-session] start', { sessionId: createdSessionId, mimeType: nextAudioForTranscription.mimeType })
         const { transcript, summary } = await transcribeAudio({
           audioBlob: nextAudioForTranscription.blob,
           mimeType: nextAudioForTranscription.mimeType,
           languageCode: 'nl',
+        })
+        console.log('[transcription][new-session] transcript-received', {
+          sessionId: createdSessionId,
+          transcriptLength: transcript.length,
+          hasSummary: Boolean(String(summary || '').trim()),
         })
         const cleanedSummary = String(summary || '').trim()
         if (cleanedSummary) {
@@ -514,6 +569,7 @@ export function NewSessionModal({
             transcriptionError: null,
           })
         } else {
+          console.log('[transcription][new-session] summary-generate-start', { sessionId: createdSessionId })
           updateSession(createdSessionId, {
             transcript,
             transcriptionStatus: 'generating',
@@ -528,6 +584,7 @@ export function NewSessionModal({
             transcriptionStatus: 'done',
             transcriptionError: null,
           })
+          console.log('[transcription][new-session] summary-generate-done', { sessionId: createdSessionId, summaryLength: generatedSummary.length })
         }
       } catch (error) {
         console.error('[NewSessionModal] Transcription failed:', error)
@@ -552,7 +609,7 @@ export function NewSessionModal({
   useEffect(() => {
     if (!visible) return
     if (step !== 'recording') return
-    if (recorder.status === 'recording' || recorder.status === 'paused' || recorder.status === 'requesting') return
+    if (recorder.status !== 'idle') return
     recorder.start()
   }, [recorder, step, visible])
 
@@ -569,11 +626,16 @@ export function NewSessionModal({
     if (!recorder.recordedBlob || !recorder.recordedMimeType) return
     if (isSavingAudio) return
 
+    const blob = recorder.recordedBlob as Blob
+    const mimeType = recorder.recordedMimeType as string
+    setAudioForTranscription({ blob, mimeType })
+    setAudioDurationSeconds(Math.max(0, recorder.elapsedSeconds))
+    setAudioPreviewUrl(URL.createObjectURL(blob))
+    setStep('recorded')
+
     setIsSavingAudio(true)
     ;(async () => {
       try {
-        const blob = recorder.recordedBlob as Blob
-        const mimeType = recorder.recordedMimeType as string
         const encryptedBlob = await e2ee.encryptAudioBlobForStorage({ audioBlob: blob, mimeType })
         const created = await createAudioBlobRemote({ audioBlob: encryptedBlob, mimeType: 'application/octet-stream' })
         const nextId = String(created.audioBlobId || '').trim()
@@ -581,9 +643,6 @@ export function NewSessionModal({
           throw new Error('Geen audio id teruggekregen van de server.')
         }
         setAudioBlobId(nextId)
-        setAudioForTranscription({ blob, mimeType })
-        setAudioPreviewUrl(URL.createObjectURL(recorder.recordedBlob as Blob))
-        setStep('recorded')
       } catch (error) {
         console.error('[NewSessionModal] Failed to save recorded audio', error)
       } finally {
@@ -865,7 +924,12 @@ export function NewSessionModal({
               {audioPreviewUrl ? (
                 <View style={styles.audioPreviewCard}>
                   {/* Audio preview */}
-                  <audio controls src={audioPreviewUrl} style={{ width: '100%' }} />
+                  <AudioPlayerCard
+                    audioBlobId={audioBlobId}
+                    audioDurationSeconds={audioDurationSeconds}
+                    audioUrlOverride={audioPreviewUrl}
+                    isEncrypting={isSavingAudio}
+                  />
                 </View>
               ) : null}
               <Pressable
@@ -884,124 +948,126 @@ export function NewSessionModal({
                 />
               </Pressable>
 
-              <View style={[styles.dropdownArea, isCoacheeOpen ? styles.dropdownAreaRaised : undefined]}>
-                <Pressable
-                  ref={coacheeTriggerRef}
-                  id="new-session-coachee-trigger"
-                  onPress={() => {
-                    updateDropdownMaxHeight(coacheeTriggerRef, setCoacheeDropdownMaxHeight)
-                    setIsCoacheeOpen((value) => !value)
-                    setIsReportTypeOpen(false)
-                  }}
-                  style={({ hovered }) => [styles.infoRow, hovered ? styles.infoRowHovered : undefined]}
-                >
-                  {/* Coachee */}
-                  <ProfileCircleIcon />
-                  <Text isSemibold style={styles.infoRowText}>
-                    {selectedCoachee?.name ?? unassignedCoacheeLabel}
-                  </Text>
-                  <View style={styles.infoRowSpacer} />
-                  <ChevronDownIcon color={colors.textStrong} size={20} />
-                </Pressable>
+              <View style={styles.recordedDropdownsRow}>
+                <View style={[styles.dropdownArea, styles.dropdownAreaHalf, isCoacheeOpen ? styles.dropdownAreaRaised : undefined]}>
+                  <Pressable
+                    ref={coacheeTriggerRef}
+                    id="new-session-coachee-trigger"
+                    onPress={() => {
+                      updateDropdownMaxHeight(coacheeTriggerRef, setCoacheeDropdownMaxHeight)
+                      setIsCoacheeOpen((value) => !value)
+                      setIsReportTypeOpen(false)
+                    }}
+                    style={({ hovered }) => [styles.infoRow, hovered ? styles.infoRowHovered : undefined]}
+                  >
+                    {/* Coachee */}
+                    <ProfileCircleIcon />
+                    <Text isSemibold style={styles.infoRowText}>
+                      {selectedCoachee?.name ?? unassignedCoacheeLabel}
+                    </Text>
+                    <View style={styles.infoRowSpacer} />
+                    <ChevronDownIcon color={colors.textStrong} size={20} />
+                  </Pressable>
 
-                <AnimatedDropdownPanel
-                  visible={isCoacheeOpen}
-                  id="new-session-coachee-panel"
-                  style={[styles.coacheePanel, { maxHeight: coacheeDropdownMaxHeight ?? defaultDropdownMaxHeight }]}
-                >
-                  <ScrollView style={styles.coacheeList} contentContainerStyle={styles.coacheeListContent} showsVerticalScrollIndicator={false}>
-                    {coacheeOptions.map((coachee, index) => {
-                      const isFirst = index === 0
-                      return (
-                        <Pressable
-                          key={coachee.id ?? 'coachee-unassigned'}
-                          onPress={() => {
-                            setSelectedCoacheeId(coachee.id)
-                            setIsCoacheeOpen(false)
-                          }}
-                          style={({ hovered }) => [
-                            styles.coacheeItem,
-                            isFirst ? styles.coacheeItemTop : undefined,
-                            hovered ? styles.coacheeItemHovered : undefined,
-                          ]}
-                        >
-                          {/* Coachee list item */}
-                          <ProfileCircleIcon />
-                          <Text style={styles.coacheeItemText}>{coachee.name}</Text>
-                        </Pressable>
-                      )
-                    })}
-                    <Pressable
-                      onPress={() => {
-                        setIsCoacheeOpen(false)
-                        onOpenNewCoachee()
-                      }}
-                      style={({ hovered }) => [
-                        styles.coacheeItem,
-                        styles.coacheeItemAdd,
-                        coacheeOptions.length === 0 ? styles.coacheeItemTop : undefined,
-                        styles.coacheeItemBottom,
-                        hovered ? styles.coacheeItemAddHovered : undefined,
-                      ]}
-                    >
-                      {/* Add coachee */}
-                      <ProfileCircleIcon />
-                      <Text style={styles.coacheeItemAddText}>+ Nieuwe coachee</Text>
-                    </Pressable>
-                  </ScrollView>
-                </AnimatedDropdownPanel>
-              </View>
+                  <AnimatedDropdownPanel
+                    visible={isCoacheeOpen}
+                    id="new-session-coachee-panel"
+                    style={[styles.coacheePanel, { maxHeight: coacheeDropdownMaxHeight ?? defaultDropdownMaxHeight }]}
+                  >
+                    <ScrollView style={styles.coacheeList} contentContainerStyle={styles.coacheeListContent} showsVerticalScrollIndicator={false}>
+                      {coacheeOptions.map((coachee, index) => {
+                        const isFirst = index === 0
+                        return (
+                          <Pressable
+                            key={coachee.id ?? 'coachee-unassigned'}
+                            onPress={() => {
+                              setSelectedCoacheeId(coachee.id)
+                              setIsCoacheeOpen(false)
+                            }}
+                            style={({ hovered }) => [
+                              styles.coacheeItem,
+                              isFirst ? styles.coacheeItemTop : undefined,
+                              hovered ? styles.coacheeItemHovered : undefined,
+                            ]}
+                          >
+                            {/* Coachee list item */}
+                            <ProfileCircleIcon />
+                            <Text style={styles.coacheeItemText}>{coachee.name}</Text>
+                          </Pressable>
+                        )
+                      })}
+                      <Pressable
+                        onPress={() => {
+                          setIsCoacheeOpen(false)
+                          onOpenNewCoachee()
+                        }}
+                        style={({ hovered }) => [
+                          styles.coacheeItem,
+                          styles.coacheeItemAdd,
+                          coacheeOptions.length === 0 ? styles.coacheeItemTop : undefined,
+                          styles.coacheeItemBottom,
+                          hovered ? styles.coacheeItemAddHovered : undefined,
+                        ]}
+                      >
+                        {/* Add coachee */}
+                        <ProfileCircleIcon />
+                        <Text style={styles.coacheeItemAddText}>+ Nieuwe coachee</Text>
+                      </Pressable>
+                    </ScrollView>
+                  </AnimatedDropdownPanel>
+                </View>
 
-              <View style={[styles.dropdownArea, isReportTypeOpen ? styles.dropdownAreaRaised : undefined]}>
-                <Pressable
-                  ref={reportTypeTriggerRef}
-                  id="new-session-report-trigger"
-                  onPress={() => {
-                    updateDropdownMaxHeight(reportTypeTriggerRef, setReportTypeDropdownMaxHeight)
-                    setIsReportTypeOpen((value) => !value)
-                    setIsCoacheeOpen(false)
-                  }}
-                  style={({ hovered }) => [styles.infoRow, hovered ? styles.infoRowHovered : undefined]}
-                >
-                  {/* Report type */}
-                  <VerslagSchrijvenIcon />
-                  <Text isSemibold style={styles.infoRowText}>
-                    {selectedTemplate?.name ?? 'Template'}
-                  </Text>
-                  <View style={styles.infoRowSpacer} />
-                  <ChevronDownIcon color={colors.textStrong} size={20} />
-                </Pressable>
+                <View style={[styles.dropdownArea, styles.dropdownAreaHalf, isReportTypeOpen ? styles.dropdownAreaRaised : undefined]}>
+                  <Pressable
+                    ref={reportTypeTriggerRef}
+                    id="new-session-report-trigger"
+                    onPress={() => {
+                      updateDropdownMaxHeight(reportTypeTriggerRef, setReportTypeDropdownMaxHeight)
+                      setIsReportTypeOpen((value) => !value)
+                      setIsCoacheeOpen(false)
+                    }}
+                    style={({ hovered }) => [styles.infoRow, hovered ? styles.infoRowHovered : undefined]}
+                  >
+                    {/* Report type */}
+                    <VerslagSchrijvenIcon />
+                    <Text isSemibold style={styles.infoRowText}>
+                      {selectedTemplate?.name ?? 'Template'}
+                    </Text>
+                    <View style={styles.infoRowSpacer} />
+                    <ChevronDownIcon color={colors.textStrong} size={20} />
+                  </Pressable>
 
-                <AnimatedDropdownPanel
-                  visible={isReportTypeOpen}
-                  id="new-session-report-panel"
-                  style={[styles.reportTypePanel, { maxHeight: reportTypeDropdownMaxHeight ?? defaultDropdownMaxHeight }]}
-                >
-                  <ScrollView style={styles.reportTypeList} contentContainerStyle={styles.reportTypeListContent} showsVerticalScrollIndicator={false}>
-                    {templates.map((template, index, items) => {
-                      const isFirst = index === 0
-                      const isLast = index === items.length - 1
-                      return (
-                        <Pressable
-                          key={template.id}
-                          onPress={() => {
-                            setSelectedTemplateId(template.id)
-                            setIsReportTypeOpen(false)
-                          }}
-                          style={({ hovered }) => [
-                            styles.reportTypeItem,
-                            isFirst ? styles.reportTypeItemTop : undefined,
-                            isLast ? styles.reportTypeItemBottom : undefined,
-                            hovered ? styles.reportTypeItemHovered : undefined,
-                          ]}
-                        >
-                          {/* Report type item */}
-                          <Text style={styles.reportTypeItemText}>{template.name}</Text>
-                        </Pressable>
-                      )
-                    })}
-                  </ScrollView>
-                </AnimatedDropdownPanel>
+                  <AnimatedDropdownPanel
+                    visible={isReportTypeOpen}
+                    id="new-session-report-panel"
+                    style={[styles.reportTypePanel, { maxHeight: reportTypeDropdownMaxHeight ?? defaultDropdownMaxHeight }]}
+                  >
+                    <ScrollView style={styles.reportTypeList} contentContainerStyle={styles.reportTypeListContent} showsVerticalScrollIndicator={false}>
+                      {templates.map((template, index, items) => {
+                        const isFirst = index === 0
+                        const isLast = index === items.length - 1
+                        return (
+                          <Pressable
+                            key={template.id}
+                            onPress={() => {
+                              setSelectedTemplateId(template.id)
+                              setIsReportTypeOpen(false)
+                            }}
+                            style={({ hovered }) => [
+                              styles.reportTypeItem,
+                              isFirst ? styles.reportTypeItemTop : undefined,
+                              isLast ? styles.reportTypeItemBottom : undefined,
+                              hovered ? styles.reportTypeItemHovered : undefined,
+                            ]}
+                          >
+                            {/* Report type item */}
+                            <Text style={styles.reportTypeItemText}>{template.name}</Text>
+                          </Pressable>
+                        )
+                      })}
+                    </ScrollView>
+                  </AnimatedDropdownPanel>
+                </View>
               </View>
             </View>
           ) : null}
@@ -1580,13 +1646,15 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 16,
   },
+  recordedDropdownsRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
   audioPreviewCard: {
     width: '100%',
-    borderRadius: 12,
-    backgroundColor: colors.pageBackground,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
+    padding: 0,
   },
   uploadBody: {
     width: '100%',
@@ -1643,6 +1711,10 @@ const styles = StyleSheet.create({
     width: '100%',
     position: 'relative',
     zIndex: 1,
+  },
+  dropdownAreaHalf: {
+    flex: 1,
+    width: undefined as any,
   },
   dropdownAreaRaised: {
     zIndex: 2,

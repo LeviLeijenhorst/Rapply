@@ -1,24 +1,32 @@
 import React, { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Animated, Easing, Pressable, StyleSheet, View } from 'react-native'
 import { colors } from '../../theme/colors'
 import { useE2ee } from '../../e2ee/E2eeProvider'
 import { loadAudioBlobRemote } from '../../services/audioBlobs'
+import { downloadAudioStream } from '../../audio/downloadAudioStream'
 import { Text } from '../Text'
 import { AudioBackwardIcon } from '../icons/AudioBackwardIcon'
 import { AudioForwardIcon } from '../icons/AudioForwardIcon'
 import { PlaySmallIcon } from '../icons/PlaySmallIcon'
 import { PauseIcon } from '../icons/PauseIcon'
+import { AudioEncryptedIcon } from '../icons/AudioEncryptedIcon'
+import { AudioDecryptedIcon } from '../icons/AudioDecryptedIcon'
 
 type Props = {
   audioBlobId: string | null
   audioDurationSeconds: number | null
+  audioUrlOverride?: string | null
+  isEncrypting?: boolean
 }
 
 export type AudioPlayerHandle = {
   seekToSeconds: (seconds: number) => void
 }
 
-export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(function AudioPlayerCard({ audioBlobId, audioDurationSeconds }, ref) {
+export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(function AudioPlayerCard(
+  { audioBlobId, audioDurationSeconds, audioUrlOverride = null, isEncrypting = false },
+  ref,
+) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const e2ee = useE2ee()
 
@@ -28,12 +36,15 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
   const [isPlaying, setIsPlaying] = useState(false)
   const [isBuffering, setIsBuffering] = useState(false)
   const [isLoadingAudio, setIsLoadingAudio] = useState(false)
+  const [isAudioReady, setIsAudioReady] = useState(false)
+  const [hasAudioError, setHasAudioError] = useState(false)
   const [isDraggingSeek, setIsDraggingSeek] = useState(false)
   const [dragPreviewSeconds, setDragPreviewSeconds] = useState<number | null>(null)
   const [waveformWidth, setWaveformWidth] = useState(0)
   const pendingSeekSecondsRef = useRef<number | null>(null)
   const pendingResumeAfterSeekRef = useRef(false)
   const seekResumePlaybackRef = useRef<boolean | null>(null)
+  const statusOpacity = useRef(new Animated.Value(0)).current
 
   function formatTimeLabel(seconds: number) {
     if (!Number.isFinite(seconds) || seconds <= 0) return '00:00'
@@ -61,10 +72,11 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
 
   function seekToSecondsInternal(seconds: number, preservePlayState: boolean) {
     const audio = audioRef.current
+    const source = audioUrlOverride ?? audioUrl
     if (!Number.isFinite(seconds)) return
     const target = Math.max(0, Math.min(durationSeconds || Number.MAX_SAFE_INTEGER, seconds))
     setCurrentSeconds(target)
-    if (!audio || !audioUrl) {
+    if (!audio || !source) {
       pendingSeekSecondsRef.current = target
       return
     }
@@ -97,39 +109,65 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
   )
 
   useEffect(() => {
+    if (audioUrlOverride) {
+      setIsBuffering(false)
+      setIsAudioReady(true)
+      setHasAudioError(false)
+      setCurrentSeconds(0)
+      setIsLoadingAudio(false)
+      return
+    }
     let isCancelled = false
 
     async function load() {
+      setIsBuffering(false)
+      setIsAudioReady(false)
+      setHasAudioError(false)
       if (!audioBlobId) {
-        setAudioUrl(null)
+        setAudioUrl((previous) => {
+          if (previous) URL.revokeObjectURL(previous)
+          return null
+        })
+        setCurrentSeconds(0)
         setIsLoadingAudio(false)
         return
       }
 
+      let nextUrl: string | null = null
       try {
         setIsLoadingAudio(true)
         const result = await loadAudioBlobRemote(audioBlobId)
-        if (isCancelled) return
         if (!result) {
-          setAudioUrl(null)
-          setIsLoadingAudio(false)
-          return
+          throw new Error('Audio blob not found')
         }
         const decrypted = await e2ee.decryptAudioBlobFromStorage(result.blob)
-        if (isCancelled) return
-        const nextUrl = URL.createObjectURL(decrypted.audioBlob)
-        setAudioUrl(nextUrl)
-        setIsLoadingAudio(false)
+        nextUrl = URL.createObjectURL(decrypted.audioBlob)
       } catch (error) {
-        console.error('[AudioPlayerCard] Failed to load audio blob', error)
-        if (!isCancelled) {
-          setAudioUrl(null)
-          setIsLoadingAudio(false)
+        console.warn('[AudioPlayerCard] Blob load failed, trying stream fallback', error)
+        try {
+          const decrypted = await downloadAudioStream({
+            audioStreamId: audioBlobId,
+            decryptChunk: (encryptedChunk) => e2ee.decryptAudioChunkFromStorage({ encryptedChunk }),
+          })
+          nextUrl = URL.createObjectURL(decrypted.audioBlob)
+        } catch (fallbackError) {
+          console.error('[AudioPlayerCard] Failed to load audio via blob and stream', fallbackError)
         }
+      } finally {
+        if (isCancelled) {
+          if (nextUrl) URL.revokeObjectURL(nextUrl)
+          return
+        }
+        setAudioUrl((previous) => {
+          if (previous) URL.revokeObjectURL(previous)
+          return nextUrl
+        })
+        setCurrentSeconds(0)
+        setIsLoadingAudio(false)
       }
     }
 
-    load()
+    void load()
 
     return () => {
       isCancelled = true
@@ -138,14 +176,15 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
         return null
       })
     }
-  }, [audioBlobId])
+  }, [audioBlobId, e2ee, audioUrlOverride])
 
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
-    if (!audioUrl) return
+    const source = audioUrlOverride ?? audioUrl
+    if (!source) return
     audio.load()
-  }, [audioUrl])
+  }, [audioUrl, audioUrlOverride])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -153,6 +192,8 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
     const onLoadedMetadata = () => {
       const duration = Number.isFinite(audio.duration) ? audio.duration : 0
       setDurationSeconds(duration)
+      setIsAudioReady(true)
+      setIsLoadingAudio(false)
       if (pendingSeekSecondsRef.current !== null) {
         audio.currentTime = pendingSeekSecondsRef.current
         pendingSeekSecondsRef.current = null
@@ -170,7 +211,24 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
     }
     const onCanPlay = () => {
       setIsBuffering(false)
+      setIsAudioReady(true)
+      setIsLoadingAudio(false)
       void resumePlaybackIfNeeded()
+    }
+    const onCanPlayThrough = () => {
+      setIsBuffering(false)
+      setIsAudioReady(true)
+      setIsLoadingAudio(false)
+    }
+    const onStalled = () => setIsBuffering(false)
+    const onAbort = () => setIsBuffering(false)
+    const onError = () => {
+      setIsBuffering(false)
+      setIsPlaying(false)
+      setIsAudioReady(false)
+      setHasAudioError(true)
+      setIsLoadingAudio(false)
+      pendingResumeAfterSeekRef.current = false
     }
     audio.addEventListener('loadedmetadata', onLoadedMetadata)
     audio.addEventListener('timeupdate', onTimeUpdate)
@@ -181,6 +239,10 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
     audio.addEventListener('seeking', onSeeking)
     audio.addEventListener('seeked', onSeeked)
     audio.addEventListener('canplay', onCanPlay)
+    audio.addEventListener('canplaythrough', onCanPlayThrough)
+    audio.addEventListener('stalled', onStalled)
+    audio.addEventListener('abort', onAbort)
+    audio.addEventListener('error', onError)
     return () => {
       audio.removeEventListener('loadedmetadata', onLoadedMetadata)
       audio.removeEventListener('timeupdate', onTimeUpdate)
@@ -191,12 +253,16 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
       audio.removeEventListener('seeking', onSeeking)
       audio.removeEventListener('seeked', onSeeked)
       audio.removeEventListener('canplay', onCanPlay)
+      audio.removeEventListener('canplaythrough', onCanPlayThrough)
+      audio.removeEventListener('stalled', onStalled)
+      audio.removeEventListener('abort', onAbort)
+      audio.removeEventListener('error', onError)
     }
-  }, [audioUrl])
+  }, [audioUrl, audioUrlOverride])
 
   useEffect(() => {
-    if (!Number.isFinite(audioDurationSeconds || null) || !audioDurationSeconds) return
-    setDurationSeconds(audioDurationSeconds)
+    if (!Number.isFinite(audioDurationSeconds || null) || audioDurationSeconds === null) return
+    setDurationSeconds(Math.max(0, audioDurationSeconds))
   }, [audioDurationSeconds])
 
   const waveformBarWidth = 2
@@ -215,11 +281,26 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
   const canSeek = durationSeconds > 0
   const displayedSeconds = dragPreviewSeconds ?? currentSeconds
   const playedRatio = canSeek ? Math.max(0, Math.min(1, displayedSeconds / durationSeconds)) : 0
-  const timeLabel = `${formatTimeLabel(currentSeconds)}/${formatTimeLabel(durationSeconds)}`
+  const timeLabel = `${formatTimeLabel(displayedSeconds)}/${formatTimeLabel(durationSeconds)}`
+  const effectiveAudioUrl = audioUrlOverride ?? audioUrl
+  const hasPlayableAudio = Boolean(effectiveAudioUrl)
+  const showPlaySpinner = isLoadingAudio || isBuffering || (!hasAudioError && hasPlayableAudio && !isAudioReady)
+  const showEncryptingStatus = isEncrypting
+  const showDecryptingStatus = !isEncrypting && isLoadingAudio && !audioUrlOverride
+  const showStatus = showEncryptingStatus || showDecryptingStatus
+
+  useEffect(() => {
+    Animated.timing(statusOpacity, {
+      toValue: showStatus ? 1 : 0,
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start()
+  }, [showStatus, statusOpacity])
 
   return (
     <View style={styles.card}>
-      <audio ref={audioRef} src={audioUrl ?? undefined} preload="auto" />
+      <audio ref={audioRef} src={effectiveAudioUrl ?? undefined} preload="auto" />
       <View style={styles.controls}>
         <View
           style={styles.waveformWrap}
@@ -307,7 +388,7 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
             <Pressable
               onPress={() => {
                 const audio = audioRef.current
-                if (!audio || isLoadingAudio) return
+                if (!audio || showPlaySpinner || !hasPlayableAudio) return
                 if (audio.paused) {
                   void audio.play().catch(() => undefined)
                 } else {
@@ -315,10 +396,10 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
                   audio.pause()
                 }
               }}
-              disabled={isLoadingAudio}
+              disabled={showPlaySpinner || !hasPlayableAudio}
               style={({ hovered }) => [styles.playButton, hovered ? styles.playButtonHovered : undefined]}
             >
-              {isLoadingAudio || isBuffering ? (
+              {showPlaySpinner ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : isPlaying ? (
                 <PauseIcon size={20} color="#FFFFFF" />
@@ -332,9 +413,15 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
             </Pressable>
           </View>
           <View style={styles.bufferSlot}>
-            <Text style={styles.bufferHint}>{isBuffering ? 'Laden...' : ''}</Text>
+            <Text style={styles.bufferHint}>{''}</Text>
           </View>
         </View>
+        <Animated.View pointerEvents="none" style={[styles.statusRow, { opacity: statusOpacity }]}>
+          <View style={styles.statusIconWrap}>
+            {showEncryptingStatus ? <AudioEncryptedIcon size={14} color="#171717" /> : <AudioDecryptedIcon size={14} color="#171717" />}
+          </View>
+          <Text style={styles.statusText}>{showEncryptingStatus ? 'Audio wordt versleuteld' : 'Audio wordt ontsleuteld'}</Text>
+        </Animated.View>
       </View>
     </View>
   )
@@ -436,14 +523,32 @@ const styles = StyleSheet.create({
   },
   timeLabel: {
     color: colors.textSecondary,
-    fontSize: 22,
-    lineHeight: 24,
-    minWidth: 110,
+    fontSize: 12,
+    lineHeight: 16,
+    minWidth: 80,
+    letterSpacing: 0.2,
   },
   bufferHint: {
     color: colors.textSecondary,
     minWidth: 90,
     textAlign: 'right',
+  },
+  statusRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 18,
+    marginTop: -2,
+  },
+  statusIconWrap: {
+    marginTop: -2,
+  },
+  statusText: {
+    fontSize: 10,
+    lineHeight: 14,
+    color: '#171717',
   },
 })
 

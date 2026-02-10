@@ -7,5 +7,12 @@ export function createDefaultLocalAppData(): LocalAppData {
     notes: [],
     writtenReports: [],
     templates: [],
+    practiceSettings: {
+      practiceName: '',
+      website: '',
+      tintColor: '#BE0165',
+      logoDataUrl: null,
+      updatedAtUnixMs: 0,
+    },
   }
 }

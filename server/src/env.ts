@@ -53,6 +53,10 @@ function normalizeEmailList(value: string | null): string[] {
   return parsed ? [parsed] : []
 }
 
+const entraGraphTenantId = optionalString("ENTRA_GRAPH_TENANT_ID") || optionalString("ENTRA_TENANT_ID") || ""
+const entraGraphClientId = optionalString("ENTRA_GRAPH_CLIENT_ID") || optionalString("ENTRA_CLIENT_ID") || ""
+const entraGraphClientSecret = optionalString("ENTRA_GRAPH_CLIENT_SECRET") || optionalString("ENTRA_CLIENT_SECRET") || ""
+
 export const env = {
   runtimeEnvironment: optionalString("NODE_ENV") || "development",
   port: Number(optionalString("PORT") || "8787"),
@@ -65,6 +69,9 @@ export const env = {
   entraClientId: requireString("ENTRA_CLIENT_ID"),
   entraClientSecret: requireString("ENTRA_CLIENT_SECRET"),
   entraAudience: parseStringList(requireString("ENTRA_AUDIENCE")),
+  entraGraphTenantId,
+  entraGraphClientId,
+  entraGraphClientSecret,
   revenueCatSecretKey: optionalString("REVENUECAT_SECRET_KEY"),
   azureOpenAiEndpoint: optionalString("AZURE_OPENAI_ENDPOINT") || "",
   azureOpenAiKey: optionalString("AZURE_OPENAI_KEY") || "",
@@ -84,4 +91,3 @@ export const env = {
   testTranscriptionEmails: normalizeEmailList(optionalString("TEST_TRANSCRIPTION_EMAILS")),
   testTranscriptionTotalHours: optionalNumber("TEST_TRANSCRIPTION_TOTAL_HOURS") ?? 80,
 }
-

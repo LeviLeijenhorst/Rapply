@@ -1,7 +1,7 @@
 import React, { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 import { ThemeMode, colorTokens } from './colors'
-import { readStoredThemeMode, writeStoredThemeMode } from './themeStorage'
+import { writeStoredThemeMode } from './themeStorage'
 
 type ThemeModeContextValue = {
   mode: ThemeMode
@@ -25,10 +25,7 @@ function applyThemeMode(mode: ThemeMode) {
 }
 
 function getInitialThemeMode(): ThemeMode {
-  const stored = readStoredThemeMode()
-  if (stored) return stored
-  if (typeof window === 'undefined') return 'light'
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark'
+  // Force light mode by default.
   return 'light'
 }
 

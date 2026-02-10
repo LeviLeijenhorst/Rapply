@@ -395,15 +395,27 @@ export function SessieDetailScreen({
     updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null, summary: null })
 
     try {
+      console.log('[transcription][retry] audio-download-start', { sessionId, audioStreamId: session.audioBlobId })
       const decrypted = await downloadAudioStream({
         audioStreamId: session.audioBlobId,
         decryptChunk: (encryptedChunk) => e2ee.decryptAudioChunkFromStorage({ encryptedChunk }),
       })
+      console.log('[transcription][retry] audio-download-done', {
+        sessionId,
+        mimeType: decrypted.mimeType,
+        audioBytes: decrypted.audioBlob.size,
+      })
 
+      console.log('[transcription][retry] transcribe-start', { sessionId })
       const { transcript, summary } = await transcribeAudio({
         audioBlob: decrypted.audioBlob,
         mimeType: decrypted.mimeType,
         languageCode: 'nl',
+      })
+      console.log('[transcription][retry] transcript-received', {
+        sessionId,
+        transcriptLength: transcript.length,
+        hasSummary: Boolean(String(summary || '').trim()),
       })
       const cleanedSummary = String(summary || '').trim()
       if (cleanedSummary) {
@@ -414,6 +426,7 @@ export function SessieDetailScreen({
           transcriptionError: null,
         })
       } else {
+        console.log('[transcription][retry] summary-generate-start', { sessionId })
         updateSession(sessionId, {
           transcript,
           transcriptionStatus: 'generating',
@@ -426,6 +439,7 @@ export function SessieDetailScreen({
           transcriptionStatus: 'done',
           transcriptionError: null,
         })
+        console.log('[transcription][retry] summary-generate-done', { sessionId, summaryLength: generatedSummary.length })
       }
     } catch (error) {
       console.error('[SessieDetailScreen] Transcription retry failed:', error)
@@ -462,16 +476,24 @@ export function SessieDetailScreen({
         if (!session?.audioBlobId) {
           throw new Error('Geen audio beschikbaar om een transcript te maken.')
         }
+        console.log('[transcription][report] audio-download-start', { sessionId, audioStreamId: session.audioBlobId })
         const decrypted = await downloadAudioStream({
           audioStreamId: session.audioBlobId,
           decryptChunk: (encryptedChunk) => e2ee.decryptAudioChunkFromStorage({ encryptedChunk }),
         })
+        console.log('[transcription][report] audio-download-done', {
+          sessionId,
+          mimeType: decrypted.mimeType,
+          audioBytes: decrypted.audioBlob.size,
+        })
+        console.log('[transcription][report] transcribe-start', { sessionId })
         const transcription = await transcribeAudio({
           audioBlob: decrypted.audioBlob,
           mimeType: decrypted.mimeType,
           languageCode: 'nl',
         })
         transcript = String(transcription.transcript || '').trim()
+        console.log('[transcription][report] transcript-received', { sessionId, transcriptLength: transcript.length })
         if (!transcript) {
           throw new Error('No transcript returned')
         }
@@ -479,6 +501,7 @@ export function SessieDetailScreen({
       }
 
       updateSession(sessionId, { transcriptionStatus: 'generating', transcriptionError: null, summary: null })
+      console.log('[transcription][report] summary-generate-start', { sessionId })
       const summary = await generateSummary({
         transcript,
         template: templateForSummary && templateForSummary.sections.length > 0 ? templateForSummary : undefined,
@@ -488,6 +511,7 @@ export function SessieDetailScreen({
         transcriptionStatus: 'done',
         transcriptionError: null,
       })
+      console.log('[transcription][report] summary-generate-done', { sessionId, summaryLength: summary.length })
     } catch (error) {
       console.error('[SessieDetailScreen] Report generation failed', error)
       const message = error instanceof Error ? error.message : 'Unknown error'
@@ -1093,7 +1117,7 @@ export function SessieDetailScreen({
             visible={isCoacheeMenuVisible}
             style={[styles.coacheeMenu, { left: coacheeMenuPosition.left, top: coacheeMenuPosition.top, width: coacheeMenuPosition.width } as any]}
           >
-            <View>
+            <ScrollView style={styles.coacheeMenuScroll} contentContainerStyle={styles.coacheeMenuScrollContent} showsVerticalScrollIndicator={false}>
               {activeCoacheeNames.map((name, index) => {
                 const isFirst = index === 0
                 return (
@@ -1140,7 +1164,7 @@ export function SessieDetailScreen({
                   + Nieuwe coachee
                 </Text>
               </Pressable>
-            </View>
+            </ScrollView>
           </AnimatedDropdownPanel>
         </WebPortal>
       ) : null}
@@ -1226,6 +1250,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     padding: 0,
     maxHeight: 48 * 7,
+  },
+  coacheeMenuScroll: {
+    maxHeight: 48 * 7,
+  },
+  coacheeMenuScrollContent: {
+    paddingVertical: 0,
   },
   coacheeMenuRow: {
     height: 48,

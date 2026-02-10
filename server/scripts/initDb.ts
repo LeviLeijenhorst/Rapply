@@ -46,6 +46,9 @@ async function main() {
     "004_audio_blobs.sql",
     "005_e2ee.sql",
     "006_templates.sql",
+    "007_audio_duration_seconds.sql",
+    "008_audio_streams.sql",
+    "009_practice_settings.sql",
   ].map((name) =>
     path.join(sqlDir, name),
   )

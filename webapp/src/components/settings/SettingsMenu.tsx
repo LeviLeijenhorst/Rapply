@@ -6,9 +6,7 @@ import { DeelCoachScribeIcon } from '../icons/DeelCoachScribeIcon'
 import { ContactIcon } from '../icons/ContactIcon'
 import { PrivacyIcon } from '../icons/PrivacyIcon'
 import { ArchiefMenuIcon } from '../icons/ArchiefMenuIcon'
-import { SettingsIcon } from '../icons/SettingsIcon'
 import { colors } from '../../theme/colors'
-import { useThemeMode } from '../../theme/ThemeProvider'
 
 type AnchorPoint = { x: number; y: number }
 
@@ -33,8 +31,6 @@ export function SettingsMenu({
   onOpenShare,
   onOpenPrivacy,
 }: Props) {
-  const { mode, toggleMode } = useThemeMode()
-  const themeBadgeLabel = mode === 'dark' ? 'Aan' : 'Uit'
   const menuIconColor = colors.textSecondary
 
   const items = [
@@ -44,16 +40,16 @@ export function SettingsMenu({
       icon: <MijnAccountIcon color={menuIconColor} />,
       onPress: onOpenAccount,
     },
-    {
-      key: 'theme',
-      label: 'Donkere modus',
-      icon: <SettingsIcon color={menuIconColor} size={18} />,
-      badgeLabel: themeBadgeLabel,
-      onPress: () => {
-        toggleMode()
-        onClose()
-      },
-    },
+    // {
+    //   key: 'theme',
+    //   label: 'Donkere modus',
+    //   icon: <SettingsIcon color={menuIconColor} size={18} />,
+    //   badgeLabel: themeBadgeLabel,
+    //   onPress: () => {
+    //     toggleMode()
+    //     onClose()
+    //   },
+    // },
     {
       key: 'archive',
       label: 'Archief',
