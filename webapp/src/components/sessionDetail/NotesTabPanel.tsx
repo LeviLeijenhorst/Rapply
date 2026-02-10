@@ -65,6 +65,7 @@ export function NotesTabPanel({
         title: 'Notities',
         kind: 'notes',
         audioBlobId: null,
+        audioDurationSeconds: null,
         uploadFileName: null,
       })
       if (!createdId) return

@@ -50,12 +50,22 @@ type ContextValue = {
   restoreCoachee: (coacheeId: string) => void
   deleteCoachee: (coacheeId: string) => void
 
-  createSession: (values: { coacheeId: string | null; title: string; kind: SessionKind; audioBlobId: string | null; uploadFileName: string | null }) => string
+  createSession: (values: {
+    coacheeId: string | null
+    title: string
+    kind: SessionKind
+    audioBlobId: string | null
+    audioDurationSeconds: number | null
+    uploadFileName: string | null
+  }) => string
   updateSession: (
     sessionId: string,
     values: {
       coacheeId?: string | null
       title?: string
+      audioBlobId?: string | null
+      audioDurationSeconds?: number | null
+      uploadFileName?: string | null
       transcript?: string | null
       summary?: string | null
       transcriptionStatus?: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
@@ -82,6 +92,9 @@ type Props = {
   children: ReactNode
   isAuthenticated: boolean
 }
+
+const STALE_TRANSCRIPTION_TIMEOUT_MS = 20 * 60 * 1000
+const STALE_TRANSCRIPTION_ERROR_MESSAGE = 'Transcriptie duurt te lang of is onderbroken. Probeer opnieuw.'
 
 export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
   const e2ee = useOptionalE2ee()
@@ -114,6 +127,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         transcript: session.transcript ? await e2ee.decryptText(session.transcript) : null,
         summary: session.summary ? await e2ee.decryptText(session.summary) : null,
         transcriptionError: session.transcriptionError ? await e2ee.decryptText(session.transcriptionError) : null,
+        audioDurationSeconds: typeof session.audioDurationSeconds === 'number' ? session.audioDurationSeconds : null,
       })
     }
 
@@ -350,6 +364,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           title,
           kind: values.kind,
           audioBlobId: values.audioBlobId,
+          audioDurationSeconds: values.audioDurationSeconds,
           uploadFileName: values.uploadFileName,
           transcript: null,
           summary: null,
@@ -373,6 +388,8 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         if (!e2ee) return
         void (async () => {
           const encryptedTitle = typeof values.title === 'string' ? await e2ee.encryptText(values.title) : undefined
+          const encryptedUploadFileName =
+            values.uploadFileName === undefined ? undefined : values.uploadFileName === null ? null : await e2ee.encryptText(values.uploadFileName)
           const encryptedTranscript = values.transcript === undefined ? undefined : values.transcript === null ? null : await e2ee.encryptText(values.transcript)
           const encryptedSummary = values.summary === undefined ? undefined : values.summary === null ? null : await e2ee.encryptText(values.summary)
           const encryptedError =
@@ -386,6 +403,9 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
             updatedAtUnixMs,
             coacheeId: values.coacheeId,
             title: encryptedTitle,
+            audioBlobId: values.audioBlobId,
+            audioDurationSeconds: values.audioDurationSeconds,
+            uploadFileName: encryptedUploadFileName,
             transcript: encryptedTranscript,
             summary: encryptedSummary,
             transcriptionStatus: values.transcriptionStatus,
@@ -520,6 +540,27 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
     }
   }, [data, e2ee, isAppDataLoaded])
 
+  useEffect(() => {
+    const now = Date.now()
+    const staleSessions = data.sessions.filter((session) => {
+      const isBusy = session.transcriptionStatus === 'transcribing' || session.transcriptionStatus === 'generating'
+      if (!isBusy) return false
+      const hasTranscript = Boolean(session.transcript && session.transcript.trim())
+      if (session.transcriptionStatus === 'generating' && hasTranscript) return false
+      const startedAt = Math.max(session.updatedAtUnixMs || 0, session.createdAtUnixMs || 0)
+      return now - startedAt >= STALE_TRANSCRIPTION_TIMEOUT_MS
+    })
+
+    if (staleSessions.length === 0) return
+
+    for (const session of staleSessions) {
+      value.updateSession(session.id, {
+        transcriptionStatus: 'error',
+        transcriptionError: STALE_TRANSCRIPTION_ERROR_MESSAGE,
+      })
+    }
+  }, [data.sessions, value.updateSession])
+
   return <LocalAppDataContext.Provider value={value}>{children}</LocalAppDataContext.Provider>
 }
 
@@ -530,4 +571,3 @@ export function useLocalAppData() {
   }
   return value
 }
-

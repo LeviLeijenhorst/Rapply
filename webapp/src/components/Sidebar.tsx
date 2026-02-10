@@ -4,13 +4,14 @@ import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 import { colors } from '../theme/colors'
 import { CoacheesIcon } from './icons/CoacheesIcon'
 import { HelpCircleIcon } from './icons/HelpCircleIcon'
+import { MijnPraktijkIcon } from './icons/MijnPraktijkIcon'
 import { SessiesIcon } from './icons/SessiesIcon'
 import { SettingsIcon } from './icons/SettingsIcon'
 import { TemplatesIcon } from './icons/TemplatesIcon'
 import { SidebarItem } from './SidebarItem'
 import { Text } from './Text'
 
-export type SidebarItemKey = 'coachees' | 'sessies' | 'templates'
+export type SidebarItemKey = 'coachees' | 'sessies' | 'templates' | 'mijnPraktijk'
 
 type AnchorPoint = { x: number; y: number }
 
@@ -74,6 +75,13 @@ export function Sidebar({ selectedSidebarItemKey, onSelectSidebarItem, onPressCr
             isSelected={selectedSidebarItemKey === 'templates'}
             onPress={() => onSelectSidebarItem('templates')}
             icon={<TemplatesIcon color={selectedSidebarItemKey === 'templates' ? selectedColor : unselectedColor} size={24} />}
+            isCompact={isCompact}
+          />
+          <SidebarItem
+            label="Mijn praktijk"
+            isSelected={selectedSidebarItemKey === 'mijnPraktijk'}
+            onPress={() => onSelectSidebarItem('mijnPraktijk')}
+            icon={<MijnPraktijkIcon color={selectedSidebarItemKey === 'mijnPraktijk' ? selectedColor : unselectedColor} size={24} />}
             isCompact={isCompact}
           />
         </View>

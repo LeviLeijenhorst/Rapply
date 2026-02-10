@@ -1,5 +1,48 @@
 import { callSecureApi } from './secureApi'
 
+const TRANSCRIPTION_PREFLIGHT_TIMEOUT_MS = 30_000
+const TRANSCRIPTION_UPLOAD_TIMEOUT_MS = 4 * 60_000
+const TRANSCRIPTION_START_TIMEOUT_MS = 8 * 60_000
+const TRANSCRIPTION_OPERATION_TIMEOUT_MS = 15 * 60_000
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs)
+  })
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId)
+  }) as Promise<T>
+}
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+  const onExternalAbort = () => controller.abort()
+
+  if (init.signal) {
+    if (init.signal.aborted) {
+      controller.abort()
+    } else {
+      init.signal.addEventListener('abort', onExternalAbort, { once: true })
+    }
+  }
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Transcriptie duurde te lang. Probeer het opnieuw.')
+    }
+    throw error
+  } finally {
+    clearTimeout(timeoutId)
+    if (init.signal) {
+      init.signal.removeEventListener('abort', onExternalAbort)
+    }
+  }
+}
+
 async function createRandomKeyBase64(): Promise<string> {
   const array = new Uint8Array(32)
   crypto.getRandomValues(array)
@@ -126,11 +169,41 @@ async function convertWebmToWav(blob: Blob): Promise<Blob> {
   }
 }
 
-async function normalizeAudioForTranscription(params: { audioBlob: Blob; mimeType: string }) {
-  const { audioBlob, mimeType } = params
-  if (mimeType.startsWith('audio/wav')) {
-    return { audioBlob, mimeType }
+function normalizeMimeType(mimeType: string): string {
+  return String(mimeType || '')
+    .toLowerCase()
+    .split(';')[0]
+    .trim()
+}
+
+function canTranscribeCompressedMimeType(mimeType: string): boolean {
+  const normalized = normalizeMimeType(mimeType)
+  return (
+    normalized === 'audio/webm' ||
+    normalized === 'video/webm' ||
+    normalized === 'audio/mpeg' ||
+    normalized === 'audio/mp3' ||
+    normalized === 'audio/mp4' ||
+    normalized === 'audio/m4a' ||
+    normalized === 'audio/ogg' ||
+    normalized === 'audio/wav' ||
+    normalized === 'audio/x-wav'
+  )
+}
+
+async function normalizeAudioForTranscription(params: { audioBlob: Blob; mimeType: string; requiresWav: boolean }) {
+  const { audioBlob, requiresWav } = params
+  const mimeType = normalizeMimeType(params.mimeType)
+  const isWav = mimeType.startsWith('audio/wav') || mimeType.startsWith('audio/x-wav')
+  if (isWav) {
+    return { audioBlob, mimeType: 'audio/wav' }
   }
+
+  if (!requiresWav && canTranscribeCompressedMimeType(mimeType)) {
+    const outputMimeType = mimeType === 'video/webm' ? 'audio/webm' : mimeType
+    return { audioBlob, mimeType: outputMimeType }
+  }
+
   const converted = await convertWebmToWav(audioBlob)
   return { audioBlob: converted, mimeType: 'audio/wav' }
 }
@@ -140,94 +213,116 @@ export async function transcribeAudio(params: {
   mimeType: string
   languageCode?: string
 }): Promise<{ transcript: string; summary: string }> {
-  const { audioBlob, mimeType, languageCode = 'nl' } = params
+  return withTimeout(
+    (async () => {
+      const { audioBlob, mimeType, languageCode = 'nl' } = params
 
-  try {
-    const normalized = await normalizeAudioForTranscription({ audioBlob, mimeType })
-    console.log('[transcription] starting', {
-      mimeType: normalized.mimeType,
-      audioSize: normalized.audioBlob.size,
-      languageCode,
-    })
-    const keyBase64 = await createRandomKeyBase64()
-    const encryptedBlob = await encryptAudioBlob(normalized.audioBlob, keyBase64)
+      try {
+        const preflight = (await callSecureApi('/transcription/preflight', {}, { timeoutMs: TRANSCRIPTION_PREFLIGHT_TIMEOUT_MS })) as {
+          allowed?: boolean
+          operationId?: string
+          uploadToken?: string
+          uploadUrl?: string
+          uploadHeaders?: Record<string, string>
+          remainingSeconds?: number
+          planKey?: string
+          transcriptionProvider?: string
+          requiresWav?: boolean
+        }
 
-    const preflight = (await callSecureApi('/transcription/preflight', {})) as {
-      allowed?: boolean
-      operationId?: string
-      uploadToken?: string
-      uploadUrl?: string
-      uploadHeaders?: Record<string, string>
-      remainingSeconds?: number
-      planKey?: string
-    }
+        const preflightProvider = String(preflight.transcriptionProvider || '').trim().toLowerCase()
+        const requiresWav = preflight.requiresWav === undefined ? preflightProvider !== 'mistral' : Boolean(preflight.requiresWav)
+        const normalized = await normalizeAudioForTranscription({ audioBlob, mimeType, requiresWav })
+        console.log('[transcription] starting', {
+          mimeType: normalized.mimeType,
+          audioSize: normalized.audioBlob.size,
+          languageCode,
+        })
+        const keyBase64 = await createRandomKeyBase64()
+        const encryptedBlob = await encryptAudioBlob(normalized.audioBlob, keyBase64)
 
-    console.log('[transcription] preflight response', {
-      allowed: preflight.allowed,
-      hasOperationId: !!preflight.operationId,
-      hasUploadToken: !!preflight.uploadToken,
-      hasUploadUrl: !!preflight.uploadUrl,
-      remainingSeconds: preflight.remainingSeconds,
-      planKey: preflight.planKey,
-    })
+        console.log('[transcription] preflight response', {
+          allowed: preflight.allowed,
+          hasOperationId: !!preflight.operationId,
+          hasUploadToken: !!preflight.uploadToken,
+          hasUploadUrl: !!preflight.uploadUrl,
+          remainingSeconds: preflight.remainingSeconds,
+          planKey: preflight.planKey,
+          provider: preflightProvider || 'unknown',
+          requiresWav,
+        })
 
-    if (!preflight.allowed) {
-      const remainingSeconds = typeof preflight.remainingSeconds === 'number' ? preflight.remainingSeconds : null
-      throw new Error(`Not enough seconds remaining for transcription${remainingSeconds !== null ? ` (remaining ${remainingSeconds}s)` : ''}`)
-    }
+        if (!preflight.allowed) {
+          const remainingSeconds = typeof preflight.remainingSeconds === 'number' ? preflight.remainingSeconds : null
+          throw new Error(`Not enough seconds remaining for transcription${remainingSeconds !== null ? ` (remaining ${remainingSeconds}s)` : ''}`)
+        }
 
-    const operationId = String(preflight.operationId || '').trim()
-    const uploadToken = String(preflight.uploadToken || '').trim()
-    const uploadUrl = String(preflight.uploadUrl || '').trim()
-    const uploadHeaders = preflight.uploadHeaders || {}
+        const operationId = String(preflight.operationId || '').trim()
+        const uploadToken = String(preflight.uploadToken || '').trim()
+        const uploadUrl = String(preflight.uploadUrl || '').trim()
+        const uploadHeaders = preflight.uploadHeaders || {}
 
-    if (!operationId || !uploadToken || !uploadUrl) {
-      throw new Error('Transcription preflight failed')
-    }
+        if (!operationId || !uploadToken || !uploadUrl) {
+          throw new Error('Transcription preflight failed')
+        }
 
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: {
-        ...uploadHeaders,
-        'Content-Type': 'application/octet-stream',
-      },
-      body: encryptedBlob,
-    })
+        const uploadResponse = await fetchWithTimeout(
+          uploadUrl,
+          {
+            method: 'PUT',
+            headers: {
+              ...uploadHeaders,
+              'Content-Type': 'application/octet-stream',
+            },
+            body: encryptedBlob,
+          },
+          TRANSCRIPTION_UPLOAD_TIMEOUT_MS,
+        )
 
-    console.log('[transcription] upload response', { status: uploadResponse.status })
+        console.log('[transcription] upload response', { status: uploadResponse.status })
 
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text()
-      throw new Error(`Upload failed: ${uploadResponse.status} ${errorText}`)
-    }
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text()
+          throw new Error(`Upload failed: ${uploadResponse.status} ${errorText}`)
+        }
 
-    const result = (await callSecureApi('/transcription/start', {
-      operationId,
-      uploadToken,
-      keyBase64,
-      language_code: languageCode,
-      mime_type: normalized.mimeType,
-    })) as {
-      transcript?: string
-      text?: string
-      summary?: string
-    }
+        const result = (await callSecureApi(
+          '/transcription/start',
+          {
+            operationId,
+            uploadToken,
+            keyBase64,
+            language_code: languageCode,
+            mime_type: normalized.mimeType,
+            include_summary: false,
+            prefer_provider: preflightProvider === 'mistral' ? 'mistral' : undefined,
+          },
+          { timeoutMs: TRANSCRIPTION_START_TIMEOUT_MS },
+        )) as {
+          transcript?: string
+          text?: string
+          summary?: string
+        }
 
-    console.log('[transcription] transcription response', {
-      hasTranscript: !!result.transcript || !!result.text,
-      hasSummary: !!result.summary,
-    })
+        console.log('[transcription] transcription response', {
+          hasTranscript: !!result.transcript || !!result.text,
+          hasSummary: !!result.summary,
+        })
 
-    const transcript = String(result.text || result.transcript || '')
-    const summary = String(result.summary || '')
+        const transcript = String(result.text || result.transcript || '')
+        const summary = String(result.summary || '')
 
-    if (!transcript.trim()) {
-      throw new Error('No transcript returned')
-    }
+        if (!transcript.trim()) {
+          throw new Error('No transcript returned')
+        }
 
-    return { transcript, summary }
-  } catch (error) {
-    console.error('[transcription] failed', error)
-    throw error
-  }
+        return { transcript, summary }
+      } catch (error) {
+        console.error('[transcription] failed', error)
+        throw error
+      }
+    })(),
+    TRANSCRIPTION_OPERATION_TIMEOUT_MS,
+    'Transcriptie duurde te lang. Probeer het opnieuw.',
+  )
 }

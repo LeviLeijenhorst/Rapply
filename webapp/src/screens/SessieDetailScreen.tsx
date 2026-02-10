@@ -27,7 +27,7 @@ import { completeChat, LocalChatMessage } from '../services/chat'
 import { generateSummary } from '../services/summary'
 import { transcribeAudio } from '../services/transcription'
 import { useE2ee } from '../e2ee/E2eeProvider'
-import { loadAudioBlobRemote } from '../services/audioBlobs'
+import { downloadAudioStream } from '../audio/downloadAudioStream'
 import { ChatStateMessage, createChatMessageId } from '../utils/chatState'
 import {
   clearQuickQuestionsChatForSession,
@@ -395,11 +395,10 @@ export function SessieDetailScreen({
     updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null, summary: null })
 
     try {
-      const audioData = await loadAudioBlobRemote(session.audioBlobId)
-      if (!audioData) {
-        throw new Error('Failed to load audio')
-      }
-      const decrypted = await e2ee.decryptAudioBlobFromStorage(audioData.blob)
+      const decrypted = await downloadAudioStream({
+        audioStreamId: session.audioBlobId,
+        decryptChunk: (encryptedChunk) => e2ee.decryptAudioChunkFromStorage({ encryptedChunk }),
+      })
 
       const { transcript, summary } = await transcribeAudio({
         audioBlob: decrypted.audioBlob,
@@ -463,11 +462,10 @@ export function SessieDetailScreen({
         if (!session?.audioBlobId) {
           throw new Error('Geen audio beschikbaar om een transcript te maken.')
         }
-        const audioData = await loadAudioBlobRemote(session.audioBlobId)
-        if (!audioData) {
-          throw new Error('Failed to load audio')
-        }
-        const decrypted = await e2ee.decryptAudioBlobFromStorage(audioData.blob)
+        const decrypted = await downloadAudioStream({
+          audioStreamId: session.audioBlobId,
+          decryptChunk: (encryptedChunk) => e2ee.decryptAudioChunkFromStorage({ encryptedChunk }),
+        })
         const transcription = await transcribeAudio({
           audioBlob: decrypted.audioBlob,
           mimeType: decrypted.mimeType,
@@ -565,7 +563,7 @@ export function SessieDetailScreen({
           <ScrollView style={styles.mobileScroll} contentContainerStyle={styles.mobileScrollContent} showsVerticalScrollIndicator={false}>
             <>
               {/* Audio */}
-              <AudioPlayerCard ref={audioPlayerRef} audioBlobId={session?.audioBlobId ?? null} />
+              <AudioPlayerCard ref={audioPlayerRef} audioBlobId={session?.audioBlobId ?? null} audioDurationSeconds={session?.audioDurationSeconds ?? null} />
               {/* Report */}
               <View style={styles.reportCard}>
                   <ReportPanel
@@ -632,10 +630,11 @@ export function SessieDetailScreen({
                                 role={message.role}
                                 text={message.text}
                                 onTranscriptMentionPress={handleTranscriptMentionPress}
+                                exportTitle={editableSessionTitle}
                               />
                             ))}
                             {isChatSending ? (
-                              <ChatMessage role="assistant" text="" isLoading onTranscriptMentionPress={handleTranscriptMentionPress} />
+                              <ChatMessage role="assistant" text="" isLoading onTranscriptMentionPress={handleTranscriptMentionPress} exportTitle={editableSessionTitle} />
                             ) : null}
                           </>
                         )}
@@ -847,7 +846,7 @@ export function SessieDetailScreen({
             ) : (
               <ScrollView style={styles.leftScroll} contentContainerStyle={styles.leftScrollContent} showsVerticalScrollIndicator={false}>
                 {/* Audio card */}
-                <AudioPlayerCard ref={audioPlayerRef} audioBlobId={session?.audioBlobId ?? null} />
+                <AudioPlayerCard ref={audioPlayerRef} audioBlobId={session?.audioBlobId ?? null} audioDurationSeconds={session?.audioDurationSeconds ?? null} />
                 {/* Report card */}
                 <View style={styles.reportCard}>
                   <ReportPanel
@@ -918,10 +917,11 @@ export function SessieDetailScreen({
                                 role={message.role}
                                 text={message.text}
                                 onTranscriptMentionPress={handleTranscriptMentionPress}
+                                exportTitle={editableSessionTitle}
                               />
                             ))}
                             {isChatSending ? (
-                              <ChatMessage role="assistant" text="" isLoading onTranscriptMentionPress={handleTranscriptMentionPress} />
+                              <ChatMessage role="assistant" text="" isLoading onTranscriptMentionPress={handleTranscriptMentionPress} exportTitle={editableSessionTitle} />
                             ) : null}
                           </>
                         )}
@@ -1061,10 +1061,11 @@ export function SessieDetailScreen({
                           role={message.role}
                           text={message.text}
                           onTranscriptMentionPress={handleTranscriptMentionPress}
+                          exportTitle={editableSessionTitle}
                         />
                       ))}
                       {isChatSending ? (
-                        <ChatMessage role="assistant" text="" isLoading onTranscriptMentionPress={handleTranscriptMentionPress} />
+                        <ChatMessage role="assistant" text="" isLoading onTranscriptMentionPress={handleTranscriptMentionPress} exportTitle={editableSessionTitle} />
                       ) : null}
                     </>
                   )}
@@ -1490,4 +1491,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 })
-

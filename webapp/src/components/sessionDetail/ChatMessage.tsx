@@ -13,6 +13,7 @@ type Props = {
   text: string
   isLoading?: boolean
   onTranscriptMentionPress?: (seconds: number) => void
+  exportTitle?: string
 }
 
 type ChatLine = {
@@ -249,7 +250,7 @@ function getFittedTitleFontSize(document: any, title: string, maxWidth: number, 
   return Math.max(minSize, Math.floor(baseSize * scale))
 }
 
-async function convertSvgToPngDataUrl(svgText: string, width: number, height: number) {
+async function convertSvgToPngDataUrl(svgText: string, width: number, height: number, scale = 1) {
   if (typeof window === 'undefined' || typeof document === 'undefined') return null
   return new Promise<string | null>((resolve) => {
     const image = new Image()
@@ -257,14 +258,17 @@ async function convertSvgToPngDataUrl(svgText: string, width: number, height: nu
     const url = URL.createObjectURL(svgBlob)
     image.onload = () => {
       const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
+      canvas.width = Math.max(1, Math.round(width * scale))
+      canvas.height = Math.max(1, Math.round(height * scale))
       const context = canvas.getContext('2d')
       if (!context) {
         URL.revokeObjectURL(url)
         resolve(null)
         return
       }
+      context.setTransform(scale, 0, 0, scale, 0, 0)
+      context.imageSmoothingEnabled = true
+      context.imageSmoothingQuality = 'high'
       context.clearRect(0, 0, width, height)
       context.drawImage(image, 0, 0, width, height)
       URL.revokeObjectURL(url)
@@ -278,7 +282,7 @@ async function convertSvgToPngDataUrl(svgText: string, width: number, height: nu
   })
 }
 
-async function exportMessageToPdf(messageText: string) {
+async function exportMessageToPdf(messageText: string, reportTitle?: string) {
   if (typeof window === 'undefined') return
   const { default: jsPDF } = await import('jspdf')
 
@@ -297,8 +301,8 @@ async function exportMessageToPdf(messageText: string) {
   const lineHeight = 16
   const headerFontSize = 12
   const textFontSize = 11
-  const titleFontSize = 20
-  const titleMinFontSize = 14
+  const subtitleFontSize = 12
+  const subtitleMinFontSize = 10
   const dateFontSize = 10
   const footerFontSize = 9
 
@@ -310,7 +314,8 @@ async function exportMessageToPdf(messageText: string) {
 
   const lines = buildDocumentLines(messageText)
   const headerLineIndexes = lines.flatMap((line, index) => (line.kind === 'header' ? [index] : []))
-  const title = lines[headerLineIndexes[0]]?.segments.map((segment) => segment.text).join('').trim() || 'Verslag'
+  const fallbackTitle = lines[headerLineIndexes[0]]?.segments.map((segment) => segment.text).join('').trim()
+  const title = String(reportTitle || '').trim() || fallbackTitle || 'CoachScribe export'
   const dateLabel = new Date().toLocaleDateString('nl-NL', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/-/g, '/')
 
   const firstHeaderIndex = headerLineIndexes[0] ?? -1
@@ -335,53 +340,40 @@ async function exportMessageToPdf(messageText: string) {
         </g>
       </svg>
     `
-  const logoDataUrl = await convertSvgToPngDataUrl(logoSvg, 159, 24)
+  const logoDataUrl = await convertSvgToPngDataUrl(logoSvg, 159, 24, 4)
 
   const ensureSpace = (needed: number) => {
     if (cursorY + needed <= footerLineY - 12) return
     doc.addPage()
     cursorY = marginTop
-    drawPageHeader(false)
+    drawPageHeader()
   }
 
   const drawLogo = () => {
     if (!logoDataUrl) return
     const logoWidth = 140
-    const logoHeight = 24
+    const logoHeight = (logoWidth * 24) / 159
     const logoX = pageWidth - marginRight - logoWidth
-    const logoY = marginTop - 18
+    const logoY = marginTop - logoHeight
     doc.addImage(logoDataUrl, 'PNG', logoX, logoY, logoWidth, logoHeight)
   }
 
-  const drawTopRule = (y: number) => {
-    doc.setDrawColor(brandColor.r, brandColor.g, brandColor.b)
-    doc.setLineWidth(1)
-    doc.line(marginLeft, y, pageWidth - marginRight, y)
-  }
-
-  const drawPageHeader = (includeTitle: boolean) => {
+  const drawPageHeader = () => {
     drawLogo()
-    if (includeTitle) {
-      const fittedTitleFontSize = getFittedTitleFontSize(doc, title, maxWidth, titleFontSize, titleMinFontSize)
-      doc.setFont('Helvetica', 'bold')
-      doc.setFontSize(fittedTitleFontSize)
-      doc.setTextColor(brandColor.r, brandColor.g, brandColor.b)
-      doc.text(title, contentX, cursorY)
-      cursorY += fittedTitleFontSize - 2
-      doc.setFont('Helvetica', 'normal')
-      doc.setFontSize(dateFontSize)
-      doc.setTextColor(textColor.r, textColor.g, textColor.b)
-      doc.text(dateLabel, contentX, cursorY)
-      cursorY += 14
-      drawTopRule(cursorY)
-      cursorY += 18
-      return
-    }
-    drawTopRule(cursorY + 6)
+    const fittedSubtitleFontSize = getFittedTitleFontSize(doc, title, maxWidth, subtitleFontSize, subtitleMinFontSize)
+    doc.setFont('Helvetica', 'normal')
+    doc.setFontSize(fittedSubtitleFontSize)
+    doc.setTextColor(brandColor.r, brandColor.g, brandColor.b)
+    doc.text(title, contentX, cursorY)
+    cursorY += fittedSubtitleFontSize + 6
+    doc.setFont('Helvetica', 'normal')
+    doc.setFontSize(dateFontSize)
+    doc.setTextColor(textColor.r, textColor.g, textColor.b)
+    doc.text(dateLabel, contentX, cursorY)
     cursorY += 18
   }
 
-  drawPageHeader(true)
+  drawPageHeader()
 
   bodyLines.forEach((line) => {
     if (line.kind === 'empty') {
@@ -419,38 +411,17 @@ async function exportMessageToPdf(messageText: string) {
     }
 
     if (line.kind === 'bullet') {
-      const bulletSymbol = '•'
-      const bulletIndent = 16
-      const bulletWidth = doc.getTextWidth(`${bulletSymbol} `)
-      const availableWidth = maxWidth - bulletIndent
-
-      const wrapped = wrapSegmentsToLines(doc, line.segments, availableWidth, textFontSize)
-      wrapped.forEach((segments, index) => {
+      const wrapped = wrapSegmentsToLines(doc, [{ text: '\u2022 ', isBold: false }, ...line.segments], maxWidth, textFontSize)
+      wrapped.forEach((segments) => {
         ensureSpace(lineHeight)
-        if (index === 0) {
-          doc.setFont('Helvetica', 'normal')
+        let x = contentX
+        segments.forEach((seg) => {
+          doc.setFont('Helvetica', seg.isBold ? 'bold' : 'normal')
           doc.setFontSize(textFontSize)
           doc.setTextColor(textColor.r, textColor.g, textColor.b)
-          doc.text(bulletSymbol, contentX, cursorY)
-
-          let x = contentX + bulletWidth
-          segments.forEach((seg) => {
-            doc.setFont('Helvetica', seg.isBold ? 'bold' : 'normal')
-            doc.setFontSize(textFontSize)
-            doc.setTextColor(textColor.r, textColor.g, textColor.b)
-            doc.text(seg.text, x, cursorY)
-            x += doc.getTextWidth(seg.text)
-          })
-        } else {
-          let x = contentX + bulletIndent
-          segments.forEach((seg) => {
-            doc.setFont('Helvetica', seg.isBold ? 'bold' : 'normal')
-            doc.setFontSize(textFontSize)
-            doc.setTextColor(textColor.r, textColor.g, textColor.b)
-            doc.text(seg.text, x, cursorY)
-            x += doc.getTextWidth(seg.text)
-          })
-        }
+          doc.text(seg.text, x, cursorY)
+          x += doc.getTextWidth(seg.text)
+        })
         cursorY += lineHeight
       })
       return
@@ -487,7 +458,7 @@ function parseChatLine(line: string): ChatLine {
   return { kind: 'text', text: line }
 }
 
-export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress }: Props) {
+export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, exportTitle }: Props) {
   const isAssistant = role === 'assistant'
   const [showCopyNotification, setShowCopyNotification] = useState(false)
   const exportableText = extractExportableText(text)
@@ -559,7 +530,7 @@ export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress }:
 
                 {isExportable ? (
                   <Pressable
-                    onPress={() => exportMessageToPdf(exportableText ?? displayText)}
+                    onPress={() => exportMessageToPdf(exportableText ?? displayText, exportTitle)}
                     style={({ hovered }) => [styles.exportButton, hovered ? styles.exportButtonHovered : undefined]}
                   >
                     <Text isSemibold style={styles.exportButtonText}>
@@ -622,3 +593,4 @@ const styles = StyleSheet.create({
     color: colors.selected,
   },
 })
+

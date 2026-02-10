@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 type RecorderStatus = 'idle' | 'requesting' | 'recording' | 'paused' | 'stopping' | 'ready' | 'error'
+const recordingChunkDurationMilliseconds = 2000
+type ChunkHandler = (chunk: { blob: Blob; durationSeconds: number }) => void
 
 function formatUnknownError(error: unknown) {
   if (error instanceof Error) return error.message
@@ -27,23 +29,30 @@ function chooseMimeType() {
   return ''
 }
 
-export function useBrowserAudioRecorder() {
+export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blob; durationSeconds: number }) => void }) {
   const [status, setStatus] = useState<RecorderStatus>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null)
   const [recordedMimeType, setRecordedMimeType] = useState<string | null>(null)
+  const [activeMimeType, setActiveMimeType] = useState<string | null>(null)
+  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([])
+  const [recordedChunkDurationsSeconds, setRecordedChunkDurationsSeconds] = useState<number[]>([])
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null)
 
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<BlobPart[]>([])
+  const recordedChunksRef = useRef<Blob[]>([])
+  const recordedChunkDurationsSecondsRef = useRef<number[]>([])
   const timerRef = useRef<number | null>(null)
-  const startTimeMsRef = useRef<number | null>(null)
-  const elapsedBeforePauseMsRef = useRef<number>(0)
+  const startTimeMillisecondsRef = useRef<number | null>(null)
+  const elapsedBeforePauseMillisecondsRef = useRef<number>(0)
+  const lastChunkTimestampMillisecondsRef = useRef<number | null>(null)
+  const lastChunkDurationSecondsRef = useRef<number>(recordingChunkDurationMilliseconds / 1000)
   const lastMimeTypeRef = useRef<string>('audio/webm')
   const stopReasonRef = useRef<'none' | 'pause' | 'stop'>('none')
   const ignoreNextStopRef = useRef(false)
+  const onChunkRef = useRef<ChunkHandler | null>(null)
 
   const isSupported = useMemo(() => {
     if (typeof window === 'undefined') return false
@@ -52,6 +61,10 @@ export function useBrowserAudioRecorder() {
   }, [])
 
   const chosenMimeType = useMemo(() => chooseMimeType(), [])
+
+  useEffect(() => {
+    onChunkRef.current = params?.onChunk ?? null
+  }, [params?.onChunk])
 
   function stopTimer() {
     if (timerRef.current) {
@@ -63,10 +76,10 @@ export function useBrowserAudioRecorder() {
   function startTimer() {
     stopTimer()
     timerRef.current = window.setInterval(() => {
-      const startTimeMs = startTimeMsRef.current
-      if (!startTimeMs) return
-      const elapsedMs = elapsedBeforePauseMsRef.current + (performance.now() - startTimeMs)
-      setElapsedSeconds(Math.floor(elapsedMs / 1000))
+      const startTimeMilliseconds = startTimeMillisecondsRef.current
+      if (!startTimeMilliseconds) return
+      const elapsedMilliseconds = elapsedBeforePauseMillisecondsRef.current + (performance.now() - startTimeMilliseconds)
+      setElapsedSeconds(Math.floor(elapsedMilliseconds / 1000))
     }, 250)
   }
 
@@ -106,10 +119,15 @@ export function useBrowserAudioRecorder() {
     setErrorMessage(null)
     setRecordedBlob(null)
     setRecordedMimeType(null)
+    setActiveMimeType(null)
+    setRecordedChunks([])
+    setRecordedChunkDurationsSeconds([])
     setElapsedSeconds(0)
-    elapsedBeforePauseMsRef.current = 0
-    startTimeMsRef.current = null
-    chunksRef.current = []
+    elapsedBeforePauseMillisecondsRef.current = 0
+    startTimeMillisecondsRef.current = null
+    lastChunkTimestampMillisecondsRef.current = null
+    recordedChunksRef.current = []
+    recordedChunkDurationsSecondsRef.current = []
     lastMimeTypeRef.current = 'audio/webm'
   }
 
@@ -117,13 +135,18 @@ export function useBrowserAudioRecorder() {
     setErrorMessage(null)
     setRecordedBlob(null)
     setRecordedMimeType(null)
+    setActiveMimeType(null)
+    setRecordedChunks([])
+    setRecordedChunkDurationsSeconds([])
   }
 
   function buildRecordedBlob() {
     const mimeType = lastMimeTypeRef.current || chosenMimeType || 'audio/webm'
-    const blob = new Blob(chunksRef.current, { type: mimeType })
+    const blob = new Blob(recordedChunksRef.current, { type: mimeType })
     setRecordedBlob(blob)
     setRecordedMimeType(mimeType)
+    setRecordedChunks([...recordedChunksRef.current])
+    setRecordedChunkDurationsSeconds([...recordedChunkDurationsSecondsRef.current])
     setStatus('ready')
   }
 
@@ -157,8 +180,18 @@ export function useBrowserAudioRecorder() {
       lastMimeTypeRef.current = recorder.mimeType || chosenMimeType || 'audio/webm'
 
       recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          chunksRef.current.push(event.data)
+        if (!event.data || event.data.size <= 0) return
+        recordedChunksRef.current.push(event.data)
+        const nowMilliseconds = performance.now()
+        const lastTimestampMilliseconds = lastChunkTimestampMillisecondsRef.current ?? nowMilliseconds
+        const elapsedSeconds = (nowMilliseconds - lastTimestampMilliseconds) / 1000
+        const resolvedDurationSeconds = Math.max(0.1, elapsedSeconds)
+        lastChunkTimestampMillisecondsRef.current = nowMilliseconds
+        recordedChunkDurationsSecondsRef.current.push(resolvedDurationSeconds)
+        if (onChunkRef.current) {
+          Promise.resolve(onChunkRef.current({ blob: event.data, durationSeconds: resolvedDurationSeconds })).catch((error) => {
+            console.error('[useBrowserAudioRecorder] Failed to handle chunk', error)
+          })
         }
       }
 
@@ -173,7 +206,10 @@ export function useBrowserAudioRecorder() {
       }
 
       recorder.onstart = () => {
-        startTimeMsRef.current = performance.now()
+        startTimeMillisecondsRef.current = performance.now()
+        lastChunkTimestampMillisecondsRef.current = performance.now()
+        lastChunkDurationSecondsRef.current = recordingChunkDurationMilliseconds / 1000
+        setActiveMimeType(lastMimeTypeRef.current || chosenMimeType || 'audio/webm')
         startTimer()
         setStatus('recording')
       }
@@ -201,7 +237,7 @@ export function useBrowserAudioRecorder() {
         buildRecordedBlob()
       }
 
-      recorder.start()
+      recorder.start(recordingChunkDurationMilliseconds)
     } catch (error) {
       console.error('[useBrowserAudioRecorder] Failed to start', error)
       setStatus('error')
@@ -219,10 +255,10 @@ export function useBrowserAudioRecorder() {
     const recorder = mediaRecorderRef.current
     if (!recorder) return
     if (recorder.state !== 'recording') return
-    const startTimeMs = startTimeMsRef.current
-    if (startTimeMs) {
-      elapsedBeforePauseMsRef.current = elapsedBeforePauseMsRef.current + (performance.now() - startTimeMs)
-      startTimeMsRef.current = null
+    const startTimeMilliseconds = startTimeMillisecondsRef.current
+    if (startTimeMilliseconds) {
+      elapsedBeforePauseMillisecondsRef.current = elapsedBeforePauseMillisecondsRef.current + (performance.now() - startTimeMilliseconds)
+      startTimeMillisecondsRef.current = null
     }
     stopTimer()
     setStatus('paused')
@@ -266,9 +302,11 @@ export function useBrowserAudioRecorder() {
       } catch {}
     }
     mediaRecorderRef.current = null
-    chunksRef.current = []
-    startTimeMsRef.current = null
-    elapsedBeforePauseMsRef.current = 0
+    recordedChunksRef.current = []
+    recordedChunkDurationsSecondsRef.current = []
+    startTimeMillisecondsRef.current = null
+    elapsedBeforePauseMillisecondsRef.current = 0
+    lastChunkTimestampMillisecondsRef.current = null
     stopReasonRef.current = 'none'
     lastMimeTypeRef.current = 'audio/webm'
     setElapsedSeconds(0)
@@ -297,6 +335,9 @@ export function useBrowserAudioRecorder() {
     elapsedSeconds,
     recordedBlob,
     recordedMimeType,
+    activeMimeType,
+    recordedChunks,
+    recordedChunkDurationsSeconds,
     mediaStream,
     start,
     stop,

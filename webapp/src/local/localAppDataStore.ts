@@ -80,12 +80,16 @@ export function updateSession(
   values: {
     coacheeId?: string | null
     title?: string
+    audioBlobId?: string | null
+    audioDurationSeconds?: number | null
+    uploadFileName?: string | null
     transcript?: string | null
     summary?: string | null
     transcriptionStatus?: Session['transcriptionStatus']
     transcriptionError?: string | null
   }
 ): LocalAppData {
+  const now = Date.now()
   return {
     ...data,
     sessions: data.sessions.map((s) => {
@@ -94,10 +98,14 @@ export function updateSession(
         ...s,
         ...(values.coacheeId !== undefined ? { coacheeId: values.coacheeId } : {}),
         ...(values.title !== undefined ? { title: values.title.trim() } : {}),
+        ...(values.audioBlobId !== undefined ? { audioBlobId: values.audioBlobId } : {}),
+        ...(values.audioDurationSeconds !== undefined ? { audioDurationSeconds: values.audioDurationSeconds } : {}),
+        ...(values.uploadFileName !== undefined ? { uploadFileName: values.uploadFileName } : {}),
         ...(values.transcript !== undefined ? { transcript: values.transcript } : {}),
         ...(values.summary !== undefined ? { summary: values.summary } : {}),
         ...(values.transcriptionStatus !== undefined ? { transcriptionStatus: values.transcriptionStatus } : {}),
         ...(values.transcriptionError !== undefined ? { transcriptionError: values.transcriptionError } : {}),
+        updatedAtUnixMs: now,
       }
     }),
   }

@@ -54,6 +54,7 @@ export function GeschrevenVerslagScreen({ onBack, onOpenSession, onOpenNewCoache
       title: sessionTitle,
       kind: 'written',
       audioBlobId: null,
+      audioDurationSeconds: null,
       uploadFileName: null,
     })
     if (!createdSessionId) return

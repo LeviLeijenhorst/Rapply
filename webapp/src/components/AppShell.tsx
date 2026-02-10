@@ -15,19 +15,22 @@ import { SessiesScreen } from '../screens/SessiesScreen'
 import { NewSessionModal } from './newSession/NewSessionModal'
 import { GeschrevenVerslagScreen } from '../screens/GeschrevenVerslagScreen'
 import { TemplatesScreen } from '../screens/TemplatesScreen'
+import { MijnPraktijkScreen } from '../screens/MijnPraktijkScreen'
 import { HelpMenu } from './help/HelpMenu'
+import { FeedbackModal } from './help/FeedbackModal'
 import { SettingsMenu } from './settings/SettingsMenu'
 import { MyAccountModal } from './settings/MyAccountModal'
 import { MySubscriptionModal } from './settings/MySubscriptionModal'
 import { ArchiefScreen } from '../screens/ArchiefScreen'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
-import { config } from '../config'
 import { CoacheeUpsertModal } from './coachees/CoacheeUpsertModal'
 import { EmptyPageMessage } from './EmptyPageMessage'
 import { AppLoadingScreen } from './AppLoadingScreen'
 import { PrivacyPolicyModal } from './settings/PrivacyPolicyModal'
 import { privacyPolicyNlText } from '../content/privacyPolicyNl'
 import { useBillingUsage } from '../hooks/useBillingUsage'
+import { useAudioUploadQueue } from '../audio/useAudioUploadQueue'
+import { callSecureApi } from '../services/secureApi'
 
 type AnchorPoint = { x: number; y: number }
 type OverlayScreenKey = 'archief'
@@ -37,6 +40,7 @@ type RouteState =
   | { kind: 'coachees' }
   | { kind: 'coachee'; coacheeId: string }
   | { kind: 'templates' }
+  | { kind: 'mijn-praktijk' }
   | { kind: 'geschrevenVerslag' }
   | { kind: 'archief' }
 
@@ -61,6 +65,7 @@ function parseRouteFromPath(pathname: string): RouteState {
     return { kind: 'sessies' }
   }
   if (parts[0] === 'templates') return { kind: 'templates' }
+  if (parts[0] === 'mijn-praktijk') return { kind: 'mijn-praktijk' }
   if (parts[0] === 'geschreven-verslag') return { kind: 'geschrevenVerslag' }
   if (parts[0] === 'archief') return { kind: 'archief' }
   return { kind: 'coachees' }
@@ -72,6 +77,7 @@ function buildPathFromRoute(route: RouteState): string {
   if (route.kind === 'coachees') return '/coachees'
   if (route.kind === 'coachee') return `/coachees/${stripPrefix(route.coacheeId, 'coachee')}`
   if (route.kind === 'templates') return '/templates'
+  if (route.kind === 'mijn-praktijk') return '/mijn-praktijk'
   if (route.kind === 'geschrevenVerslag') return '/geschreven-verslag'
   return '/archief'
 }
@@ -86,6 +92,7 @@ export function AppShell({ onLogout }: Props) {
   const isSidebarCompact = width < 700
   const { data, createCoachee, isAppDataLoaded } = useLocalAppData()
   const { usedMinutes, totalMinutes } = useBillingUsage()
+  useAudioUploadQueue(true)
 
   const [selectedSidebarItemKey, setSelectedSidebarItemKey] = useState<SidebarItemKey>('coachees')
   const [selectedSessieId, setSelectedSessieId] = useState<string | null>(null)
@@ -100,12 +107,14 @@ export function AppShell({ onLogout }: Props) {
   const [helpMenuAnchorPoint, setHelpMenuAnchorPoint] = useState<AnchorPoint | null>(null)
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false)
   const [settingsMenuAnchorPoint, setSettingsMenuAnchorPoint] = useState<AnchorPoint | null>(null)
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
 
   const [isMyAccountModalOpen, setIsMyAccountModalOpen] = useState(false)
   const [isMySubscriptionModalOpen, setIsMySubscriptionModalOpen] = useState(false)
   const [isCoacheeModalOpen, setIsCoacheeModalOpen] = useState(false)
   const [isPrivacyPolicyModalOpen, setIsPrivacyPolicyModalOpen] = useState(false)
   const [previousRoute, setPreviousRoute] = useState<RouteState | null>(null)
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
 
   const applyRoute = useCallback(
     (route: RouteState) => {
@@ -146,6 +155,13 @@ export function AppShell({ onLogout }: Props) {
       }
       if (route.kind === 'templates') {
         setSelectedSidebarItemKey('templates')
+        setSelectedCoacheeId(null)
+        setSelectedSessieId(null)
+        setSessionOriginRoute(null)
+        return
+      }
+      if (route.kind === 'mijn-praktijk') {
+        setSelectedSidebarItemKey('mijnPraktijk')
         setSelectedCoacheeId(null)
         setSelectedSessieId(null)
         setSessionOriginRoute(null)
@@ -298,6 +314,7 @@ export function AppShell({ onLogout }: Props) {
       return selectedCoacheeId ? { kind: 'coachee', coacheeId: selectedCoacheeId } : { kind: 'coachees' }
     }
     if (selectedSidebarItemKey === 'templates') return { kind: 'templates' }
+    if (selectedSidebarItemKey === 'mijnPraktijk') return { kind: 'mijn-praktijk' }
     return { kind: 'sessies' }
   }, [isGeschrevenVerslagOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
 
@@ -330,6 +347,54 @@ export function AppShell({ onLogout }: Props) {
   }, [data.coachees, data.sessions, navigateTo, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey, sessionOriginRoute])
 
   const hasBreadcrumbs = breadcrumbItems.length >= 2
+
+  const deleteAccount = useCallback(async () => {
+    if (isDeletingAccount) return
+
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm('Weet je zeker dat je je account wilt verwijderen?')
+      if (!confirmed) return
+    }
+
+    try {
+      setIsDeletingAccount(true)
+      await callSecureApi<{ ok: boolean }>('/account/delete', {})
+      setIsMyAccountModalOpen(false)
+      onLogout()
+    } catch (error) {
+      console.error('[AppShell] Account verwijderen mislukt', error)
+      if (typeof window !== 'undefined') {
+        window.alert('Verwijderen mislukt. Probeer het alsjeblieft later opnieuw.')
+      }
+    } finally {
+      setIsDeletingAccount(false)
+    }
+  }, [isDeletingAccount, onLogout])
+
+  const shareCoachscribe = useCallback(async () => {
+    const shareUrl = 'https://www.coachscribe.nl'
+    const shareText = 'Bekijk CoachScribe op www.coachscribe.nl'
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        await navigator.share({
+          title: 'CoachScribe',
+          text: shareText,
+          url: shareUrl,
+        })
+        return
+      }
+
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl)
+      }
+
+      if (typeof window !== 'undefined') {
+        window.alert('Delen is niet beschikbaar op dit apparaat. Link gekopieerd: www.coachscribe.nl')
+      }
+    } catch (error) {
+      console.error('[AppShell] Delen mislukt', error)
+    }
+  }, [])
 
   function renderMainContent() {
     if (!isAppDataLoaded) {
@@ -441,6 +506,9 @@ export function AppShell({ onLogout }: Props) {
     if (selectedSidebarItemKey === 'templates') {
       return <TemplatesScreen />
     }
+    if (selectedSidebarItemKey === 'mijnPraktijk') {
+      return <MijnPraktijkScreen />
+    }
     return <Text style={styles.mainContentText}>{selectedSidebarItemKey}</Text>
   }
 
@@ -475,6 +543,8 @@ export function AppShell({ onLogout }: Props) {
                     ? { kind: 'coachees' }
                     : sidebarItemKey === 'templates'
                       ? { kind: 'templates' }
+                      : sidebarItemKey === 'mijnPraktijk'
+                        ? { kind: 'mijn-praktijk' }
                       : { kind: 'sessies' },
                 )
                 setIsHelpMenuOpen(false)
@@ -512,6 +582,7 @@ export function AppShell({ onLogout }: Props) {
             onOpenFeedback={() => {
               setIsHelpMenuOpen(false)
               setHelpMenuAnchorPoint(null)
+              setIsFeedbackModalOpen(true)
             }}
           />
 
@@ -539,6 +610,7 @@ export function AppShell({ onLogout }: Props) {
             onOpenShare={() => {
               setIsSettingsMenuOpen(false)
               setSettingsMenuAnchorPoint(null)
+              void shareCoachscribe()
             }}
             onOpenPrivacy={() => {
               setIsSettingsMenuOpen(false)
@@ -574,17 +646,16 @@ export function AppShell({ onLogout }: Props) {
 
           <MyAccountModal
             visible={isMyAccountModalOpen}
-            initialName="Sarah Brouwer"
-            initialEmail="Sarah@coaching.nl"
             onClose={() => setIsMyAccountModalOpen(false)}
-            onSave={() => setIsMyAccountModalOpen(false)}
             onLogout={() => setIsMyAccountModalOpen(false)}
-            onDeleteAccount={() => setIsMyAccountModalOpen(false)}
-            isManagedByEntra
-            entraAccountUrl={config.entra.accountPortalUrl}
+            onDeleteAccount={() => {
+              void deleteAccount()
+            }}
+            isDeleteAccountBusy={isDeletingAccount}
           />
 
           <MySubscriptionModal visible={isMySubscriptionModalOpen} onClose={() => setIsMySubscriptionModalOpen(false)} />
+          <FeedbackModal visible={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} />
           <PrivacyPolicyModal
             visible={isPrivacyPolicyModalOpen}
             text={privacyPolicyNlText}
@@ -662,4 +733,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 })
-

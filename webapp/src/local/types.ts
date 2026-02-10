@@ -16,6 +16,7 @@ export type Session = {
   updatedAtUnixMs: number
   kind: SessionKind
   audioBlobId: string | null
+  audioDurationSeconds: number | null
   uploadFileName: string | null
   transcript: string | null
   summary: string | null

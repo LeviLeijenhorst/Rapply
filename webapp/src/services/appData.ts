@@ -26,6 +26,9 @@ export async function updateSessionRemote(params: {
   updatedAtUnixMs: number
   coacheeId?: string | null
   title?: string
+  audioBlobId?: string | null
+  audioDurationSeconds?: number | null
+  uploadFileName?: string | null
   transcript?: string | null
   summary?: string | null
   transcriptionStatus?: Session['transcriptionStatus']

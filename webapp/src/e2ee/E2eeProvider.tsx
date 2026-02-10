@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 
 import { Text } from '../components/Text'
 import { colors } from '../theme/colors'
-import { decryptAudioFromStorage, encryptAudioForStorage } from './audioCrypto'
+import { decryptAudioChunkFromStorage, decryptAudioFromStorage, decryptAudioStreamFromStorage, encryptAudioChunkForStorage, encryptAudioForStorage } from './audioCrypto'
 import {
   createRandomId,
   createRecoveryKey,
@@ -38,6 +38,9 @@ type E2eeContextValue = {
 
   encryptAudioBlobForStorage: (params: { audioBlob: Blob; mimeType: string }) => Promise<Blob>
   decryptAudioBlobFromStorage: (encryptedBlob: Blob) => Promise<{ audioBlob: Blob; mimeType: string }>
+  decryptAudioStreamFromStorage: (encryptedStream: ReadableStream<Uint8Array>) => Promise<{ stream: ReadableStream<Uint8Array>; mimeType: string }>
+  encryptAudioChunkForStorage: (params: { audioBytes: Uint8Array }) => Promise<Uint8Array>
+  decryptAudioChunkFromStorage: (params: { encryptedChunk: Uint8Array }) => Promise<Uint8Array>
 
   wrapUserDataKeyForDevicePublicKeyJwk: (publicKeyJwk: JsonWebKey) => Promise<string>
   rotateRecoveryKey: () => Promise<string>
@@ -211,6 +214,9 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
 
       encryptAudioBlobForStorage: ({ audioBlob, mimeType }) => encryptAudioForStorage({ key: userDataKey, audioBlob, mimeType }),
       decryptAudioBlobFromStorage: (encryptedBlob) => decryptAudioFromStorage({ key: userDataKey, encryptedBlob }),
+      decryptAudioStreamFromStorage: (encryptedStream) => decryptAudioStreamFromStorage({ key: userDataKey, encryptedStream }),
+      encryptAudioChunkForStorage: ({ audioBytes }) => encryptAudioChunkForStorage({ key: userDataKey, audioBytes }),
+      decryptAudioChunkFromStorage: ({ encryptedChunk }) => decryptAudioChunkFromStorage({ key: userDataKey, encryptedChunk }),
 
       wrapUserDataKeyForDevicePublicKeyJwk: async (publicKeyJwk) => {
         const userDataKeyBytes = await crypto.subtle.exportKey('raw', userDataKey).then((buffer) => new Uint8Array(buffer))
@@ -239,17 +245,17 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
           {/* Recovery key setup */}
           <View style={styles.card}>
             <Text isBold style={styles.title}>
-              Herstelcode opslaan
+              CoachScribe-code opslaan
             </Text>
             <Text style={styles.bodyText}>
-              Dit is je herstelcode. Sla hem op een veilige plek op. Als je al je apparaten kwijtraakt, heb je deze code nodig om je data terug te krijgen.
+              Dit is je CoachScribe-code. Sla hem op een veilige plek op. Op andere apparaten of een andere browser heb je deze code nodig om toegang te krijgen tot je data.
             </Text>
             <View style={styles.codeBox}>
               <Text isSemibold style={styles.codeText}>
                 {setupRecoveryKey}
               </Text>
             </View>
-            <Pressable onPress={() => downloadTextFile({ fileName: 'coachscribe-herstelcode.txt', text: `${setupRecoveryKey}\n` })} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]}>
+            <Pressable onPress={() => downloadTextFile({ fileName: 'coachscribe-CoachScribe-code.txt', text: `${setupRecoveryKey}\n` })} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]}>
               <Text isBold style={styles.secondaryButtonText}>Download</Text>
             </Pressable>
             <Pressable
@@ -281,12 +287,12 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
               CoachScribe-code nodig
             </Text>
             <Text style={styles.bodyText}>
-              Dit apparaat heeft nog geen toegang tot je versleutelde data. Vul je herstelcode in om dit apparaat toe te voegen.
+              Dit apparaat heeft nog geen toegang tot je versleutelde data. Vul je CoachScribe-code in om dit apparaat toe te voegen.
             </Text>
             <TextInput
               value={recoveryInput}
               onChangeText={setRecoveryInput}
-              placeholder="Herstelcode..."
+              placeholder="CoachScribe-code..."
               placeholderTextColor="#656565"
               autoCapitalize="none"
               autoCorrect={false}

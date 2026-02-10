@@ -1,45 +1,32 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { colors } from '../../theme/colors'
 import { Text } from '../Text'
 import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
-import { EditActionIcon } from '../icons/EditActionIcon'
 import { TrashIcon } from '../icons/TrashIcon'
 import { MijnAccountIcon } from '../icons/MijnAccountIcon'
 import { LogoutIcon } from '../icons/LogoutIcon'
-import { focusAndSelectAll } from '../../utils/textInput'
 import { useE2ee } from '../../e2ee/E2eeProvider'
 import { e2eeApprovePairing, e2eeListDevices, e2eeRevokeDevice } from '../../services/e2ee'
 
 type Props = {
   visible: boolean
-  initialName: string
-  initialEmail: string
   onClose: () => void
-  onSave: (values: { name: string; email: string; password: string }) => void
   onLogout: () => void
   onDeleteAccount: () => void
-  isManagedByEntra?: boolean
-  entraAccountUrl?: string
+  isDeleteAccountBusy?: boolean
 }
 
 export function MyAccountModal({
   visible,
-  initialName,
-  initialEmail,
   onClose,
-  onSave,
   onLogout,
   onDeleteAccount,
-  isManagedByEntra = false,
-  entraAccountUrl = 'https://myaccount.microsoft.com/',
+  isDeleteAccountBusy = false,
 }: Props) {
   const e2ee = useE2ee()
-  const [name, setName] = useState(initialName)
-  const [email, setEmail] = useState(initialEmail)
-  const [password, setPassword] = useState('')
   const [devices, setDevices] = useState<
     { deviceId: string; publicKeyJwk: JsonWebKey; pairingExpiresAtMs: number | null; approvedAtMs: number | null; revokedAtMs: number | null; createdAtMs: number }[]
   >([])
@@ -47,15 +34,8 @@ export function MyAccountModal({
   const [rotatedRecoveryKey, setRotatedRecoveryKey] = useState<string | null>(null)
   const [isE2eeBusy, setIsE2eeBusy] = useState(false)
 
-  const nameInputRef = useRef<TextInput | null>(null)
-  const emailInputRef = useRef<TextInput | null>(null)
-  const passwordInputRef = useRef<TextInput | null>(null)
-
   useEffect(() => {
     if (!visible) return
-    setName(initialName)
-    setEmail(initialEmail)
-    setPassword(isManagedByEntra ? '********' : 'password')
     setE2eeStatus(null)
     setRotatedRecoveryKey(null)
     setIsE2eeBusy(false)
@@ -66,11 +46,9 @@ export function MyAccountModal({
         console.error('[MyAccountModal] Failed to load devices', error)
         setDevices([])
       })
-  }, [initialEmail, initialName, isManagedByEntra, visible])
+  }, [visible])
 
   if (!visible) return null
-
-  const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
 
   return (
     <AnimatedOverlayModal visible={visible} onClose={onClose} contentContainerStyle={styles.container}>
@@ -94,62 +72,14 @@ export function MyAccountModal({
 
       {/* Modal body */}
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
-        {isManagedByEntra ? (
-          <View style={styles.entraNoticeCard}>
-            {/* Entra notice */}
-            <Text style={styles.entraNoticeText}>Je accountgegevens worden beheerd via Microsoft Entra.</Text>
-            <Pressable
-              onPress={() => {
-                Linking.openURL(entraAccountUrl)
-              }}
-              style={({ hovered }) => [styles.entraLinkButton, hovered ? styles.entraLinkButtonHovered : undefined]}
-            >
-              {/* Entra account link */}
-              <Text isSemibold style={styles.entraLinkButtonText}>
-                Beheer je account in Microsoft
-              </Text>
-            </Pressable>
-          </View>
-        ) : null}
-        <AccountField
-          label="Naam"
-          value={name}
-          onChangeText={setName}
-          inputRef={nameInputRef}
-          inputWebStyle={inputWebStyle}
-          onPressEdit={() => focusAndSelectAll(nameInputRef, name)}
-          secureTextEntry={false}
-          isEditable={!isManagedByEntra}
-        />
-        <AccountField
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          inputRef={emailInputRef}
-          inputWebStyle={inputWebStyle}
-          onPressEdit={() => focusAndSelectAll(emailInputRef, email)}
-          secureTextEntry={false}
-          isEditable={!isManagedByEntra}
-        />
-        <AccountField
-          label="Wachtwoord"
-          value={password}
-          onChangeText={setPassword}
-          inputRef={passwordInputRef}
-          inputWebStyle={inputWebStyle}
-          onPressEdit={() => focusAndSelectAll(passwordInputRef, password)}
-          secureTextEntry
-          isEditable={!isManagedByEntra}
-        />
-
         {/* Recovery key */}
         <View style={styles.e2eeCard}>
           {/* Recovery key */}
           <Text isSemibold style={styles.e2eeTitle}>
-            Herstelcode
+            CoachScribe-code
           </Text>
           <Text style={styles.e2eeText}>
-            Met de herstelcode kun je je versleutelde data terugkrijgen als je al je apparaten kwijtraakt. Bewaar hem op een veilige plek.
+            Je CoachScribe-code is nodig om toegang te krijgen tot je data op andere apparaten of een andere browser. Bewaar hem op een veilige plek.
           </Text>
           {rotatedRecoveryKey ? (
             <View style={styles.e2eeCodeBox}>
@@ -171,20 +101,20 @@ export function MyAccountModal({
                   const url = URL.createObjectURL(blob)
                   const link = document.createElement('a')
                   link.href = url
-                  link.download = 'coachscribe-herstelcode.txt'
+                  link.download = 'coachscribe-CoachScribe-code.txt'
                   document.body.appendChild(link)
                   link.click()
                   link.remove()
                   URL.revokeObjectURL(url)
                 })
-                .catch((error) => setE2eeStatus(error instanceof Error ? error.message : 'Herstelcode roteren mislukt'))
+                .catch((error) => setE2eeStatus(error instanceof Error ? error.message : 'CoachScribe-code roteren mislukt'))
                 .finally(() => setIsE2eeBusy(false))
             }}
             style={({ hovered }) => [styles.e2eeButton, hovered ? styles.e2eeButtonHovered : undefined, isE2eeBusy ? styles.e2eeButtonDisabled : undefined]}
             disabled={isE2eeBusy}
           >
             <Text isBold style={styles.e2eeButtonText}>
-              Nieuwe herstelcode maken
+              Nieuwe CoachScribe-code maken
             </Text>
           </Pressable>
         </View>
@@ -193,7 +123,7 @@ export function MyAccountModal({
         <View style={styles.e2eeCard}>
           {/* Devices */}
           <Text isSemibold style={styles.e2eeTitle}>
-            Apparaten
+            Sessies
           </Text>
           {devices
             .filter((device) => !device.revokedAtMs)
@@ -260,12 +190,16 @@ export function MyAccountModal({
             </View>
           </Pressable>
 
-          <Pressable onPress={onDeleteAccount} style={({ hovered }) => [styles.dangerWideButton, hovered ? styles.dangerWideButtonHovered : undefined]}>
+          <Pressable
+            onPress={onDeleteAccount}
+            style={({ hovered }) => [styles.dangerWideButton, hovered ? styles.dangerWideButtonHovered : undefined, isDeleteAccountBusy ? styles.e2eeButtonDisabled : undefined]}
+            disabled={isDeleteAccountBusy}
+          >
             {/* Delete account */}
             <View style={styles.dangerWideButtonContent}>
               <TrashIcon color={colors.selected} size={18} />
               <Text isSemibold style={styles.dangerWideButtonText}>
-                Account verwijderen
+                {isDeleteAccountBusy ? 'Account verwijderen...' : 'Account verwijderen'}
               </Text>
             </View>
           </Pressable>
@@ -280,59 +214,8 @@ export function MyAccountModal({
             Annuleren
           </Text>
         </Pressable>
-        {!isManagedByEntra ? (
-          <Pressable
-            onPress={() => onSave({ name, email, password })}
-            style={({ hovered }) => [styles.footerPrimaryButton, hovered ? styles.footerPrimaryButtonHovered : undefined]}
-          >
-            {/* Save */}
-            <Text isBold style={styles.footerPrimaryButtonText}>
-              Opslaan
-            </Text>
-          </Pressable>
-        ) : null}
-        </View>
-    </AnimatedOverlayModal>
-  )
-}
-
-type AccountFieldProps = {
-  label: string
-  value: string
-  onChangeText: (value: string) => void
-  inputRef: React.MutableRefObject<TextInput | null>
-  inputWebStyle: any
-  onPressEdit: () => void
-  secureTextEntry: boolean
-  isEditable: boolean
-}
-
-function AccountField({ label, value, onChangeText, inputRef, inputWebStyle, onPressEdit, secureTextEntry, isEditable }: AccountFieldProps) {
-  return (
-    <View style={styles.field}>
-      {/* Field label */}
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.inputRow}>
-        <TextInput
-          ref={(value) => {
-            inputRef.current = value
-          }}
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={`${label}...`}
-          placeholderTextColor="#656565"
-          secureTextEntry={secureTextEntry}
-          editable={isEditable}
-          style={[styles.textInput, inputWebStyle]}
-        />
-        {isEditable ? (
-          <Pressable onPress={onPressEdit} style={({ hovered }) => [styles.inputIconButton, hovered ? styles.inputIconButtonHovered : undefined]}>
-            {/* Edit icon */}
-            <EditActionIcon color="#656565" size={18} />
-          </Pressable>
-        ) : null}
       </View>
-    </View>
+    </AnimatedOverlayModal>
   )
 }
 
@@ -688,4 +571,3 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
-

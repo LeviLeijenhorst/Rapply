@@ -75,7 +75,16 @@ export function TranscriptTabPanel({
   const filteredTranscript = transcript && searchValue.trim() ? transcript.split('\n').filter((line) => line.toLowerCase().includes(searchValue.trim().toLowerCase())) : transcript?.split('\n') || []
 
   const parsedTranscriptLines = filteredTranscript.map((line, index) => parseTranscriptLine(line, index))
-  const firstSpeakerKey = parsedTranscriptLines.find((line) => line.speakerKey)?.speakerKey ?? ''
+  let latestKnownTimeSeconds: number | null = null
+  const parsedTranscriptLinesWithFallback = parsedTranscriptLines.map((line) => {
+    if (line.timeSeconds !== null) {
+      latestKnownTimeSeconds = line.timeSeconds
+      return line
+    }
+    if (latestKnownTimeSeconds === null) return line
+    return { ...line, timeSeconds: latestKnownTimeSeconds }
+  })
+  const firstSpeakerKey = parsedTranscriptLinesWithFallback.find((line) => line.speakerKey)?.speakerKey ?? ''
 
   return (
     <View style={[styles.container, shouldFillAvailableHeight ? styles.containerFill : styles.containerAuto]}>
@@ -123,22 +132,19 @@ export function TranscriptTabPanel({
           </View>
         ) : hasContent ? (
           parsedTranscriptLines.length > 0 ? (
-            parsedTranscriptLines.map((line) => {
+            parsedTranscriptLinesWithFallback.map((line) => {
               const isFirstSpeaker = firstSpeakerKey ? line.speakerKey === firstSpeakerKey : true
               const isSeekEnabled = !!onSeekToSeconds && line.timeSeconds !== null
               return (
                 <Pressable
                   key={line.id}
-                  onPress={() => {
-                    if (!isSeekEnabled || line.timeSeconds === null) return
-                    onSeekToSeconds?.(line.timeSeconds)
-                  }}
+                  onPress={isSeekEnabled ? () => onSeekToSeconds?.(line.timeSeconds as number) : undefined}
                   style={({ hovered }) => [
                     styles.row,
                     styles.messageRow,
                     isFirstSpeaker ? styles.messageRowPrimary : styles.messageRowSecondary,
-                    styles.messageRowClickable,
-                    hovered ? styles.messageRowHovered : undefined,
+                    isSeekEnabled ? styles.messageRowClickable : undefined,
+                    isSeekEnabled && hovered ? styles.messageRowHovered : undefined,
                   ]}
                 >
                   {/* Transcript line */}

@@ -1,4 +1,4 @@
-import { fetchSecureApi } from './secureApi'
+﻿import { fetchSecureApi } from './secureApi'
 
 export async function createAudioBlobRemote(params: { audioBlob: Blob; mimeType: string }): Promise<{ audioBlobId: string }> {
   const response = await fetchSecureApi('/audio-blobs', {
@@ -20,3 +20,7 @@ export async function loadAudioBlobRemote(id: string): Promise<{ blob: Blob; mim
   return { blob, mimeType }
 }
 
+export async function loadAudioBlobStreamRemote(id: string, signal?: AbortSignal): Promise<Response> {
+  const safeId = encodeURIComponent(id)
+  return fetchSecureApi(`/audio-blobs/${safeId}`, { method: 'GET', signal })
+}
