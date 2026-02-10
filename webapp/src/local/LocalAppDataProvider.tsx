@@ -21,6 +21,7 @@ import {
 } from './localAppDataStore'
 import { createId } from './createId'
 import { Coachee, LocalAppData, Note, PracticeSettings, Session, SessionKind, Template, TemplateSection, WrittenReport } from './types'
+import { createDefaultLocalAppData } from './defaultData'
 import {
   createCoacheeRemote,
   createNoteRemote,
@@ -105,6 +106,25 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
   const e2ee = useOptionalE2ee()
   const [data, setData] = useState<LocalAppData>(() => loadLocalAppData())
   const [isAppDataLoaded, setIsAppDataLoaded] = useState(() => !isAuthenticated)
+  const defaultPracticeSettings = createDefaultLocalAppData().practiceSettings
+
+  function normalizePracticeSettings(input: unknown, context: string): PracticeSettings {
+    if (!input || typeof input !== 'object') {
+      console.warn('[LocalAppDataProvider] Missing practice settings in remote data', {
+        context,
+        inputType: typeof input,
+      })
+      return defaultPracticeSettings
+    }
+    const candidate = input as Partial<PracticeSettings>
+    return {
+      practiceName: typeof candidate.practiceName === 'string' ? candidate.practiceName : defaultPracticeSettings.practiceName,
+      website: typeof candidate.website === 'string' ? candidate.website : defaultPracticeSettings.website,
+      tintColor: typeof candidate.tintColor === 'string' ? candidate.tintColor : defaultPracticeSettings.tintColor,
+      logoDataUrl: typeof candidate.logoDataUrl === 'string' ? candidate.logoDataUrl : null,
+      updatedAtUnixMs: Number.isFinite(candidate.updatedAtUnixMs) ? Number(candidate.updatedAtUnixMs) : defaultPracticeSettings.updatedAtUnixMs,
+    }
+  }
 
   useEffect(() => {
     saveLocalAppData(data)
@@ -113,7 +133,8 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
   async function decryptRemoteData(remote: LocalAppData): Promise<LocalAppData> {
     if (!e2ee) {
       const templates = Array.isArray(remote.templates) ? remote.templates : []
-      return { ...remote, templates, practiceSettings: remote.practiceSettings }
+      const practiceSettings = normalizePracticeSettings(remote.practiceSettings, 'no-encryption')
+      return { ...remote, templates, practiceSettings }
     }
 
     const decryptTextCompat = async (value: string): Promise<string> => {
@@ -170,12 +191,13 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
       templates.push(await decryptTemplate(template, decryptTextCompat))
     }
 
+    const practiceSettingsInput = normalizePracticeSettings(remote.practiceSettings, 'with-encryption')
     const practiceSettings: PracticeSettings = {
-      practiceName: await decryptTextCompat(remote.practiceSettings.practiceName),
-      website: await decryptTextCompat(remote.practiceSettings.website),
-      tintColor: await decryptTextCompat(remote.practiceSettings.tintColor),
-      logoDataUrl: remote.practiceSettings.logoDataUrl ? await decryptTextCompat(remote.practiceSettings.logoDataUrl) : null,
-      updatedAtUnixMs: remote.practiceSettings.updatedAtUnixMs,
+      practiceName: await decryptTextCompat(practiceSettingsInput.practiceName),
+      website: await decryptTextCompat(practiceSettingsInput.website),
+      tintColor: await decryptTextCompat(practiceSettingsInput.tintColor),
+      logoDataUrl: practiceSettingsInput.logoDataUrl ? await decryptTextCompat(practiceSettingsInput.logoDataUrl) : null,
+      updatedAtUnixMs: practiceSettingsInput.updatedAtUnixMs,
     }
 
     return { coachees, sessions, notes, writtenReports, templates, practiceSettings }
