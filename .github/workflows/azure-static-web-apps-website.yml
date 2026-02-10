@@ -1,0 +1,52 @@
+name: Azure Static Web Apps Website CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "website/**"
+      - ".github/workflows/azure-static-web-apps-website.yml"
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
+    branches:
+      - main
+    paths:
+      - "website/**"
+      - ".github/workflows/azure-static-web-apps-website.yml"
+
+jobs:
+  build_and_deploy_job:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    name: Build and Deploy Website
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and Deploy Website
+        uses: Azure/static-web-apps-deploy@v1
+        env:
+          IS_STATIC_EXPORT: true
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "website"
+          api_location: ""
+          output_location: "out"
+          app_build_command: "npm ci && npm run build"
+
+  close_pull_request_job:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Close Pull Request Website
+    steps:
+      - name: Close Pull Request Website
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE }}
+          action: "close"
