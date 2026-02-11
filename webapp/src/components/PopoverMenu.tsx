@@ -34,6 +34,7 @@ type Props = {
 export function PopoverMenu({ visible, anchorPoint, placement, width, estimatedHeight, items, onClose }: Props) {
   const isReducedMotionEnabled = useReducedMotion()
   const [isRendered, setIsRendered] = useState(visible)
+  const [menuHeight, setMenuHeight] = useState(estimatedHeight)
   const opacity = useRef(new Animated.Value(0)).current
   const translateY = useRef(new Animated.Value(6)).current
 
@@ -45,6 +46,11 @@ export function PopoverMenu({ visible, anchorPoint, placement, width, estimatedH
   useEffect(() => {
     if (visible) setIsRendered(true)
   }, [visible])
+
+  useEffect(() => {
+    if (!visible) return
+    setMenuHeight(estimatedHeight)
+  }, [estimatedHeight, visible])
 
   useEffect(() => {
     if (!isRendered) return
@@ -82,15 +88,22 @@ export function PopoverMenu({ visible, anchorPoint, placement, width, estimatedH
 
   const left = Math.min(Math.max(padding, anchorPoint.x), Math.max(padding, viewportWidth - width - padding))
   const topFromBelow = anchorPoint.y + 8
-  const topFromAbove = anchorPoint.y - estimatedHeight - 8
+  const topFromAbove = anchorPoint.y - menuHeight - 8
   const unclampedTop = placement === 'below' ? topFromBelow : topFromAbove
-  const top = Math.min(Math.max(padding, unclampedTop), Math.max(padding, viewportHeight - estimatedHeight - padding))
+  const top = Math.min(Math.max(padding, unclampedTop), Math.max(padding, viewportHeight - menuHeight - padding))
 
   return (
     <WebPortal>
       <View style={styles.overlay}>
         <Pressable onPress={onClose} style={styles.backdrop} />
-        <Animated.View style={[styles.menu, { width, left, top, opacity, transform: [{ translateY }] } as any]}>
+        <Animated.View
+          onLayout={(event) => {
+            const nextHeight = Math.ceil(event.nativeEvent.layout.height ?? 0)
+            if (!nextHeight || nextHeight === menuHeight) return
+            setMenuHeight(nextHeight)
+          }}
+          style={[styles.menu, { width, left, top, opacity, transform: [{ translateY }] } as any]}
+        >
           {items.map((item, index) => (
             <View key={item.key} style={styles.rowContainer}>
               <Pressable

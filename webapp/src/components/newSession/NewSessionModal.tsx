@@ -27,10 +27,11 @@ import { Mp3UploadIcon } from '../icons/Mp3UploadIcon'
 import { VerslagSchrijvenIcon } from '../icons/VerslagSchrijvenIcon'
 import { SendSquareIcon } from '../icons/SendSquareIcon'
 import { FolderOpenIcon } from '../icons/FolderOpenIcon'
+import { CheckmarkIcon } from '../icons/CheckmarkIcon'
 import { unassignedCoacheeLabel } from '../../utils/coachee'
 import { AudioPlayerCard } from '../sessionDetail/AudioPlayerCard'
 
-type Step = 'select' | 'upload' | 'recording' | 'recorded'
+type Step = 'select' | 'consent' | 'upload' | 'recording' | 'recorded'
 type OptionKey = 'gesprek' | 'verslag' | 'upload' | 'schrijven'
 
 type Props = {
@@ -119,6 +120,7 @@ export function NewSessionModal({
   const [isUploadDragActive, setIsUploadDragActive] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isCloseWarningVisible, setIsCloseWarningVisible] = useState(false)
+  const [hasRecordingConsent, setHasRecordingConsent] = useState(false)
   const sessionTitleInputRef = useRef<TextInput | null>(null)
   const uploadDropAreaRef = useRef<View | null>(null)
   const isUploadDragActiveRef = useRef(false)
@@ -172,6 +174,7 @@ export function NewSessionModal({
     setAudioForTranscription(null)
     setIsMinimized(false)
     setIsCloseWarningVisible(false)
+    setHasRecordingConsent(false)
     setIsUploadDragActive(false)
     setCoacheeDropdownMaxHeight(null)
     setReportTypeDropdownMaxHeight(null)
@@ -338,7 +341,15 @@ export function NewSessionModal({
   }, [isRendered, shouldShowMinimized])
 
   const title =
-    step === 'select' ? 'Nieuwe sessie' : step === 'upload' ? 'MP3 bestand uploaden' : step === 'recording' ? 'Opnemen' : 'Gesprek opgenomen'
+    step === 'select'
+      ? 'Nieuwe sessie'
+      : step === 'consent'
+        ? 'Toestemming voor opname bevestigen'
+        : step === 'upload'
+          ? 'MP3 bestand uploaden'
+          : step === 'recording'
+            ? 'Opnemen'
+            : 'Gesprek opgenomen'
   const showFooter = step !== 'recording'
   const isUploadStep = step === 'upload'
   const modalHeight = Math.min(533, windowHeight * 0.9)
@@ -402,6 +413,11 @@ export function NewSessionModal({
       setSelectedAudioFile(file)
     }
     input.click()
+  }
+
+  function openConsentHelpPage() {
+    if (typeof window === 'undefined') return
+    window.open('https://www.coachscribe.nl/toestemming-vragen', '_blank', 'noopener,noreferrer')
   }
 
   function isMp3File(file: File) {
@@ -1071,6 +1087,39 @@ export function NewSessionModal({
               </View>
             </View>
           ) : null}
+
+          {step === 'consent' ? (
+            <View style={styles.consentBody}>
+              <View style={styles.consentIconCircle}>
+                <MicrophoneSmallIcon color={colors.textStrong} size={28} />
+              </View>
+              <Text isBold style={styles.consentTitle}>
+                Ik heb expliciete toestemming van mijn coachee
+              </Text>
+              <Text style={styles.consentDescription}>
+                Door verder te gaan bevestig je dat alle deelnemers vooraf zijn geinformeerd over de opname en vrijwillig toestemming hebben gegeven.
+              </Text>
+              <Pressable
+                onPress={() => setHasRecordingConsent((value) => !value)}
+                style={({ hovered }) => [styles.consentCheckboxRow, hovered ? styles.consentCheckboxRowHovered : undefined]}
+              >
+                <View style={[styles.consentCheckbox, hasRecordingConsent ? styles.consentCheckboxChecked : undefined]}>
+                  {hasRecordingConsent ? <CheckmarkIcon color={colors.selected} width={14} height={12} /> : null}
+                </View>
+                <Text style={styles.consentCheckboxLabel}>
+                  Ik bevestig dat ik toestemming heb.
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={openConsentHelpPage}
+                style={({ hovered }) => [styles.consentHelpLinkRow, hovered ? styles.consentHelpLinkRowHovered : undefined]}
+              >
+                <Text isSemibold style={styles.consentHelpLinkText}>
+                  Hoe geef ik toestemming?
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
         </View>
 
         {/* Modal footer */}
@@ -1131,16 +1180,23 @@ export function NewSessionModal({
                     return
                   }
 
+                  if (step === 'consent') {
+                    if (!selectedOption || !hasRecordingConsent) return
+                    if (selectedOption === 'upload') {
+                      setStep('upload')
+                      return
+                    }
+                    setStep('recording')
+                    return
+                  }
+
                   if (!selectedOption) return
                   if (selectedOption === 'schrijven') {
                     onStartWrittenReport()
                     return
                   }
-                  if (selectedOption === 'upload') {
-                    setStep('upload')
-                    return
-                  }
-                  setStep('recording')
+                  setHasRecordingConsent(false)
+                  setStep('consent')
                 }}
                 style={({ hovered, pressed }) => [
                   styles.footerButtonBase,
@@ -1148,11 +1204,23 @@ export function NewSessionModal({
                   styles.footerButtonRight,
                   step === 'upload' && !selectedAudioFile ? styles.primaryButtonDisabled : undefined,
                   !selectedOption && step === 'select' ? styles.primaryButtonDisabled : undefined,
+                  step === 'consent' && !hasRecordingConsent ? styles.primaryButtonDisabled : undefined,
                   hovered &&
-                    (step === 'select' ? !!selectedOption : step === 'upload' ? !!selectedAudioFile : step === 'recorded' ? !!audioForTranscription : false)
+                    (step === 'select'
+                      ? !!selectedOption
+                      : step === 'consent'
+                        ? hasRecordingConsent
+                        : step === 'upload'
+                          ? !!selectedAudioFile
+                          : step === 'recorded'
+                            ? !!audioForTranscription
+                            : false)
                     ? styles.footerButtonPrimaryHovered
                     : undefined,
-                  pressed && !(step === 'upload' && !selectedAudioFile) && !(!selectedOption && step === 'select')
+                  pressed &&
+                  !(step === 'upload' && !selectedAudioFile) &&
+                  !(!selectedOption && step === 'select') &&
+                  !(step === 'consent' && !hasRecordingConsent)
                     ? styles.footerButtonPrimaryPressed
                     : undefined,
                 ]}
@@ -1659,6 +1727,88 @@ const styles = StyleSheet.create({
   uploadBody: {
     width: '100%',
     gap: 16,
+  },
+  consentBody: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  consentIconCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#FCE3F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  consentTitle: {
+    fontSize: 30,
+    lineHeight: 36,
+    color: colors.textStrong,
+    textAlign: 'center',
+  },
+  consentDescription: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.text,
+    textAlign: 'center',
+    maxWidth: 640,
+  },
+  consentCheckboxRow: {
+    width: '100%',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 8,
+  },
+  consentCheckboxRowHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  consentCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    flexShrink: 0,
+  },
+  consentCheckboxChecked: {
+    borderColor: '#FFFFFF',
+    backgroundColor: '#FFFFFF',
+  },
+  consentCheckboxLabel: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textStrong,
+  },
+  consentHelpLinkRow: {
+    marginTop: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
+  consentHelpLinkRowHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  consentHelpLinkText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.selected,
+    textDecorationLine: 'underline',
   },
   uploadDropArea: {
     width: '100%',

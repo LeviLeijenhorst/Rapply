@@ -17,6 +17,7 @@ type Props = {
   audioDurationSeconds: number | null
   audioUrlOverride?: string | null
   isEncrypting?: boolean
+  onCurrentSecondsChange?: (seconds: number) => void
 }
 
 export type AudioPlayerHandle = {
@@ -24,7 +25,7 @@ export type AudioPlayerHandle = {
 }
 
 export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(function AudioPlayerCard(
-  { audioBlobId, audioDurationSeconds, audioUrlOverride = null, isEncrypting = false },
+  { audioBlobId, audioDurationSeconds, audioUrlOverride = null, isEncrypting = false, onCurrentSecondsChange },
   ref,
 ) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -290,6 +291,10 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
   const showStatus = showEncryptingStatus || showDecryptingStatus
 
   useEffect(() => {
+    onCurrentSecondsChange?.(currentSeconds)
+  }, [currentSeconds, onCurrentSecondsChange])
+
+  useEffect(() => {
     Animated.timing(statusOpacity, {
       toValue: showStatus ? 1 : 0,
       duration: 180,
@@ -486,7 +491,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bufferSlot: {
-    width: 120,
+    width: 170,
     marginLeft: 'auto',
     alignItems: 'flex-end',
     justifyContent: 'center',

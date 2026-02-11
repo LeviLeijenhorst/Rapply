@@ -48,12 +48,20 @@ export async function encryptBytesWithAesGcm(params: { key: CryptoKey; plaintext
 
 export async function decryptBytesWithAesGcm(params: { key: CryptoKey; encrypted: string }): Promise<Uint8Array> {
   const combined = fromBase64Url(params.encrypted)
-  const magic = textDecoder.decode(combined.slice(0, 5))
-  if (magic !== 'E2EE1') {
-    throw new Error('Ongeldige versleuteling')
+  const magic5 = textDecoder.decode(combined.slice(0, 5))
+  let iv: Uint8Array
+  let ciphertext: Uint8Array
+  if (magic5 === 'E2EE1') {
+    iv = combined.slice(5, 17)
+    ciphertext = combined.slice(17)
+  } else {
+    const magic4 = textDecoder.decode(combined.slice(0, 4))
+    if (magic4 !== 'CSA1') {
+      throw new Error('Ongeldige versleuteling')
+    }
+    iv = combined.slice(4, 16)
+    ciphertext = combined.slice(16)
   }
-  const iv = combined.slice(5, 17)
-  const ciphertext = combined.slice(17)
   const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, params.key, toArrayBuffer(ciphertext))
   return new Uint8Array(plaintext)
 }
@@ -122,4 +130,3 @@ export async function unwrapUserDataKeyForRecovery(params: { recoveryKey: string
   const key = await importAesKey(recoveryBytes)
   return decryptBytesWithAesGcm({ key, encrypted: params.wrappedUserDataKeyForRecovery })
 }
-

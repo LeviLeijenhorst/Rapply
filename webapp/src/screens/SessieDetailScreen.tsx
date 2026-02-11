@@ -26,6 +26,7 @@ import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { completeChat, LocalChatMessage } from '../services/chat'
 import { generateSummary } from '../services/summary'
 import { transcribeAudio } from '../services/transcription'
+import { loadAudioBlobRemote } from '../services/audioBlobs'
 import { useE2ee } from '../e2ee/E2eeProvider'
 import { downloadAudioStream } from '../audio/downloadAudioStream'
 import { ChatStateMessage, createChatMessageId } from '../utils/chatState'
@@ -37,6 +38,7 @@ import {
 import { isUnassignedCoacheeName, unassignedCoacheeLabel } from '../utils/coachee'
 import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
 import { buildCoacheeTranscriptsSystemMessages, buildConversationTranscriptSystemMessages } from '../utils/quickQuestionsContext'
+import { getPendingPreviewAudio } from '../audio/pendingPreviewStore'
 
 type Props = {
   sessionId: string
@@ -88,9 +90,12 @@ export function SessieDetailScreen({
   const [isChatMaximizedRendered, setIsChatMaximizedRendered] = useState(false)
   const [writtenReportDraft, setWrittenReportDraft] = useState(writtenReportText)
   const [isDeleteSessieModalVisible, setIsDeleteSessieModalVisible] = useState(false)
+  const [pendingPreviewAudioUrl, setPendingPreviewAudioUrl] = useState<string | null>(null)
+  const [currentAudioSeconds, setCurrentAudioSeconds] = useState(0)
 
   const coacheeButtonRef = useRef<any>(null)
   const templates = data.templates ?? []
+  const practiceTintColor = data.practiceSettings.tintColor || colors.selected
   const defaultTemplateId = useMemo(() => {
     const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'standaard verslag')
     return (standardTemplate ?? templates[0])?.id ?? null
@@ -151,6 +156,33 @@ export function SessieDetailScreen({
     if (!rect) return
     setCoacheeMenuAnchor({ left: rect.left, top: rect.bottom + 8, width: rect.width })
   }
+
+  useEffect(() => {
+    let isCancelled = false
+    let nextUrl: string | null = null
+
+    void (async () => {
+      const pendingPreview = await getPendingPreviewAudio(sessionId)
+      if (isCancelled) return
+      if (!pendingPreview) {
+        setPendingPreviewAudioUrl((previous) => {
+          if (previous) URL.revokeObjectURL(previous)
+          return null
+        })
+        return
+      }
+      nextUrl = URL.createObjectURL(pendingPreview)
+      setPendingPreviewAudioUrl((previous) => {
+        if (previous) URL.revokeObjectURL(previous)
+        return nextUrl
+      })
+    })()
+
+    return () => {
+      isCancelled = true
+      if (nextUrl) URL.revokeObjectURL(nextUrl)
+    }
+  }, [sessionId])
 
   useEffect(() => {
     setWrittenReportDraft(writtenReportText)
@@ -388,6 +420,27 @@ export function SessieDetailScreen({
     await sendChatMessage(trimmedText)
   }
 
+  async function loadDecryptedSessionAudio(audioId: string): Promise<{ audioBlob: Blob; mimeType: string }> {
+    try {
+      const storedAudio = await loadAudioBlobRemote(audioId)
+      if (!storedAudio) {
+        throw new Error('Audio blob not found')
+      }
+      const decryptedBlob = await e2ee.decryptAudioBlobFromStorage(storedAudio.blob)
+      return { audioBlob: decryptedBlob.audioBlob, mimeType: decryptedBlob.mimeType }
+    } catch (blobError) {
+      console.warn('[transcription] Blob load failed for session audio, trying stream fallback', {
+        sessionId,
+        audioId,
+        error: blobError,
+      })
+      return downloadAudioStream({
+        audioStreamId: audioId,
+        decryptChunk: (encryptedChunk) => e2ee.decryptAudioChunkFromStorage({ encryptedChunk }),
+      })
+    }
+  }
+
   async function retryTranscription() {
     if (!session?.audioBlobId) return
     if (session?.transcriptionStatus === 'transcribing' || session?.transcriptionStatus === 'generating') return
@@ -395,11 +448,8 @@ export function SessieDetailScreen({
     updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null, summary: null })
 
     try {
-      console.log('[transcription][retry] audio-download-start', { sessionId, audioStreamId: session.audioBlobId })
-      const decrypted = await downloadAudioStream({
-        audioStreamId: session.audioBlobId,
-        decryptChunk: (encryptedChunk) => e2ee.decryptAudioChunkFromStorage({ encryptedChunk }),
-      })
+      console.log('[transcription][retry] audio-download-start', { sessionId, audioId: session.audioBlobId })
+      const decrypted = await loadDecryptedSessionAudio(session.audioBlobId)
       console.log('[transcription][retry] audio-download-done', {
         sessionId,
         mimeType: decrypted.mimeType,
@@ -476,11 +526,8 @@ export function SessieDetailScreen({
         if (!session?.audioBlobId) {
           throw new Error('Geen audio beschikbaar om een transcript te maken.')
         }
-        console.log('[transcription][report] audio-download-start', { sessionId, audioStreamId: session.audioBlobId })
-        const decrypted = await downloadAudioStream({
-          audioStreamId: session.audioBlobId,
-          decryptChunk: (encryptedChunk) => e2ee.decryptAudioChunkFromStorage({ encryptedChunk }),
-        })
+        console.log('[transcription][report] audio-download-start', { sessionId, audioId: session.audioBlobId })
+        const decrypted = await loadDecryptedSessionAudio(session.audioBlobId)
         console.log('[transcription][report] audio-download-done', {
           sessionId,
           mimeType: decrypted.mimeType,
@@ -587,7 +634,13 @@ export function SessieDetailScreen({
           <ScrollView style={styles.mobileScroll} contentContainerStyle={styles.mobileScrollContent} showsVerticalScrollIndicator={false}>
             <>
               {/* Audio */}
-              <AudioPlayerCard ref={audioPlayerRef} audioBlobId={session?.audioBlobId ?? null} audioDurationSeconds={session?.audioDurationSeconds ?? null} />
+              <AudioPlayerCard
+                ref={audioPlayerRef}
+                audioBlobId={session?.audioBlobId ?? null}
+                audioDurationSeconds={session?.audioDurationSeconds ?? null}
+                audioUrlOverride={pendingPreviewAudioUrl}
+                onCurrentSecondsChange={setCurrentAudioSeconds}
+              />
               {/* Report */}
               <View style={styles.reportCard}>
                   <ReportPanel
@@ -693,6 +746,9 @@ export function SessieDetailScreen({
                       transcriptionError={session?.transcriptionError ?? null}
                       onSeekToSeconds={(seconds) => audioPlayerRef.current?.seekToSeconds(seconds)}
                       onRetryTranscription={retryTranscription}
+                      currentAudioSeconds={currentAudioSeconds}
+                      highlightTintColor={practiceTintColor}
+                      audioDurationSeconds={session?.audioDurationSeconds ?? null}
                     />
                   ) : null}
                 </AnimatedMainContent>
@@ -870,7 +926,13 @@ export function SessieDetailScreen({
             ) : (
               <ScrollView style={styles.leftScroll} contentContainerStyle={styles.leftScrollContent} showsVerticalScrollIndicator={false}>
                 {/* Audio card */}
-                <AudioPlayerCard ref={audioPlayerRef} audioBlobId={session?.audioBlobId ?? null} audioDurationSeconds={session?.audioDurationSeconds ?? null} />
+                <AudioPlayerCard
+                  ref={audioPlayerRef}
+                  audioBlobId={session?.audioBlobId ?? null}
+                  audioDurationSeconds={session?.audioDurationSeconds ?? null}
+                  audioUrlOverride={pendingPreviewAudioUrl}
+                  onCurrentSecondsChange={setCurrentAudioSeconds}
+                />
                 {/* Report card */}
                 <View style={styles.reportCard}>
                   <ReportPanel
@@ -975,6 +1037,9 @@ export function SessieDetailScreen({
                       transcriptionError={session?.transcriptionError ?? null}
                       onSeekToSeconds={(seconds) => audioPlayerRef.current?.seekToSeconds(seconds)}
                       onRetryTranscription={retryTranscription}
+                      currentAudioSeconds={currentAudioSeconds}
+                      highlightTintColor={practiceTintColor}
+                      audioDurationSeconds={session?.audioDurationSeconds ?? null}
                     />
                   ) : null}
                 </AnimatedMainContent>

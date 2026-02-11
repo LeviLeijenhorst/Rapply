@@ -29,6 +29,21 @@ export function Sidebar({ selectedSidebarItemKey, onSelectSidebarItem, onPressCr
 
   const selectedColor = colors.selected
   const unselectedColor = colors.text
+  function getMenuAnchorPoint(event: any): AnchorPoint {
+    const rectFromCurrentTarget = event?.currentTarget?.getBoundingClientRect?.()
+    const rectFromNativeTarget = event?.nativeEvent?.target?.getBoundingClientRect?.()
+    const rect = rectFromCurrentTarget ?? rectFromNativeTarget
+
+    const clientX = event?.nativeEvent?.clientX
+    const clientY = event?.nativeEvent?.clientY
+    const pageX = event?.nativeEvent?.pageX
+    const pageY = event?.nativeEvent?.pageY
+
+    return {
+      x: rect ? rect.left : typeof clientX === 'number' ? clientX : typeof pageX === 'number' ? pageX : 0,
+      y: rect ? rect.top : typeof clientY === 'number' ? clientY : typeof pageY === 'number' ? pageY : 0,
+    }
+  }
 
   return (
     <View style={[styles.container, isCompact ? styles.containerCompact : undefined]}>
@@ -93,18 +108,7 @@ export function Sidebar({ selectedSidebarItemKey, onSelectSidebarItem, onPressCr
           label="Help"
           isSelected={false}
           onPress={(event) => {
-            const rectFromCurrentTarget = (event as any)?.currentTarget?.getBoundingClientRect?.()
-            const rectFromNativeTarget = (event?.nativeEvent as any)?.target?.getBoundingClientRect?.()
-            const rect = rectFromCurrentTarget ?? rectFromNativeTarget
-
-            const clientX = (event?.nativeEvent as any)?.clientX
-            const clientY = (event?.nativeEvent as any)?.clientY
-            const pageX = (event?.nativeEvent as any)?.pageX
-            const pageY = (event?.nativeEvent as any)?.pageY
-
-            const nextX = rect ? rect.left : typeof clientX === 'number' ? clientX : typeof pageX === 'number' ? pageX : 0
-            const nextY = rect ? rect.top : typeof clientY === 'number' ? clientY : typeof pageY === 'number' ? pageY : 0
-            onOpenHelpMenu({ x: nextX, y: nextY })
+            onOpenHelpMenu(getMenuAnchorPoint(event))
           }}
           icon={<HelpCircleIcon />}
           isCompact={isCompact}
@@ -113,18 +117,7 @@ export function Sidebar({ selectedSidebarItemKey, onSelectSidebarItem, onPressCr
           label="Instellingen"
           isSelected={false}
           onPress={(event) => {
-            const rectFromCurrentTarget = (event as any)?.currentTarget?.getBoundingClientRect?.()
-            const rectFromNativeTarget = (event?.nativeEvent as any)?.target?.getBoundingClientRect?.()
-            const rect = rectFromCurrentTarget ?? rectFromNativeTarget
-
-            const clientX = (event?.nativeEvent as any)?.clientX
-            const clientY = (event?.nativeEvent as any)?.clientY
-            const pageX = (event?.nativeEvent as any)?.pageX
-            const pageY = (event?.nativeEvent as any)?.pageY
-
-            const nextX = rect ? rect.left : typeof clientX === 'number' ? clientX : typeof pageX === 'number' ? pageX : 0
-            const nextY = rect ? rect.top : typeof clientY === 'number' ? clientY : typeof pageY === 'number' ? pageY : 0
-            onOpenSettingsMenu({ x: nextX, y: nextY })
+            onOpenSettingsMenu(getMenuAnchorPoint(event))
           }}
           icon={<SettingsIcon color={unselectedColor} size={24} />}
           isCompact={isCompact}

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 
 import { colors } from '../../theme/colors'
 import { SendIcon } from '../icons/SendIcon'
+import { Text } from '../Text'
 
 type Props = {
   value: string
@@ -60,73 +61,82 @@ export function ChatComposer({
 
   return (
     <View style={styles.container}>
-      {/* Chat composer */}
-      <View style={[styles.inputContainer, { height: inputHeight }]}>
-        <TextInput
-          ref={(value) => {
-            inputRef.current = value
-          }}
-          value={value}
-          onChangeText={onChangeValue}
-          placeholder=""
-          placeholderTextColor="#8E8480"
-          multiline
-          scrollEnabled={isScrollable}
-          textAlignVertical="top"
-          onKeyPress={(event: any) => {
-            const key = event?.nativeEvent?.key
-            const isShift = Boolean(event?.nativeEvent?.shiftKey)
-            if (key === 'Escape') {
-              if (typeof event?.preventDefault === 'function') event.preventDefault()
-              onPressEscape?.()
-              return
-            }
-            if (key === 'Enter' && !isShift) {
-              if (typeof event?.preventDefault === 'function') event.preventDefault()
-              if (value.trim().length === 0 || isSendDisabled) return
-              onSend()
-            }
-          }}
-          onContentSizeChange={(event) => {
-            const contentHeight = Math.ceil((event.nativeEvent.contentSize?.height ?? 0) + 24)
-            const nextHeight = Math.max(minHeight, Math.min(maxHeight, contentHeight))
+      <View style={styles.row}>
+        {/* Chat composer */}
+        <View style={[styles.inputContainer, { height: inputHeight }]}>
+          <TextInput
+            ref={(value) => {
+              inputRef.current = value
+            }}
+            value={value}
+            onChangeText={onChangeValue}
+            placeholder=""
+            placeholderTextColor="#8E8480"
+            multiline
+            scrollEnabled={isScrollable}
+            textAlignVertical="top"
+            onKeyPress={(event: any) => {
+              const key = event?.nativeEvent?.key
+              const isShift = Boolean(event?.nativeEvent?.shiftKey)
+              if (key === 'Escape') {
+                if (typeof event?.preventDefault === 'function') event.preventDefault()
+                onPressEscape?.()
+                return
+              }
+              if (key === 'Enter' && !isShift) {
+                if (typeof event?.preventDefault === 'function') event.preventDefault()
+                if (value.trim().length === 0 || isSendDisabled) return
+                onSend()
+              }
+            }}
+            onContentSizeChange={(event) => {
+              const contentHeight = Math.ceil((event.nativeEvent.contentSize?.height ?? 0) + 24)
+              const nextHeight = Math.max(minHeight, Math.min(maxHeight, contentHeight))
 
-            const heightDelta = Math.abs(nextHeight - inputHeightRef.current)
-            if (heightDelta >= 1) {
-              inputHeightRef.current = nextHeight
-              setInputHeight(nextHeight)
-            }
+              const heightDelta = Math.abs(nextHeight - inputHeightRef.current)
+              if (heightDelta >= 1) {
+                inputHeightRef.current = nextHeight
+                setInputHeight(nextHeight)
+              }
 
-            const scrollThreshold = 2
-            const shouldEnableScroll = contentHeight > maxHeight + scrollThreshold
-            const shouldDisableScroll = contentHeight < maxHeight - scrollThreshold
-            const nextIsScrollable = shouldEnableScroll ? true : shouldDisableScroll ? false : isScrollableRef.current
+              const scrollThreshold = 2
+              const shouldEnableScroll = contentHeight > maxHeight + scrollThreshold
+              const shouldDisableScroll = contentHeight < maxHeight - scrollThreshold
+              const nextIsScrollable = shouldEnableScroll ? true : shouldDisableScroll ? false : isScrollableRef.current
 
-            if (nextIsScrollable !== isScrollableRef.current) {
-              isScrollableRef.current = nextIsScrollable
-              setIsScrollable(nextIsScrollable)
-            }
+              if (nextIsScrollable !== isScrollableRef.current) {
+                isScrollableRef.current = nextIsScrollable
+                setIsScrollable(nextIsScrollable)
+              }
+            }}
+            style={[styles.input, inputWebStyle, inputScrollStyle]}
+          />
+        </View>
+
+        <Pressable
+          onPress={() => {
+            if (isSendDisabled) return
+            onSend()
           }}
-          style={[styles.input, inputWebStyle, inputScrollStyle]}
-        />
+          style={({ hovered }) => [styles.sendButton, isSendDisabled ? styles.sendButtonDisabled : undefined, hovered ? styles.sendButtonHovered : undefined]}
+        >
+          {/* Send button */}
+          <SendIcon size={24} />
+        </Pressable>
       </View>
-
-      <Pressable
-        onPress={() => {
-          if (isSendDisabled) return
-          onSend()
-        }}
-        style={({ hovered }) => [styles.sendButton, isSendDisabled ? styles.sendButtonDisabled : undefined, hovered ? styles.sendButtonHovered : undefined]}
-      >
-        {/* Send button */}
-        <SendIcon size={24} />
-      </Pressable>
+      <View style={styles.disclaimerRow}>
+        <Text style={styles.disclaimerText}>Antwoorden in deze chat worden gegenereerd door AI</Text>
+      </View>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
+    gap: 6,
+  },
+  row: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -163,6 +173,18 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  disclaimerText: {
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.textSecondary,
+    opacity: 0.7,
+    textAlign: 'center',
+  },
+  disclaimerRow: {
+    width: '100%',
+    alignItems: 'center',
+    paddingRight: 52,
   },
 })
 

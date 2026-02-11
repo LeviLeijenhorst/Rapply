@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 
 import { FormattedText } from '../FormattedText'
@@ -6,18 +6,6 @@ import { Text } from '../Text'
 import { colors } from '../../theme/colors'
 import { SearchIcon } from '../icons/SearchIcon'
 import { parseTimeLabelToSeconds } from '../../utils/time'
-
-type TranscriptLine = {
-  speakerName: string
-  timeLabel: string
-  text: string
-}
-
-const transcriptLines: TranscriptLine[] = [
-  { speakerName: 'Levi', timeLabel: '00:01', text: 'De bedoeling is dat je zegmaar uhm het exacte gesprek woord voor woord dan ook op een pagina kan zien' },
-  { speakerName: 'Coach', timeLabel: '00:07', text: 'Hmmm dat klinkt wel interessant, maar hoe weet je dan wie wat heeft gezegd?' },
-  { speakerName: 'Levi', timeLabel: '00:16', text: 'Nouja de AI die er achter zit die kan dat op een vrij precieze manier achterhalen' },
-]
 
 type Props = {
   searchValue: string
@@ -28,6 +16,9 @@ type Props = {
   transcriptionError: string | null
   onSeekToSeconds?: (seconds: number) => void
   onRetryTranscription?: () => void
+  currentAudioSeconds?: number
+  highlightTintColor?: string
+  audioDurationSeconds?: number | null
 }
 
 type ParsedTranscriptLine = {
@@ -53,6 +44,9 @@ function parseTranscriptLine(line: string, index: number): ParsedTranscriptLine 
   }
 }
 
+const INITIAL_VISIBLE_LINE_COUNT = 140
+const VISIBLE_LINE_CHUNK_SIZE = 140
+
 export function TranscriptTabPanel({
   searchValue,
   onChangeSearchValue,
@@ -62,8 +56,12 @@ export function TranscriptTabPanel({
   transcriptionError,
   onSeekToSeconds,
   onRetryTranscription,
+  currentAudioSeconds,
+  highlightTintColor,
+  audioDurationSeconds,
 }: Props) {
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
+  const [visibleLineCount, setVisibleLineCount] = useState(INITIAL_VISIBLE_LINE_COUNT)
 
   const hasTranscript = Boolean(transcript && transcript.trim())
   const isTranscribing = transcriptionStatus === 'transcribing'
@@ -72,7 +70,8 @@ export function TranscriptTabPanel({
   const hasError = transcriptionStatus === 'error'
   const hasContent = hasTranscript && !isLoading && !hasError
 
-  const filteredTranscript = transcript && searchValue.trim() ? transcript.split('\n').filter((line) => line.toLowerCase().includes(searchValue.trim().toLowerCase())) : transcript?.split('\n') || []
+  const filteredTranscript =
+    transcript && searchValue.trim() ? transcript.split('\n').filter((line) => line.toLowerCase().includes(searchValue.trim().toLowerCase())) : transcript?.split('\n') || []
 
   const parsedTranscriptLines = filteredTranscript.map((line, index) => parseTranscriptLine(line, index))
   let latestKnownTimeSeconds: number | null = null
@@ -85,6 +84,45 @@ export function TranscriptTabPanel({
     return { ...line, timeSeconds: latestKnownTimeSeconds }
   })
   const firstSpeakerKey = parsedTranscriptLinesWithFallback.find((line) => line.speakerKey)?.speakerKey ?? ''
+  const hasSearch = searchValue.trim().length > 0
+  const normalizedAudioDurationSeconds = Number.isFinite(audioDurationSeconds) && Number(audioDurationSeconds) > 0 ? Number(audioDurationSeconds) : null
+
+  useEffect(() => {
+    setVisibleLineCount(INITIAL_VISIBLE_LINE_COUNT)
+  }, [transcript, searchValue])
+
+  const visibleTranscriptLines = useMemo(() => {
+    if (hasSearch) return parsedTranscriptLinesWithFallback
+    return parsedTranscriptLinesWithFallback.slice(0, visibleLineCount)
+  }, [hasSearch, parsedTranscriptLinesWithFallback, visibleLineCount])
+
+  const resolveSeekSecondsForLine = (line: ParsedTranscriptLine, index: number, totalCount: number) => {
+    if (line.timeSeconds !== null) return line.timeSeconds
+    if (normalizedAudioDurationSeconds === null) return null
+    if (totalCount <= 1) return 0
+    return (index / (totalCount - 1)) * normalizedAudioDurationSeconds
+  }
+
+  const activeLineId = useMemo(() => {
+    if (!Number.isFinite(currentAudioSeconds) || currentAudioSeconds === undefined) return null
+    const timeline = parsedTranscriptLinesWithFallback
+      .map((line, index) => ({
+        id: line.id,
+        timeSeconds: resolveSeekSecondsForLine(line, index, parsedTranscriptLinesWithFallback.length),
+      }))
+      .filter((item): item is { id: string; timeSeconds: number } => item.timeSeconds !== null)
+
+    for (let index = 0; index < timeline.length; index += 1) {
+      const current = timeline[index]
+      const next = timeline[index + 1]
+      if (!next) {
+        if (currentAudioSeconds >= current.timeSeconds) return current.id
+        continue
+      }
+      if (currentAudioSeconds >= current.timeSeconds && currentAudioSeconds < next.timeSeconds) return current.id
+    }
+    return null
+  }, [currentAudioSeconds, normalizedAudioDurationSeconds, parsedTranscriptLinesWithFallback])
 
   return (
     <View style={[styles.container, shouldFillAvailableHeight ? styles.containerFill : styles.containerAuto]}>
@@ -104,6 +142,15 @@ export function TranscriptTabPanel({
         style={[styles.list, shouldFillAvailableHeight ? styles.listFill : styles.listAuto]}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator
+        onScroll={(event) => {
+          if (hasSearch) return
+          if (visibleLineCount >= parsedTranscriptLinesWithFallback.length) return
+          const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent
+          const distanceToBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height)
+          if (distanceToBottom > 320) return
+          setVisibleLineCount((previous) => Math.min(parsedTranscriptLinesWithFallback.length, previous + VISIBLE_LINE_CHUNK_SIZE))
+        }}
+        scrollEventThrottle={32}
       >
         {isLoading ? (
           <View style={styles.loadingContainer}>
@@ -132,19 +179,32 @@ export function TranscriptTabPanel({
           </View>
         ) : hasContent ? (
           parsedTranscriptLines.length > 0 ? (
-            parsedTranscriptLinesWithFallback.map((line) => {
+            visibleTranscriptLines.map((line, index) => {
               const isFirstSpeaker = firstSpeakerKey ? line.speakerKey === firstSpeakerKey : true
-              const isSeekEnabled = !!onSeekToSeconds && line.timeSeconds !== null
+              const absoluteIndex = parsedTranscriptLinesWithFallback.findIndex((item) => item.id === line.id)
+              const seekSeconds = resolveSeekSecondsForLine(
+                line,
+                absoluteIndex >= 0 ? absoluteIndex : index,
+                parsedTranscriptLinesWithFallback.length,
+              )
+              const isSeekEnabled = !!onSeekToSeconds && seekSeconds !== null
+              const isActiveLine = activeLineId === line.id
               return (
                 <Pressable
                   key={line.id}
-                  onPress={isSeekEnabled ? () => onSeekToSeconds?.(line.timeSeconds as number) : undefined}
+                  onPress={isSeekEnabled ? () => onSeekToSeconds?.(seekSeconds as number) : undefined}
                   style={({ hovered }) => [
                     styles.row,
                     styles.messageRow,
                     isFirstSpeaker ? styles.messageRowPrimary : styles.messageRowSecondary,
                     isSeekEnabled ? styles.messageRowClickable : undefined,
                     isSeekEnabled && hovered ? styles.messageRowHovered : undefined,
+                    isActiveLine
+                      ? {
+                          borderColor: highlightTintColor || colors.selected,
+                          backgroundColor: `${highlightTintColor || colors.selected}22`,
+                        }
+                      : undefined,
                   ]}
                 >
                   {/* Transcript line */}

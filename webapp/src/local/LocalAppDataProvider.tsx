@@ -99,7 +99,7 @@ type Props = {
   isAuthenticated: boolean
 }
 
-const STALE_TRANSCRIPTION_TIMEOUT_MS = 5 * 60 * 1000
+const STALE_TRANSCRIPTION_TIMEOUT_MS = 90 * 60 * 1000
 const STALE_TRANSCRIPTION_ERROR_MESSAGE = 'Transcriptie duurt te lang of is onderbroken. Probeer opnieuw.'
 
 export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
@@ -607,13 +607,24 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
       updatePracticeSettings: (values) => {
         const updatedAtUnixMs = Date.now()
         setData((previous) => updatePracticeSettings(previous, { ...values, updatedAtUnixMs }))
-        if (!e2ee) return
+        if (!isAuthenticated) return
         void (async () => {
-          const encryptedPracticeName = values.practiceName !== undefined ? await e2ee.encryptText(values.practiceName.trim()) : undefined
-          const encryptedWebsite = values.website !== undefined ? await e2ee.encryptText(values.website.trim()) : undefined
-          const encryptedTintColor = values.tintColor !== undefined ? await e2ee.encryptText(values.tintColor) : undefined
+          const nextPracticeName = values.practiceName !== undefined ? values.practiceName.trim() : undefined
+          const nextWebsite = values.website !== undefined ? values.website.trim() : undefined
+          const nextTintColor = values.tintColor
+          const nextLogoDataUrl = values.logoDataUrl
+
+          const encryptedPracticeName = nextPracticeName === undefined ? undefined : e2ee ? await e2ee.encryptText(nextPracticeName) : nextPracticeName
+          const encryptedWebsite = nextWebsite === undefined ? undefined : e2ee ? await e2ee.encryptText(nextWebsite) : nextWebsite
+          const encryptedTintColor = nextTintColor === undefined ? undefined : e2ee ? await e2ee.encryptText(nextTintColor) : nextTintColor
           const encryptedLogoDataUrl =
-            values.logoDataUrl === undefined ? undefined : values.logoDataUrl === null ? null : await e2ee.encryptText(values.logoDataUrl)
+            nextLogoDataUrl === undefined
+              ? undefined
+              : nextLogoDataUrl === null
+                ? null
+                : e2ee
+                  ? await e2ee.encryptText(nextLogoDataUrl)
+                  : nextLogoDataUrl
           await updatePracticeSettingsRemote({
             practiceName: encryptedPracticeName,
             website: encryptedWebsite,
@@ -626,7 +637,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           .catch((error: unknown) => console.error('[LocalAppDataProvider] Remote update failed', error))
       },
     }
-  }, [data, e2ee, isAppDataLoaded])
+  }, [data, e2ee, isAppDataLoaded, isAuthenticated])
 
   useEffect(() => {
     const now = Date.now()
