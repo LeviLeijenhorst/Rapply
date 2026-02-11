@@ -252,6 +252,9 @@ app.get("/health", (_req: Request, res: Response) => {
         rateLimitWindowMs,
         rateLimitMaxRequests,
       },
+      e2eeEscrow: {
+        configured: !!env.e2eeEscrowServiceUrl && !!env.e2eeEscrowServiceApiKey,
+      },
     },
   })
 })
@@ -300,6 +303,8 @@ app.post(
       e2eeEnabled: result.e2eeEnabled,
       wrappedUserDataKeyForDevice: result.wrappedUserDataKeyForDevice,
       recoveryKeyUpdatedAtMs: result.recoveryKeyUpdatedAtMs,
+      recoveryCustodyMode: result.recoveryCustodyMode,
+      hasEscrowedRecoveryKey: result.hasEscrowedRecoveryKey,
     })
   }),
 )
@@ -310,14 +315,18 @@ app.post(
     const user = await requireAuthenticatedUser(req)
     const payload = req.body || {}
     const deviceId = readId(payload.deviceId, "deviceId")
-    const wrappedUserDataKeyForDevice = readText(payload.wrappedUserDataKeyForDevice, "wrappedUserDataKeyForDevice")
+    const wrappedUserDataKeyForDevice = readOptionalText(payload.wrappedUserDataKeyForDevice, true) ?? null
     const wrappedUserDataKeyForRecovery = readText(payload.wrappedUserDataKeyForRecovery, "wrappedUserDataKeyForRecovery")
+    const recoveryCustodyMode = "self"
+    const escrowReferenceId = null
 
     await e2ee.setupE2ee({
       userId: user.userId,
       deviceId,
       wrappedUserDataKeyForDevice,
       wrappedUserDataKeyForRecovery,
+      recoveryCustodyMode,
+      escrowReferenceId,
       nowUnixMs: Date.now(),
     })
 
@@ -364,6 +373,41 @@ app.post(
     const wrappedUserDataKeyForRecovery = readText(payload.wrappedUserDataKeyForRecovery, "wrappedUserDataKeyForRecovery")
     await e2ee.rotateRecoveryWrappedKey({ userId: user.userId, wrappedUserDataKeyForRecovery, nowUnixMs: Date.now() })
     res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/e2ee/recovery/custody/set",
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const payload = req.body || {}
+    const recoveryCustodyMode = readRequiredRecoveryCustodyMode(payload.recoveryCustodyMode)
+    if (recoveryCustodyMode !== "self") {
+      sendError(res, 400, "Only self custody is supported")
+      return
+    }
+    const escrowReferenceId = readOptionalText(payload.escrowReferenceId, true) ?? null
+    await e2ee.setRecoveryCustody({
+      userId: user.userId,
+      recoveryCustodyMode,
+      escrowReferenceId: null,
+      nowUnixMs: Date.now(),
+    })
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/e2ee/recovery/escrow/store",
+  asyncHandler(async (req, res) => {
+    sendError(res, 410, "Escrow is disabled; self custody only")
+  }),
+)
+
+app.post(
+  "/e2ee/recovery/escrow/read",
+  asyncHandler(async (req, res) => {
+    sendError(res, 410, "Escrow is disabled; self custody only")
   }),
 )
 
@@ -881,13 +925,30 @@ app.post(
   rateLimitAccount,
   asyncHandler(async (req, res) => {
     const user = await requireAuthenticatedUser(req)
+    const confirmTextRaw = typeof req.body?.confirmText === "string" ? req.body.confirmText.trim() : ""
+    const confirmText = confirmTextRaw.toUpperCase()
+    if (confirmTextRaw && confirmText !== "VERWIJDEREN") {
+      sendError(res, 400, "Bevestigingstekst ongeldig")
+      return
+    }
 
     try {
       await deleteEntraUserById(user.entraUserId)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       console.log("[account/delete] Entra deletion failed", { userId: user.userId, entraUserId: user.entraUserId, message })
-      sendError(res, 502, "Kon Entra account niet verwijderen")
+      const hasPermissionError =
+        message.includes("Authorization_RequestDenied") ||
+        message.includes("Insufficient privileges") ||
+        message.includes("Permission") ||
+        message.includes("permissions")
+      sendError(
+        res,
+        502,
+        hasPermissionError
+          ? "Kon Entra account niet verwijderen. Controleer Microsoft Graph permissies (User.ReadWrite.All) en admin consent voor de backend app-registratie."
+          : "Kon Entra account niet verwijderen. Controleer de Entra Graph configuratie op de server.",
+      )
       return
     }
 
@@ -1309,6 +1370,23 @@ function readOptionalNumber(value: unknown): number | null | undefined {
   const numeric = typeof value === "number" ? value : Number(value)
   if (!Number.isFinite(numeric)) return null
   return Number(numeric)
+}
+
+function readOptionalRecoveryCustodyMode(value: unknown): e2ee.RecoveryCustodyMode | null {
+  if (value === undefined || value === null) return null
+  const text = typeof value === "string" ? value.trim().toLowerCase() : ""
+  if (text === "self" || text === "escrow") {
+    return text
+  }
+  return null
+}
+
+function readRequiredRecoveryCustodyMode(value: unknown): e2ee.RecoveryCustodyMode {
+  const mode = readOptionalRecoveryCustodyMode(value)
+  if (!mode) {
+    throw new Error("Missing recoveryCustodyMode")
+  }
+  return mode
 }
 
 function readUnixMs(value: unknown, fieldName: string): number {

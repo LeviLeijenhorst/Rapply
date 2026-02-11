@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 
 import { colors } from '../theme/colors'
@@ -21,6 +21,8 @@ import { FeedbackModal } from './help/FeedbackModal'
 import { SettingsMenu } from './settings/SettingsMenu'
 import { MyAccountModal } from './settings/MyAccountModal'
 import { MySubscriptionModal } from './settings/MySubscriptionModal'
+import { DeleteAccountConfirmModal } from './settings/DeleteAccountConfirmModal'
+import { DeleteAccountErrorModal } from './settings/DeleteAccountErrorModal'
 import { ArchiefScreen } from '../screens/ArchiefScreen'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { CoacheeUpsertModal } from './coachees/CoacheeUpsertModal'
@@ -31,6 +33,9 @@ import { privacyPolicyNlText } from '../content/privacyPolicyNl'
 import { useBillingUsage } from '../hooks/useBillingUsage'
 import { useAudioUploadQueue } from '../audio/useAudioUploadQueue'
 import { callSecureApi } from '../services/secureApi'
+import { useE2ee } from '../e2ee/E2eeProvider'
+import { clearPendingPreviewAudio, listPendingPreviewAudioTasks } from '../audio/pendingPreviewStore'
+import { processSessionAudio } from '../audio/processSessionAudio'
 
 type AnchorPoint = { x: number; y: number }
 type OverlayScreenKey = 'archief'
@@ -86,13 +91,40 @@ type Props = {
   onLogout: () => void
 }
 
+function parseDeleteAccountErrorMessage(error: unknown): string {
+  const fallback = 'Verwijderen mislukt. Probeer het alsjeblieft later opnieuw.'
+  if (!(error instanceof Error)) return fallback
+
+  const rawMessage = String(error.message || '').trim()
+  if (!rawMessage) return fallback
+
+  const jsonStartIndex = rawMessage.indexOf('{')
+  if (jsonStartIndex >= 0) {
+    try {
+      const parsed = JSON.parse(rawMessage.slice(jsonStartIndex))
+      if (typeof parsed?.error === 'string' && parsed.error.trim()) {
+        return parsed.error.trim()
+      }
+    } catch {
+      // ignore parse errors and continue with fallback parsing
+    }
+  }
+
+  const apiErrorMatch = rawMessage.match(/^API error:\s*\d+\s*(.+)$/)
+  if (apiErrorMatch?.[1]?.trim()) return apiErrorMatch[1].trim()
+
+  return fallback
+}
+
 export function AppShell({ onLogout }: Props) {
   const { width } = useWindowDimensions()
   const isTooSmall = width < 420
   const isSidebarCompact = width < 700
-  const { data, createCoachee, isAppDataLoaded } = useLocalAppData()
+  const { data, createCoachee, isAppDataLoaded, updateSession } = useLocalAppData()
+  const e2ee = useE2ee()
   const { usedMinutes, totalMinutes } = useBillingUsage()
   useAudioUploadQueue(true)
+  const hasResumedPendingAudioRef = useRef(false)
 
   const [selectedSidebarItemKey, setSelectedSidebarItemKey] = useState<SidebarItemKey>('coachees')
   const [selectedSessieId, setSelectedSessieId] = useState<string | null>(null)
@@ -115,6 +147,56 @@ export function AppShell({ onLogout }: Props) {
   const [isPrivacyPolicyModalOpen, setIsPrivacyPolicyModalOpen] = useState(false)
   const [previousRoute, setPreviousRoute] = useState<RouteState | null>(null)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  const [isDeleteAccountConfirmModalOpen, setIsDeleteAccountConfirmModalOpen] = useState(false)
+  const [deleteAccountErrorMessage, setDeleteAccountErrorMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isAppDataLoaded) return
+    if (hasResumedPendingAudioRef.current) return
+    hasResumedPendingAudioRef.current = true
+
+    let isCancelled = false
+    void (async () => {
+      try {
+        const tasks = await listPendingPreviewAudioTasks()
+        for (const task of tasks) {
+          if (isCancelled) return
+          const session = data.sessions.find((item) => item.id === task.sessionId)
+          if (!session) {
+            await clearPendingPreviewAudio(task.sessionId)
+            continue
+          }
+          if (session.transcriptionStatus === 'done' && session.audioBlobId) {
+            await clearPendingPreviewAudio(task.sessionId)
+            continue
+          }
+
+          try {
+            await processSessionAudio({
+              sessionId: task.sessionId,
+              audioBlob: task.blob,
+              mimeType: task.mimeType,
+              summaryTemplate: task.summaryTemplate,
+              initialAudioBlobId: session.audioBlobId ?? null,
+              e2ee,
+              updateSession,
+              onAudioUploaded: async () => {
+                await clearPendingPreviewAudio(task.sessionId)
+              },
+            })
+          } catch (error) {
+            console.error('[AppShell] Pending audio resume failed', { sessionId: task.sessionId, error })
+          }
+        }
+      } catch (error) {
+        console.error('[AppShell] Failed to load pending audio tasks', error)
+      }
+    })()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [data.sessions, e2ee, isAppDataLoaded, updateSession])
 
   const applyRoute = useCallback(
     (route: RouteState) => {
@@ -351,21 +433,16 @@ export function AppShell({ onLogout }: Props) {
   const deleteAccount = useCallback(async () => {
     if (isDeletingAccount) return
 
-    if (typeof window !== 'undefined') {
-      const confirmed = window.confirm('Weet je zeker dat je je account wilt verwijderen?')
-      if (!confirmed) return
-    }
-
     try {
       setIsDeletingAccount(true)
-      await callSecureApi<{ ok: boolean }>('/account/delete', {})
+      await callSecureApi<{ ok: boolean }>('/account/delete', { confirmText: 'VERWIJDEREN' })
+      setIsDeleteAccountConfirmModalOpen(false)
       setIsMyAccountModalOpen(false)
       onLogout()
     } catch (error) {
       console.error('[AppShell] Account verwijderen mislukt', error)
-      if (typeof window !== 'undefined') {
-        window.alert('Verwijderen mislukt. Probeer het alsjeblieft later opnieuw.')
-      }
+      setIsDeleteAccountConfirmModalOpen(false)
+      setDeleteAccountErrorMessage(parseDeleteAccountErrorMessage(error))
     } finally {
       setIsDeletingAccount(false)
     }
@@ -649,9 +726,29 @@ export function AppShell({ onLogout }: Props) {
             onClose={() => setIsMyAccountModalOpen(false)}
             onLogout={() => setIsMyAccountModalOpen(false)}
             onDeleteAccount={() => {
-              void deleteAccount()
+              if (isDeletingAccount) return
+              setDeleteAccountErrorMessage(null)
+              setIsDeleteAccountConfirmModalOpen(true)
             }}
             isDeleteAccountBusy={isDeletingAccount}
+          />
+
+          <DeleteAccountConfirmModal
+            visible={isDeleteAccountConfirmModalOpen}
+            isBusy={isDeletingAccount}
+            onClose={() => {
+              if (isDeletingAccount) return
+              setIsDeleteAccountConfirmModalOpen(false)
+            }}
+            onConfirm={() => {
+              void deleteAccount()
+            }}
+          />
+
+          <DeleteAccountErrorModal
+            visible={Boolean(deleteAccountErrorMessage)}
+            message={deleteAccountErrorMessage || ''}
+            onClose={() => setDeleteAccountErrorMessage(null)}
           />
 
           <MySubscriptionModal visible={isMySubscriptionModalOpen} onClose={() => setIsMySubscriptionModalOpen(false)} />
