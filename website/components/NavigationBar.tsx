@@ -13,7 +13,6 @@ const navigationLinks = [
   { label: "Coaches", destination: "/coaches" },
   { label: "Veiligheid", destination: "/veiligheid" },
   { label: "Over Ons", destination: "/over-ons" },
-  { label: "Prijzen", destination: "/prijzen" },
 ];
 
 export default function NavigationBar() {
