@@ -3,9 +3,25 @@ import { Csa1DecryptStream, ensureValidAesKey } from "./csa1"
 
 const CSA1_OVERHEAD_BYTES = 32
 
-function readDurationSeconds(metadata: any): number {
+function readDurationSeconds(metadata: any, decryptedSizeBytes?: number): number {
   const value = typeof metadata?.format?.duration === "number" ? metadata.format.duration : 0
-  return Number.isFinite(value) && value > 0 ? value : 0
+  if (Number.isFinite(value) && value > 0) return value
+
+  const bitrate = typeof metadata?.format?.bitrate === "number" ? metadata.format.bitrate : 0
+  if (
+    Number.isFinite(bitrate) &&
+    bitrate > 0 &&
+    typeof decryptedSizeBytes === "number" &&
+    Number.isFinite(decryptedSizeBytes) &&
+    decryptedSizeBytes > 0
+  ) {
+    // Some MP4/M4A recordings do not expose container duration, but bitrate is available.
+    // In that case derive duration from size and bitrate to keep transcription unblocked.
+    const estimated = (decryptedSizeBytes * 8) / bitrate
+    if (Number.isFinite(estimated) && estimated > 0) return estimated
+  }
+
+  return 0
 }
 
 export async function computeAudioDurationSecondsFromEncryptedUpload(params: {
@@ -42,7 +58,7 @@ export async function computeAudioDurationSecondsFromEncryptedUpload(params: {
     throw parseError
   }
 
-  const durationSeconds = readDurationSeconds(metadata)
+  const durationSeconds = readDurationSeconds(metadata, decryptedSizeBytes)
   const rawDuration = typeof metadata?.format?.duration
   if (durationSeconds <= 0) {
     console.error("[duration] no valid duration from metadata", {
@@ -51,9 +67,10 @@ export async function computeAudioDurationSecondsFromEncryptedUpload(params: {
       decryptedSizeBytes,
       rawDuration,
       formatDuration: metadata?.format?.duration,
+      formatBitrate: metadata?.format?.bitrate,
+      formatContainer: metadata?.format?.container,
     })
     throw new Error("Failed to determine audio duration")
   }
   return durationSeconds
 }
-
