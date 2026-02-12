@@ -11,7 +11,7 @@ export type AuthenticatedUser = {
   displayName: string | null
 }
 
-export const authImplementationVersion = 6
+export const authImplementationVersion = 7
 
 function createAuthError(message: string) {
   const err: any = new Error(message)
