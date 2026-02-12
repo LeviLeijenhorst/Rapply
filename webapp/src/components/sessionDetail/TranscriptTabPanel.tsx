@@ -6,6 +6,7 @@ import { Text } from '../Text'
 import { colors } from '../../theme/colors'
 import { SearchIcon } from '../icons/SearchIcon'
 import { parseTimeLabelToSeconds } from '../../utils/time'
+import { toUserFriendlyTranscriptionError } from '../../utils/transcriptionError'
 
 type Props = {
   searchValue: string
@@ -163,7 +164,7 @@ export function TranscriptTabPanel({
         ) : hasError ? (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>
-              {transcriptionError || 'Er is een fout opgetreden bij het genereren van de transcriptie.'}
+              {toUserFriendlyTranscriptionError(transcriptionError, 'Er is een fout opgetreden bij het genereren van de transcriptie.')}
             </Text>
             {onRetryTranscription ? (
               <Pressable

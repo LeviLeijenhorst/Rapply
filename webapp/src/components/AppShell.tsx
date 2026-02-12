@@ -16,7 +16,6 @@ import { NewSessionModal } from './newSession/NewSessionModal'
 import { GeschrevenVerslagScreen } from '../screens/GeschrevenVerslagScreen'
 import { TemplatesScreen } from '../screens/TemplatesScreen'
 import { MijnPraktijkScreen } from '../screens/MijnPraktijkScreen'
-import { HelpMenu } from './help/HelpMenu'
 import { FeedbackModal } from './help/FeedbackModal'
 import { SettingsMenu } from './settings/SettingsMenu'
 import { MyAccountModal } from './settings/MyAccountModal'
@@ -135,8 +134,6 @@ export function AppShell({ onLogout }: Props) {
   const [isGeschrevenVerslagOpen, setIsGeschrevenVerslagOpen] = useState(false)
   const [overlayScreenKey, setOverlayScreenKey] = useState<OverlayScreenKey | null>(null)
 
-  const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false)
-  const [helpMenuAnchorPoint, setHelpMenuAnchorPoint] = useState<AnchorPoint | null>(null)
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false)
   const [settingsMenuAnchorPoint, setSettingsMenuAnchorPoint] = useState<AnchorPoint | null>(null)
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
@@ -624,19 +621,16 @@ export function AppShell({ onLogout }: Props) {
                         ? { kind: 'mijn-praktijk' }
                       : { kind: 'sessies' },
                 )
-                setIsHelpMenuOpen(false)
                 setIsSettingsMenuOpen(false)
               }}
               onPressCreateSession={() => openNewSessionModal(null)}
-              onOpenHelpMenu={(anchorPoint) => {
-                setHelpMenuAnchorPoint(anchorPoint)
-                setIsHelpMenuOpen(true)
+              onOpenFeedback={() => {
+                setIsFeedbackModalOpen(true)
                 setIsSettingsMenuOpen(false)
               }}
               onOpenSettingsMenu={(anchorPoint) => {
                 setSettingsMenuAnchorPoint(anchorPoint)
                 setIsSettingsMenuOpen(true)
-                setIsHelpMenuOpen(false)
               }}
             />
             {/* Main content */}
@@ -644,24 +638,6 @@ export function AppShell({ onLogout }: Props) {
               <AnimatedMainContent contentKey={mainContentKey}>{renderMainContent()}</AnimatedMainContent>
             </View>
           </View>
-
-          <HelpMenu
-            visible={isHelpMenuOpen}
-            anchorPoint={helpMenuAnchorPoint}
-            onClose={() => {
-              setIsHelpMenuOpen(false)
-              setHelpMenuAnchorPoint(null)
-            }}
-            onOpenHelpCenter={() => {
-              setIsHelpMenuOpen(false)
-              setHelpMenuAnchorPoint(null)
-            }}
-            onOpenFeedback={() => {
-              setIsHelpMenuOpen(false)
-              setHelpMenuAnchorPoint(null)
-              setIsFeedbackModalOpen(true)
-            }}
-          />
 
           <SettingsMenu
             visible={isSettingsMenuOpen}

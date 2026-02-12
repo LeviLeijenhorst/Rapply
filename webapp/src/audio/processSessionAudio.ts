@@ -1,6 +1,7 @@
 import { createAudioBlobRemote } from '../services/audioBlobs'
 import { transcribeAudio } from '../services/transcription'
 import { generateSummary } from '../services/summary'
+import { normalizeTranscriptionError } from '../utils/transcriptionError'
 
 type SessionUpdate = {
   audioBlobId?: string | null
@@ -12,15 +13,6 @@ type SessionUpdate = {
 
 type E2eeAudio = {
   encryptAudioBlobForStorage: (params: { audioBlob: Blob; mimeType: string }) => Promise<Blob>
-}
-
-function normalizeTranscriptionError(error: unknown): string {
-  const rawMessage = error instanceof Error ? error.message : 'Unknown error'
-  const lowered = rawMessage.toLowerCase()
-  if (lowered.includes('too large')) {
-    return 'Audio bestand is te groot voor transcriptie.'
-  }
-  return rawMessage
 }
 
 export async function processSessionAudio(params: {

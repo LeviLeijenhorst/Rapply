@@ -303,21 +303,6 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
             <Pressable onPress={() => void handleRecover()} style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined, isBusy ? styles.primaryButtonDisabled : undefined]} disabled={isBusy}>
               <Text isBold style={styles.primaryButtonText}>Ontgrendelen</Text>
             </Pressable>
-            <Pressable
-              onPress={() => {
-                if (!deviceId) return
-                setIsBusy(true)
-                setStatusMessage(null)
-                void e2eeRequestPairing({ deviceId })
-                  .then(() => setStatusMessage('Koppelverzoek aangemaakt. Open dit scherm op je andere apparaat om te bevestigen.'))
-                  .catch((error) => setStatusMessage(error instanceof Error ? error.message : 'Koppelen mislukt'))
-                  .finally(() => setIsBusy(false))
-              }}
-              style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined, isBusy ? styles.primaryButtonDisabled : undefined]}
-              disabled={isBusy}
-            >
-              <Text isBold style={styles.secondaryButtonText}>Koppelen met ander apparaat</Text>
-            </Pressable>
           </View>
         </View>
       ) : stage === 'ready' && value ? (

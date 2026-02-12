@@ -13,7 +13,8 @@ type Props = {
 }
 
 export function AuthEntryScreen({ mode, onStartLogin }: Props) {
-  const [hasAgreedToPolicy, setHasAgreedToPolicy] = useState(false)
+  const [hasAgreedToPrivacy, setHasAgreedToPrivacy] = useState(false)
+  const [hasAgreedToTerms, setHasAgreedToTerms] = useState(false)
   const illustrationSource = require('../../../assets/authhumans_1.png')
 
   async function startLogin() {
@@ -27,7 +28,12 @@ export function AuthEntryScreen({ mode, onStartLogin }: Props) {
     }
   }
 
-  const isActionDisabled = !hasAgreedToPolicy
+  const isActionDisabled = !hasAgreedToPrivacy || !hasAgreedToTerms
+
+  function openLegalPage(url: string) {
+    if (typeof window === 'undefined') return
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
 
   return (
     <AuthCard>
@@ -78,13 +84,40 @@ export function AuthEntryScreen({ mode, onStartLogin }: Props) {
               </Text>
             </Pressable>
             {/* Agreement checkbox */}
-            <Pressable style={styles.checkboxRow} onPress={() => setHasAgreedToPolicy((value) => !value)}>
-              <View style={[styles.checkbox, hasAgreedToPolicy ? styles.checkboxChecked : undefined]}>
-                {hasAgreedToPolicy ? <CheckmarkIcon color={colors.selected} width={14} height={12} /> : null}
+            <Pressable style={styles.checkboxRow} onPress={() => setHasAgreedToPrivacy((value) => !value)}>
+              <View style={[styles.checkbox, hasAgreedToPrivacy ? styles.checkboxChecked : undefined]}>
+                {hasAgreedToPrivacy ? <CheckmarkIcon color={colors.selected} width={14} height={12} /> : null}
               </View>
-              <Text style={styles.checkboxText}>
-                Ik ga akkoord met de privacy policy en gebruikersovereenkomst
-              </Text>
+              <View style={styles.checkboxTextContainer}>
+                <Text style={styles.checkboxText}>Ik ga akkoord met het privacybeleid</Text>
+                <Text
+                  onPress={(event: any) => {
+                    event?.stopPropagation?.()
+                    openLegalPage('https://www.coachscribe.nl/privacybeleid')
+                  }}
+                  style={styles.checkboxLink}
+                >
+                  Bekijk privacybeleid
+                </Text>
+              </View>
+            </Pressable>
+
+            <Pressable style={styles.checkboxRow} onPress={() => setHasAgreedToTerms((value) => !value)}>
+              <View style={[styles.checkbox, hasAgreedToTerms ? styles.checkboxChecked : undefined]}>
+                {hasAgreedToTerms ? <CheckmarkIcon color={colors.selected} width={14} height={12} /> : null}
+              </View>
+              <View style={styles.checkboxTextContainer}>
+                <Text style={styles.checkboxText}>Ik ga akkoord met de gebruikersovereenkomst</Text>
+                <Text
+                  onPress={(event: any) => {
+                    event?.stopPropagation?.()
+                    openLegalPage('https://www.coachscribe.nl/gebruikersovereenkomst')
+                  }}
+                  style={styles.checkboxLink}
+                >
+                  Bekijk gebruikersovereenkomst
+                </Text>
+              </View>
             </Pressable>
           </View>
         </View>
@@ -206,6 +239,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: '#FFFFFF',
+  },
+  checkboxTextContainer: {
+    flex: 1,
+    gap: 2,
+  },
+  checkboxLink: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#FFFFFF',
+    textDecorationLine: 'underline',
+    ...( { cursor: 'pointer' } as any ),
   },
 })
 

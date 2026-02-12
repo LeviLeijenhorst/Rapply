@@ -8,6 +8,7 @@ import { CopiedIcon } from '../icons/CopiedIcon'
 import { SharePdfIcon } from '../icons/SharePdfIcon'
 import { parseTimeLabelToSeconds } from '../../utils/time'
 import { useLocalAppData } from '../../local/LocalAppDataProvider'
+import { RichTextEditorModal } from '../editor/RichTextEditorModal'
 
 type Props = {
   role: 'user' | 'assistant'
@@ -525,6 +526,8 @@ export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, e
   )
   const isAssistant = role === 'assistant'
   const [showCopyNotification, setShowCopyNotification] = useState(false)
+  const [isPdfEditorOpen, setIsPdfEditorOpen] = useState(false)
+  const [pdfDraft, setPdfDraft] = useState('')
   const exportableText = extractExportableText(text)
   const displayText = removeExportMarkers(text)
   const lines = String(displayText || '').split('\n').map(parseChatLine)
@@ -594,7 +597,10 @@ export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, e
 
                 {isExportable ? (
                   <Pressable
-                    onPress={() => exportMessageToPdf(exportableText ?? displayText, exportTitle, pdfPracticeSettings)}
+                    onPress={() => {
+                      setPdfDraft(exportableText || displayText)
+                      setIsPdfEditorOpen(true)
+                    }}
                     style={({ hovered }) => [styles.exportButton, hovered ? styles.exportButtonHovered : undefined]}
                   >
                     <Text isSemibold style={styles.exportButtonText}>
@@ -604,6 +610,18 @@ export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, e
                   </Pressable>
                 ) : null}
               </View>
+              <RichTextEditorModal
+                visible={isPdfEditorOpen}
+                title="PDF bewerken"
+                initialValue={pdfDraft}
+                saveLabel="Exporteren"
+                onClose={() => setIsPdfEditorOpen(false)}
+                onSave={(value) => {
+                  setPdfDraft(value)
+                  setIsPdfEditorOpen(false)
+                  void exportMessageToPdf(value || exportableText || displayText, exportTitle, pdfPracticeSettings)
+                }}
+              />
             </>
           )}
         </View>

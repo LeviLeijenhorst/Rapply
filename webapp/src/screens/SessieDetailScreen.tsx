@@ -39,6 +39,8 @@ import { isUnassignedCoacheeName, unassignedCoacheeLabel } from '../utils/coache
 import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
 import { buildCoacheeTranscriptsSystemMessages, buildConversationTranscriptSystemMessages } from '../utils/quickQuestionsContext'
 import { getPendingPreviewAudio } from '../audio/pendingPreviewStore'
+import { RichTextEditorModal } from '../components/editor/RichTextEditorModal'
+import { normalizeTranscriptionError } from '../utils/transcriptionError'
 
 type Props = {
   sessionId: string
@@ -92,6 +94,7 @@ export function SessieDetailScreen({
   const [isDeleteSessieModalVisible, setIsDeleteSessieModalVisible] = useState(false)
   const [pendingPreviewAudioUrl, setPendingPreviewAudioUrl] = useState<string | null>(null)
   const [currentAudioSeconds, setCurrentAudioSeconds] = useState(0)
+  const [isSummaryEditorOpen, setIsSummaryEditorOpen] = useState(false)
 
   const coacheeButtonRef = useRef<any>(null)
   const templates = data.templates ?? []
@@ -493,11 +496,9 @@ export function SessieDetailScreen({
       }
     } catch (error) {
       console.error('[SessieDetailScreen] Transcription retry failed:', error)
-      const rawMessage = error instanceof Error ? error.message : 'Unknown error'
-      const isTooLarge = rawMessage.toLowerCase().includes('too large')
       updateSession(sessionId, {
         transcriptionStatus: 'error',
-        transcriptionError: isTooLarge ? 'Audio bestand is te groot voor transcriptie.' : rawMessage,
+        transcriptionError: normalizeTranscriptionError(error),
       })
     }
   }
@@ -561,10 +562,9 @@ export function SessieDetailScreen({
       console.log('[transcription][report] summary-generate-done', { sessionId, summaryLength: summary.length })
     } catch (error) {
       console.error('[SessieDetailScreen] Report generation failed', error)
-      const message = error instanceof Error ? error.message : 'Unknown error'
       updateSession(sessionId, {
         transcriptionStatus: 'error',
-        transcriptionError: message,
+        transcriptionError: normalizeTranscriptionError(error),
       })
     }
   }
@@ -651,6 +651,7 @@ export function SessieDetailScreen({
                     hasTranscript={hasTranscript}
                   transcriptionStatus={session?.transcriptionStatus ?? 'idle'}
                   transcriptionError={session?.transcriptionError ?? null}
+                  onEditSummary={() => setIsSummaryEditorOpen(true)}
                   onRetryTranscription={() => (selectedTemplateId ? generateReportForTemplate(selectedTemplateId) : null)}
                 />
               </View>
@@ -943,6 +944,7 @@ export function SessieDetailScreen({
                     hasTranscript={hasTranscript}
                     transcriptionStatus={session?.transcriptionStatus ?? 'idle'}
                     transcriptionError={session?.transcriptionError ?? null}
+                    onEditSummary={() => setIsSummaryEditorOpen(true)}
                     onRetryTranscription={() => (selectedTemplateId ? generateReportForTemplate(selectedTemplateId) : null)}
                   />
                 </View>
@@ -1101,6 +1103,21 @@ export function SessieDetailScreen({
           setSelectedTemplateId(templateId)
           setIsTemplatePickerModalVisible(false)
           void generateReportForTemplate(templateId)
+        }}
+      />
+
+      <RichTextEditorModal
+        visible={isSummaryEditorOpen}
+        title="Samenvatting bewerken"
+        initialValue={session?.summary ?? ''}
+        onClose={() => setIsSummaryEditorOpen(false)}
+        onSave={(value) => {
+          updateSession(sessionId, {
+            summary: value,
+            transcriptionStatus: value ? 'done' : session?.transcriptionStatus ?? 'done',
+            transcriptionError: null,
+          })
+          setIsSummaryEditorOpen(false)
         }}
       />
 

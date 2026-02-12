@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 
 import { colors } from '../theme/colors'
 import { CoacheesIcon } from './icons/CoacheesIcon'
-import { HelpCircleIcon } from './icons/HelpCircleIcon'
+import { FeedbackIcon } from './icons/FeedbackIcon'
 import { MijnPraktijkIcon } from './icons/MijnPraktijkIcon'
 import { SessiesIcon } from './icons/SessiesIcon'
 import { SettingsIcon } from './icons/SettingsIcon'
@@ -19,11 +19,11 @@ type Props = {
   selectedSidebarItemKey: SidebarItemKey
   onSelectSidebarItem: (sidebarItemKey: SidebarItemKey) => void
   onPressCreateSession: () => void
-  onOpenHelpMenu: (anchorPoint: AnchorPoint) => void
+  onOpenFeedback: (anchorPoint: AnchorPoint) => void
   onOpenSettingsMenu: (anchorPoint: AnchorPoint) => void
 }
 
-export function Sidebar({ selectedSidebarItemKey, onSelectSidebarItem, onPressCreateSession, onOpenHelpMenu, onOpenSettingsMenu }: Props) {
+export function Sidebar({ selectedSidebarItemKey, onSelectSidebarItem, onPressCreateSession, onOpenFeedback, onOpenSettingsMenu }: Props) {
   const { width } = useWindowDimensions()
   const isCompact = width < 700
 
@@ -105,12 +105,12 @@ export function Sidebar({ selectedSidebarItemKey, onSelectSidebarItem, onPressCr
       {/* Sidebar bottom items */}
       <View style={styles.bottomSection}>
         <SidebarItem
-          label="Help"
+          label="Feedback"
           isSelected={false}
           onPress={(event) => {
-            onOpenHelpMenu(getMenuAnchorPoint(event))
+            onOpenFeedback(getMenuAnchorPoint(event))
           }}
-          icon={<HelpCircleIcon />}
+          icon={<FeedbackIcon color={unselectedColor} size={24} />}
           isCompact={isCompact}
         />
         <SidebarItem

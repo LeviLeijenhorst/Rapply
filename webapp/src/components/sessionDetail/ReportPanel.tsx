@@ -6,6 +6,8 @@ import { colors } from '../../theme/colors'
 import { StandaardVerslagIcon } from '../icons/StandaardVerslagIcon'
 import { CopyIcon } from '../icons/CopyIcon'
 import { CopiedIcon } from '../icons/CopiedIcon'
+import { EditSmallIcon } from '../icons/EditSmallIcon'
+import { toUserFriendlyTranscriptionError } from '../../utils/transcriptionError'
 
 type Props = {
   templateLabel: string
@@ -16,6 +18,7 @@ type Props = {
   transcriptionStatus: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
   transcriptionError: string | null
   onRetryTranscription?: () => void
+  onEditSummary?: () => void
 }
 
 function renderInlineText(text: string, textStyle: any) {
@@ -96,7 +99,7 @@ function renderSummaryWithHeadings(summary: string) {
   return elements
 }
 
-export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary, hasTranscript, transcriptionStatus, transcriptionError, onRetryTranscription }: Props) {
+export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary, hasTranscript, transcriptionStatus, transcriptionError, onRetryTranscription, onEditSummary }: Props) {
   const [showCopyNotification, setShowCopyNotification] = useState(false)
 
   const hasSummary = Boolean(summary && summary.trim())
@@ -107,6 +110,7 @@ export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary
   const loadingLabel = !hasTranscript || isTranscribing ? 'Transcript wordt gegenereerd' : 'Verslag wordt gegenereerd'
 
   const reportCopyText = summary || ''
+  const showEditSummaryButton = hasSummary && !shouldShowLoading && !hasError && !!onEditSummary
 
   return (
     <View style={styles.container}>
@@ -128,6 +132,11 @@ export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary
             </Text>
           ) : null}
         </Pressable>
+        {showEditSummaryButton ? (
+          <Pressable onPress={onEditSummary} style={({ hovered }) => [styles.editButton, hovered ? styles.editButtonHovered : undefined]}>
+            {({ hovered }) => <EditSmallIcon color={hovered ? colors.selected : colors.textSecondary} size={17} />}
+          </Pressable>
+        ) : null}
       </View>
 
       <View style={styles.reportContent} id="report-panel-content">
@@ -141,7 +150,7 @@ export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary
         ) : hasError ? (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>
-              {transcriptionError || 'Er is een fout opgetreden bij het genereren van het verslag.'}
+              {toUserFriendlyTranscriptionError(transcriptionError, 'Er is een fout opgetreden bij het genereren van het verslag.')}
             </Text>
             {onRetryTranscription ? (
               <Pressable
@@ -193,6 +202,7 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   templateButton: {
     height: 40,
@@ -217,6 +227,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: colors.textStrong,
+  },
+  editButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editButtonHovered: {
+    backgroundColor: colors.hoverBackground,
   },
   reportContent: {
     width: '100%',
@@ -355,4 +375,3 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 })
-

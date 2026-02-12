@@ -29,6 +29,7 @@ import { SendSquareIcon } from '../icons/SendSquareIcon'
 import { FolderOpenIcon } from '../icons/FolderOpenIcon'
 import { CheckmarkIcon } from '../icons/CheckmarkIcon'
 import { unassignedCoacheeLabel } from '../../utils/coachee'
+import { normalizeTranscriptionError } from '../../utils/transcriptionError'
 import { AudioPlayerCard } from '../sessionDetail/AudioPlayerCard'
 
 type Step = 'select' | 'consent' | 'upload' | 'recording' | 'recorded'
@@ -604,11 +605,9 @@ export function NewSessionModal({
         }
       } catch (error) {
         console.error('[NewSessionModal] Transcription failed:', error)
-        const rawMessage = error instanceof Error ? error.message : 'Unknown error'
-        const isTooLarge = rawMessage.toLowerCase().includes('too large')
         updateSession(createdSessionId, {
           transcriptionStatus: 'error',
-          transcriptionError: isTooLarge ? 'Audio bestand is te groot voor transcriptie.' : rawMessage,
+          transcriptionError: normalizeTranscriptionError(error),
         })
       }
     })()

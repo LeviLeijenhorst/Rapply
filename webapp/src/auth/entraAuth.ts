@@ -7,6 +7,43 @@ type OpenIdConfiguration = {
 }
 
 let openIdConfigurationCache: OpenIdConfiguration | null = null
+let accessTokenMemoryCache: string | null = null
+let refreshTokenMemoryCache: string | null = null
+
+const AUTH_FLOW_MAX_AGE_MS = 10 * 60 * 1000
+const ENTRA_CODE_VERIFIER_KEY = 'entra_code_verifier'
+const ENTRA_REDIRECT_URI_KEY = 'entra_redirect_uri'
+const ENTRA_AUTH_START_TIME_KEY = 'entra_auth_start_time'
+const ENTRA_OAUTH_STATE_KEY = 'entra_oauth_state'
+const ENTRA_ACCESS_TOKEN_KEY = 'entra_access_token'
+const ENTRA_REFRESH_TOKEN_KEY = 'entra_refresh_token'
+
+function getSessionStorage(): Storage | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return window.sessionStorage
+  } catch {
+    return null
+  }
+}
+
+function getStoredValue(key: string): string | null {
+  const storage = getSessionStorage()
+  if (!storage) return null
+  return storage.getItem(key)
+}
+
+function setStoredValue(key: string, value: string) {
+  const storage = getSessionStorage()
+  if (!storage) return
+  storage.setItem(key, value)
+}
+
+function removeStoredValue(key: string) {
+  const storage = getSessionStorage()
+  if (!storage) return
+  storage.removeItem(key)
+}
 
 async function fetchOpenIdConfiguration(): Promise<OpenIdConfiguration> {
   if (openIdConfigurationCache) return openIdConfigurationCache
@@ -27,6 +64,12 @@ async function fetchOpenIdConfiguration(): Promise<OpenIdConfiguration> {
 }
 
 function generateCodeVerifier(): string {
+  const array = new Uint8Array(32)
+  crypto.getRandomValues(array)
+  return btoa(String.fromCharCode(...array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
+function generateOAuthState(): string {
   const array = new Uint8Array(32)
   crypto.getRandomValues(array)
   return btoa(String.fromCharCode(...array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
@@ -69,17 +112,41 @@ type AccessTokenPayload = {
   exp?: number
 }
 
+function clearAuthFlowData() {
+  removeStoredValue(ENTRA_CODE_VERIFIER_KEY)
+  removeStoredValue(ENTRA_REDIRECT_URI_KEY)
+  removeStoredValue(ENTRA_AUTH_START_TIME_KEY)
+  removeStoredValue(ENTRA_OAUTH_STATE_KEY)
+}
+
+function setStoredAccessToken(accessToken: string) {
+  accessTokenMemoryCache = accessToken
+  setStoredValue(ENTRA_ACCESS_TOKEN_KEY, accessToken)
+}
+
+function setStoredRefreshToken(refreshToken: string | null) {
+  refreshTokenMemoryCache = refreshToken
+  if (refreshToken) {
+    setStoredValue(ENTRA_REFRESH_TOKEN_KEY, refreshToken)
+    return
+  }
+  removeStoredValue(ENTRA_REFRESH_TOKEN_KEY)
+}
+
 export async function signInWithEntra(values?: { screenHint?: 'signup' }): Promise<void> {
   const discovery = await fetchOpenIdConfiguration()
   const redirectUri = buildRedirectUri()
   const codeVerifier = generateCodeVerifier()
   const codeChallenge = await generateCodeChallenge(codeVerifier)
+  const state = generateOAuthState()
 
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('entra_code_verifier', codeVerifier)
-    localStorage.setItem('entra_redirect_uri', redirectUri)
-    localStorage.setItem('entra_auth_start_time', Date.now().toString())
+  if (!getSessionStorage()) {
+    throw new Error('Session storage is not available. Please disable strict browser storage restrictions and try again.')
   }
+  setStoredValue(ENTRA_CODE_VERIFIER_KEY, codeVerifier)
+  setStoredValue(ENTRA_REDIRECT_URI_KEY, redirectUri)
+  setStoredValue(ENTRA_AUTH_START_TIME_KEY, Date.now().toString())
+  setStoredValue(ENTRA_OAUTH_STATE_KEY, state)
 
   const params = new URLSearchParams({
     client_id: config.entra.clientId,
@@ -89,6 +156,7 @@ export async function signInWithEntra(values?: { screenHint?: 'signup' }): Promi
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
     response_mode: 'query',
+    state,
   })
   if (values?.screenHint) {
     params.set('screen_hint', values.screenHint)
@@ -103,13 +171,14 @@ export async function signUpWithEntra(): Promise<void> {
 }
 
 export async function handleAuthCallback(): Promise<EntraAuthResult> {
-  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+  if (typeof window === 'undefined' || !getSessionStorage()) {
     throw new Error('Not in browser environment')
   }
 
   const urlParams = new URLSearchParams(window.location.search)
   const code = urlParams.get('code')
   const error = urlParams.get('error')
+  const receivedState = urlParams.get('state')
 
   if (error) {
     throw new Error(`Authentication failed: ${error}`)
@@ -119,27 +188,30 @@ export async function handleAuthCallback(): Promise<EntraAuthResult> {
     throw new Error('Missing authorization code')
   }
 
-  const codeVerifier = localStorage.getItem('entra_code_verifier')
-  const redirectUri = localStorage.getItem('entra_redirect_uri')
-  const authStartTime = localStorage.getItem('entra_auth_start_time')
+  const codeVerifier = getStoredValue(ENTRA_CODE_VERIFIER_KEY)
+  const redirectUri = getStoredValue(ENTRA_REDIRECT_URI_KEY)
+  const authStartTime = getStoredValue(ENTRA_AUTH_START_TIME_KEY)
+  const expectedState = getStoredValue(ENTRA_OAUTH_STATE_KEY)
 
   if (authStartTime) {
     const startTime = Number(authStartTime)
-    if (Number.isFinite(startTime) && Date.now() - startTime > 10 * 60 * 1000) {
-      localStorage.removeItem('entra_code_verifier')
-      localStorage.removeItem('entra_redirect_uri')
-      localStorage.removeItem('entra_auth_start_time')
+    if (Number.isFinite(startTime) && Date.now() - startTime > AUTH_FLOW_MAX_AGE_MS) {
+      clearAuthFlowData()
       throw new Error('Authentication session expired. Please try signing in again.')
     }
   }
 
+  if (!receivedState || !expectedState || receivedState !== expectedState) {
+    clearAuthFlowData()
+    throw new Error('Invalid OAuth state. Please try signing in again.')
+  }
+
   if (!codeVerifier || !redirectUri) {
+    clearAuthFlowData()
     throw new Error('Missing code verifier or redirect URI. Please try signing in again.')
   }
 
-  localStorage.removeItem('entra_code_verifier')
-  localStorage.removeItem('entra_redirect_uri')
-  localStorage.removeItem('entra_auth_start_time')
+  clearAuthFlowData()
 
   let tokenResponse: Response
   const exchangeUrl = `${config.api.baseUrl}/auth/exchange-code`
@@ -178,9 +250,9 @@ export async function handleAuthCallback(): Promise<EntraAuthResult> {
     throw new Error('Missing access token')
   }
 
-  localStorage.setItem('entra_access_token', accessToken)
+  setStoredAccessToken(accessToken)
   if (tokenData.refreshToken) {
-    localStorage.setItem('entra_refresh_token', tokenData.refreshToken)
+    setStoredRefreshToken(tokenData.refreshToken)
   }
 
   window.history.replaceState({}, '', '/inloggen')
@@ -189,13 +261,21 @@ export async function handleAuthCallback(): Promise<EntraAuthResult> {
 }
 
 export function getStoredAccessToken(): string | null {
-  if (typeof localStorage === 'undefined') return null
-  return localStorage.getItem('entra_access_token')
+  if (accessTokenMemoryCache) return accessTokenMemoryCache
+  const accessToken = getStoredValue(ENTRA_ACCESS_TOKEN_KEY)
+  if (accessToken) {
+    accessTokenMemoryCache = accessToken
+  }
+  return accessToken
 }
 
 export function getStoredRefreshToken(): string | null {
-  if (typeof localStorage === 'undefined') return null
-  return localStorage.getItem('entra_refresh_token')
+  if (refreshTokenMemoryCache) return refreshTokenMemoryCache
+  const refreshToken = getStoredValue(ENTRA_REFRESH_TOKEN_KEY)
+  if (refreshToken) {
+    refreshTokenMemoryCache = refreshToken
+  }
+  return refreshToken
 }
 
 function decodeAccessTokenPayload(accessToken: string): AccessTokenPayload | null {
@@ -247,11 +327,9 @@ export async function refreshAccessToken(): Promise<string | null> {
     return null
   }
 
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('entra_access_token', accessToken)
-    if (newRefreshToken) {
-      localStorage.setItem('entra_refresh_token', newRefreshToken)
-    }
+  setStoredAccessToken(accessToken)
+  if (newRefreshToken) {
+    setStoredRefreshToken(newRefreshToken)
   }
 
   return accessToken
@@ -265,10 +343,9 @@ export async function getValidAccessToken(): Promise<string | null> {
 }
 
 export async function clearEntraLocalTokens(): Promise<void> {
-  if (typeof localStorage === 'undefined') return
-  localStorage.removeItem('entra_refresh_token')
-  localStorage.removeItem('entra_access_token')
-  localStorage.removeItem('entra_code_verifier')
-  localStorage.removeItem('entra_redirect_uri')
-  localStorage.removeItem('entra_auth_start_time')
+  accessTokenMemoryCache = null
+  refreshTokenMemoryCache = null
+  removeStoredValue(ENTRA_REFRESH_TOKEN_KEY)
+  removeStoredValue(ENTRA_ACCESS_TOKEN_KEY)
+  clearAuthFlowData()
 }
