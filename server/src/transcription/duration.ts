@@ -2,6 +2,7 @@ import { parseStream } from "music-metadata"
 import { Csa1DecryptStream, ensureValidAesKey } from "./csa1"
 
 const CSA1_OVERHEAD_BYTES = 32
+const DEFAULT_FALLBACK_BITRATE_BPS = 64_000
 
 function readDurationSeconds(metadata: any, decryptedSizeBytes?: number): number {
   const value = typeof metadata?.format?.duration === "number" ? metadata.format.duration : 0
@@ -22,6 +23,15 @@ function readDurationSeconds(metadata: any, decryptedSizeBytes?: number): number
   }
 
   return 0
+}
+
+function estimateDurationSecondsFromSizeOnly(params: { decryptedSizeBytes?: number }): number {
+  const { decryptedSizeBytes } = params
+  if (typeof decryptedSizeBytes !== "number" || !Number.isFinite(decryptedSizeBytes) || decryptedSizeBytes <= 0) {
+    return 0
+  }
+  const estimated = (decryptedSizeBytes * 8) / DEFAULT_FALLBACK_BITRATE_BPS
+  return Number.isFinite(estimated) && estimated > 0 ? estimated : 0
 }
 
 export async function computeAudioDurationSecondsFromEncryptedUpload(params: {
@@ -61,6 +71,19 @@ export async function computeAudioDurationSecondsFromEncryptedUpload(params: {
   const durationSeconds = readDurationSeconds(metadata, decryptedSizeBytes)
   const rawDuration = typeof metadata?.format?.duration
   if (durationSeconds <= 0) {
+    const estimatedFromSizeOnly = estimateDurationSecondsFromSizeOnly({ decryptedSizeBytes })
+    if (estimatedFromSizeOnly > 0) {
+      console.error("[duration] estimated duration from size-only fallback", {
+        mimeType,
+        encryptedSizeBytes,
+        decryptedSizeBytes,
+        estimatedDurationSeconds: estimatedFromSizeOnly,
+        assumedBitrateBps: DEFAULT_FALLBACK_BITRATE_BPS,
+        formatContainer: metadata?.format?.container,
+      })
+      return estimatedFromSizeOnly
+    }
+
     console.error("[duration] no valid duration from metadata", {
       mimeType,
       encryptedSizeBytes,
