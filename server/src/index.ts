@@ -1150,9 +1150,25 @@ app.post(
       }
 
       const durationStartedAtMs = Date.now()
-      const durationStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
-      const durationSeconds = await computeAudioDurationSecondsFromEncryptedUpload({ encryptedStream: durationStream, keyBase64, mimeType })
       const uploadBytes = await getEncryptedUploadSize({ blobName: uploadPath })
+      let durationSeconds = 0
+      try {
+        const durationStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
+        durationSeconds = await computeAudioDurationSecondsFromEncryptedUpload({
+          encryptedStream: durationStream,
+          keyBase64,
+          mimeType,
+          encryptedSizeBytes: uploadBytes,
+        })
+      } catch {
+        const fallbackDurationStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
+        durationSeconds = await computeAudioDurationSecondsFromEncryptedUpload({
+          encryptedStream: fallbackDurationStream,
+          keyBase64,
+          mimeType: "",
+          encryptedSizeBytes: uploadBytes,
+        })
+      }
       const secondsToCharge = Math.max(1, Math.ceil(durationSeconds))
       durationMs = Date.now() - durationStartedAtMs
 
