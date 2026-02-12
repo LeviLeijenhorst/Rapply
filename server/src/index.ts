@@ -1100,9 +1100,13 @@ app.post(
 
 app.post(
   "/transcription/start",
+  (req, _res, next) => {
+    console.error("[transcription] POST /transcription/start received (before rate limit)")
+    next()
+  },
   rateLimitTranscription,
   asyncHandler(async (req, res) => {
-    console.log("[transcription] POST /transcription/start hit")
+    console.error("[transcription] POST /transcription/start hit")
     const user = await requireAuthenticatedUser(req)
     const startedAtMs = Date.now()
 
@@ -1127,7 +1131,7 @@ app.post(
       return
     }
 
-    console.log("[transcription] start received", { operationId, mimeType })
+    console.error("[transcription] start received", { operationId, mimeType })
 
     let uploadPath = ""
 
@@ -1154,7 +1158,7 @@ app.post(
 
       const durationStartedAtMs = Date.now()
       const uploadBytes = await getEncryptedUploadSize({ blobName: uploadPath })
-      console.log("[transcription] duration input", { operationId, uploadPath, uploadBytes, mimeType })
+      console.error("[transcription] duration input", { operationId, uploadPath, uploadBytes, mimeType })
       let durationSeconds = 0
       try {
         const durationStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
@@ -1223,7 +1227,7 @@ app.post(
       const azureSpeechKey = env.azureSpeechKey
       const azureSpeechRegion = env.azureSpeechRegion
       transcriptionProvider = apiKey ? "mistral" : azureSpeechKey && azureSpeechRegion ? "azure-speech" : "none"
-      console.log("[transcription] start", { operationId, durationSeconds, uploadBytes, mimeType, provider: transcriptionProvider })
+      console.error("[transcription] start", { operationId, durationSeconds, uploadBytes, mimeType, provider: transcriptionProvider })
 
       if (preferProvider === "mistral" && !apiKey) {
         throw new Error("Mistral transcription was requested but MISTRAL_API_KEY is missing.")
@@ -1274,7 +1278,7 @@ app.post(
         summary = await generateSummary({ transcript })
         summaryMs = Date.now() - summaryStartedAtMs
       }
-      console.log("[transcription] timing", {
+      console.error("[transcription] timing", {
         operationId,
         tokenMs,
         durationMs,
