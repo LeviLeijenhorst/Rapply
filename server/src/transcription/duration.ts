@@ -22,16 +22,36 @@ export async function computeAudioDurationSecondsFromEncryptedUpload(params: {
       ? Math.floor(encryptedSizeBytes - CSA1_OVERHEAD_BYTES)
       : undefined
 
-  const metadata = await parseStream(
-    decryptedStream as any,
-    {
-      ...(mimeType ? { mimeType } : {}),
-      size: decryptedSizeBytes,
-    },
-    { duration: true },
-  )
+  let metadata: any
+  try {
+    metadata = await parseStream(
+      decryptedStream as any,
+      {
+        ...(mimeType ? { mimeType } : {}),
+        size: decryptedSizeBytes,
+      },
+      { duration: true },
+    )
+  } catch (parseError: any) {
+    console.error("[duration] parseStream failed", {
+      mimeType,
+      encryptedSizeBytes,
+      decryptedSizeBytes,
+      errorMessage: String(parseError?.message || parseError),
+    })
+    throw parseError
+  }
+
   const durationSeconds = readDurationSeconds(metadata)
+  const rawDuration = typeof metadata?.format?.duration
   if (durationSeconds <= 0) {
+    console.error("[duration] no valid duration from metadata", {
+      mimeType,
+      encryptedSizeBytes,
+      decryptedSizeBytes,
+      rawDuration,
+      formatDuration: metadata?.format?.duration,
+    })
     throw new Error("Failed to determine audio duration")
   }
   return durationSeconds

@@ -1151,6 +1151,7 @@ app.post(
 
       const durationStartedAtMs = Date.now()
       const uploadBytes = await getEncryptedUploadSize({ blobName: uploadPath })
+      console.log("[transcription] duration input", { operationId, uploadPath, uploadBytes, mimeType })
       let durationSeconds = 0
       try {
         const durationStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
@@ -1160,7 +1161,13 @@ app.post(
           mimeType,
           encryptedSizeBytes: uploadBytes,
         })
-      } catch {
+      } catch (firstError: any) {
+        console.error("[transcription] duration first attempt failed", {
+          operationId,
+          uploadBytes,
+          mimeType,
+          errorMessage: String(firstError?.message || firstError),
+        })
         const fallbackDurationStream = await fetchEncryptedUploadStream({ blobName: uploadPath })
         durationSeconds = await computeAudioDurationSecondsFromEncryptedUpload({
           encryptedStream: fallbackDurationStream,
