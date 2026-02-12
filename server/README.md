@@ -42,3 +42,16 @@ If you run on a physical Android phone via USB, make sure you also run:
 adb reverse tcp:8787 tcp:8787
 ```
 
+## Azure App Service deployment (coachscribe-api)
+
+Use only the GitHub workflow `.github/workflows/main_coachscribe-api.yml` for API deployments.
+
+1. In Azure Portal, disconnect **Deployment Center** source sync for `coachscribe-api` to avoid Oryx/source-based deploys racing with the workflow artifact deploy.
+2. Ensure app startup command is `node dist/index.cjs`.
+3. Deploy by pushing to `main` (changes in `server/**`) or running the workflow manually.
+4. Verify runtime code with:
+   - `GET /health` and check `build.diagnosticLogVersion`
+   - App Service log stream for `[request] POST /transcription/start reached Express (global middleware)` during a transcription start.
+
+The workflow builds a deterministic artifact (`dist/index.cjs` + production dependencies) and deploys it as a zip package.
+
