@@ -103,6 +103,13 @@ app.use(
   }),
 )
 
+app.use((req, _res, next) => {
+  if (req.method === "POST" && req.path === "/transcription/start") {
+    console.error("[request] POST /transcription/start reached Express (global middleware)")
+  }
+  next()
+})
+
 app.post(
   "/audio-blobs",
   express.raw({ type: "*/*", limit: "1024mb" }),
@@ -248,11 +255,14 @@ const rateLimitTranscription = createRateLimitMiddleware({
 })
 const rateLimitAccount = createRateLimitMiddleware({ windowMs: rateLimitWindowMs, maxRequests: 10, keyPrefix: "account" })
 
+const diagnosticLogVersion = "2026-02-12-global-request-log"
+
 app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({
     ok: true,
     build: {
       authImplementationVersion,
+      diagnosticLogVersion,
     },
     config: {
       database: {
