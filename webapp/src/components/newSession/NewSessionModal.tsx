@@ -52,6 +52,21 @@ function formatTimeLabel(totalSeconds: number) {
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
+function buildDefaultSessionTitle(existingTitles: string[]) {
+  const numberedUntitledSessionPattern = /^Sessie #(\d+) \(naamloos\)$/
+  let maxSessionNumber = 0
+
+  existingTitles.forEach((title) => {
+    const match = numberedUntitledSessionPattern.exec(title.trim())
+    if (!match) return
+    const sessionNumber = Number(match[1])
+    if (!Number.isFinite(sessionNumber) || sessionNumber <= 0) return
+    maxSessionNumber = Math.max(maxSessionNumber, sessionNumber)
+  })
+
+  return `Sessie #${maxSessionNumber + 1} (naamloos)`
+}
+
 async function readAudioDurationSeconds(blob: Blob): Promise<number | null> {
   if (typeof window === 'undefined') return null
   const audio = document.createElement('audio')
@@ -116,7 +131,7 @@ export function NewSessionModal({
   const [selectedCoacheeId, setSelectedCoacheeId] = useState<string | null>(null)
   const [isReportTypeOpen, setIsReportTypeOpen] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
-  const [sessionTitle, setSessionTitle] = useState('Sessie #3 (naamloos)')
+  const [sessionTitle, setSessionTitle] = useState(() => buildDefaultSessionTitle(data.sessions.map((session) => session.title)))
   const [selectedAudioFile, setSelectedAudioFile] = useState<File | null>(null)
   const [isUploadDragActive, setIsUploadDragActive] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
@@ -166,7 +181,7 @@ export function NewSessionModal({
     setIsReportTypeOpen(false)
     setSelectedCoacheeId(null)
     setSelectedTemplateId(defaultTemplateId)
-    setSessionTitle('Sessie #3 (naamloos)')
+    setSessionTitle(buildDefaultSessionTitle(data.sessions.map((session) => session.title)))
     setSelectedAudioFile(null)
     setAudioBlobId(null)
     setAudioPreviewUrl(null)
