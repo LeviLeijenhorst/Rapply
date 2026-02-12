@@ -1102,6 +1102,7 @@ app.post(
   "/transcription/start",
   rateLimitTranscription,
   asyncHandler(async (req, res) => {
+    console.log("[transcription] POST /transcription/start hit")
     const user = await requireAuthenticatedUser(req)
     const startedAtMs = Date.now()
 
