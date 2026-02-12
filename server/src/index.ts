@@ -1126,6 +1126,8 @@ app.post(
       return
     }
 
+    console.log("[transcription] start received", { operationId, mimeType })
+
     let uploadPath = ""
 
     let transcriptionProvider = "unknown"
