@@ -6,7 +6,7 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "node ./node_modules/tsx/dist/cli.mjs src/index.ts",
+    "start": "npx tsx src/index.ts",
     "init-db": "tsx scripts/initDb.ts"
   },
   "dependencies": {
