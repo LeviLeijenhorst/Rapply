@@ -88,6 +88,10 @@ export const env = {
   rateLimitWindowMs: Number(optionalString("RATE_LIMIT_WINDOW_MS") || "60000"),
   rateLimitMaxRequests: Number(optionalString("RATE_LIMIT_MAX_REQUESTS") || "120"),
   unlimitedTranscriptionEmails: normalizeEmailList(optionalString("UNLIMITED_TRANSCRIPTION_EMAILS")),
+  fixedTranscriptionEmails: normalizeEmailList(optionalString("FIXED_TRANSCRIPTION_EMAILS")),
+  fixedTranscriptionTotalMinutes: optionalNumber("FIXED_TRANSCRIPTION_TOTAL_MINUTES") ?? 0,
   testTranscriptionEmails: normalizeEmailList(optionalString("TEST_TRANSCRIPTION_EMAILS")),
   testTranscriptionTotalHours: optionalNumber("TEST_TRANSCRIPTION_TOTAL_HOURS") ?? 80,
+  e2eeEscrowServiceUrl: optionalString("E2EE_ESCROW_SERVICE_URL") || "",
+  e2eeEscrowServiceApiKey: optionalString("E2EE_ESCROW_SERVICE_API_KEY") || "",
 }

@@ -9,8 +9,9 @@ import {
 } from "./auth"
 import { createCorsMiddleware, createRateLimitMiddleware, parseCorsAllowedOriginsFromEnv } from "./security"
 import { applyUnlimitedTranscriptionToBillingStatus, isUnlimitedTranscriptionEmail, unlimitedTranscriptionRemainingSeconds } from "./billing/unlimitedTranscription"
+import { applyFixedTranscriptionToBillingStatus, getFixedTranscriptionTotalSeconds, isFixedTranscriptionEmail } from "./billing/fixedTranscription"
 import { applyTestTranscriptionToBillingStatus, getTestTranscriptionTotalSeconds, isTestTranscriptionEmail } from "./billing/testTranscription"
-import { ensureBillingUser, readBillingStatus } from "./billing/store"
+import { ensureBillingUser, readBillingStatus, type BillingStatus } from "./billing/store"
 import { derivePlanStateFromRevenueCatSubscriber, derivePurchasedSecondsFromRevenueCatSubscriber, fetchRevenueCatSubscriber } from "./billing/revenuecat"
 import { randomBase64Url } from "./transcription/random"
 import { createUploadToken, consumeUploadToken, chargeSecondsIdempotent, refundSecondsIdempotent } from "./transcription/store"
@@ -49,6 +50,34 @@ import {
   type Template,
   type WrittenReport,
 } from "./appData"
+
+function applyEmailBillingOverrides(status: BillingStatus, email: string | null): BillingStatus {
+  if (isUnlimitedTranscriptionEmail(email)) {
+    return applyUnlimitedTranscriptionToBillingStatus(status)
+  }
+  if (isFixedTranscriptionEmail(email)) {
+    return applyFixedTranscriptionToBillingStatus(status)
+  }
+  if (isTestTranscriptionEmail(email)) {
+    return applyTestTranscriptionToBillingStatus(status)
+  }
+  return status
+}
+
+function getNonExpiringTotalSecondsOverrideForEmail(email: string | null): number | undefined {
+  if (isUnlimitedTranscriptionEmail(email)) {
+    return unlimitedTranscriptionRemainingSeconds
+  }
+  if (isFixedTranscriptionEmail(email)) {
+    const totalSeconds = getFixedTranscriptionTotalSeconds()
+    return totalSeconds > 0 ? totalSeconds : undefined
+  }
+  if (isTestTranscriptionEmail(email)) {
+    const totalSeconds = getTestTranscriptionTotalSeconds()
+    return totalSeconds > 0 ? totalSeconds : undefined
+  }
+  return undefined
+}
 
 const app = express()
 
@@ -980,13 +1009,7 @@ app.post(
       cycleStartMs: planState.cycleStartMs,
       cycleEndMs: planState.cycleEndMs,
     })
-    const isUnlimitedTranscription = isUnlimitedTranscriptionEmail(user.email)
-    const isTestTranscription = isTestTranscriptionEmail(user.email)
-    const billingStatus = isUnlimitedTranscription
-      ? applyUnlimitedTranscriptionToBillingStatus(billingStatusRaw)
-      : isTestTranscription
-        ? applyTestTranscriptionToBillingStatus(billingStatusRaw)
-        : billingStatusRaw
+    const billingStatus = applyEmailBillingOverrides(billingStatusRaw, user.email)
 
     res.status(200).json({
       ok: true,
@@ -1014,13 +1037,7 @@ app.post(
       cycleStartMs: planState.cycleStartMs,
       cycleEndMs: planState.cycleEndMs,
     })
-    const isUnlimitedTranscription = isUnlimitedTranscriptionEmail(user.email)
-    const isTestTranscription = isTestTranscriptionEmail(user.email)
-    const billingStatus = isUnlimitedTranscription
-      ? applyUnlimitedTranscriptionToBillingStatus(billingStatusRaw)
-      : isTestTranscription
-        ? applyTestTranscriptionToBillingStatus(billingStatusRaw)
-        : billingStatusRaw
+    const billingStatus = applyEmailBillingOverrides(billingStatusRaw, user.email)
 
     res.status(200).json({
       planKey: planState.planKey,
@@ -1047,13 +1064,7 @@ app.post(
       cycleStartMs: planState.cycleStartMs,
       cycleEndMs: planState.cycleEndMs,
     })
-    const isUnlimitedTranscription = isUnlimitedTranscriptionEmail(user.email)
-    const isTestTranscription = isTestTranscriptionEmail(user.email)
-    const status = isUnlimitedTranscription
-      ? applyUnlimitedTranscriptionToBillingStatus(statusRaw)
-      : isTestTranscription
-        ? applyTestTranscriptionToBillingStatus(statusRaw)
-        : statusRaw
+    const status = applyEmailBillingOverrides(statusRaw, user.email)
 
     const remainingSeconds = status.remainingSeconds
     const allowed = remainingSeconds > 0
@@ -1150,12 +1161,7 @@ app.post(
       const planState = derivePlanStateFromRevenueCatSubscriber(subscriber)
 
       let charge: { secondsCharged: number; remainingSecondsAfter: number }
-      const isUnlimitedTranscription = isUnlimitedTranscriptionEmail(user.email)
-      const isTestTranscription = isTestTranscriptionEmail(user.email)
-      const testTranscriptionTotalSeconds = isTestTranscription ? getTestTranscriptionTotalSeconds() : 0
-      const unlimitedTotalSeconds = isUnlimitedTranscription ? unlimitedTranscriptionRemainingSeconds : 0
-      const nonExpiringTotalSecondsOverride =
-        unlimitedTotalSeconds > 0 ? unlimitedTotalSeconds : testTranscriptionTotalSeconds > 0 ? testTranscriptionTotalSeconds : undefined
+      const nonExpiringTotalSecondsOverride = getNonExpiringTotalSecondsOverrideForEmail(user.email)
       try {
         charge = await chargeSecondsIdempotent({
           userId: user.userId,
@@ -1169,12 +1175,13 @@ app.post(
       } catch (e: any) {
         const message = String(e?.message || e)
         if (message === "Not enough seconds remaining") {
-          const status = await readBillingStatus({
+          const statusRaw = await readBillingStatus({
             userId: user.userId,
             planKey: planState.planKey,
             cycleStartMs: planState.cycleStartMs,
             cycleEndMs: planState.cycleEndMs,
           })
+          const status = applyEmailBillingOverrides(statusRaw, user.email)
           sendError(
             res,
             402,
