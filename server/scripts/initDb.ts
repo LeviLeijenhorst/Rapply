@@ -44,12 +44,11 @@ async function main() {
     "002_remove_transcript.sql",
     "003_app_data.sql",
     "004_audio_blobs.sql",
-    "005_e2ee.sql",
     "006_templates.sql",
     "007_audio_duration_seconds.sql",
     "008_audio_streams.sql",
     "009_practice_settings.sql",
-    "010_e2ee_recovery_custody.sql",
+    "011_e2ee_v2.sql",
   ].map((name) =>
     path.join(sqlDir, name),
   )

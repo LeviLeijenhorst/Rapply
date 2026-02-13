@@ -1,6 +1,5 @@
 import express, { type Request, type Response } from "express"
 import crypto from "crypto"
-import { decodeJwt } from "jose"
 import { env } from "./env"
 import { asyncHandler, sendError } from "./http"
 import {
@@ -26,7 +25,7 @@ import { updateUserDisplayName } from "./users"
 import { deleteEntraUserById } from "./entraGraph"
 import { createAudioBlob, readAudioBlob } from "./audioBlobs"
 import { createAudioStream, createAudioStreamChunk, readAudioStreamChunk, readAudioStreamManifest, updateAudioStreamDetails } from "./audioStreams"
-import * as e2ee from "./e2ee"
+import * as e2eeV2 from "./e2eeV2"
 import { createDefaultTemplates } from "./templates/defaultTemplates"
 import {
   createCoachee,
@@ -319,89 +318,80 @@ app.post(
 )
 
 app.post(
-  "/e2ee/device/register",
+  "/e2ee/v2/bootstrap",
   asyncHandler(async (req, res) => {
     const user = await requireAuthenticatedUser(req)
-    const payload = req.body || {}
-    const deviceId = readId(payload.deviceId, "deviceId")
-    const publicKeyJwk = payload.publicKeyJwk
-    if (!publicKeyJwk) {
-      sendError(res, 400, "Missing publicKeyJwk")
-      return
-    }
-
-    await e2ee.registerDevice({ userId: user.userId, deviceId, publicKeyJwk, createdAtUnixMs: Date.now() })
-    res.status(200).json({ ok: true })
-  }),
-)
-
-app.post(
-  "/e2ee/bootstrap",
-  asyncHandler(async (req, res) => {
-    const user = await requireAuthenticatedUser(req)
-    const payload = req.body || {}
-    const deviceId = readId(payload.deviceId, "deviceId")
-    const result = await e2ee.bootstrap({ userId: user.userId, deviceId })
-    res.status(200).json({
-      e2eeEnabled: result.e2eeEnabled,
-      wrappedUserDataKeyForDevice: result.wrappedUserDataKeyForDevice,
-      recoveryKeyUpdatedAtMs: result.recoveryKeyUpdatedAtMs,
-      recoveryCustodyMode: result.recoveryCustodyMode,
-      hasEscrowedRecoveryKey: result.hasEscrowedRecoveryKey,
-    })
-  }),
-)
-
-app.post(
-  "/e2ee/setup",
-  asyncHandler(async (req, res) => {
-    const user = await requireAuthenticatedUser(req)
-    const payload = req.body || {}
-    const deviceId = readId(payload.deviceId, "deviceId")
-    const wrappedUserDataKeyForDevice = readOptionalText(payload.wrappedUserDataKeyForDevice, true) ?? null
-    const wrappedUserDataKeyForRecovery = readText(payload.wrappedUserDataKeyForRecovery, "wrappedUserDataKeyForRecovery")
-    const recoveryCustodyMode = "self"
-    const escrowReferenceId = null
-
-    await e2ee.setupE2ee({
-      userId: user.userId,
-      deviceId,
-      wrappedUserDataKeyForDevice,
-      wrappedUserDataKeyForRecovery,
-      recoveryCustodyMode,
-      escrowReferenceId,
-      nowUnixMs: Date.now(),
-    })
-
-    res.status(200).json({ ok: true })
-  }),
-)
-
-app.post(
-  "/e2ee/recovery/wrapped-user-data-key",
-  asyncHandler(async (req, res) => {
-    const user = await requireAuthenticatedUser(req)
-    const result = await e2ee.readRecoveryWrappedKey({ userId: user.userId })
-    if (!result) {
-      sendError(res, 404, "E2EE not set up")
-      return
-    }
+    const result = await e2eeV2.bootstrap({ userId: user.userId })
     res.status(200).json(result)
   }),
 )
 
 app.post(
-  "/e2ee/device-key/set",
+  "/e2ee/v2/setup",
+  rateLimitAccount,
   asyncHandler(async (req, res) => {
     const user = await requireAuthenticatedUser(req)
     const payload = req.body || {}
-    const deviceId = readId(payload.deviceId, "deviceId")
-    const wrappedUserDataKeyForDevice = readText(payload.wrappedUserDataKeyForDevice, "wrappedUserDataKeyForDevice")
 
-    await e2ee.setWrappedUserDataKeyForDevice({
+    const argon2Salt = readText(payload.argon2Salt, "argon2Salt")
+    const argon2TimeCost = readRequiredNumber(payload.argon2TimeCost, "argon2TimeCost")
+    const argon2MemoryCostKib = readRequiredNumber(payload.argon2MemoryCostKib, "argon2MemoryCostKib")
+    const argon2Parallelism = readRequiredNumber(payload.argon2Parallelism, "argon2Parallelism")
+    const wrappedArkUserPassphrase = readText(payload.wrappedArkUserPassphrase, "wrappedArkUserPassphrase")
+    const wrappedArkRecoveryCode = readOptionalText(payload.wrappedArkRecoveryCode, true) ?? null
+    const keyVersion = readRequiredInteger(payload.keyVersion ?? 1, "keyVersion")
+    const cryptoVersion = readRequiredInteger(payload.cryptoVersion ?? 1, "cryptoVersion")
+    const recoveryPolicy = readOptionalRecoveryPolicy(payload.recoveryPolicy) ?? "self_service"
+    const custodianThreshold = readOptionalInteger(payload.custodianThreshold)
+    validateArgon2Params({
+      argon2TimeCost,
+      argon2MemoryCostKib,
+      argon2Parallelism,
+    })
+
+    await e2eeV2.setupUserKeys({
       userId: user.userId,
-      deviceId,
-      wrappedUserDataKeyForDevice,
+      argon2Salt,
+      argon2TimeCost,
+      argon2MemoryCostKib,
+      argon2Parallelism,
+      wrappedArkUserPassphrase,
+      wrappedArkRecoveryCode,
+      keyVersion,
+      cryptoVersion,
+      recoveryPolicy,
+      custodianThreshold,
+      nowUnixMs: Date.now(),
+    })
+
+    res.status(200).json({ ok: true })
+  }),
+)
+
+app.post(
+  "/e2ee/v2/user-key-material",
+  rateLimitAccount,
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const material = await e2eeV2.readUserKeyMaterial({ userId: user.userId })
+    if (!material) {
+      sendError(res, 404, "E2EE not configured")
+      return
+    }
+    res.status(200).json(material)
+  }),
+)
+
+app.post(
+  "/e2ee/v2/recovery-code/set",
+  rateLimitAccount,
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const payload = req.body || {}
+    const wrappedArkRecoveryCode = readOptionalText(payload.wrappedArkRecoveryCode, true) ?? null
+    await e2eeV2.setRecoveryWrappedArk({
+      userId: user.userId,
+      wrappedArkRecoveryCode,
       nowUnixMs: Date.now(),
     })
     res.status(200).json({ ok: true })
@@ -409,31 +399,55 @@ app.post(
 )
 
 app.post(
-  "/e2ee/recovery/rotate",
+  "/e2ee/v2/passphrase/rotate",
+  rateLimitAccount,
   asyncHandler(async (req, res) => {
     const user = await requireAuthenticatedUser(req)
     const payload = req.body || {}
-    const wrappedUserDataKeyForRecovery = readText(payload.wrappedUserDataKeyForRecovery, "wrappedUserDataKeyForRecovery")
-    await e2ee.rotateRecoveryWrappedKey({ userId: user.userId, wrappedUserDataKeyForRecovery, nowUnixMs: Date.now() })
+    const argon2Salt = readText(payload.argon2Salt, "argon2Salt")
+    const argon2TimeCost = readRequiredNumber(payload.argon2TimeCost, "argon2TimeCost")
+    const argon2MemoryCostKib = readRequiredNumber(payload.argon2MemoryCostKib, "argon2MemoryCostKib")
+    const argon2Parallelism = readRequiredNumber(payload.argon2Parallelism, "argon2Parallelism")
+    const wrappedArkUserPassphrase = readText(payload.wrappedArkUserPassphrase, "wrappedArkUserPassphrase")
+    const keyVersion = readRequiredInteger(payload.keyVersion, "keyVersion")
+    validateArgon2Params({
+      argon2TimeCost,
+      argon2MemoryCostKib,
+      argon2Parallelism,
+    })
+
+    await e2eeV2.rotatePassphraseWrappedArk({
+      userId: user.userId,
+      argon2Salt,
+      argon2TimeCost,
+      argon2MemoryCostKib,
+      argon2Parallelism,
+      wrappedArkUserPassphrase,
+      keyVersion,
+      nowUnixMs: Date.now(),
+    })
+
     res.status(200).json({ ok: true })
   }),
 )
 
 app.post(
-  "/e2ee/recovery/custody/set",
+  "/e2ee/v2/object-key/upsert",
   asyncHandler(async (req, res) => {
     const user = await requireAuthenticatedUser(req)
     const payload = req.body || {}
-    const recoveryCustodyMode = readRequiredRecoveryCustodyMode(payload.recoveryCustodyMode)
-    if (recoveryCustodyMode !== "self") {
-      sendError(res, 400, "Only self custody is supported")
-      return
-    }
-    const escrowReferenceId = readOptionalText(payload.escrowReferenceId, true) ?? null
-    await e2ee.setRecoveryCustody({
+    const objectType = readRequiredObjectType(payload.objectType)
+    const objectId = readId(payload.objectId, "objectId")
+    const keyVersion = readRequiredInteger(payload.keyVersion, "keyVersion")
+    const cryptoVersion = readRequiredInteger(payload.cryptoVersion ?? 1, "cryptoVersion")
+    const wrappedDek = readText(payload.wrappedDek, "wrappedDek")
+    await e2eeV2.upsertObjectKey({
       userId: user.userId,
-      recoveryCustodyMode,
-      escrowReferenceId: null,
+      objectType,
+      objectId,
+      keyVersion,
+      cryptoVersion,
+      wrappedDek,
       nowUnixMs: Date.now(),
     })
     res.status(200).json({ ok: true })
@@ -441,87 +455,14 @@ app.post(
 )
 
 app.post(
-  "/e2ee/recovery/escrow/store",
-  asyncHandler(async (req, res) => {
-    sendError(res, 410, "Escrow is disabled; self custody only")
-  }),
-)
-
-app.post(
-  "/e2ee/recovery/escrow/read",
-  asyncHandler(async (req, res) => {
-    sendError(res, 410, "Escrow is disabled; self custody only")
-  }),
-)
-
-app.post(
-  "/e2ee/pairing/request",
+  "/e2ee/v2/object-key/get",
   asyncHandler(async (req, res) => {
     const user = await requireAuthenticatedUser(req)
     const payload = req.body || {}
-    const deviceId = readId(payload.deviceId, "deviceId")
-    const expiresAtMs = Date.now() + 10 * 60_000
-    await e2ee.requestPairing({ userId: user.userId, deviceId, expiresAtUnixMs: expiresAtMs })
-    res.status(200).json({ expiresAtMs })
-  }),
-)
-
-function requireRecentLogin(req: Request) {
-  const authHeader = String(req.headers.authorization || "")
-  const match = authHeader.match(/^Bearer\s+(.+)$/i)
-  const token = match ? String(match[1] || "").trim() : ""
-  if (!token) {
-    throw new Error("Missing Authorization header")
-  }
-  const payload = decodeJwt(token) as any
-  const issuedAtSeconds = typeof payload?.iat === "number" ? payload.iat : null
-  if (!issuedAtSeconds) {
-    throw new Error("Missing iat in token")
-  }
-  const nowSeconds = Math.floor(Date.now() / 1000)
-  const ageSeconds = nowSeconds - issuedAtSeconds
-  if (ageSeconds > 30 * 60) {
-    throw new Error("Recent login required")
-  }
-}
-
-app.post(
-  "/e2ee/pairing/approve",
-  asyncHandler(async (req, res) => {
-    const user = await requireAuthenticatedUser(req)
-
-    try {
-      requireRecentLogin(req)
-    } catch (error) {
-      sendError(res, 401, error instanceof Error ? error.message : "Recent login required")
-      return
-    }
-
-    const payload = req.body || {}
-    const deviceId = readId(payload.deviceId, "deviceId")
-    const wrappedUserDataKeyForDevice = readText(payload.wrappedUserDataKeyForDevice, "wrappedUserDataKeyForDevice")
-    await e2ee.approvePairing({ userId: user.userId, deviceId, wrappedUserDataKeyForDevice, nowUnixMs: Date.now() })
-    res.status(200).json({ ok: true })
-  }),
-)
-
-app.post(
-  "/e2ee/devices/list",
-  asyncHandler(async (req, res) => {
-    const user = await requireAuthenticatedUser(req)
-    const devices = await e2ee.listDevices({ userId: user.userId })
-    res.status(200).json({ devices })
-  }),
-)
-
-app.post(
-  "/e2ee/devices/revoke",
-  asyncHandler(async (req, res) => {
-    const user = await requireAuthenticatedUser(req)
-    const payload = req.body || {}
-    const deviceId = readId(payload.deviceId, "deviceId")
-    await e2ee.revokeDevice({ userId: user.userId, deviceId, nowUnixMs: Date.now() })
-    res.status(200).json({ ok: true })
+    const objectType = readRequiredObjectType(payload.objectType)
+    const objectId = readId(payload.objectId, "objectId")
+    const objectKeys = await e2eeV2.readObjectKeys({ userId: user.userId, objectType, objectId })
+    res.status(200).json({ objectKeys })
   }),
 )
 
@@ -1478,6 +1419,14 @@ function readRequiredNumber(value: unknown, fieldName: string): number {
   return Number(numeric)
 }
 
+function readRequiredInteger(value: unknown, fieldName: string): number {
+  const numeric = readRequiredNumber(value, fieldName)
+  if (!Number.isInteger(numeric)) {
+    throw new Error(`Invalid ${fieldName}`)
+  }
+  return numeric
+}
+
 function readOptionalText(value: unknown, allowEmpty = false): string | null | undefined {
   if (value === undefined) return undefined
   if (value === null) return null
@@ -1494,21 +1443,51 @@ function readOptionalNumber(value: unknown): number | null | undefined {
   return Number(numeric)
 }
 
-function readOptionalRecoveryCustodyMode(value: unknown): e2ee.RecoveryCustodyMode | null {
+function readOptionalInteger(value: unknown): number | null {
   if (value === undefined || value === null) return null
-  const text = typeof value === "string" ? value.trim().toLowerCase() : ""
-  if (text === "self" || text === "escrow") {
-    return text
-  }
-  return null
+  const numeric = typeof value === "number" ? value : Number(value)
+  if (!Number.isFinite(numeric) || !Number.isInteger(numeric)) return null
+  return Number(numeric)
 }
 
-function readRequiredRecoveryCustodyMode(value: unknown): e2ee.RecoveryCustodyMode {
-  const mode = readOptionalRecoveryCustodyMode(value)
-  if (!mode) {
-    throw new Error("Missing recoveryCustodyMode")
+function readOptionalRecoveryPolicy(value: unknown): e2eeV2.RecoveryPolicy | null {
+  if (value === undefined || value === null) return null
+  const text = typeof value === "string" ? value.trim().toLowerCase() : ""
+  if (text === "self_service" || text === "custodian_only" || text === "hybrid") {
+    return text
   }
-  return mode
+  throw new Error("Invalid recoveryPolicy")
+}
+
+const allowedE2eeObjectTypes = new Set([
+  "coachee",
+  "session",
+  "note",
+  "written_report",
+  "template",
+  "practice_settings",
+  "audio_blob",
+  "audio_stream",
+])
+
+function readRequiredObjectType(value: unknown): string {
+  const objectType = readText(value, "objectType")
+  if (!allowedE2eeObjectTypes.has(objectType)) {
+    throw new Error("Invalid objectType")
+  }
+  return objectType
+}
+
+function validateArgon2Params(params: { argon2TimeCost: number; argon2MemoryCostKib: number; argon2Parallelism: number }) {
+  if (!Number.isInteger(params.argon2TimeCost) || params.argon2TimeCost < 1 || params.argon2TimeCost > 10) {
+    throw new Error("Invalid argon2TimeCost")
+  }
+  if (!Number.isInteger(params.argon2MemoryCostKib) || params.argon2MemoryCostKib < 16 * 1024 || params.argon2MemoryCostKib > 2 * 1024 * 1024) {
+    throw new Error("Invalid argon2MemoryCostKib")
+  }
+  if (!Number.isInteger(params.argon2Parallelism) || params.argon2Parallelism < 1 || params.argon2Parallelism > 16) {
+    throw new Error("Invalid argon2Parallelism")
+  }
 }
 
 function readUnixMs(value: unknown, fieldName: string): number {
