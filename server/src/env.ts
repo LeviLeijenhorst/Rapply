@@ -94,4 +94,5 @@ export const env = {
   testTranscriptionTotalHours: optionalNumber("TEST_TRANSCRIPTION_TOTAL_HOURS") ?? 80,
   e2eeEscrowServiceUrl: optionalString("E2EE_ESCROW_SERVICE_URL") || "",
   e2eeEscrowServiceApiKey: optionalString("E2EE_ESCROW_SERVICE_API_KEY") || "",
+  adminFeedbackEmails: normalizeEmailList(optionalString("ADMIN_FEEDBACK_EMAILS")),
 }

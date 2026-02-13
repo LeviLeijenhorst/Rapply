@@ -6,6 +6,16 @@ const TRANSCRIPTION_START_TIMEOUT_MS = 90 * 60_000
 const TRANSCRIPTION_OPERATION_TIMEOUT_MS = 95 * 60_000
 const AZURE_SPEECH_MAX_AUDIO_BYTES = 250 * 1024 * 1024
 const AZURE_WAV_TARGET_SAMPLE_RATE = 16_000
+const ABORTED_REQUEST_ERROR = 'Request aborted'
+
+type TranscriptionProgressHandlers = {
+  onOperationPrepared?: (operationId: string) => void
+}
+
+function isRequestAbortedError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error || '')
+  return message === ABORTED_REQUEST_ERROR
+}
 
 function mapTranscriptionErrorMessage(rawMessage: string): string {
   const normalized = String(rawMessage || '').toLowerCase()
@@ -47,6 +57,9 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, tim
     return await fetch(input, { ...init, signal: controller.signal })
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
+      if (init.signal?.aborted) {
+        throw new Error(ABORTED_REQUEST_ERROR)
+      }
       throw new Error('Transcriptie duurde te lang. Probeer het opnieuw.')
     }
     throw error
@@ -267,13 +280,15 @@ export async function transcribeAudio(params: {
   audioBlob: Blob
   mimeType: string
   languageCode?: string
+  signal?: AbortSignal
+  progress?: TranscriptionProgressHandlers
 }): Promise<{ transcript: string; summary: string }> {
   return withTimeout(
     (async () => {
-      const { audioBlob, mimeType, languageCode = 'nl' } = params
+      const { audioBlob, mimeType, languageCode = 'nl', signal, progress } = params
 
       try {
-        const preflight = (await callSecureApi('/transcription/preflight', {}, { timeoutMs: TRANSCRIPTION_PREFLIGHT_TIMEOUT_MS })) as {
+        const preflight = (await callSecureApi('/transcription/preflight', {}, { timeoutMs: TRANSCRIPTION_PREFLIGHT_TIMEOUT_MS, signal })) as {
           allowed?: boolean
           operationId?: string
           uploadToken?: string
@@ -323,6 +338,7 @@ export async function transcribeAudio(params: {
         if (!operationId || !uploadToken || !uploadUrl) {
           throw new Error('Transcription preflight failed')
         }
+        progress?.onOperationPrepared?.(operationId)
 
         const uploadResponse = await fetchWithTimeout(
           uploadUrl,
@@ -333,6 +349,7 @@ export async function transcribeAudio(params: {
               'Content-Type': 'application/octet-stream',
             },
             body: encryptedBlob,
+            signal,
           },
           TRANSCRIPTION_UPLOAD_TIMEOUT_MS,
         )
@@ -355,7 +372,7 @@ export async function transcribeAudio(params: {
             include_summary: false,
             prefer_provider: preflightProvider === 'mistral' ? 'mistral' : undefined,
           },
-          { timeoutMs: TRANSCRIPTION_START_TIMEOUT_MS },
+          { timeoutMs: TRANSCRIPTION_START_TIMEOUT_MS, signal },
         )) as {
           transcript?: string
           text?: string
@@ -376,6 +393,9 @@ export async function transcribeAudio(params: {
 
         return { transcript, summary }
       } catch (error) {
+        if (isRequestAbortedError(error) || signal?.aborted) {
+          throw new Error(ABORTED_REQUEST_ERROR)
+        }
         console.error('[transcription] failed', error)
         const rawMessage = error instanceof Error ? error.message : String(error || 'Transcriptie mislukt')
         throw new Error(mapTranscriptionErrorMessage(rawMessage))
@@ -384,4 +404,14 @@ export async function transcribeAudio(params: {
     TRANSCRIPTION_OPERATION_TIMEOUT_MS,
     'Transcriptie duurde te lang. Probeer het opnieuw.',
   )
+}
+
+export async function cancelTranscriptionOperation(params: { operationId: string; signal?: AbortSignal }): Promise<void> {
+  const operationId = String(params.operationId || '').trim()
+  if (!operationId) return
+  await callSecureApi('/transcription/cancel', { operationId }, { timeoutMs: 30_000, signal: params.signal })
+}
+
+export function isTranscriptionCancelledError(error: unknown): boolean {
+  return isRequestAbortedError(error)
 }

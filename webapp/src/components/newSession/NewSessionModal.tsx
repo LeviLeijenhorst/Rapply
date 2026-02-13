@@ -9,8 +9,16 @@ import { useReducedMotion } from '../../hooks/useReducedMotion'
 import { useLocalAppData } from '../../local/LocalAppDataProvider'
 import { useE2ee } from '../../e2ee/E2eeProvider'
 import { createAudioBlobRemote } from '../../services/audioBlobs'
-import { transcribeAudio } from '../../services/transcription'
+import { isTranscriptionCancelledError, transcribeAudio } from '../../services/transcription'
 import { generateSummary } from '../../services/summary'
+import {
+  finishTranscriptionRun,
+  isTranscriptionRunActive,
+  setSummaryAbortController,
+  setTranscriptionAbortController,
+  setTranscriptionOperationId,
+  startTranscriptionRun,
+} from '../../services/transcriptionRunStore'
 import { colors } from '../../theme/colors'
 import { webTransitionSmooth, webTransitionSlow } from '../../theme/webTransitions'
 import { Text } from '../Text'
@@ -31,6 +39,7 @@ import { CheckmarkIcon } from '../icons/CheckmarkIcon'
 import { unassignedCoacheeLabel } from '../../utils/coachee'
 import { normalizeTranscriptionError } from '../../utils/transcriptionError'
 import { AudioPlayerCard } from '../sessionDetail/AudioPlayerCard'
+import { setPendingPreviewAudio } from '../../audio/pendingPreviewStore'
 
 type Step = 'select' | 'consent' | 'upload' | 'recording' | 'recorded'
 type OptionKey = 'gesprek' | 'verslag' | 'upload' | 'schrijven'
@@ -65,6 +74,33 @@ function buildDefaultSessionTitle(existingTitles: string[]) {
   })
 
   return `Sessie #${maxSessionNumber + 1} (naamloos)`
+}
+
+const knownAudioMimeByExtension: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  m4a: 'audio/mp4',
+  mp4: 'audio/mp4',
+  aac: 'audio/aac',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
+  opus: 'audio/opus',
+  webm: 'audio/webm',
+  flac: 'audio/flac',
+}
+
+function getFileExtension(fileName: string) {
+  const trimmed = String(fileName || '').trim().toLowerCase()
+  const dotIndex = trimmed.lastIndexOf('.')
+  if (dotIndex < 0 || dotIndex === trimmed.length - 1) return ''
+  return trimmed.slice(dotIndex + 1)
+}
+
+function getAudioMimeTypeFromFile(file: File) {
+  if (file.type && file.type.toLowerCase().startsWith('audio/')) {
+    return file.type
+  }
+  const extension = getFileExtension(file.name)
+  return knownAudioMimeByExtension[extension] ?? 'audio/mpeg'
 }
 
 async function readAudioDurationSeconds(blob: Blob): Promise<number | null> {
@@ -359,10 +395,10 @@ export function NewSessionModal({
   const title =
     step === 'select'
       ? 'Nieuwe sessie'
-      : step === 'consent'
+        : step === 'consent'
         ? 'Toestemming voor opname bevestigen'
         : step === 'upload'
-          ? 'MP3 bestand uploaden'
+          ? 'Bestand uploaden'
           : step === 'recording'
             ? 'Opnemen'
             : 'Gesprek opgenomen'
@@ -422,10 +458,11 @@ export function NewSessionModal({
     if (typeof document === 'undefined') return
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = 'audio/mpeg,.mp3'
+    input.accept = 'audio/*,.mp3,.m4a,.mp4,.aac,.wav,.ogg,.opus,.webm,.flac'
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
+      if (!isAudioFile(file)) return
       setSelectedAudioFile(file)
     }
     input.click()
@@ -436,15 +473,16 @@ export function NewSessionModal({
     window.open('https://www.coachscribe.nl/toestemming-vragen', '_blank', 'noopener,noreferrer')
   }
 
-  function isMp3File(file: File) {
+  function isAudioFile(file: File) {
     if (!file) return false
-    if (file.type === 'audio/mpeg') return true
-    return file.name.toLowerCase().endsWith('.mp3')
+    if (file.type && file.type.toLowerCase().startsWith('audio/')) return true
+    const extension = getFileExtension(file.name)
+    return Boolean(knownAudioMimeByExtension[extension])
   }
 
   function handleDroppedFile(file: File | null) {
     if (!file) return
-    if (!isMp3File(file)) return
+    if (!isAudioFile(file)) return
     setSelectedAudioFile(file)
   }
 
@@ -520,7 +558,7 @@ export function NewSessionModal({
     if (!selectedAudioFile) return
     if (isSavingAudio) return
     setIsSavingAudio(true)
-    const mimeType = selectedAudioFile.type || 'audio/mpeg'
+    const mimeType = getAudioMimeTypeFromFile(selectedAudioFile)
     const detectedDurationSeconds = await readAudioDurationSeconds(selectedAudioFile)
     setAudioDurationSeconds(detectedDurationSeconds)
     setAudioForTranscription({ blob: selectedAudioFile, mimeType })
@@ -571,6 +609,14 @@ export function NewSessionModal({
     })
 
     if (!createdSessionId) return
+
+    await setPendingPreviewAudio({
+      sessionId: createdSessionId,
+      blob: audioForTranscription.blob,
+      mimeType: audioForTranscription.mimeType,
+      summaryTemplate,
+    })
+
     if (!audioBlobId) {
       pendingSessionIdRef.current = createdSessionId
     }
@@ -580,13 +626,25 @@ export function NewSessionModal({
     handleClose()
 
     void (async () => {
+      const runId = startTranscriptionRun(createdSessionId)
+      const transcriptionAbortController = new AbortController()
+      setTranscriptionAbortController(createdSessionId, runId, transcriptionAbortController)
       try {
         console.log('[transcription][new-session] start', { sessionId: createdSessionId, mimeType: nextAudioForTranscription.mimeType })
         const { transcript, summary } = await transcribeAudio({
           audioBlob: nextAudioForTranscription.blob,
           mimeType: nextAudioForTranscription.mimeType,
           languageCode: 'nl',
+          signal: transcriptionAbortController.signal,
+          progress: {
+            onOperationPrepared: (operationId) => {
+              if (!isTranscriptionRunActive(createdSessionId, runId)) return
+              setTranscriptionOperationId(createdSessionId, runId, operationId)
+            },
+          },
         })
+        if (!isTranscriptionRunActive(createdSessionId, runId)) return
+        setTranscriptionAbortController(createdSessionId, runId, null)
         console.log('[transcription][new-session] transcript-received', {
           sessionId: createdSessionId,
           transcriptLength: transcript.length,
@@ -602,6 +660,8 @@ export function NewSessionModal({
           })
         } else {
           console.log('[transcription][new-session] summary-generate-start', { sessionId: createdSessionId })
+          const summaryAbortController = new AbortController()
+          setSummaryAbortController(createdSessionId, runId, summaryAbortController)
           updateSession(createdSessionId, {
             transcript,
             transcriptionStatus: 'generating',
@@ -610,7 +670,9 @@ export function NewSessionModal({
           const generatedSummary = await generateSummary({
             transcript,
             template: summaryTemplate,
+            signal: summaryAbortController.signal,
           })
+          if (!isTranscriptionRunActive(createdSessionId, runId)) return
           updateSession(createdSessionId, {
             summary: generatedSummary,
             transcriptionStatus: 'done',
@@ -618,12 +680,21 @@ export function NewSessionModal({
           })
           console.log('[transcription][new-session] summary-generate-done', { sessionId: createdSessionId, summaryLength: generatedSummary.length })
         }
+        finishTranscriptionRun(createdSessionId, runId)
       } catch (error) {
+        if (!isTranscriptionRunActive(createdSessionId, runId)) {
+          return
+        }
+        if (isTranscriptionCancelledError(error)) {
+          finishTranscriptionRun(createdSessionId, runId)
+          return
+        }
         console.error('[NewSessionModal] Transcription failed:', error)
         updateSession(createdSessionId, {
           transcriptionStatus: 'error',
           transcriptionError: normalizeTranscriptionError(error),
         })
+        finishTranscriptionRun(createdSessionId, runId)
       }
     })()
   }
@@ -837,7 +908,7 @@ export function NewSessionModal({
                 leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
               />
               <SessionOptionRow
-                label="MP3 bestand uploaden"
+                label="Bestand uploaden"
                 isSelected={selectedOption === 'upload'}
                 onPress={() => setSelectedOption('upload')}
                 leftIcon={<Mp3UploadIcon />}

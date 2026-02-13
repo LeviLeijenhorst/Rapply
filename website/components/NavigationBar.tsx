@@ -91,13 +91,13 @@ export default function NavigationBar() {
           <div className="hidden items-center gap-4 lg:flex">
             <Button
               label="Inloggen"
-              destination="https://app.coachscribe.nl"
+              destination="https://app.coachscribe.nl/inloggen?direct=1"
               variant="secondary"
               className="font-normal"
             />
             <Button
               label="Probeer Gratis"
-              destination="https://app.coachscribe.nl"
+              destination="https://app.coachscribe.nl/inloggen?mode=signup"
               variant="primary"
               className="font-normal"
             />
@@ -223,13 +223,13 @@ export default function NavigationBar() {
           <div className="flex flex-col gap-4">
             <Button
               label="Inloggen"
-              destination="https://app.coachscribe.nl"
+              destination="https://app.coachscribe.nl/inloggen?direct=1"
               variant="secondary"
               className="font-normal"
             />
             <Button
               label="Probeer Gratis"
-              destination="https://app.coachscribe.nl"
+              destination="https://app.coachscribe.nl/inloggen?mode=signup"
               variant="primary"
               className="font-normal"
             />

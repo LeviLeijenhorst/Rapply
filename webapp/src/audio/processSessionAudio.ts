@@ -1,6 +1,14 @@
 import { createAudioBlobRemote } from '../services/audioBlobs'
-import { transcribeAudio } from '../services/transcription'
+import { isTranscriptionCancelledError, transcribeAudio } from '../services/transcription'
 import { generateSummary } from '../services/summary'
+import {
+  finishTranscriptionRun,
+  isTranscriptionRunActive,
+  setSummaryAbortController,
+  setTranscriptionAbortController,
+  setTranscriptionOperationId,
+  startTranscriptionRun,
+} from '../services/transcriptionRunStore'
 import { normalizeTranscriptionError } from '../utils/transcriptionError'
 
 type SessionUpdate = {
@@ -29,6 +37,7 @@ export async function processSessionAudio(params: {
   onAudioUploaded?: (audioBlobId: string) => void | Promise<void>
 }): Promise<void> {
   const { sessionId, audioBlob, mimeType, summaryTemplate, initialAudioBlobId, e2ee, updateSession, onAudioUploaded } = params
+  const runId = startTranscriptionRun(sessionId)
 
   let ensuredAudioBlobId = initialAudioBlobId
   if (!ensuredAudioBlobId) {
@@ -53,11 +62,22 @@ export async function processSessionAudio(params: {
   })
 
   try {
+    const transcriptionAbortController = new AbortController()
+    setTranscriptionAbortController(sessionId, runId, transcriptionAbortController)
     const { transcript, summary } = await transcribeAudio({
       audioBlob,
       mimeType,
       languageCode: 'nl',
+      signal: transcriptionAbortController.signal,
+      progress: {
+        onOperationPrepared: (operationId) => {
+          if (!isTranscriptionRunActive(sessionId, runId)) return
+          setTranscriptionOperationId(sessionId, runId, operationId)
+        },
+      },
     })
+    if (!isTranscriptionRunActive(sessionId, runId)) return
+    setTranscriptionAbortController(sessionId, runId, null)
     const cleanedSummary = String(summary || '').trim()
     if (cleanedSummary) {
       updateSession(sessionId, {
@@ -66,9 +86,12 @@ export async function processSessionAudio(params: {
         transcriptionStatus: 'done',
         transcriptionError: null,
       })
+      finishTranscriptionRun(sessionId, runId)
       return
     }
 
+    const summaryAbortController = new AbortController()
+    setSummaryAbortController(sessionId, runId, summaryAbortController)
     updateSession(sessionId, {
       transcript,
       transcriptionStatus: 'generating',
@@ -77,17 +100,28 @@ export async function processSessionAudio(params: {
     const generatedSummary = await generateSummary({
       transcript,
       template: summaryTemplate,
+      signal: summaryAbortController.signal,
     })
+    if (!isTranscriptionRunActive(sessionId, runId)) return
     updateSession(sessionId, {
       summary: generatedSummary,
       transcriptionStatus: 'done',
       transcriptionError: null,
     })
+    finishTranscriptionRun(sessionId, runId)
   } catch (error) {
+    if (!isTranscriptionRunActive(sessionId, runId)) {
+      return
+    }
+    if (isTranscriptionCancelledError(error)) {
+      finishTranscriptionRun(sessionId, runId)
+      return
+    }
     updateSession(sessionId, {
       transcriptionStatus: 'error',
       transcriptionError: normalizeTranscriptionError(error),
     })
+    finishTranscriptionRun(sessionId, runId)
     throw error
   }
 }

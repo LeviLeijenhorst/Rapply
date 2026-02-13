@@ -5,6 +5,7 @@ import { useNavigation } from "@react-navigation/native"
 import { logger } from "@/utils/logger"
 import { getAuthSession, onAuthSessionChange } from "@/services/auth"
 import * as Linking from "expo-linking"
+import { getMobileE2eeStatus } from "@/services/e2eeMobile"
 
 export default function LoadingScreen() {
   const navigation = useNavigation<any>()
@@ -38,6 +39,12 @@ export default function LoadingScreen() {
         }
 
         didNavigate = true
+        const e2eeStatus = await getMobileE2eeStatus()
+        if (isCancelled) return
+        if (e2eeStatus.requiresSetup) {
+          navigation.reset({ index: 0, routes: [{ name: "KeyCustodySetup" }] })
+          return
+        }
         navigation.reset({ index: 0, routes: [{ name: "Welcome" }] })
       } catch (error: any) {
         logger.error("[Loading] Failed to read session", { message: String(error?.message ?? error ?? "") })

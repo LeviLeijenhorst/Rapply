@@ -1,38 +1,39 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Image, Pressable, StyleSheet, View } from 'react-native'
 
 import { AuthCard } from '../components/AuthCard'
 import { CoachscribeLogo } from '../../components/CoachscribeLogo'
-import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon'
 import { Text } from '../../components/Text'
 import { colors } from '../../theme/colors'
 
 type Props = {
   mode: 'inloggen' | 'registreren'
   onStartLogin?: () => void
+  errorMessage?: string | null
 }
 
-export function AuthEntryScreen({ mode, onStartLogin }: Props) {
-  const [hasAgreedToPrivacy, setHasAgreedToPrivacy] = useState(false)
-  const [hasAgreedToTerms, setHasAgreedToTerms] = useState(false)
+export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
   const illustrationSource = require('../../../assets/authhumans_1.png')
 
   async function startLogin() {
     try {
       onStartLogin?.()
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+      const queryMode = urlParams?.get('mode')
+      const shouldSignUp =
+        mode === 'registreren' || queryMode === 'signup' || (mode === 'inloggen' && queryMode !== 'signin')
+
+      if (shouldSignUp) {
+        const { signUpWithEntra } = await import('../entraAuth')
+        await signUpWithEntra()
+        return
+      }
       const { signInWithEntra } = await import('../entraAuth')
       await signInWithEntra()
     } catch (error) {
       console.error('Entra sign in failed:', error)
       alert('Inloggen mislukt. Probeer het opnieuw.')
     }
-  }
-
-  const isActionDisabled = !hasAgreedToPrivacy || !hasAgreedToTerms
-
-  function openLegalPage(url: string) {
-    if (typeof window === 'undefined') return
-    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -72,53 +73,17 @@ export function AuthEntryScreen({ mode, onStartLogin }: Props) {
             </Text>
             {/* Continue button */}
             <Pressable
-              onPress={isActionDisabled ? undefined : startLogin}
+              onPress={startLogin}
               style={({ hovered }) => [
                 styles.actionButton,
                 hovered ? styles.actionButtonHovered : undefined,
-                isActionDisabled ? styles.actionButtonDisabled : undefined,
               ]}
             >
               <Text isBold style={styles.actionButtonText}>
                 Doorgaan
               </Text>
             </Pressable>
-            {/* Agreement checkbox */}
-            <Pressable style={styles.checkboxRow} onPress={() => setHasAgreedToPrivacy((value) => !value)}>
-              <View style={[styles.checkbox, hasAgreedToPrivacy ? styles.checkboxChecked : undefined]}>
-                {hasAgreedToPrivacy ? <CheckmarkIcon color={colors.selected} width={14} height={12} /> : null}
-              </View>
-              <View style={styles.checkboxTextContainer}>
-                <Text style={styles.checkboxText}>Ik ga akkoord met het privacybeleid</Text>
-                <Text
-                  onPress={(event: any) => {
-                    event?.stopPropagation?.()
-                    openLegalPage('https://www.coachscribe.nl/privacybeleid')
-                  }}
-                  style={styles.checkboxLink}
-                >
-                  Bekijk privacybeleid
-                </Text>
-              </View>
-            </Pressable>
-
-            <Pressable style={styles.checkboxRow} onPress={() => setHasAgreedToTerms((value) => !value)}>
-              <View style={[styles.checkbox, hasAgreedToTerms ? styles.checkboxChecked : undefined]}>
-                {hasAgreedToTerms ? <CheckmarkIcon color={colors.selected} width={14} height={12} /> : null}
-              </View>
-              <View style={styles.checkboxTextContainer}>
-                <Text style={styles.checkboxText}>Ik ga akkoord met de gebruikersovereenkomst</Text>
-                <Text
-                  onPress={(event: any) => {
-                    event?.stopPropagation?.()
-                    openLegalPage('https://www.coachscribe.nl/gebruikersovereenkomst')
-                  }}
-                  style={styles.checkboxLink}
-                >
-                  Bekijk gebruikersovereenkomst
-                </Text>
-              </View>
-            </Pressable>
+            {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
           </View>
         </View>
       </View>
@@ -205,51 +170,15 @@ const styles = StyleSheet.create({
   actionButtonHovered: {
     backgroundColor: '#F6E6F0',
   },
-  actionButtonDisabled: {
-    opacity: 0.5,
-  },
   actionButtonText: {
     fontSize: 14,
     lineHeight: 18,
     color: colors.selected,
   },
-  checkboxRow: {
-    width: '100%',
-    maxWidth: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#FFFFFF',
-  },
-  checkboxText: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#FFFFFF',
-  },
-  checkboxTextContainer: {
-    flex: 1,
-    gap: 2,
-  },
-  checkboxLink: {
+  errorText: {
     fontSize: 13,
     lineHeight: 18,
-    color: '#FFFFFF',
-    textDecorationLine: 'underline',
-    ...( { cursor: 'pointer' } as any ),
+    color: '#FFE5E5',
   },
 })
 

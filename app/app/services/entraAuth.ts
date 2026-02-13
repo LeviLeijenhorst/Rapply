@@ -12,6 +12,10 @@ export type EntraAuthResult = {
   accessToken: string
 }
 
+type EntraSignInOptions = {
+  screenHint?: "signup"
+}
+
 type OpenIdConfiguration = {
   authorization_endpoint: string
   token_endpoint: string
@@ -87,7 +91,7 @@ export async function clearEntraLocalTokens(): Promise<void> {
   await writeRefreshToken(null)
 }
 
-export async function signInWithEntra(): Promise<EntraAuthResult> {
+export async function signInWithEntra(options?: EntraSignInOptions): Promise<EntraAuthResult> {
   const { openIdConfigurationUrl, clientId, apiScope } = readEntraConfig()
 
   const discovery = await fetchOpenIdConfiguration(openIdConfigurationUrl)
@@ -99,6 +103,7 @@ export async function signInWithEntra(): Promise<EntraAuthResult> {
     redirectUri,
     responseType: AuthSession.ResponseType.Code,
     scopes: ["openid", "profile", "email", apiScope, "offline_access"],
+    extraParams: options?.screenHint ? { screen_hint: options.screenHint } : undefined,
     usePKCE: true,
   })
 

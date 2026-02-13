@@ -20,19 +20,51 @@ export function buildConversationTranscriptSystemMessages(params: { transcript: 
 export function buildCoacheeSummariesSystemMessages(params: {
   coacheeName: string
   sessions: { title: string; createdAtUnixMs: number; summary: string | null }[]
+  maxTotalCharacters?: number
+  maxSummaryCharactersPerSession?: number
+  maxSessions?: number
 }): LocalChatMessage[] {
-  const sessionsWithSummary = params.sessions
-    .map((session) => ({
+  const maxTotalCharacters = Math.max(1000, params.maxTotalCharacters ?? 45000)
+  const maxSummaryCharactersPerSession = Math.max(500, params.maxSummaryCharactersPerSession ?? 2500)
+  const maxSessions = Math.max(1, params.maxSessions ?? 80)
+
+  const sortedSessions = [...params.sessions].sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
+  const included: Array<{ title: string; dateLabel: string; summary: string }> = []
+  let totalCharacters = 0
+  let isTruncated = false
+
+  for (const session of sortedSessions) {
+    if (included.length >= maxSessions) {
+      isTruncated = true
+      break
+    }
+    if (totalCharacters >= maxTotalCharacters) {
+      isTruncated = true
+      break
+    }
+
+    const summary = normalizeText(session.summary)
+    if (!summary) continue
+
+    const clippedSummary = summary.length > maxSummaryCharactersPerSession ? summary.slice(0, maxSummaryCharactersPerSession) : summary
+    const nextTotal = totalCharacters + clippedSummary.length
+    if (nextTotal > maxTotalCharacters) {
+      isTruncated = true
+      break
+    }
+
+    included.push({
       title: normalizeText(session.title) || 'Sessie',
       dateLabel: formatDateLabel(session.createdAtUnixMs),
-      summary: normalizeText(session.summary),
-    }))
-    .filter((session) => session.summary.length > 0)
+      summary: clippedSummary,
+    })
+    totalCharacters = nextTotal
+  }
 
-  const text = sessionsWithSummary.length
-    ? `Hier zijn samenvattingen van eerdere gesprekken met ${params.coacheeName}:\n\n${sessionsWithSummary
+  const text = included.length
+    ? `Hier zijn samenvattingen van eerdere gesprekken met ${params.coacheeName}:\n\n${included
         .map((session, index) => `${index + 1}. ${session.title} (${session.dateLabel})\n${session.summary}`)
-        .join('\n\n')}\n\nGebruik deze samenvattingen om de vragen te beantwoorden.`
+        .join('\n\n')}${isTruncated ? '\n\nLet op: niet alle samenvattingen passen in de context. Oudere samenvattingen zijn weggelaten.' : ''}\n\nGebruik deze samenvattingen om de vragen te beantwoorden.`
     : `Er zijn nog geen samenvattingen beschikbaar voor ${params.coacheeName}. Beantwoord vragen zo goed mogelijk op basis van wat de gebruiker typt.`
 
   return [{ role: 'system', text }]

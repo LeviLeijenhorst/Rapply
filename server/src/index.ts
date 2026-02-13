@@ -21,7 +21,7 @@ import { runVoxtralTranscriptionFromEncryptedUpload } from "./transcription/voxt
 import { runAzureSpeechTranscriptionFromEncryptedUpload } from "./transcription/azureSpeechTranscription"
 import { generateSummary } from "./summary/summary"
 import { completeChatWithAzureOpenAi } from "./chat/azureOpenAiChat"
-import { execute, getDatabaseConnectionInfo, testDatabaseConnection } from "./db"
+import { execute, getDatabaseConnectionInfo, queryMany, testDatabaseConnection } from "./db"
 import { updateUserDisplayName } from "./users"
 import { deleteEntraUserById } from "./entraGraph"
 import { createAudioBlob, readAudioBlob } from "./audioBlobs"
@@ -256,6 +256,10 @@ const rateLimitTranscription = createRateLimitMiddleware({
 const rateLimitAccount = createRateLimitMiddleware({ windowMs: rateLimitWindowMs, maxRequests: 10, keyPrefix: "account" })
 
 const diagnosticLogVersion = "2026-02-12-global-request-log"
+const defaultAdminFeedbackEmail = "contact@jnlsolutions.nl"
+const adminFeedbackEmailSet = new Set(
+  (env.adminFeedbackEmails.length ? env.adminFeedbackEmails : [defaultAdminFeedbackEmail]).map((email) => email.trim().toLowerCase()).filter(Boolean),
+)
 
 app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({
@@ -935,6 +939,61 @@ app.post(
 )
 
 app.post(
+  "/admin/feedback/list",
+  rateLimitAccount,
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const normalizedEmail = String(user.email || "").trim().toLowerCase()
+    if (!adminFeedbackEmailSet.has(normalizedEmail)) {
+      sendError(res, 403, "Forbidden")
+      return
+    }
+
+    const requestedLimitRaw = Number(req.body?.limit)
+    const requestedLimit = Number.isFinite(requestedLimitRaw) ? Math.trunc(requestedLimitRaw) : 200
+    const limit = Math.min(500, Math.max(1, requestedLimit))
+
+    const rows = await queryMany<{
+      id: string
+      user_id: string
+      name: string | null
+      email: string | null
+      message: string
+      created_at: string
+      account_email: string | null
+    }>(
+      `
+      select
+        f.id,
+        f.user_id,
+        f.name,
+        f.email,
+        f.message,
+        f.created_at,
+        u.email as account_email
+      from public.feedback f
+      left join public.users u on u.id = f.user_id
+      order by f.created_at desc
+      limit $1
+      `,
+      [limit],
+    )
+
+    res.status(200).json({
+      items: rows.map((row) => ({
+        id: row.id,
+        userId: row.user_id,
+        name: row.name,
+        email: row.email,
+        accountEmail: row.account_email,
+        message: row.message,
+        createdAt: row.created_at,
+      })),
+    })
+  }),
+)
+
+app.post(
   "/praktijk/request",
   asyncHandler(async (req, res) => {
     const user = await requireAuthenticatedUser(req)
@@ -1346,6 +1405,22 @@ app.post(
         }
       } catch {}
     }
+  }),
+)
+
+app.post(
+  "/transcription/cancel",
+  rateLimitTranscription,
+  asyncHandler(async (req, res) => {
+    const user = await requireAuthenticatedUser(req)
+    const operationId = typeof req.body?.operationId === "string" ? req.body.operationId.trim() : ""
+    if (!operationId) {
+      sendError(res, 400, "Missing operationId")
+      return
+    }
+
+    await refundSecondsIdempotent({ userId: user.userId, operationId })
+    res.status(200).json({ cancelled: true })
   }),
 )
 

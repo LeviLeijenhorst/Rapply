@@ -10,6 +10,10 @@ export type AuthSession = {
   displayName: string | null
 }
 
+type SignInOptions = {
+  screenHint?: "signup"
+}
+
 const storageKey = "coachscribe_auth_session_v1"
 const signInInFlightKey = "coachscribe_signin_inflight_v1"
 const signInInFlightTtlMs = 2 * 60 * 1000
@@ -173,11 +177,11 @@ function logJwtSummary(token: string) {
   }
 }
 
-export async function signIn(): Promise<void> {
+export async function signIn(options?: SignInOptions): Promise<void> {
   await setSignInInFlight(true)
   logger.info("[auth] signIn: entra start")
   try {
-    const result = await signInWithEntra()
+    const result = await signInWithEntra(options)
     logJwtSummary(result.accessToken)
     logger.info("[auth] signIn: entra ok, hydrating session")
     const hydrated = await hydrateSessionFromAccessToken(result.accessToken)

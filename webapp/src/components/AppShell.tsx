@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
+import { Linking, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 
 import { colors } from '../theme/colors'
 import { AnimatedMainContent } from './AnimatedMainContent'
@@ -27,14 +27,13 @@ import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { CoacheeUpsertModal } from './coachees/CoacheeUpsertModal'
 import { EmptyPageMessage } from './EmptyPageMessage'
 import { AppLoadingScreen } from './AppLoadingScreen'
-import { PrivacyPolicyModal } from './settings/PrivacyPolicyModal'
-import { privacyPolicyNlText } from '../content/privacyPolicyNl'
 import { useBillingUsage } from '../hooks/useBillingUsage'
 import { useAudioUploadQueue } from '../audio/useAudioUploadQueue'
 import { callSecureApi } from '../services/secureApi'
 import { useE2ee } from '../e2ee/E2eeProvider'
 import { clearPendingPreviewAudio, listPendingPreviewAudioTasks } from '../audio/pendingPreviewStore'
 import { processSessionAudio } from '../audio/processSessionAudio'
+import { AdminFeedbackScreen } from '../screens/AdminFeedbackScreen'
 
 type AnchorPoint = { x: number; y: number }
 type OverlayScreenKey = 'archief'
@@ -47,6 +46,7 @@ type RouteState =
   | { kind: 'mijn-praktijk' }
   | { kind: 'geschrevenVerslag' }
   | { kind: 'archief' }
+  | { kind: 'admin' }
 
 function stripPrefix(value: string, prefix: string) {
   return value.startsWith(`${prefix}-`) ? value.slice(prefix.length + 1) : value
@@ -72,6 +72,7 @@ function parseRouteFromPath(pathname: string): RouteState {
   if (parts[0] === 'mijn-praktijk') return { kind: 'mijn-praktijk' }
   if (parts[0] === 'geschreven-verslag') return { kind: 'geschrevenVerslag' }
   if (parts[0] === 'archief') return { kind: 'archief' }
+  if (parts[0] === 'admin') return { kind: 'admin' }
   return { kind: 'coachees' }
 }
 
@@ -83,12 +84,15 @@ function buildPathFromRoute(route: RouteState): string {
   if (route.kind === 'templates') return '/templates'
   if (route.kind === 'mijn-praktijk') return '/mijn-praktijk'
   if (route.kind === 'geschrevenVerslag') return '/geschreven-verslag'
+  if (route.kind === 'admin') return '/admin'
   return '/archief'
 }
 
 type Props = {
   onLogout: () => void
 }
+
+const PRIVACY_BELEID_URL = 'https://www.coachscribe.nl/privacybeleid'
 
 function parseDeleteAccountErrorMessage(error: unknown): string {
   const fallback = 'Verwijderen mislukt. Probeer het alsjeblieft later opnieuw.'
@@ -133,6 +137,7 @@ export function AppShell({ onLogout }: Props) {
   const [newSessionCoacheeId, setNewSessionCoacheeId] = useState<string | null>(null)
   const [isGeschrevenVerslagOpen, setIsGeschrevenVerslagOpen] = useState(false)
   const [overlayScreenKey, setOverlayScreenKey] = useState<OverlayScreenKey | null>(null)
+  const [isAdminScreenOpen, setIsAdminScreenOpen] = useState(false)
 
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false)
   const [settingsMenuAnchorPoint, setSettingsMenuAnchorPoint] = useState<AnchorPoint | null>(null)
@@ -141,7 +146,6 @@ export function AppShell({ onLogout }: Props) {
   const [isMyAccountModalOpen, setIsMyAccountModalOpen] = useState(false)
   const [isMySubscriptionModalOpen, setIsMySubscriptionModalOpen] = useState(false)
   const [isCoacheeModalOpen, setIsCoacheeModalOpen] = useState(false)
-  const [isPrivacyPolicyModalOpen, setIsPrivacyPolicyModalOpen] = useState(false)
   const [previousRoute, setPreviousRoute] = useState<RouteState | null>(null)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [isDeleteAccountConfirmModalOpen, setIsDeleteAccountConfirmModalOpen] = useState(false)
@@ -198,6 +202,7 @@ export function AppShell({ onLogout }: Props) {
   const applyRoute = useCallback(
     (route: RouteState) => {
       if (route.kind === 'archief') {
+        setIsAdminScreenOpen(false)
         setOverlayScreenKey('archief')
         setIsGeschrevenVerslagOpen(false)
         setSelectedSessieId(null)
@@ -206,6 +211,7 @@ export function AppShell({ onLogout }: Props) {
         return
       }
       if (route.kind === 'geschrevenVerslag') {
+        setIsAdminScreenOpen(false)
         setOverlayScreenKey(null)
         setIsGeschrevenVerslagOpen(true)
         setSelectedSidebarItemKey('sessies')
@@ -215,6 +221,17 @@ export function AppShell({ onLogout }: Props) {
         return
       }
 
+      if (route.kind === 'admin') {
+        setIsAdminScreenOpen(true)
+        setOverlayScreenKey(null)
+        setIsGeschrevenVerslagOpen(false)
+        setSelectedSessieId(null)
+        setSelectedCoacheeId(null)
+        setSessionOriginRoute(null)
+        return
+      }
+
+      setIsAdminScreenOpen(false)
       setOverlayScreenKey(null)
       setIsGeschrevenVerslagOpen(false)
 
@@ -258,7 +275,15 @@ export function AppShell({ onLogout }: Props) {
       setSelectedCoacheeId(null)
       setSessionOriginRoute(null)
     },
-    [setOverlayScreenKey, setIsGeschrevenVerslagOpen, setSelectedCoacheeId, setSelectedSessieId, setSelectedSidebarItemKey, setSessionOriginRoute],
+    [
+      setIsAdminScreenOpen,
+      setOverlayScreenKey,
+      setIsGeschrevenVerslagOpen,
+      setSelectedCoacheeId,
+      setSelectedSessieId,
+      setSelectedSidebarItemKey,
+      setSessionOriginRoute,
+    ],
   )
 
   const navigateTo = useCallback(
@@ -333,6 +358,8 @@ export function AppShell({ onLogout }: Props) {
 
   const mainContentKey = overlayScreenKey
     ? overlayScreenKey
+    : isAdminScreenOpen
+      ? 'admin'
     : isGeschrevenVerslagOpen
       ? 'geschreven-verslag'
       : selectedSessieId
@@ -387,6 +414,7 @@ export function AppShell({ onLogout }: Props) {
 
   const currentRoute = useMemo<RouteState>(() => {
     if (overlayScreenKey === 'archief') return { kind: 'archief' }
+    if (isAdminScreenOpen) return { kind: 'admin' }
     if (isGeschrevenVerslagOpen) return { kind: 'geschrevenVerslag' }
     if (selectedSessieId) return { kind: 'sessie', sessieId: selectedSessieId }
     if (selectedSidebarItemKey === 'coachees') {
@@ -395,7 +423,7 @@ export function AppShell({ onLogout }: Props) {
     if (selectedSidebarItemKey === 'templates') return { kind: 'templates' }
     if (selectedSidebarItemKey === 'mijnPraktijk') return { kind: 'mijn-praktijk' }
     return { kind: 'sessies' }
-  }, [isGeschrevenVerslagOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
+  }, [isAdminScreenOpen, isGeschrevenVerslagOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
 
   const breadcrumbItems = useMemo(() => {
     if (selectedSessieId) {
@@ -470,9 +498,16 @@ export function AppShell({ onLogout }: Props) {
     }
   }, [])
 
+  const submitFeedback = useCallback(async (feedback: string) => {
+    await callSecureApi<{ ok: true }>('/feedback', { message: feedback })
+  }, [])
+
   function renderMainContent() {
     if (!isAppDataLoaded) {
       return <AppLoadingScreen />
+    }
+    if (isAdminScreenOpen) {
+      return <AdminFeedbackScreen />
     }
     if (overlayScreenKey === 'archief') {
       return <ArchiefScreen />
@@ -668,7 +703,11 @@ export function AppShell({ onLogout }: Props) {
             onOpenPrivacy={() => {
               setIsSettingsMenuOpen(false)
               setSettingsMenuAnchorPoint(null)
-              setIsPrivacyPolicyModalOpen(true)
+              if (typeof window !== 'undefined') {
+                window.open(PRIVACY_BELEID_URL, '_blank', 'noopener,noreferrer')
+                return
+              }
+              void Linking.openURL(PRIVACY_BELEID_URL)
             }}
           />
 
@@ -728,11 +767,10 @@ export function AppShell({ onLogout }: Props) {
           />
 
           <MySubscriptionModal visible={isMySubscriptionModalOpen} onClose={() => setIsMySubscriptionModalOpen(false)} />
-          <FeedbackModal visible={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} />
-          <PrivacyPolicyModal
-            visible={isPrivacyPolicyModalOpen}
-            text={privacyPolicyNlText}
-            onClose={() => setIsPrivacyPolicyModalOpen(false)}
+          <FeedbackModal
+            visible={isFeedbackModalOpen}
+            onClose={() => setIsFeedbackModalOpen(false)}
+            onContinue={submitFeedback}
           />
           <CoacheeUpsertModal
             visible={isCoacheeModalOpen}

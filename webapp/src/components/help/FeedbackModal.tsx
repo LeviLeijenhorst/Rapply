@@ -9,19 +9,38 @@ import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
 type Props = {
   visible: boolean
   onClose: () => void
-  onContinue?: (feedback: string) => void
+  onContinue?: (feedback: string) => Promise<void> | void
 }
 
 export function FeedbackModal({ visible, onClose, onContinue }: Props) {
   const [feedback, setFeedback] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!visible) return
     setFeedback('')
+    setIsSubmitting(false)
+    setSubmitError(null)
   }, [visible])
 
   const trimmedFeedback = feedback.trim()
-  const isContinueDisabled = trimmedFeedback.length === 0
+  const isContinueDisabled = trimmedFeedback.length === 0 || isSubmitting
+
+  async function submitFeedback() {
+    if (isContinueDisabled) return
+    try {
+      setIsSubmitting(true)
+      setSubmitError(null)
+      await onContinue?.(trimmedFeedback)
+      onClose()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Opslaan mislukt. Probeer het opnieuw.'
+      setSubmitError(message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <AnimatedOverlayModal visible={visible} onClose={onClose} contentContainerStyle={styles.container}>
@@ -29,7 +48,13 @@ export function FeedbackModal({ visible, onClose, onContinue }: Props) {
         <Text isBold style={styles.title}>
           Feedback geven
         </Text>
-        <Pressable onPress={onClose} style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}>
+        <Pressable
+          onPress={() => {
+            if (isSubmitting) return
+            onClose()
+          }}
+          style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}
+        >
           <ModalCloseDarkIcon size={20} />
         </Pressable>
       </View>
@@ -48,10 +73,16 @@ export function FeedbackModal({ visible, onClose, onContinue }: Props) {
           placeholderTextColor={colors.textSecondary}
           textAlignVertical="top"
         />
+
+        {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
       </View>
 
       <View style={styles.footer}>
-        <Pressable onPress={onClose} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]}>
+        <Pressable
+          onPress={onClose}
+          style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined, isSubmitting ? styles.secondaryButtonDisabled : undefined]}
+          disabled={isSubmitting}
+        >
           <Text isBold style={styles.secondaryButtonText}>
             Annuleren
           </Text>
@@ -59,9 +90,7 @@ export function FeedbackModal({ visible, onClose, onContinue }: Props) {
 
         <Pressable
           onPress={() => {
-            if (isContinueDisabled) return
-            onContinue?.(trimmedFeedback)
-            onClose()
+            void submitFeedback()
           }}
           style={({ hovered }) => [
             styles.primaryButton,
@@ -71,7 +100,7 @@ export function FeedbackModal({ visible, onClose, onContinue }: Props) {
           disabled={isContinueDisabled}
         >
           <Text isBold style={styles.primaryButtonText}>
-            Doorgaan
+            {isSubmitting ? 'Versturen...' : 'Doorgaan'}
           </Text>
         </Pressable>
       </View>
@@ -153,6 +182,9 @@ const styles = StyleSheet.create({
   secondaryButtonHovered: {
     backgroundColor: colors.hoverBackground,
   },
+  secondaryButtonDisabled: {
+    opacity: 0.55,
+  },
   secondaryButtonText: {
     fontSize: 14,
     lineHeight: 18,
@@ -176,5 +208,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: '#FFFFFF',
+  },
+  errorText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#B20000',
   },
 })
