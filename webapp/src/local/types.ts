@@ -47,6 +47,7 @@ export type TemplateSection = {
 export type Template = {
   id: string
   name: string
+  description: string
   sections: TemplateSection[]
   isSaved: boolean
   createdAtUnixMs: number

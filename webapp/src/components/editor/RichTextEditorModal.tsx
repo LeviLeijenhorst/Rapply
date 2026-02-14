@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native'
+import Svg, { Line, Path } from 'react-native-svg'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
+import { fontSizes, radius, shadows, spacing } from '../../foundation/theme/tokens'
 import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
 import { Text } from '../Text'
 import { colors } from '../../theme/colors'
@@ -16,10 +18,21 @@ type Props = {
 }
 
 type ToolbarAction = 'h2' | 'h3' | 'bold' | 'italic' | 'bullet' | 'numbered' | 'quote' | 'divider'
+type ToolbarButtonConfig = { key: ToolbarAction; label: string; group: 'text' | 'style' | 'lists' | 'insert' }
 type ToolbarState = { h2: boolean; h3: boolean; bold: boolean; italic: boolean; bullet: boolean; numbered: boolean; quote: boolean }
 
 const isWeb = Platform.OS === 'web'
 const defaultToolbarState: ToolbarState = { h2: false, h3: false, bold: false, italic: false, bullet: false, numbered: false, quote: false }
+const toolbarButtons: readonly ToolbarButtonConfig[] = [
+  { key: 'h2', label: 'Kop 2', group: 'text' },
+  { key: 'h3', label: 'Kop 3', group: 'text' },
+  { key: 'bold', label: 'Vet', group: 'style' },
+  { key: 'italic', label: 'Cursief', group: 'style' },
+  { key: 'bullet', label: 'Lijst', group: 'lists' },
+  { key: 'numbered', label: 'Nummerlijst', group: 'lists' },
+  { key: 'quote', label: 'Citaat', group: 'insert' },
+  { key: 'divider', label: 'Scheidingslijn', group: 'insert' },
+] as const
 
 function escapeHtml(text: string) {
   return text
@@ -289,14 +302,16 @@ export function RichTextEditorModal({ visible, title, initialValue, onClose, onS
       </View>
 
       <View style={styles.toolbar}>
-        <ToolbarButton label="H2" isActive={toolbarState.h2} onPress={() => runAction('h2')} />
-        <ToolbarButton label="H3" isActive={toolbarState.h3} onPress={() => runAction('h3')} />
-        <ToolbarButton label="B" isActive={toolbarState.bold} onPress={() => runAction('bold')} />
-        <ToolbarButton label="I" isActive={toolbarState.italic} onPress={() => runAction('italic')} />
-        <ToolbarButton label="* Lijst" isActive={toolbarState.bullet} onPress={() => runAction('bullet')} />
-        <ToolbarButton label="1. Lijst" isActive={toolbarState.numbered} onPress={() => runAction('numbered')} />
-        <ToolbarButton label="Citaat" isActive={toolbarState.quote} onPress={() => runAction('quote')} />
-        <ToolbarButton label="Lijn" onPress={() => runAction('divider')} />
+        {toolbarButtons.map((button, index) => {
+          const showSeparator = index > 0 && button.group !== toolbarButtons[index - 1].group
+          const isActive = button.key === 'divider' ? false : toolbarState[button.key as keyof ToolbarState]
+          return (
+            <React.Fragment key={button.key}>
+              {showSeparator ? <View style={styles.toolbarSeparator} /> : null}
+              <ToolbarButton label={button.label} action={button.key} isActive={Boolean(isActive)} onPress={() => runAction(button.key)} />
+            </React.Fragment>
+          )
+        })}
       </View>
 
       <View style={styles.body}>
@@ -350,11 +365,14 @@ export function RichTextEditorModal({ visible, title, initialValue, onClose, onS
   )
 }
 
-function ToolbarButton({ label, onPress, isActive = false }: { label: string; onPress: () => void; isActive?: boolean }) {
+function ToolbarButton({ label, action, onPress, isActive = false }: { label: string; action: ToolbarAction; onPress: () => void; isActive?: boolean }) {
+  const iconColor = isActive ? '#FFFFFF' : colors.textStrong
   return (
     <Pressable
       onPress={onPress}
       style={({ hovered }) => [styles.toolbarButton, isActive ? styles.toolbarButtonActive : undefined, hovered ? styles.toolbarButtonHovered : undefined]}
+      accessibilityLabel={label}
+      {...(isWeb ? ({ title: label } as any) : {})}
       {...(isWeb
         ? ({
             onMouseDown: (event: MouseEvent) => {
@@ -363,10 +381,80 @@ function ToolbarButton({ label, onPress, isActive = false }: { label: string; on
           } as any)
         : {})}
     >
-      <Text isSemibold style={[styles.toolbarButtonText, isActive ? styles.toolbarButtonTextActive : undefined]}>
-        {label}
-      </Text>
+      <EditorToolbarIcon action={action} color={iconColor} />
     </Pressable>
+  )
+}
+
+function EditorToolbarIcon({ action, color }: { action: ToolbarAction; color: string }) {
+  const stroke = color
+  if (action === 'h2') {
+    return (
+      <Svg width={18} height={18} viewBox="0 0 18 18" fill="none">
+        <Path d="M2.25 4.5V13.5M7.5 4.5V13.5M2.25 9H7.5" stroke={stroke} strokeWidth={1.6} strokeLinecap="round" />
+        <Path d="M11 6.1L13.6 4.5V13.5M11 13.5H15.2" stroke={stroke} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    )
+  }
+
+  if (action === 'h3') {
+    return (
+      <Svg width={18} height={18} viewBox="0 0 18 18" fill="none">
+        <Path d="M2.25 4.5V13.5M7.5 4.5V13.5M2.25 9H7.5" stroke={stroke} strokeWidth={1.6} strokeLinecap="round" />
+        <Path d="M11 5.2H14.7L12.6 8.1C13.8 8.2 14.8 9.2 14.8 10.5C14.8 11.9 13.7 13 12.2 13C11.2 13 10.4 12.5 9.9 11.8" stroke={stroke} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    )
+  }
+
+  if (action === 'bold') {
+    return (
+      <Svg width={18} height={18} viewBox="0 0 18 18" fill="none">
+        <Path d="M5.2 4.5H9.5C11.1 4.5 12.4 5.6 12.4 7C12.4 8.3 11.3 9.3 9.9 9.3H5.2V4.5Z" stroke={stroke} strokeWidth={1.6} strokeLinejoin="round" />
+        <Path d="M5.2 9.3H10.1C11.9 9.3 13.3 10.4 13.3 11.9C13.3 13.4 11.8 14.6 10 14.6H5.2V9.3Z" stroke={stroke} strokeWidth={1.6} strokeLinejoin="round" />
+      </Svg>
+    )
+  }
+
+  if (action === 'italic') {
+    return (
+      <Svg width={18} height={18} viewBox="0 0 18 18" fill="none">
+        <Path d="M10.5 4.5H14.2M3.8 13.5H7.5M10.9 4.5L7.1 13.5" stroke={stroke} strokeWidth={1.8} strokeLinecap="round" />
+      </Svg>
+    )
+  }
+
+  if (action === 'bullet') {
+    return (
+      <Svg width={18} height={18} viewBox="0 0 18 18" fill="none">
+        <Path d="M6.4 5.2H14.3M6.4 9H14.3M6.4 12.8H14.3" stroke={stroke} strokeWidth={1.6} strokeLinecap="round" />
+        <Path d="M3.8 5.2H3.81M3.8 9H3.81M3.8 12.8H3.81" stroke={stroke} strokeWidth={2.4} strokeLinecap="round" />
+      </Svg>
+    )
+  }
+
+  if (action === 'numbered') {
+    return (
+      <Svg width={18} height={18} viewBox="0 0 18 18" fill="none">
+        <Path d="M6.4 5.2H14.3M6.4 9H14.3M6.4 12.8H14.3" stroke={stroke} strokeWidth={1.6} strokeLinecap="round" />
+        <Path d="M2.9 4.7H4.1V6.3M2.7 8.1H4.2L2.7 10H4.2M2.6 11.9H4.1C4.6 11.9 5 12.2 5 12.6C5 13 4.6 13.3 4.1 13.3H2.6" stroke={stroke} strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    )
+  }
+
+  if (action === 'quote') {
+    return (
+      <Svg width={18} height={18} viewBox="0 0 18 18" fill="none">
+        <Path d="M6.6 6.2H4.9C4 6.2 3.3 6.9 3.3 7.8V9.7C3.3 10.6 4 11.3 4.9 11.3H6.4" stroke={stroke} strokeWidth={1.6} strokeLinecap="round" />
+        <Path d="M12.8 6.2H11.1C10.2 6.2 9.5 6.9 9.5 7.8V9.7C9.5 10.6 10.2 11.3 11.1 11.3H12.6" stroke={stroke} strokeWidth={1.6} strokeLinecap="round" />
+      </Svg>
+    )
+  }
+
+  return (
+    <Svg width={18} height={18} viewBox="0 0 18 18" fill="none">
+      <Line x1={3} y1={9} x2={15} y2={9} stroke={stroke} strokeWidth={1.6} strokeLinecap="round" />
+      <Path d="M9 4.5V6.5M9 11.5V13.5" stroke={stroke} strokeWidth={1.6} strokeLinecap="round" />
+    </Svg>
   )
 }
 
@@ -374,11 +462,11 @@ const editorWebStyle: React.CSSProperties = {
   width: '100%',
   height: '100%',
   minHeight: 320,
-  borderRadius: 10,
+  borderRadius: radius.md,
   border: `1px solid ${colors.border}`,
   backgroundColor: colors.pageBackground,
-  padding: '14px',
-  fontSize: '14px',
+  padding: `${spacing.sm}px`,
+  fontSize: `${fontSizes.sm}px`,
   lineHeight: '22px',
   color: colors.text,
   fontFamily: 'Catamaran_400Regular, Catamaran, sans-serif',
@@ -392,7 +480,8 @@ const styles = StyleSheet.create({
     maxWidth: '96%',
     maxHeight: '90%',
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: radius.lg,
+    ...( { boxShadow: shadows.modal } as any ),
     overflow: 'hidden',
   },
   header: {
@@ -423,51 +512,52 @@ const styles = StyleSheet.create({
   toolbar: {
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    backgroundColor: colors.pageBackground,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    alignItems: 'center',
+    gap: spacing.xs,
+    ...( { overflowX: 'auto' } as any ),
+  },
+  toolbarSeparator: {
+    width: 1,
+    alignSelf: 'stretch',
+    marginVertical: 6,
+    backgroundColor: colors.border,
   },
   toolbarButton: {
-    height: 32,
-    borderRadius: 8,
+    width: 34,
+    height: 34,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.pageBackground,
-    paddingHorizontal: 10,
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
   toolbarButtonHovered: {
-    backgroundColor: colors.hoverBackground,
+    backgroundColor: 'rgba(38,52,63,0.06)',
+    borderColor: colors.border,
   },
   toolbarButtonActive: {
     backgroundColor: colors.selected,
     borderColor: colors.selected,
   },
-  toolbarButtonText: {
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.textStrong,
-  },
-  toolbarButtonTextActive: {
-    color: '#FFFFFF',
-  },
   body: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     ...( { flex: 1, minHeight: 360 } as any ),
   },
   textInput: {
     width: '100%',
     height: '100%',
-    borderRadius: 10,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.pageBackground,
-    padding: 14,
-    fontSize: 14,
+    padding: spacing.sm,
+    fontSize: fontSizes.sm,
     lineHeight: 22,
     color: colors.text,
   },

@@ -121,11 +121,11 @@ function parseDeleteAccountErrorMessage(error: unknown): string {
 
 export function AppShell({ onLogout }: Props) {
   const { width } = useWindowDimensions()
-  const isTooSmall = width < 420
+  const isTooSmall = width < 320
   const isSidebarCompact = width < 700
   const { data, createCoachee, isAppDataLoaded, updateSession } = useLocalAppData()
   const e2ee = useE2ee()
-  const { usedMinutes, totalMinutes } = useBillingUsage()
+  const { usedMinutes, totalMinutes, isLoading: isUsageLoading } = useBillingUsage()
   useAudioUploadQueue(true)
   const hasResumedPendingAudioRef = useRef(false)
 
@@ -628,6 +628,7 @@ export function AppShell({ onLogout }: Props) {
         onLogout={onLogout}
         usedMinutes={usedMinutes}
         totalMinutes={totalMinutes}
+        isUsageLoading={isUsageLoading}
       />
       {hasBreadcrumbs ? (
         <View style={[styles.breadcrumbContainer, isSidebarCompact ? styles.breadcrumbContainerCompact : undefined]}>
@@ -637,7 +638,7 @@ export function AppShell({ onLogout }: Props) {
       ) : null}
       {isTooSmall ? (
         <View style={styles.tooSmallContainer}>
-          <Text style={styles.tooSmallText}>Deze webapp is niet ontworpen voor apparaten smaller dan 420px.</Text>
+          <Text style={styles.tooSmallText}>Deze webapp is niet ontworpen voor apparaten smaller dan 320px.</Text>
         </View>
       ) : (
         <>

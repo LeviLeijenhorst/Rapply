@@ -1,44 +1,102 @@
 import { callSecureApi } from './secureApi'
 
-export async function e2eeBootstrap(params: { deviceId: string }): Promise<{ e2eeEnabled: boolean; wrappedUserDataKeyForDevice: string | null; recoveryKeyUpdatedAtMs: number | null }> {
-  return callSecureApi('/e2ee/bootstrap', params)
+export type E2eeRecoveryPolicy = 'self_service' | 'custodian_only' | 'hybrid'
+
+export type E2eeObjectType =
+  | 'coachee'
+  | 'session'
+  | 'note'
+  | 'written_report'
+  | 'template'
+  | 'practice_settings'
+  | 'audio_blob'
+  | 'audio_stream'
+
+export type E2eeUserKeyMaterial = {
+  cryptoVersion: number
+  keyVersion: number
+  argon2Salt: string
+  argon2TimeCost: number
+  argon2MemoryCostKib: number
+  argon2Parallelism: number
+  wrappedArkUserPassphrase: string
+  wrappedArkRecoveryCode: string | null
+  recoveryPolicy: E2eeRecoveryPolicy
+  custodianThreshold: number | null
 }
 
-export async function e2eeRegisterDevice(params: { deviceId: string; publicKeyJwk: JsonWebKey }): Promise<void> {
-  await callSecureApi('/e2ee/device/register', params)
+// Loads encryption bootstrap state for the current user.
+export async function e2eeBootstrap(): Promise<{
+  e2eeConfigured: boolean
+  keyVersion: number | null
+  recoveryPolicy: E2eeRecoveryPolicy | null
+}> {
+  return callSecureApi('/e2ee/bootstrap', {})
 }
 
-export async function e2eeSetup(params: { deviceId: string; wrappedUserDataKeyForDevice: string; wrappedUserDataKeyForRecovery: string }): Promise<void> {
+// Creates or replaces user key material for account encryption.
+export async function e2eeSetup(params: {
+  cryptoVersion?: number
+  keyVersion?: number
+  argon2Salt: string
+  argon2TimeCost: number
+  argon2MemoryCostKib: number
+  argon2Parallelism: number
+  wrappedArkUserPassphrase: string
+  wrappedArkRecoveryCode?: string | null
+  recoveryPolicy?: E2eeRecoveryPolicy
+  custodianThreshold?: number | null
+}): Promise<void> {
   await callSecureApi('/e2ee/setup', params)
 }
 
-export async function e2eeGetWrappedUserDataKeyForRecovery(): Promise<{ wrappedUserDataKeyForRecovery: string; recoveryKeyUpdatedAtMs: number }> {
-  return callSecureApi('/e2ee/recovery/wrapped-user-data-key', {})
+// Reads the current user's key material needed for unlock and recovery.
+export async function e2eeGetUserKeyMaterial(): Promise<E2eeUserKeyMaterial> {
+  return callSecureApi('/e2ee/user-key-material', {})
 }
 
-export async function e2eeSetWrappedUserDataKeyForDevice(params: { deviceId: string; wrappedUserDataKeyForDevice: string }): Promise<void> {
-  await callSecureApi('/e2ee/device-key/set', params)
+// Stores or clears the recovery-code wrapped ARK value.
+export async function e2eeSetRecoveryCode(params: { wrappedArkRecoveryCode: string | null }): Promise<void> {
+  await callSecureApi('/e2ee/recovery-code/set', params)
 }
 
-export async function e2eeRotateRecoveryWrappedKey(params: { wrappedUserDataKeyForRecovery: string }): Promise<void> {
-  await callSecureApi('/e2ee/recovery/rotate', params)
+// Rotates the passphrase-wrapped ARK and Argon2 parameters.
+export async function e2eeRotatePassphrase(params: {
+  keyVersion: number
+  argon2Salt: string
+  argon2TimeCost: number
+  argon2MemoryCostKib: number
+  argon2Parallelism: number
+  wrappedArkUserPassphrase: string
+}): Promise<void> {
+  await callSecureApi('/e2ee/passphrase/rotate', params)
 }
 
-export async function e2eeRequestPairing(params: { deviceId: string }): Promise<{ expiresAtMs: number }> {
-  return callSecureApi('/e2ee/pairing/request', params)
+// Upserts an encrypted object DEK for one object reference.
+export async function e2eeUpsertObjectKey(params: {
+  objectType: E2eeObjectType
+  objectId: string
+  keyVersion: number
+  cryptoVersion?: number
+  wrappedDek: string
+}): Promise<void> {
+  await callSecureApi('/e2ee/object-key/upsert', params)
 }
 
-export async function e2eeApprovePairing(params: { deviceId: string; wrappedUserDataKeyForDevice: string }): Promise<void> {
-  await callSecureApi('/e2ee/pairing/approve', params)
+// Reads all encrypted object DEK versions for one object reference.
+export async function e2eeGetObjectKeys(params: {
+  objectType: E2eeObjectType
+  objectId: string
+}): Promise<{ objectKeys: { keyVersion: number; cryptoVersion: number; wrappedDek: string; updatedAtUnixMs: number }[] }> {
+  return callSecureApi('/e2ee/object-key/get', params)
 }
 
-export async function e2eeListDevices(): Promise<{
-  devices: { deviceId: string; publicKeyJwk: JsonWebKey; pairingExpiresAtMs: number | null; approvedAtMs: number | null; revokedAtMs: number | null; createdAtMs: number }[]
-}> {
-  return callSecureApi('/e2ee/devices/list', {})
+// Reads the latest encrypted object DEK versions for multiple object references.
+export async function e2eeGetObjectKeysBatch(params: {
+  refs: {
+    objectType: E2eeObjectType
+    objectId: string
+  }[]
+}): Promise<{ objectKeys: { objectType: string; objectId: string; keyVersion: number; cryptoVersion: number; wrappedDek: string; updatedAtUnixMs: number }[] }> {
+  return callSecureApi('/e2ee/object-key/get-batch', params)
 }
-
-export async function e2eeRevokeDevice(params: { deviceId: string }): Promise<void> {
-  await callSecureApi('/e2ee/devices/revoke', params)
-}
-

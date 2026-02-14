@@ -21,7 +21,6 @@ import {
 } from './localAppDataStore'
 import { createId } from './createId'
 import { Coachee, LocalAppData, Note, PracticeSettings, Session, SessionKind, Template, TemplateSection, WrittenReport } from './types'
-import { createDefaultLocalAppData } from './defaultData'
 import {
   createCoacheeRemote,
   createNoteRemote,
@@ -85,8 +84,8 @@ type ContextValue = {
 
   setWrittenReport: (sessionId: string, text: string) => void
 
-  createTemplate: (values: { name: string; sections: TemplateSection[] }) => string
-  updateTemplate: (templateId: string, values: { name?: string; sections?: TemplateSection[] }) => void
+  createTemplate: (values: { name: string; description: string; sections: TemplateSection[] }) => string
+  updateTemplate: (templateId: string, values: { name?: string; description?: string; sections?: TemplateSection[] }) => void
   deleteTemplate: (templateId: string) => void
   toggleTemplateSaved: (templateId: string) => void
   updatePracticeSettings: (values: { practiceName?: string; website?: string; tintColor?: string; logoDataUrl?: string | null }) => void
@@ -99,32 +98,13 @@ type Props = {
   isAuthenticated: boolean
 }
 
-const STALE_TRANSCRIPTION_TIMEOUT_MS = 90 * 60 * 1000
+const STALE_TRANSCRIPTION_TIMEOUT_MS = 6 * 60 * 60 * 1000
 const STALE_TRANSCRIPTION_ERROR_MESSAGE = 'Transcriptie duurt te lang of is onderbroken. Probeer opnieuw.'
 
 export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
   const e2ee = useOptionalE2ee()
   const [data, setData] = useState<LocalAppData>(() => loadLocalAppData())
   const [isAppDataLoaded, setIsAppDataLoaded] = useState(() => !isAuthenticated)
-  const defaultPracticeSettings = createDefaultLocalAppData().practiceSettings
-
-  function normalizePracticeSettings(input: unknown, context: string): PracticeSettings {
-    if (!input || typeof input !== 'object') {
-      console.warn('[LocalAppDataProvider] Missing practice settings in remote data', {
-        context,
-        inputType: typeof input,
-      })
-      return defaultPracticeSettings
-    }
-    const candidate = input as Partial<PracticeSettings>
-    return {
-      practiceName: typeof candidate.practiceName === 'string' ? candidate.practiceName : defaultPracticeSettings.practiceName,
-      website: typeof candidate.website === 'string' ? candidate.website : defaultPracticeSettings.website,
-      tintColor: typeof candidate.tintColor === 'string' ? candidate.tintColor : defaultPracticeSettings.tintColor,
-      logoDataUrl: typeof candidate.logoDataUrl === 'string' ? candidate.logoDataUrl : null,
-      updatedAtUnixMs: Number.isFinite(candidate.updatedAtUnixMs) ? Number(candidate.updatedAtUnixMs) : defaultPracticeSettings.updatedAtUnixMs,
-    }
-  }
 
   useEffect(() => {
     saveLocalAppData(data)
@@ -133,8 +113,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
   async function decryptRemoteData(remote: LocalAppData): Promise<LocalAppData> {
     if (!e2ee) {
       const templates = Array.isArray(remote.templates) ? remote.templates : []
-      const practiceSettings = normalizePracticeSettings(remote.practiceSettings, 'no-encryption')
-      return { ...remote, templates, practiceSettings }
+      return { ...remote, templates, practiceSettings: remote.practiceSettings }
     }
 
     const decryptTextCompat = async (value: string): Promise<string> => {
@@ -191,13 +170,12 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
       templates.push(await decryptTemplate(template, decryptTextCompat))
     }
 
-    const practiceSettingsInput = normalizePracticeSettings(remote.practiceSettings, 'with-encryption')
     const practiceSettings: PracticeSettings = {
-      practiceName: await decryptTextCompat(practiceSettingsInput.practiceName),
-      website: await decryptTextCompat(practiceSettingsInput.website),
-      tintColor: await decryptTextCompat(practiceSettingsInput.tintColor),
-      logoDataUrl: practiceSettingsInput.logoDataUrl ? await decryptTextCompat(practiceSettingsInput.logoDataUrl) : null,
-      updatedAtUnixMs: practiceSettingsInput.updatedAtUnixMs,
+      practiceName: await decryptTextCompat(remote.practiceSettings.practiceName),
+      website: await decryptTextCompat(remote.practiceSettings.website),
+      tintColor: await decryptTextCompat(remote.practiceSettings.tintColor),
+      logoDataUrl: remote.practiceSettings.logoDataUrl ? await decryptTextCompat(remote.practiceSettings.logoDataUrl) : null,
+      updatedAtUnixMs: remote.practiceSettings.updatedAtUnixMs,
     }
 
     return { coachees, sessions, notes, writtenReports, templates, practiceSettings }
@@ -240,7 +218,12 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         description: await decryptTextCompat(section.description),
       })
     }
-    return { ...template, name: await decryptTextCompat(template.name), sections }
+    return {
+      ...template,
+      name: await decryptTextCompat(template.name),
+      description: await decryptTextCompat(template.description || ''),
+      sections,
+    }
   }
 
   async function encryptTemplate(template: Template): Promise<Template> {
@@ -253,7 +236,12 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         description: await e2ee.encryptText(section.description),
       })
     }
-    return { ...template, name: await e2ee.encryptText(template.name), sections }
+    return {
+      ...template,
+      name: await e2ee.encryptText(template.name),
+      description: await e2ee.encryptText(template.description || ''),
+      sections,
+    }
   }
 
   async function encryptPracticeSettings(practiceSettings: PracticeSettings): Promise<PracticeSettings> {
@@ -531,10 +519,12 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
       createTemplate: (values) => {
         const trimmedName = values.name.trim()
         if (!trimmedName) return ''
+        const trimmedDescription = values.description.trim()
         const now = Date.now()
         const template: Template = {
           id: createId('template'),
           name: trimmedName,
+          description: trimmedDescription,
           sections: values.sections,
           isSaved: false,
           createdAtUnixMs: now,
@@ -558,6 +548,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
             return {
               ...template,
               ...(typeof values.name === 'string' ? { name: values.name.trim() } : {}),
+              ...(typeof values.description === 'string' ? { description: values.description.trim() } : {}),
               ...(values.sections ? { sections: values.sections } : {}),
               updatedAtUnixMs,
             }
@@ -570,6 +561,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           const nextTemplate: Template = {
             ...template,
             ...(typeof values.name === 'string' ? { name: values.name } : {}),
+            ...(typeof values.description === 'string' ? { description: values.description } : {}),
             ...(values.sections ? { sections: values.sections } : {}),
             updatedAtUnixMs,
           }
@@ -607,24 +599,13 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
       updatePracticeSettings: (values) => {
         const updatedAtUnixMs = Date.now()
         setData((previous) => updatePracticeSettings(previous, { ...values, updatedAtUnixMs }))
-        if (!isAuthenticated) return
+        if (!e2ee) return
         void (async () => {
-          const nextPracticeName = values.practiceName !== undefined ? values.practiceName.trim() : undefined
-          const nextWebsite = values.website !== undefined ? values.website.trim() : undefined
-          const nextTintColor = values.tintColor
-          const nextLogoDataUrl = values.logoDataUrl
-
-          const encryptedPracticeName = nextPracticeName === undefined ? undefined : e2ee ? await e2ee.encryptText(nextPracticeName) : nextPracticeName
-          const encryptedWebsite = nextWebsite === undefined ? undefined : e2ee ? await e2ee.encryptText(nextWebsite) : nextWebsite
-          const encryptedTintColor = nextTintColor === undefined ? undefined : e2ee ? await e2ee.encryptText(nextTintColor) : nextTintColor
+          const encryptedPracticeName = values.practiceName !== undefined ? await e2ee.encryptText(values.practiceName.trim()) : undefined
+          const encryptedWebsite = values.website !== undefined ? await e2ee.encryptText(values.website.trim()) : undefined
+          const encryptedTintColor = values.tintColor !== undefined ? await e2ee.encryptText(values.tintColor) : undefined
           const encryptedLogoDataUrl =
-            nextLogoDataUrl === undefined
-              ? undefined
-              : nextLogoDataUrl === null
-                ? null
-                : e2ee
-                  ? await e2ee.encryptText(nextLogoDataUrl)
-                  : nextLogoDataUrl
+            values.logoDataUrl === undefined ? undefined : values.logoDataUrl === null ? null : await e2ee.encryptText(values.logoDataUrl)
           await updatePracticeSettingsRemote({
             practiceName: encryptedPracticeName,
             website: encryptedWebsite,
@@ -637,7 +618,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           .catch((error: unknown) => console.error('[LocalAppDataProvider] Remote update failed', error))
       },
     }
-  }, [data, e2ee, isAppDataLoaded, isAuthenticated])
+  }, [data, e2ee, isAppDataLoaded])
 
   useEffect(() => {
     const now = Date.now()

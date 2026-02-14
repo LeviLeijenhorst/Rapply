@@ -1,5 +1,5 @@
 import React, { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Animated, Easing, Pressable, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
 import { colors } from '../../theme/colors'
 import { useE2ee } from '../../e2ee/E2eeProvider'
 import { loadAudioBlobRemote } from '../../services/audioBlobs'
@@ -45,7 +45,6 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
   const pendingSeekSecondsRef = useRef<number | null>(null)
   const pendingResumeAfterSeekRef = useRef(false)
   const seekResumePlaybackRef = useRef<boolean | null>(null)
-  const statusOpacity = useRef(new Animated.Value(0)).current
 
   function formatTimeLabel(seconds: number) {
     if (!Number.isFinite(seconds) || seconds <= 0) return '00:00'
@@ -73,11 +72,11 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
 
   function seekToSecondsInternal(seconds: number, preservePlayState: boolean) {
     const audio = audioRef.current
-    const source = audioUrlOverride ?? audioUrl
     if (!Number.isFinite(seconds)) return
     const target = Math.max(0, Math.min(durationSeconds || Number.MAX_SAFE_INTEGER, seconds))
     setCurrentSeconds(target)
-    if (!audio || !source) {
+    onCurrentSecondsChange?.(target)
+    if (!audio || !audioUrl) {
       pendingSeekSecondsRef.current = target
       return
     }
@@ -112,9 +111,10 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
   useEffect(() => {
     if (audioUrlOverride) {
       setIsBuffering(false)
-      setIsAudioReady(true)
+      setIsAudioReady(false)
       setHasAudioError(false)
       setCurrentSeconds(0)
+      onCurrentSecondsChange?.(0)
       setIsLoadingAudio(false)
       return
     }
@@ -130,6 +130,7 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
           return null
         })
         setCurrentSeconds(0)
+        onCurrentSecondsChange?.(0)
         setIsLoadingAudio(false)
         return
       }
@@ -164,6 +165,7 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
           return nextUrl
         })
         setCurrentSeconds(0)
+        onCurrentSecondsChange?.(0)
         setIsLoadingAudio(false)
       }
     }
@@ -177,7 +179,7 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
         return null
       })
     }
-  }, [audioBlobId, e2ee, audioUrlOverride])
+  }, [audioBlobId, e2ee, audioUrlOverride, onCurrentSecondsChange])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -200,7 +202,11 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
         pendingSeekSecondsRef.current = null
       }
     }
-    const onTimeUpdate = () => setCurrentSeconds(Number.isFinite(audio.currentTime) ? audio.currentTime : 0)
+    const onTimeUpdate = () => {
+      const nextSeconds = Number.isFinite(audio.currentTime) ? audio.currentTime : 0
+      setCurrentSeconds(nextSeconds)
+      onCurrentSecondsChange?.(nextSeconds)
+    }
     const onPlay = () => setIsPlaying(true)
     const onPause = () => setIsPlaying(false)
     const onEnded = () => setIsPlaying(false)
@@ -259,7 +265,7 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
       audio.removeEventListener('abort', onAbort)
       audio.removeEventListener('error', onError)
     }
-  }, [audioUrl, audioUrlOverride])
+  }, [audioUrl, audioUrlOverride, onCurrentSecondsChange])
 
   useEffect(() => {
     if (!Number.isFinite(audioDurationSeconds || null) || audioDurationSeconds === null) return
@@ -282,26 +288,13 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
   const canSeek = durationSeconds > 0
   const displayedSeconds = dragPreviewSeconds ?? currentSeconds
   const playedRatio = canSeek ? Math.max(0, Math.min(1, displayedSeconds / durationSeconds)) : 0
-  const timeLabel = `${formatTimeLabel(displayedSeconds)}/${formatTimeLabel(durationSeconds)}`
+  const timeLabel = `${formatTimeLabel(currentSeconds)}/${formatTimeLabel(durationSeconds)}`
   const effectiveAudioUrl = audioUrlOverride ?? audioUrl
   const hasPlayableAudio = Boolean(effectiveAudioUrl)
-  const showPlaySpinner = isLoadingAudio || isBuffering || (!hasAudioError && hasPlayableAudio && !isAudioReady)
+  const showPlaySpinner = isLoadingAudio || isBuffering || (!audioUrlOverride && !hasAudioError && hasPlayableAudio && !isAudioReady)
   const showEncryptingStatus = isEncrypting
   const showDecryptingStatus = !isEncrypting && isLoadingAudio && !audioUrlOverride
   const showStatus = showEncryptingStatus || showDecryptingStatus
-
-  useEffect(() => {
-    onCurrentSecondsChange?.(currentSeconds)
-  }, [currentSeconds, onCurrentSecondsChange])
-
-  useEffect(() => {
-    Animated.timing(statusOpacity, {
-      toValue: showStatus ? 1 : 0,
-      duration: 180,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start()
-  }, [showStatus, statusOpacity])
 
   return (
     <View style={styles.card}>
@@ -421,12 +414,12 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
             <Text style={styles.bufferHint}>{''}</Text>
           </View>
         </View>
-        <Animated.View pointerEvents="none" style={[styles.statusRow, { opacity: statusOpacity }]}>
-          <View style={styles.statusIconWrap}>
+        {showStatus ? (
+          <View style={styles.statusRow}>
             {showEncryptingStatus ? <AudioEncryptedIcon size={14} color="#171717" /> : <AudioDecryptedIcon size={14} color="#171717" />}
+            <Text style={styles.statusText}>{showEncryptingStatus ? 'Audio wordt versleuteld' : 'Audio wordt ontsleuteld'}</Text>
           </View>
-          <Text style={styles.statusText}>{showEncryptingStatus ? 'Audio wordt versleuteld' : 'Audio wordt ontsleuteld'}</Text>
-        </Animated.View>
+        ) : null}
       </View>
     </View>
   )
@@ -491,7 +484,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bufferSlot: {
-    width: 170,
+    width: 120,
     marginLeft: 'auto',
     alignItems: 'flex-end',
     justifyContent: 'center',
@@ -528,8 +521,8 @@ const styles = StyleSheet.create({
   },
   timeLabel: {
     color: colors.textSecondary,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 10,
+    lineHeight: 14,
     minWidth: 80,
     letterSpacing: 0.2,
   },
@@ -544,10 +537,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    minHeight: 18,
-    marginTop: -2,
-  },
-  statusIconWrap: {
+    minHeight: 16,
     marginTop: -2,
   },
   statusText: {

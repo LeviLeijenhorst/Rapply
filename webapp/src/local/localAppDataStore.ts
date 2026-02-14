@@ -38,7 +38,12 @@ function normalizeLocalAppData(data: LocalAppData): LocalAppData {
   const fallback = createDefaultLocalAppData()
   return {
     ...data,
-    templates: Array.isArray(data.templates) ? data.templates : fallback.templates,
+    templates: Array.isArray(data.templates)
+      ? data.templates.map((template) => ({
+          ...template,
+          description: typeof (template as any).description === 'string' ? (template as any).description : '',
+        }))
+      : fallback.templates,
     practiceSettings: data.practiceSettings
       ? {
           practiceName: typeof data.practiceSettings.practiceName === 'string' ? data.practiceSettings.practiceName : '',
@@ -167,7 +172,7 @@ export function createTemplate(data: LocalAppData, template: Template): { data: 
 export function updateTemplate(
   data: LocalAppData,
   templateId: string,
-  values: { name?: string; sections?: Template['sections']; isSaved?: boolean; updatedAtUnixMs: number },
+  values: { name?: string; description?: string; sections?: Template['sections']; isSaved?: boolean; updatedAtUnixMs: number },
 ): LocalAppData {
   return {
     ...data,
@@ -176,6 +181,7 @@ export function updateTemplate(
       return {
         ...template,
         ...(typeof values.name === 'string' ? { name: values.name.trim() } : {}),
+        ...(typeof values.description === 'string' ? { description: values.description.trim() } : {}),
         ...(values.sections ? { sections: values.sections } : {}),
         ...(typeof values.isSaved === 'boolean' ? { isSaved: values.isSaved } : {}),
         updatedAtUnixMs: values.updatedAtUnixMs,

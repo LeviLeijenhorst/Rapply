@@ -190,7 +190,7 @@ export function NewSessionModal({
   const { height: windowHeight } = useWindowDimensions()
   const templates = data.templates ?? []
   const defaultTemplateId = useMemo(() => {
-    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'standaard verslag')
+    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'standaard samenvatting')
     return (standardTemplate ?? templates[0])?.id ?? null
   }, [templates])
   const selectedTemplate = useMemo(() => templates.find((template) => template.id === selectedTemplateId) ?? null, [selectedTemplateId, templates])
@@ -590,7 +590,7 @@ export function NewSessionModal({
   }
 
   function handleBackdropPress() {
-    setIsCloseWarningVisible(true)
+    handleClose()
   }
 
   async function createAndOpenSession(values: { kind: 'recording' | 'upload' }) {
@@ -1411,7 +1411,8 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...( { position: 'absolute', inset: 0 } as any ),
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(16,18,20,0.22)',
+    ...( { backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' } as any ),
     zIndex: 0,
   },
   backdropPressable: {
@@ -1642,7 +1643,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   footerButtonSecondaryHovered: {
-    backgroundColor: colors.hoverBackground,
+    backgroundColor: 'rgba(0,0,0,0.06)',
   },
   footerButtonSecondaryPressed: {},
   footerButtonSecondaryText: {
@@ -1755,7 +1756,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   closeWarningButtonSecondaryHovered: {
-    backgroundColor: colors.hoverBackground,
+    backgroundColor: 'rgba(0,0,0,0.06)',
   },
   closeWarningButtonSecondaryText: {
     fontSize: 14,

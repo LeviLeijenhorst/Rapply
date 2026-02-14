@@ -1,9 +1,11 @@
 import { callSecureApi } from './secureApi'
 
 const TRANSCRIPTION_PREFLIGHT_TIMEOUT_MS = 30_000
-const TRANSCRIPTION_UPLOAD_TIMEOUT_MS = 20 * 60_000
-const TRANSCRIPTION_START_TIMEOUT_MS = 90 * 60_000
-const TRANSCRIPTION_OPERATION_TIMEOUT_MS = 95 * 60_000
+const TRANSCRIPTION_UPLOAD_TIMEOUT_MS = 45 * 60_000
+const TRANSCRIPTION_START_TIMEOUT_MS = 3 * 60 * 60_000
+const TRANSCRIPTION_OPERATION_TIMEOUT_MS = 4 * 60 * 60_000
+const TRANSCRIPTION_PREFLIGHT_MAX_RETRIES = 2
+const TRANSCRIPTION_UPLOAD_MAX_RETRIES = 2
 const AZURE_SPEECH_MAX_AUDIO_BYTES = 250 * 1024 * 1024
 const AZURE_WAV_TARGET_SAMPLE_RATE = 16_000
 const ABORTED_REQUEST_ERROR = 'Request aborted'
@@ -38,6 +40,58 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
   return Promise.race([promise, timeoutPromise]).finally(() => {
     if (timeoutId) clearTimeout(timeoutId)
   }) as Promise<T>
+}
+
+function shouldRetryTranscriptionRequest(error: unknown): boolean {
+  const message = String(error instanceof Error ? error.message : error || '').toLowerCase()
+  if (!message) return false
+  return (
+    message.includes('de server reageert niet op tijd') ||
+    message.includes('kon geen verbinding maken met de server') ||
+    message.includes('failed to fetch') ||
+    message.includes('network') ||
+    message.includes('upload failed: 5') ||
+    message.includes('api error: 5') ||
+    message.includes('api error: 429') ||
+    message.includes(' api error: 408') ||
+    message.includes(' api error: 409') ||
+    message.includes('temporarily unavailable') ||
+    message.includes('timeout')
+  )
+}
+
+async function sleepWithAbort(ms: number, signal?: AbortSignal): Promise<void> {
+  if (ms <= 0) return
+  await new Promise<void>((resolve, reject) => {
+    let isSettled = false
+    const settleResolve = () => {
+      if (isSettled) return
+      isSettled = true
+      if (signal) signal.removeEventListener('abort', onAbort)
+      resolve()
+    }
+    const settleReject = (error: Error) => {
+      if (isSettled) return
+      isSettled = true
+      if (signal) signal.removeEventListener('abort', onAbort)
+      reject(error)
+    }
+    const timeoutId = setTimeout(settleResolve, ms)
+    let isDone = false
+    const onAbort = () => {
+      if (isDone) return
+      isDone = true
+      clearTimeout(timeoutId)
+      settleReject(new Error(ABORTED_REQUEST_ERROR))
+    }
+    if (signal) {
+      if (signal.aborted) {
+        onAbort()
+        return
+      }
+      signal.addEventListener('abort', onAbort, { once: true })
+    }
+  })
 }
 
 async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs: number): Promise<Response> {
@@ -288,7 +342,7 @@ export async function transcribeAudio(params: {
       const { audioBlob, mimeType, languageCode = 'nl', signal, progress } = params
 
       try {
-        const preflight = (await callSecureApi('/transcription/preflight', {}, { timeoutMs: TRANSCRIPTION_PREFLIGHT_TIMEOUT_MS, signal })) as {
+        let preflight: {
           allowed?: boolean
           operationId?: string
           uploadToken?: string
@@ -298,6 +352,29 @@ export async function transcribeAudio(params: {
           planKey?: string
           transcriptionProvider?: string
           requiresWav?: boolean
+        } | null = null
+        for (let attempt = 0; attempt <= TRANSCRIPTION_PREFLIGHT_MAX_RETRIES; attempt += 1) {
+          try {
+            preflight = (await callSecureApi('/transcription/preflight', {}, { timeoutMs: TRANSCRIPTION_PREFLIGHT_TIMEOUT_MS, signal })) as {
+              allowed?: boolean
+              operationId?: string
+              uploadToken?: string
+              uploadUrl?: string
+              uploadHeaders?: Record<string, string>
+              remainingSeconds?: number
+              planKey?: string
+              transcriptionProvider?: string
+              requiresWav?: boolean
+            }
+            break
+          } catch (error) {
+            if (isRequestAbortedError(error) || signal?.aborted) throw error
+            if (attempt >= TRANSCRIPTION_PREFLIGHT_MAX_RETRIES || !shouldRetryTranscriptionRequest(error)) throw error
+            await sleepWithAbort(400 * (attempt + 1), signal)
+          }
+        }
+        if (!preflight) {
+          throw new Error('Transcription preflight failed')
         }
 
         const preflightProvider = String(preflight.transcriptionProvider || '').trim().toLowerCase()
@@ -340,19 +417,32 @@ export async function transcribeAudio(params: {
         }
         progress?.onOperationPrepared?.(operationId)
 
-        const uploadResponse = await fetchWithTimeout(
-          uploadUrl,
-          {
-            method: 'PUT',
-            headers: {
-              ...uploadHeaders,
-              'Content-Type': 'application/octet-stream',
-            },
-            body: encryptedBlob,
-            signal,
-          },
-          TRANSCRIPTION_UPLOAD_TIMEOUT_MS,
-        )
+        let uploadResponse: Response | null = null
+        for (let attempt = 0; attempt <= TRANSCRIPTION_UPLOAD_MAX_RETRIES; attempt += 1) {
+          try {
+            uploadResponse = await fetchWithTimeout(
+              uploadUrl,
+              {
+                method: 'PUT',
+                headers: {
+                  ...uploadHeaders,
+                  'Content-Type': 'application/octet-stream',
+                },
+                body: encryptedBlob,
+                signal,
+              },
+              TRANSCRIPTION_UPLOAD_TIMEOUT_MS,
+            )
+            break
+          } catch (error) {
+            if (isRequestAbortedError(error) || signal?.aborted) throw error
+            if (attempt >= TRANSCRIPTION_UPLOAD_MAX_RETRIES || !shouldRetryTranscriptionRequest(error)) throw error
+            await sleepWithAbort(500 * (attempt + 1), signal)
+          }
+        }
+        if (!uploadResponse) {
+          throw new Error('Upload failed')
+        }
 
         console.log('[transcription] upload response', { status: uploadResponse.status })
 

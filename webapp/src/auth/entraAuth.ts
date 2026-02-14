@@ -369,3 +369,8 @@ export async function clearEntraLocalTokens(): Promise<void> {
   removeStoredValue(ENTRA_ACCESS_TOKEN_KEY)
   clearAuthFlowData()
 }
+
+// Clears locally stored Entra auth state for sign-out.
+export async function signOutFromEntra(): Promise<void> {
+  await clearEntraLocalTokens()
+}

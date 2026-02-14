@@ -1,5 +1,5 @@
 import React from 'react'
-import { Image, Pressable, StyleSheet, View } from 'react-native'
+import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 
 import { AuthCard } from '../components/AuthCard'
 import { CoachscribeLogo } from '../../components/CoachscribeLogo'
@@ -13,7 +13,9 @@ type Props = {
 }
 
 export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
-  const illustrationSource = require('../../../assets/authhumans_1.png')
+  const { width } = useWindowDimensions()
+  const isCompact = width < 980
+  const illustrationSource = require('../../../assets/authhumans.png')
 
   async function startLogin() {
     try {
@@ -39,7 +41,7 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
   return (
     <AuthCard>
       {/* Welcome layout */}
-      <View style={styles.layoutRow}>
+      <View style={[styles.layoutRow, isCompact ? styles.layoutColumn : undefined]}>
         {/* Branding panel */}
         <View style={styles.brandingPanel}>
           {/* Brand header */}
@@ -51,7 +53,7 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
           </View>
           {/* Welcome illustration */}
           <View style={styles.illustrationContainer}>
-            <Image source={illustrationSource} resizeMode="contain" style={styles.illustrationImage} />
+            <Image source={illustrationSource} resizeMode="contain" style={[styles.illustrationImage, isCompact ? styles.illustrationImageCompact : undefined]} />
           </View>
         </View>
 
@@ -97,6 +99,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     minHeight: 560,
   },
+  layoutColumn: {
+    flexDirection: 'column',
+    minHeight: 0,
+  },
   brandingPanel: {
     flexGrow: 1,
     flexShrink: 1,
@@ -128,6 +134,10 @@ const styles = StyleSheet.create({
   illustrationImage: {
     width: 420,
     height: 320,
+  },
+  illustrationImageCompact: {
+    width: 300,
+    height: 220,
   },
   welcomePanel: {
     flexGrow: 1,

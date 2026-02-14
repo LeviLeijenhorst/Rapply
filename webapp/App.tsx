@@ -8,7 +8,7 @@ import { AuthFlow } from './src/auth/AuthFlow'
 import { AuthLoadingScreen } from './src/auth/components/AuthLoadingScreen'
 import { AuthScreenLayout } from './src/auth/components/AuthScreenLayout'
 import { LocalAppDataProvider } from './src/local/LocalAppDataProvider'
-import { clearEntraLocalTokens, getStoredAccessToken } from './src/auth/entraAuth'
+import { getStoredAccessToken, signOutFromEntra } from './src/auth/entraAuth'
 import { navigate } from './src/auth/router/webRouter'
 import { E2eeProvider } from './src/e2ee/E2eeProvider'
 import { ThemeProvider } from './src/theme/ThemeProvider'
@@ -60,14 +60,19 @@ export default function App() {
               <AppErrorBoundary onReset={() => setIsAuthenticated(false)}>
                 <AppShell
                   onLogout={() => {
-                    if (logoutTimeoutRef.current) {
-                      clearTimeout(logoutTimeoutRef.current)
-                    }
-                    setIsLoggingOut(true)
-                    clearEntraLocalTokens()
-                    setIsAuthenticated(false)
-                    navigate('/inloggen', { replace: true })
-                    logoutTimeoutRef.current = setTimeout(() => setIsLoggingOut(false), 300)
+                    void (async () => {
+                      if (logoutTimeoutRef.current) {
+                        clearTimeout(logoutTimeoutRef.current)
+                      }
+                      setIsLoggingOut(true)
+                      setIsAuthenticated(false)
+                      navigate('/inloggen', { replace: true })
+                      try {
+                        await signOutFromEntra()
+                      } finally {
+                        logoutTimeoutRef.current = setTimeout(() => setIsLoggingOut(false), 300)
+                      }
+                    })()
                   }}
                 />
               </AppErrorBoundary>

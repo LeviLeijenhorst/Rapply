@@ -1,6 +1,7 @@
 import React from 'react'
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 
+import { radius, spacing } from '../foundation/theme/tokens'
 import { colors } from '../theme/colors'
 import { CoachscribeLogo } from './CoachscribeLogo'
 import { UsageIndicator } from './UsageIndicator'
@@ -10,9 +11,10 @@ type Props = {
   onLogout: () => void
   usedMinutes: number
   totalMinutes: number
+  isUsageLoading?: boolean
 }
 
-export function Navbar({ onLogout, usedMinutes, totalMinutes }: Props) {
+export function Navbar({ onLogout, usedMinutes, totalMinutes, isUsageLoading = false }: Props) {
   const { width } = useWindowDimensions()
   const hideUsage = width < 600
 
@@ -32,7 +34,7 @@ export function Navbar({ onLogout, usedMinutes, totalMinutes }: Props) {
           {!hideUsage ? (
             <View style={styles.usageContainer}>
               {/* Usage indicator */}
-              <UsageIndicator usedMinutes={usedMinutes} totalMinutes={totalMinutes} />
+              <UsageIndicator usedMinutes={usedMinutes} totalMinutes={totalMinutes} isLoading={isUsageLoading} />
             </View>
           ) : null}
           <Pressable onPress={onLogout} style={({ hovered }) => [styles.logoutButton, hovered ? styles.logoutButtonHovered : undefined]}>
@@ -60,13 +62,13 @@ const styles = StyleSheet.create({
   leftArea: {
     width: 240,
     height: '100%',
-    padding: 24,
+    padding: spacing.lg,
     justifyContent: 'center',
   },
   rightArea: {
     flex: 1,
     height: '100%',
-    padding: 24,
+    padding: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
@@ -74,15 +76,15 @@ const styles = StyleSheet.create({
   rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: spacing.md,
   },
   logoutButton: {
     height: 40,
-    borderRadius: 12,
+    borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 8,
+    padding: spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
     ...( { cursor: 'pointer' } as any ),
@@ -96,7 +98,7 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
   },
   usageContainer: {
-    borderRadius: 12,
+    borderRadius: radius.md,
   },
 })
 

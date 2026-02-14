@@ -13,7 +13,7 @@ import { colors } from '../theme/colors'
 import { ConversationTabs, ConversationTabKey } from '../components/sessionDetail/ConversationTabs'
 import { AudioPlayerCard, type AudioPlayerHandle } from '../components/sessionDetail/AudioPlayerCard'
 import { ChatComposer } from '../components/sessionDetail/ChatComposer'
-import { ChatMessage } from '../components/sessionDetail/ChatMessage'
+import { ChatMessage, exportMessageToPdf } from '../components/sessionDetail/ChatMessage'
 import { QuickQuestionsStart } from '../components/sessionDetail/QuickQuestionsStart'
 import { ReportPanel } from '../components/sessionDetail/ReportPanel'
 import { NotesTabPanel } from '../components/sessionDetail/NotesTabPanel'
@@ -105,12 +105,15 @@ export function SessieDetailScreen({
   const [currentAudioSeconds, setCurrentAudioSeconds] = useState(0)
   const [isSummaryEditorOpen, setIsSummaryEditorOpen] = useState(false)
   const [forcedTranscriptionStatus, setForcedTranscriptionStatus] = useState<'transcribing' | 'generating' | null>(null)
+  const [isPdfEditorOpen, setIsPdfEditorOpen] = useState(false)
+  const [pdfEditorDraft, setPdfEditorDraft] = useState('')
+  const [pdfEditorTitle, setPdfEditorTitle] = useState<string | undefined>(undefined)
 
   const coacheeButtonRef = useRef<any>(null)
   const templates = data.templates ?? []
   const practiceTintColor = data.practiceSettings.tintColor || colors.selected
   const defaultTemplateId = useMemo(() => {
-    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'standaard verslag')
+    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'standaard samenvatting')
     return (standardTemplate ?? templates[0])?.id ?? null
   }, [templates])
   const selectedTemplate = useMemo(() => templates.find((template) => template.id === selectedTemplateId) ?? null, [selectedTemplateId, templates])
@@ -439,6 +442,12 @@ export function SessieDetailScreen({
     if (!trimmedText) return
     setComposerText('')
     await sendChatMessage(trimmedText)
+  }
+
+  function handleRequestPdfEdit(params: { text: string; title?: string }) {
+    setPdfEditorDraft(params.text)
+    setPdfEditorTitle(params.title)
+    setIsPdfEditorOpen(true)
   }
 
   function beginGenerationRun() {
@@ -831,6 +840,7 @@ export function SessieDetailScreen({
                                 text={message.text}
                                 onTranscriptMentionPress={handleTranscriptMentionPress}
                                 exportTitle={editableSessionTitle}
+                                onRequestPdfEdit={({ text, title }) => handleRequestPdfEdit({ text, title })}
                               />
                             ))}
                             {isChatSending ? (
@@ -1130,6 +1140,7 @@ export function SessieDetailScreen({
                                 text={message.text}
                                 onTranscriptMentionPress={handleTranscriptMentionPress}
                                 exportTitle={editableSessionTitle}
+                                onRequestPdfEdit={({ text, title }) => handleRequestPdfEdit({ text, title })}
                               />
                             ))}
                             {isChatSending ? (
@@ -1246,6 +1257,23 @@ export function SessieDetailScreen({
         }}
       />
 
+      <RichTextEditorModal
+        visible={isPdfEditorOpen}
+        title="PDF bewerken"
+        initialValue={pdfEditorDraft}
+        saveLabel="Exporteer PDF"
+        onClose={() => setIsPdfEditorOpen(false)}
+        onSave={(value) => {
+          void exportMessageToPdf(value, pdfEditorTitle, {
+            practiceName: data.practiceSettings.practiceName,
+            website: data.practiceSettings.website,
+            tintColor: data.practiceSettings.tintColor,
+            logoDataUrl: data.practiceSettings.logoDataUrl,
+          })
+          setIsPdfEditorOpen(false)
+        }}
+      />
+
       {isChatMaximizedRendered ? (
         <WebPortal>
           <Animated.View style={[styles.chatOverlay, { opacity: chatOverlayOpacity }]}>
@@ -1293,6 +1321,7 @@ export function SessieDetailScreen({
                           text={message.text}
                           onTranscriptMentionPress={handleTranscriptMentionPress}
                           exportTitle={editableSessionTitle}
+                          onRequestPdfEdit={({ text, title }) => handleRequestPdfEdit({ text, title })}
                         />
                       ))}
                       {isChatSending ? (

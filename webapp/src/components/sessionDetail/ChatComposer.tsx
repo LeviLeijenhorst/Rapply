@@ -15,6 +15,22 @@ type Props = {
   onPressEscape?: () => void
 }
 
+const tabAutocompleteSuggestions = [
+  'Maak een korte samenvatting van deze sessie.',
+  'Welke actiepunten volgen uit deze sessie?',
+  'Welke doelen zijn besproken in deze sessie?',
+  'Vat dit samen in bullet points.',
+  'Geef mij 3 verdiepende vragen voor de volgende sessie.',
+]
+
+function applyTabAutocomplete(value: string): string | null {
+  const trimmed = String(value || '').trim()
+  if (!trimmed) return tabAutocompleteSuggestions[0]
+  const lower = trimmed.toLowerCase()
+  const suggestion = tabAutocompleteSuggestions.find((item) => item.toLowerCase().startsWith(lower))
+  return suggestion && suggestion.length > trimmed.length ? suggestion : null
+}
+
 export function ChatComposer({
   value,
   onChangeValue,
@@ -78,6 +94,12 @@ export function ChatComposer({
             onKeyPress={(event: any) => {
               const key = event?.nativeEvent?.key
               const isShift = Boolean(event?.nativeEvent?.shiftKey)
+              if (key === 'Tab') {
+                if (typeof event?.preventDefault === 'function') event.preventDefault()
+                const suggestion = applyTabAutocomplete(value)
+                if (suggestion) onChangeValue(suggestion)
+                return
+              }
               if (key === 'Escape') {
                 if (typeof event?.preventDefault === 'function') event.preventDefault()
                 onPressEscape?.()

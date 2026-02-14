@@ -93,7 +93,7 @@ export function Sidebar({ selectedSidebarItemKey, onSelectSidebarItem, onPressCr
             isCompact={isCompact}
           />
           <SidebarItem
-            label="Mijn praktijk"
+            label="Mijn brand"
             isSelected={selectedSidebarItemKey === 'mijnPraktijk'}
             onPress={() => onSelectSidebarItem('mijnPraktijk')}
             icon={<MijnPraktijkIcon color={selectedSidebarItemKey === 'mijnPraktijk' ? selectedColor : unselectedColor} size={24} />}
