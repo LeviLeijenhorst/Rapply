@@ -1,9 +1,11 @@
 import { createUploadUrl, getTranscriptionUploadsContainerClient } from "../azureBlob"
 
+// Intent: createEncryptedUploadUrl
 export async function createEncryptedUploadUrl(params: { blobName: string; expiresInSeconds: number }) {
   return await createUploadUrl({ blobName: params.blobName, expiresInSeconds: params.expiresInSeconds })
 }
 
+// Intent: fetchEncryptedUploadStream
 export async function fetchEncryptedUploadStream(params: { blobName: string }): Promise<NodeJS.ReadableStream> {
   const container = getTranscriptionUploadsContainerClient()
   const blob = container.getBlobClient(params.blobName.replace(/^\/+/, ""))
@@ -15,12 +17,14 @@ export async function fetchEncryptedUploadStream(params: { blobName: string }): 
   return stream as any
 }
 
+// Intent: deleteEncryptedUpload
 export async function deleteEncryptedUpload(params: { blobName: string }): Promise<void> {
   const container = getTranscriptionUploadsContainerClient()
   const blob = container.getBlobClient(params.blobName.replace(/^\/+/, ""))
   await blob.deleteIfExists()
 }
 
+// Intent: getEncryptedUploadSize
 export async function getEncryptedUploadSize(params: { blobName: string }): Promise<number> {
   const container = getTranscriptionUploadsContainerClient()
   const blob = container.getBlobClient(params.blobName.replace(/^\/+/, ""))
@@ -28,6 +32,7 @@ export async function getEncryptedUploadSize(params: { blobName: string }): Prom
   return typeof properties.contentLength === "number" ? properties.contentLength : 0
 }
 
+// Intent: deleteEncryptedUploadsByPrefix
 export async function deleteEncryptedUploadsByPrefix(params: { prefix: string }): Promise<void> {
   const container = getTranscriptionUploadsContainerClient()
   const prefix = params.prefix.replace(/^\/+/, "")

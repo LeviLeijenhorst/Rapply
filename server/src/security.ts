@@ -1,11 +1,13 @@
 import type { Request, Response, NextFunction } from "express"
 import cors, { type CorsOptions } from "cors"
 
+// Normalizes an origin by trimming and removing trailing slashes.
 function normalizeOrigin(value: string): string {
   const trimmed = String(value || "").trim()
   return trimmed.replace(/\/+$/g, "")
 }
 
+// Parses a comma-separated env allowlist into normalized origin values.
 function parseCommaSeparatedList(value: string | null): string[] {
   const raw = typeof value === "string" ? value : ""
   return raw
@@ -14,6 +16,7 @@ function parseCommaSeparatedList(value: string | null): string[] {
     .filter((x) => !!x)
 }
 
+// Builds the CORS middleware with strict production requirements.
 export function createCorsMiddleware(params: {
   runtimeEnvironment: string
   allowedOrigins: string[] | null
@@ -28,7 +31,7 @@ export function createCorsMiddleware(params: {
   }
 
   const options: CorsOptions = {
-    methods: ["POST", "OPTIONS"],
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Authorization", "Content-Type"],
     origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
       if (!origin) {
@@ -52,6 +55,7 @@ type RateLimitBucket = {
   count: number
 }
 
+// Intent: createRateLimitMiddleware
 export function createRateLimitMiddleware(params: {
   windowMs: number
   maxRequests: number
@@ -90,8 +94,8 @@ export function createRateLimitMiddleware(params: {
   }
 }
 
+// Parses and validates configured CORS allowlist values from env.
 export function parseCorsAllowedOriginsFromEnv(value: string | null): string[] | null {
   const parsed = parseCommaSeparatedList(value)
   return parsed.length > 0 ? parsed : null
 }
-

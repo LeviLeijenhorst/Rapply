@@ -1,9 +1,11 @@
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string }
 
+// Intent: normalizeText
 function normalizeText(value: unknown) {
   return String(value || "").trim()
 }
 
+// Intent: pickContent
 function pickContent(json: any): string {
   const content = json?.choices?.[0]?.message?.content
   if (typeof content === "string") {
@@ -19,6 +21,7 @@ function pickContent(json: any): string {
   return ""
 }
 
+// Intent: completeMistralChat
 export async function completeMistralChat(params: {
   apiKey: string
   model: string

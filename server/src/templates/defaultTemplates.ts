@@ -2,16 +2,19 @@ import crypto from "crypto"
 
 import type { Template } from "../appData"
 
+// Intent: createId
 function createId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`
 }
 
+// Intent: createDefaultTemplates
 export function createDefaultTemplates(): Template[] {
   const now = Date.now()
   return [
     {
       id: createId("template"),
       name: "Standaard verslag",
+      description: "Een helder algemeen verslag met samenvatting, inzichten en concrete actiepunten.",
       isSaved: false,
       createdAtUnixMs: now,
       updatedAtUnixMs: now,
@@ -36,6 +39,7 @@ export function createDefaultTemplates(): Template[] {
     {
       id: createId("template"),
       name: "SOAP",
+      description: "Klassieke SOAP-structuur voor feitelijke en goed navolgbare sessieverslagen.",
       isSaved: false,
       createdAtUnixMs: now,
       updatedAtUnixMs: now,
@@ -65,6 +69,7 @@ export function createDefaultTemplates(): Template[] {
     {
       id: createId("template"),
       name: "Intake",
+      description: "Intake-template om hulpvraag, context, doelen en verwachtingen duidelijk vast te leggen.",
       isSaved: false,
       createdAtUnixMs: now,
       updatedAtUnixMs: now,
@@ -94,6 +99,7 @@ export function createDefaultTemplates(): Template[] {
     {
       id: createId("template"),
       name: "Eindverslag",
+      description: "Afrondend verslag voor resultaten, kerninzichten en vervolgaanbevelingen.",
       isSaved: false,
       createdAtUnixMs: now,
       updatedAtUnixMs: now,
@@ -118,6 +124,7 @@ export function createDefaultTemplates(): Template[] {
     {
       id: createId("template"),
       name: "Voor de coachee",
+      description: "Toegankelijke terugkoppeling voor de coachee met afspraken en praktische acties.",
       isSaved: false,
       createdAtUnixMs: now,
       updatedAtUnixMs: now,

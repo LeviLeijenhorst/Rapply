@@ -9,6 +9,7 @@ export type RevenueCatSubscriberResponse = {
   }
 }
 
+// Intent: parseDateMs
 function parseDateMs(value: string | null | undefined): number | null {
   const s = typeof value === "string" ? value.trim() : ""
   if (!s) return null
@@ -17,6 +18,7 @@ function parseDateMs(value: string | null | undefined): number | null {
   return ms
 }
 
+// Intent: isEntitlementActive
 function isEntitlementActive(entitlement: { expires_date?: string | null } | undefined, nowMs: number): boolean {
   if (!entitlement) return false
   if (entitlement.expires_date === null) return true
@@ -25,6 +27,7 @@ function isEntitlementActive(entitlement: { expires_date?: string | null } | und
   return expiresMs > nowMs
 }
 
+// Intent: pickActiveSubscriptionProductId
 function pickActiveSubscriptionProductId(subscriptions: Record<string, { expires_date?: string | null }> | undefined, nowMs: number): string | null {
   const entries = subscriptions ? Object.entries(subscriptions) : []
   const active = entries
@@ -38,6 +41,7 @@ function pickActiveSubscriptionProductId(subscriptions: Record<string, { expires
   return active[0].productId
 }
 
+// Intent: fetchRevenueCatSubscriber
 export async function fetchRevenueCatSubscriber(userId: string): Promise<RevenueCatSubscriberResponse> {
   const apiKey = env.revenueCatSecretKey
   if (!apiKey) {
@@ -67,6 +71,7 @@ export type RevenueCatPlanState = {
   cycleEndMs: number | null
 }
 
+// Intent: derivePlanStateFromRevenueCatSubscriber
 export function derivePlanStateFromRevenueCatSubscriber(subscriberResponse: RevenueCatSubscriberResponse): RevenueCatPlanState {
   const nowMs = Date.now()
   const subscriber = subscriberResponse?.subscriber
@@ -85,6 +90,7 @@ export function derivePlanStateFromRevenueCatSubscriber(subscriberResponse: Reve
   return { entitlementIsActive, planKey, subscriptionProductId, cycleStartMs, cycleEndMs }
 }
 
+// Intent: derivePurchasedSecondsFromRevenueCatSubscriber
 export function derivePurchasedSecondsFromRevenueCatSubscriber(subscriberResponse: RevenueCatSubscriberResponse): number {
   const subscriber = subscriberResponse?.subscriber
   const map = subscriber?.non_subscriptions ?? {}

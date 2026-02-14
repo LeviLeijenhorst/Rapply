@@ -17,6 +17,7 @@ const subscriptionProductIdsByPlanKey: Record<Exclude<PlanKey, "praktijk">, stri
   fulltime: ["tier_3_monthly"],
 }
 
+// Intent: normalizeSubscriptionProductId
 function normalizeSubscriptionProductId(value: string): string {
   const trimmed = String(value || "").trim()
   if (!trimmed) return ""
@@ -25,6 +26,7 @@ function normalizeSubscriptionProductId(value: string): string {
   return trimmed.slice(0, idx).trim()
 }
 
+// Intent: buildPlanKeyBySubscriptionProductId
 function buildPlanKeyBySubscriptionProductId(): Record<string, Exclude<PlanKey, "praktijk">> {
   const map: Record<string, Exclude<PlanKey, "praktijk">> = {}
   const entries = Object.entries(subscriptionProductIdsByPlanKey) as Array<[Exclude<PlanKey, "praktijk">, string[]]>
@@ -40,12 +42,14 @@ function buildPlanKeyBySubscriptionProductId(): Record<string, Exclude<PlanKey, 
 
 const planKeyBySubscriptionProductId = buildPlanKeyBySubscriptionProductId()
 
+// Intent: getPlanKeyFromSubscriptionProductId
 export function getPlanKeyFromSubscriptionProductId(productId: string | null | undefined): Exclude<PlanKey, "praktijk"> | null {
   const key = typeof productId === "string" ? normalizeSubscriptionProductId(productId) : ""
   if (!key) return null
   return planKeyBySubscriptionProductId[key] ?? null
 }
 
+// Intent: getIncludedSecondsForPlanKey
 export function getIncludedSecondsForPlanKey(planKey: PlanKey | null | undefined): number {
   if (!planKey) return 0
   if (planKey === "praktijk") return 0

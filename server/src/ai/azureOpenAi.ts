@@ -2,14 +2,17 @@ import { env } from "../env"
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string }
 
+// Intent: normalizeText
 function normalizeText(value: string) {
   return String(value || "").trim()
 }
 
+// Intent: normalizeEndpoint
 function normalizeEndpoint(value: string) {
   return String(value || "").trim().replace(/\/+$/, "")
 }
 
+// Intent: completeAzureOpenAiChat
 export async function completeAzureOpenAiChat(params: {
   deployment: string
   messages: ChatMessage[]

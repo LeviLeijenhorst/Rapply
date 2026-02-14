@@ -1,11 +1,13 @@
 import { env } from "./env"
 
+// Intent: readTenantIdFromOpenIdConfigurationUrl
 function readTenantIdFromOpenIdConfigurationUrl(openIdConfigurationUrl: string): string | null {
   const match = String(openIdConfigurationUrl || "").match(/\/([0-9a-fA-F-]{36}|[a-zA-Z0-9.-]+)\/v2\.0\//)
   if (!match?.[1]) return null
   return match[1]
 }
 
+// Intent: requireGraphConfig
 function requireGraphConfig() {
   const tenantId = env.entraGraphTenantId || readTenantIdFromOpenIdConfigurationUrl(env.entraOpenIdConfigurationUrl) || ""
   const clientId = String(env.entraGraphClientId || "").trim()
@@ -18,6 +20,7 @@ function requireGraphConfig() {
   return { tenantId, clientId, clientSecret }
 }
 
+// Intent: fetchGraphAccessToken
 async function fetchGraphAccessToken(): Promise<string> {
   const { tenantId, clientId, clientSecret } = requireGraphConfig()
   const tokenEndpoint = `https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0/token`
@@ -49,6 +52,7 @@ async function fetchGraphAccessToken(): Promise<string> {
   return accessToken
 }
 
+// Intent: deleteEntraUserById
 export async function deleteEntraUserById(entraUserId: string): Promise<void> {
   const id = String(entraUserId || "").trim()
   if (!id) {

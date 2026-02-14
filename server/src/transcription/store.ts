@@ -1,18 +1,9 @@
 import { freeSeconds, getIncludedSecondsForPlanKey, type PlanKey } from "../billing/constants"
+import { buildCycleKey, clampNonNegative } from "../billing/cycleMath"
 import crypto from "crypto"
 import { execute, queryOne } from "../db"
 
-function clampNonNegative(value: unknown): number {
-  const n = typeof value === "number" ? value : Number(value)
-  if (!Number.isFinite(n)) return 0
-  return Math.max(0, Math.floor(n))
-}
-
-function buildCycleKey(cycleStartMs: number | null, cycleEndMs: number | null): string | null {
-  if (!cycleStartMs || !cycleEndMs) return null
-  return `${cycleStartMs}-${cycleEndMs}`
-}
-
+// Creates a short-lived token that authorizes exactly one upload for an operation.
 export async function createUploadToken(params: { userId: string; operationId: string; uploadPath: string }): Promise<{ uploadToken: string; expiresAtMs: number }> {
   const { userId, operationId, uploadPath } = params
 
@@ -40,11 +31,13 @@ export async function createUploadToken(params: { userId: string; operationId: s
   throw new Error("Failed to create upload token")
 }
 
+// Intent: cryptoRandomToken
 function cryptoRandomToken(): string {
   const base64 = crypto.randomBytes(32).toString("base64")
   return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
 }
 
+// Marks an upload token as used and returns the associated blob path.
 export async function consumeUploadToken(params: { userId: string; uploadToken: string; operationId: string }): Promise<{ uploadPath: string }> {
   const { userId, uploadToken, operationId } = params
   const row = await queryOne<{ upload_blob_name: string }>(
@@ -75,47 +68,7 @@ export type ChargeResult = {
   remainingSecondsAfter: number
 }
 
-export async function recordTranscriptionOperationWithoutCharge(params: {
-  userId: string
-  operationId: string
-  planKey: PlanKey | null
-  cycleStartMs: number | null
-  cycleEndMs: number | null
-  remainingSecondsAfter: number
-}): Promise<void> {
-  const { userId, operationId, planKey, cycleStartMs, cycleEndMs, remainingSecondsAfter } = params
-  const cycleKey = buildCycleKey(cycleStartMs, cycleEndMs)
-
-  await execute(
-    `
-    insert into public.transcription_operations (
-      operation_id,
-      user_id,
-      status,
-      seconds_charged,
-      charged_cycle_seconds,
-      charged_non_expiring_seconds,
-      remaining_seconds_after,
-      plan_key,
-      cycle_key,
-      charged_at
-    )
-    values ($1, $2, 'charged', $3, $4, $5, $6, $7, $8, now())
-    on conflict (operation_id) do update
-      set user_id = excluded.user_id,
-          status = excluded.status,
-          seconds_charged = excluded.seconds_charged,
-          charged_cycle_seconds = excluded.charged_cycle_seconds,
-          charged_non_expiring_seconds = excluded.charged_non_expiring_seconds,
-          remaining_seconds_after = excluded.remaining_seconds_after,
-          plan_key = excluded.plan_key,
-          cycle_key = excluded.cycle_key,
-          charged_at = now()
-    `,
-    [operationId, userId, 0, 0, 0, remainingSecondsAfter, planKey, cycleKey],
-  )
-}
-
+// Charges transcription seconds once per operation and returns the post-charge balance.
 export async function chargeSecondsIdempotent(params: {
   userId: string
   operationId: string
@@ -231,6 +184,7 @@ export async function chargeSecondsIdempotent(params: {
   return { secondsCharged: seconds, chargedCycleSeconds, chargedNonExpiringSeconds, remainingSecondsAfter }
 }
 
+// Refunds previously charged seconds once per operation.
 export async function refundSecondsIdempotent(params: { userId: string; operationId: string }): Promise<void> {
   const { userId, operationId } = params
 
@@ -289,4 +243,3 @@ export async function refundSecondsIdempotent(params: { userId: string; operatio
     [operationId, userId],
   )
 }
-

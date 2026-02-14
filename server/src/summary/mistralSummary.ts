@@ -1,10 +1,12 @@
 import { env } from "../env"
 import { completeMistralChat, type ChatMessage } from "../ai/mistralChat"
 
+// Intent: normalizeText
 function normalizeText(value: unknown) {
   return String(value || "").trim()
 }
 
+// Intent: safeClampTranscript
 function safeClampTranscript(transcript: string) {
   const trimmed = normalizeText(transcript)
   if (!trimmed) {
@@ -17,6 +19,7 @@ function safeClampTranscript(transcript: string) {
   return trimmed
 }
 
+// Intent: generateSummaryWithMistral
 export async function generateSummaryWithMistral(params: { transcript: string; templateKey?: string; template?: { name: string; sections: { title: string; description: string }[] } }): Promise<string> {
   const transcript = safeClampTranscript(params.transcript)
 
@@ -100,6 +103,7 @@ export async function generateSummaryWithMistral(params: { transcript: string; t
   return summary
 }
 
+// Intent: buildTemplateStructure
 function buildTemplateStructure(template: { name: string; sections: { title: string; description: string }[] }) {
   const sectionGuide = template.sections
     .map((section) => `- ${section.title}: ${normalizeText(section.description) || "Geen extra toelichting."}`)

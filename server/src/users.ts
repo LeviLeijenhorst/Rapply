@@ -8,6 +8,7 @@ export type AppUser = {
   displayName: string | null
 }
 
+// Intent: ensureUserFromEntra
 export async function ensureUserFromEntra(params: { entraUserId: string; email: string | null; displayName: string | null }): Promise<AppUser> {
   const entraUserId = String(params.entraUserId || "").trim()
   if (!entraUserId) {
@@ -49,10 +50,12 @@ export async function ensureUserFromEntra(params: { entraUserId: string; email: 
   }
 }
 
+// Intent: deleteUserById
 export async function deleteUserById(userId: string): Promise<void> {
   await execute(`delete from public.users where id = $1`, [userId])
 }
 
+// Intent: updateUserDisplayName
 export async function updateUserDisplayName(params: { userId: string; displayName: string | null }): Promise<void> {
   const displayName = typeof params.displayName === "string" && params.displayName.trim() ? params.displayName.trim() : null
   await execute(`update public.users set display_name = $1, updated_at = now() where id = $2`, [displayName, params.userId])

@@ -15,6 +15,7 @@ export type UserKeyMaterial = {
   custodianThreshold: number | null
 }
 
+// Intent: bootstrap
 export async function bootstrap(params: { userId: string }): Promise<{ e2eeConfigured: boolean; keyVersion: number | null; recoveryPolicy: RecoveryPolicy | null }> {
   const row = await queryOne<{ key_version: number; recovery_policy: RecoveryPolicy }>(
     "select key_version, recovery_policy from public.e2ee_user_keys where user_id = $1",
@@ -26,6 +27,7 @@ export async function bootstrap(params: { userId: string }): Promise<{ e2eeConfi
   return { e2eeConfigured: true, keyVersion: row.key_version, recoveryPolicy: row.recovery_policy }
 }
 
+// Intent: setupUserKeys
 export async function setupUserKeys(params: {
   userId: string
   cryptoVersion: number
@@ -89,6 +91,7 @@ export async function setupUserKeys(params: {
   )
 }
 
+// Intent: readUserKeyMaterial
 export async function readUserKeyMaterial(params: { userId: string }): Promise<UserKeyMaterial | null> {
   const row = await queryOne<{
     crypto_version: number
@@ -134,6 +137,7 @@ export async function readUserKeyMaterial(params: { userId: string }): Promise<U
   }
 }
 
+// Intent: setRecoveryWrappedArk
 export async function setRecoveryWrappedArk(params: { userId: string; wrappedArkRecoveryCode: string | null; nowUnixMs: number }): Promise<void> {
   await execute(
     `
@@ -146,6 +150,7 @@ export async function setRecoveryWrappedArk(params: { userId: string; wrappedArk
   )
 }
 
+// Intent: rotatePassphraseWrappedArk
 export async function rotatePassphraseWrappedArk(params: {
   userId: string
   argon2Salt: string
@@ -181,6 +186,7 @@ export async function rotatePassphraseWrappedArk(params: {
   )
 }
 
+// Intent: upsertObjectKey
 export async function upsertObjectKey(params: {
   userId: string
   objectType: string
@@ -220,6 +226,7 @@ export async function upsertObjectKey(params: {
   )
 }
 
+// Intent: readObjectKeys
 export async function readObjectKeys(params: { userId: string; objectType: string; objectId: string }): Promise<
   { keyVersion: number; cryptoVersion: number; wrappedDek: string; updatedAtUnixMs: number }[]
 > {
@@ -238,6 +245,61 @@ export async function readObjectKeys(params: { userId: string; objectType: strin
     [params.userId, params.objectType, params.objectId],
   )
   return rows.map((row) => ({
+    keyVersion: row.key_version,
+    cryptoVersion: row.crypto_version,
+    wrappedDek: row.wrapped_dek,
+    updatedAtUnixMs: row.updated_at_unix_ms,
+  }))
+}
+
+// Intent: readLatestObjectKeysBatch
+export async function readLatestObjectKeysBatch(params: {
+  userId: string
+  refs: { objectType: string; objectId: string }[]
+}): Promise<{ objectType: string; objectId: string; keyVersion: number; cryptoVersion: number; wrappedDek: string; updatedAtUnixMs: number }[]> {
+  if (!params.refs.length) return []
+
+  const values: unknown[] = [params.userId]
+  const rowSql: string[] = []
+  for (let index = 0; index < params.refs.length; index += 1) {
+    const ref = params.refs[index]
+    const typeParamIndex = values.length + 1
+    const idParamIndex = values.length + 2
+    values.push(ref.objectType, ref.objectId)
+    rowSql.push(`($${typeParamIndex}::text, $${idParamIndex}::text)`)
+  }
+
+  const rows = await queryMany<{
+    object_type: string
+    object_id: string
+    key_version: number
+    crypto_version: number
+    wrapped_dek: string
+    updated_at_unix_ms: number
+  }>(
+    `
+      with refs(object_type, object_id) as (
+        values ${rowSql.join(",\n        ")}
+      )
+      select distinct on (k.object_type, k.object_id)
+        k.object_type,
+        k.object_id,
+        k.key_version,
+        k.crypto_version,
+        k.wrapped_dek,
+        k.updated_at_unix_ms
+      from public.e2ee_object_keys k
+      inner join refs r
+        on r.object_type = k.object_type and r.object_id = k.object_id
+      where k.user_id = $1
+      order by k.object_type, k.object_id, k.key_version desc
+    `,
+    values,
+  )
+
+  return rows.map((row) => ({
+    objectType: row.object_type,
+    objectId: row.object_id,
     keyVersion: row.key_version,
     cryptoVersion: row.crypto_version,
     wrappedDek: row.wrapped_dek,
