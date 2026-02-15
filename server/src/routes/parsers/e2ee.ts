@@ -1,4 +1,4 @@
-import type { RecoveryPolicy } from "../../e2eeV2"
+import type { RecoveryPolicy } from "../../e2ee"
 import { readRequiredNumber, readText } from "./scalars"
 
 const allowedE2eeObjectTypes = new Set([
@@ -46,4 +46,3 @@ export function validateArgon2Params(params: { argon2TimeCost: number; argon2Mem
     throw new Error("Invalid argon2Parallelism")
   }
 }
-

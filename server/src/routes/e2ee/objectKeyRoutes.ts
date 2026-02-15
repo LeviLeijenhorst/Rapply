@@ -1,13 +1,13 @@
 import type { Express } from "express"
 import { requireAuthenticatedUser } from "../../auth"
-import * as e2eeV2 from "../../e2eeV2"
+import * as e2ee from "../../e2ee"
 import { asyncHandler } from "../../http"
 import { readId, readRequiredInteger, readRequiredObjectType, readText } from "../requestParsers"
 
 // Registers endpoints that manage per-object E2EE DEKs.
 export function registerE2eeObjectKeyRoutes(app: Express): void {
   app.post(
-    "/e2ee/v2/object-key/upsert",
+    "/e2ee/object-key/upsert",
     asyncHandler(async (req, res) => {
       const user = await requireAuthenticatedUser(req)
       const payload = req.body || {}
@@ -16,7 +16,7 @@ export function registerE2eeObjectKeyRoutes(app: Express): void {
       const keyVersion = readRequiredInteger(payload.keyVersion, "keyVersion")
       const cryptoVersion = readRequiredInteger(payload.cryptoVersion ?? 1, "cryptoVersion")
       const wrappedDek = readText(payload.wrappedDek, "wrappedDek")
-      await e2eeV2.upsertObjectKey({
+      await e2ee.upsertObjectKey({
         userId: user.userId,
         objectType,
         objectId,
@@ -30,19 +30,19 @@ export function registerE2eeObjectKeyRoutes(app: Express): void {
   )
 
   app.post(
-    "/e2ee/v2/object-key/get",
+    "/e2ee/object-key/get",
     asyncHandler(async (req, res) => {
       const user = await requireAuthenticatedUser(req)
       const payload = req.body || {}
       const objectType = readRequiredObjectType(payload.objectType)
       const objectId = readId(payload.objectId, "objectId")
-      const objectKeys = await e2eeV2.readObjectKeys({ userId: user.userId, objectType, objectId })
+      const objectKeys = await e2ee.readObjectKeys({ userId: user.userId, objectType, objectId })
       res.status(200).json({ objectKeys })
     }),
   )
 
   app.post(
-    "/e2ee/v2/object-key/get-batch",
+    "/e2ee/object-key/get-batch",
     asyncHandler(async (req, res) => {
       const user = await requireAuthenticatedUser(req)
       const payload = req.body || {}
@@ -58,9 +58,8 @@ export function registerE2eeObjectKeyRoutes(app: Express): void {
         return { objectType, objectId }
       })
 
-      const objectKeys = await e2eeV2.readLatestObjectKeysBatch({ userId: user.userId, refs })
+      const objectKeys = await e2ee.readLatestObjectKeysBatch({ userId: user.userId, refs })
       res.status(200).json({ objectKeys })
     }),
   )
 }
-

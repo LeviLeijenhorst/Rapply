@@ -13,7 +13,7 @@ export function createDefaultTemplates(): Template[] {
   return [
     {
       id: createId("template"),
-      name: "Standaard verslag",
+      name: "Standaard samenvatting",
       description: "Een helder algemeen verslag met samenvatting, inzichten en concrete actiepunten.",
       isSaved: false,
       createdAtUnixMs: now,

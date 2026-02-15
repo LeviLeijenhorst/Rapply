@@ -91,4 +91,12 @@ export const env = {
   testTranscriptionEmails: normalizeEmailList(optionalString("TEST_TRANSCRIPTION_EMAILS")),
   testTranscriptionTotalHours: optionalNumber("TEST_TRANSCRIPTION_TOTAL_HOURS") ?? 80,
   adminFeedbackEmails: normalizeEmailList(optionalString("ADMIN_FEEDBACK_EMAILS")),
+  kmsProvider: optionalString("KMS_PROVIDER") || "ovh",
+  localKmsMasterKeyBase64: optionalString("LOCAL_KMS_MASTER_KEY_BASE64") || "",
+  ovhKmsBaseUrl: optionalString("OVH_KMS_BASE_URL") || "",
+  ovhKmsServiceKeyId: optionalString("OVH_KMS_SERVICE_KEY_ID") || "",
+  ovhKmsContext: optionalString("OVH_KMS_CONTEXT") || "coachscribe-user-ark",
+  ovhKmsClientCertPath: optionalString("OVH_KMS_CLIENT_CERT_PATH") || "",
+  ovhKmsClientKeyPath: optionalString("OVH_KMS_CLIENT_KEY_PATH") || "",
+  ovhKmsCaPath: optionalString("OVH_KMS_CA_PATH") || "",
 }

@@ -1,6 +1,9 @@
+import crypto from "node:crypto"
 import { execute, queryMany, queryOne } from "./db"
+import { kmsUnwrapArkBytes, kmsWrapArkBytes } from "./kms"
 
 export type RecoveryPolicy = "self_service" | "custodian_only" | "hybrid"
+export type E2eeCustodyMode = "server_managed" | "user_managed"
 
 export type UserKeyMaterial = {
   cryptoVersion: number
@@ -15,16 +18,157 @@ export type UserKeyMaterial = {
   custodianThreshold: number | null
 }
 
+export type BootstrapState = {
+  e2eeConfigured: boolean
+  keyVersion: number | null
+  recoveryPolicy: RecoveryPolicy | null
+  custodyMode: E2eeCustodyMode | null
+}
+
+function createArkBytes(): Uint8Array {
+  return crypto.randomBytes(32)
+}
+
+// Intent: ensureServerManagedUserKey
+export async function ensureServerManagedUserKey(params: { userId: string; nowUnixMs: number }): Promise<void> {
+  const row = await queryOne<{ user_id: string }>("select user_id from public.e2ee_user_keys where user_id = $1", [params.userId])
+  if (row) return
+  const arkBytes = createArkBytes()
+  const wrappedArkServerKms = await kmsWrapArkBytes(arkBytes)
+  await execute(
+    `
+      insert into public.e2ee_user_keys (
+        user_id,
+        crypto_version,
+        key_version,
+        argon2_salt,
+        argon2_time_cost,
+        argon2_memory_cost_kib,
+        argon2_parallelism,
+        wrapped_ark_user_passphrase,
+        wrapped_ark_recovery_code,
+        wrapped_ark_server_kms,
+        recovery_policy,
+        custody_mode,
+        custodian_threshold,
+        created_at_unix_ms,
+        updated_at_unix_ms
+      )
+      values ($1, 1, 1, null, null, null, null, null, null, $2, 'self_service', 'server_managed', null, $3, $3)
+    `,
+    [params.userId, wrappedArkServerKms, params.nowUnixMs],
+  )
+}
+
 // Intent: bootstrap
-export async function bootstrap(params: { userId: string }): Promise<{ e2eeConfigured: boolean; keyVersion: number | null; recoveryPolicy: RecoveryPolicy | null }> {
-  const row = await queryOne<{ key_version: number; recovery_policy: RecoveryPolicy }>(
-    "select key_version, recovery_policy from public.e2ee_user_keys where user_id = $1",
+export async function bootstrap(params: { userId: string }): Promise<BootstrapState> {
+  const row = await queryOne<{ key_version: number; recovery_policy: RecoveryPolicy; custody_mode: E2eeCustodyMode }>(
+    "select key_version, recovery_policy, custody_mode from public.e2ee_user_keys where user_id = $1",
     [params.userId],
   )
   if (!row) {
-    return { e2eeConfigured: false, keyVersion: null, recoveryPolicy: null }
+    return { e2eeConfigured: false, keyVersion: null, recoveryPolicy: null, custodyMode: null }
   }
-  return { e2eeConfigured: true, keyVersion: row.key_version, recoveryPolicy: row.recovery_policy }
+  return {
+    e2eeConfigured: true,
+    keyVersion: row.key_version,
+    recoveryPolicy: row.recovery_policy,
+    custodyMode: row.custody_mode,
+  }
+}
+
+// Intent: readServerManagedArkBytes
+export async function readServerManagedArkBytes(params: { userId: string }): Promise<{ arkBytes: Uint8Array; keyVersion: number } | null> {
+  const row = await queryOne<{ wrapped_ark_server_kms: string | null; key_version: number; custody_mode: E2eeCustodyMode }>(
+    `
+      select wrapped_ark_server_kms, key_version, custody_mode
+      from public.e2ee_user_keys
+      where user_id = $1
+    `,
+    [params.userId],
+  )
+  if (!row || row.custody_mode !== "server_managed" || !row.wrapped_ark_server_kms) {
+    return null
+  }
+  const arkBytes = await kmsUnwrapArkBytes(row.wrapped_ark_server_kms)
+  return { arkBytes, keyVersion: row.key_version }
+}
+
+// Intent: setUserManagedCustody
+export async function setUserManagedCustody(params: {
+  userId: string
+  cryptoVersion: number
+  keyVersion: number
+  argon2Salt: string
+  argon2TimeCost: number
+  argon2MemoryCostKib: number
+  argon2Parallelism: number
+  wrappedArkUserPassphrase: string
+  wrappedArkRecoveryCode: string | null
+  recoveryPolicy: RecoveryPolicy
+  custodianThreshold: number | null
+  nowUnixMs: number
+}): Promise<void> {
+  await execute(
+    `
+      update public.e2ee_user_keys
+      set crypto_version = $2,
+          key_version = $3,
+          argon2_salt = $4,
+          argon2_time_cost = $5,
+          argon2_memory_cost_kib = $6,
+          argon2_parallelism = $7,
+          wrapped_ark_user_passphrase = $8,
+          wrapped_ark_recovery_code = $9,
+          wrapped_ark_server_kms = null,
+          recovery_policy = $10,
+          custody_mode = 'user_managed',
+          custodian_threshold = $11,
+          updated_at_unix_ms = $12
+      where user_id = $1
+    `,
+    [
+      params.userId,
+      params.cryptoVersion,
+      params.keyVersion,
+      params.argon2Salt,
+      params.argon2TimeCost,
+      params.argon2MemoryCostKib,
+      params.argon2Parallelism,
+      params.wrappedArkUserPassphrase,
+      params.wrappedArkRecoveryCode,
+      params.recoveryPolicy,
+      params.custodianThreshold,
+      params.nowUnixMs,
+    ],
+  )
+}
+
+// Intent: setServerManagedCustody
+export async function setServerManagedCustody(params: {
+  userId: string
+  keyVersion: number
+  arkBytes: Uint8Array
+  nowUnixMs: number
+}): Promise<void> {
+  const wrappedArkServerKms = await kmsWrapArkBytes(params.arkBytes)
+  await execute(
+    `
+      update public.e2ee_user_keys
+      set key_version = $2,
+          wrapped_ark_server_kms = $3,
+          custody_mode = 'server_managed',
+          argon2_salt = null,
+          argon2_time_cost = null,
+          argon2_memory_cost_kib = null,
+          argon2_parallelism = null,
+          wrapped_ark_user_passphrase = null,
+          wrapped_ark_recovery_code = null,
+          updated_at_unix_ms = $4
+      where user_id = $1
+    `,
+    [params.userId, params.keyVersion, wrappedArkServerKms, params.nowUnixMs],
+  )
 }
 
 // Intent: setupUserKeys
@@ -54,12 +198,14 @@ export async function setupUserKeys(params: {
         argon2_parallelism,
         wrapped_ark_user_passphrase,
         wrapped_ark_recovery_code,
+        wrapped_ark_server_kms,
         recovery_policy,
+        custody_mode,
         custodian_threshold,
         created_at_unix_ms,
         updated_at_unix_ms
       )
-      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, null, $10, 'user_managed', $11, $12, $12)
       on conflict (user_id) do update
       set crypto_version = excluded.crypto_version,
           key_version = excluded.key_version,
@@ -69,7 +215,9 @@ export async function setupUserKeys(params: {
           argon2_parallelism = excluded.argon2_parallelism,
           wrapped_ark_user_passphrase = excluded.wrapped_ark_user_passphrase,
           wrapped_ark_recovery_code = excluded.wrapped_ark_recovery_code,
+          wrapped_ark_server_kms = null,
           recovery_policy = excluded.recovery_policy,
+          custody_mode = 'user_managed',
           custodian_threshold = excluded.custodian_threshold,
           updated_at_unix_ms = excluded.updated_at_unix_ms
     `,
@@ -86,7 +234,6 @@ export async function setupUserKeys(params: {
       params.recoveryPolicy,
       params.custodianThreshold,
       params.nowUnixMs,
-      params.nowUnixMs,
     ],
   )
 }
@@ -96,13 +243,14 @@ export async function readUserKeyMaterial(params: { userId: string }): Promise<U
   const row = await queryOne<{
     crypto_version: number
     key_version: number
-    argon2_salt: string
-    argon2_time_cost: number
-    argon2_memory_cost_kib: number
-    argon2_parallelism: number
-    wrapped_ark_user_passphrase: string
+    argon2_salt: string | null
+    argon2_time_cost: number | null
+    argon2_memory_cost_kib: number | null
+    argon2_parallelism: number | null
+    wrapped_ark_user_passphrase: string | null
     wrapped_ark_recovery_code: string | null
     recovery_policy: RecoveryPolicy
+    custody_mode: E2eeCustodyMode
     custodian_threshold: number | null
   }>(
     `
@@ -116,13 +264,17 @@ export async function readUserKeyMaterial(params: { userId: string }): Promise<U
         wrapped_ark_user_passphrase,
         wrapped_ark_recovery_code,
         recovery_policy,
+        custody_mode,
         custodian_threshold
       from public.e2ee_user_keys
       where user_id = $1
     `,
     [params.userId],
   )
-  if (!row) return null
+  if (!row || row.custody_mode !== "user_managed") return null
+  if (!row.argon2_salt || !row.argon2_time_cost || !row.argon2_memory_cost_kib || !row.argon2_parallelism || !row.wrapped_ark_user_passphrase) {
+    return null
+  }
   return {
     cryptoVersion: row.crypto_version,
     keyVersion: row.key_version,
@@ -144,7 +296,7 @@ export async function setRecoveryWrappedArk(params: { userId: string; wrappedArk
       update public.e2ee_user_keys
       set wrapped_ark_recovery_code = $2,
           updated_at_unix_ms = $3
-      where user_id = $1
+      where user_id = $1 and custody_mode = 'user_managed'
     `,
     [params.userId, params.wrappedArkRecoveryCode, params.nowUnixMs],
   )
@@ -170,6 +322,8 @@ export async function rotatePassphraseWrappedArk(params: {
           argon2_parallelism = $5,
           wrapped_ark_user_passphrase = $6,
           key_version = $7,
+          custody_mode = 'user_managed',
+          wrapped_ark_server_kms = null,
           updated_at_unix_ms = $8
       where user_id = $1
     `,

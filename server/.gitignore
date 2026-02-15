@@ -1,2 +1,10 @@
 .env
+dist
+node_modules
+*.pem
+*.key
+*.crt
+certs/
+ovh-client-cert.pem
+ovh-client-key.pem
 

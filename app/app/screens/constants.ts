@@ -1,4 +1,5 @@
 import { Platform, StatusBar, Vibration } from "react-native"
+import { spacing as themeSpacing } from "../theme/spacing"
 
 export const colors = {
   orange: "#BE0165",
@@ -11,7 +12,7 @@ export const colors = {
   textOrange: "#BE0165",
 }
 
-export const spacing = { small: 12, big: 16 }
+export const spacing = { small: themeSpacing.sm, big: themeSpacing.md }
 export const typography = {
   fontFamily: "catamaranRegular",
   monospaceFontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
