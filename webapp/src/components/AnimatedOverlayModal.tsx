@@ -118,7 +118,8 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...( { position: 'absolute', inset: 0 } as any ),
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(16,18,20,0.22)',
+    ...( { backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' } as any ),
     zIndex: 0,
   },
   backdropPressable: {

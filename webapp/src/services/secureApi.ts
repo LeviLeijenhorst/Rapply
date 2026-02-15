@@ -3,6 +3,7 @@ import { getValidAccessToken } from '../auth/entraAuth'
 
 type SecureApiOptions = {
   timeoutMs?: number
+  signal?: AbortSignal
 }
 
 const DEFAULT_SECURE_API_TIMEOUT_MS = 30_000
@@ -37,7 +38,7 @@ export async function fetchSecureApi(endpoint: string, init: RequestInit, option
   }
 
   const timeoutMs = options?.timeoutMs ?? DEFAULT_SECURE_API_TIMEOUT_MS
-  const externalSignal = init.signal ?? undefined
+  const externalSignal = options?.signal ?? init.signal ?? undefined
   const { signal, cleanup } = createTimeoutSignal(timeoutMs, externalSignal)
 
   let response: Response
@@ -53,6 +54,9 @@ export async function fetchSecureApi(endpoint: string, init: RequestInit, option
   } catch (error) {
     cleanup()
     if (error instanceof DOMException && error.name === 'AbortError') {
+      if (externalSignal?.aborted) {
+        throw new Error('Request aborted')
+      }
       throw new Error('De server reageert niet op tijd. Probeer het opnieuw.')
     }
     console.error('[secureApi] Network error', {

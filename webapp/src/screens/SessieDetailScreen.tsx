@@ -13,7 +13,7 @@ import { colors } from '../theme/colors'
 import { ConversationTabs, ConversationTabKey } from '../components/sessionDetail/ConversationTabs'
 import { AudioPlayerCard, type AudioPlayerHandle } from '../components/sessionDetail/AudioPlayerCard'
 import { ChatComposer } from '../components/sessionDetail/ChatComposer'
-import { ChatMessage } from '../components/sessionDetail/ChatMessage'
+import { ChatMessage, exportMessageToPdf } from '../components/sessionDetail/ChatMessage'
 import { QuickQuestionsStart } from '../components/sessionDetail/QuickQuestionsStart'
 import { ReportPanel } from '../components/sessionDetail/ReportPanel'
 import { NotesTabPanel } from '../components/sessionDetail/NotesTabPanel'
@@ -25,7 +25,16 @@ import { AnimatedDropdownPanel } from '../components/AnimatedDropdownPanel'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { completeChat, LocalChatMessage } from '../services/chat'
 import { generateSummary } from '../services/summary'
-import { transcribeAudio } from '../services/transcription'
+import { cancelTranscriptionOperation, isTranscriptionCancelledError, transcribeAudio } from '../services/transcription'
+import {
+  cancelTranscriptionRun,
+  finishTranscriptionRun,
+  isTranscriptionRunActive,
+  setSummaryAbortController,
+  setTranscriptionAbortController,
+  setTranscriptionOperationId,
+  startTranscriptionRun,
+} from '../services/transcriptionRunStore'
 import { loadAudioBlobRemote } from '../services/audioBlobs'
 import { useE2ee } from '../e2ee/E2eeProvider'
 import { downloadAudioStream } from '../audio/downloadAudioStream'
@@ -96,12 +105,16 @@ export function SessieDetailScreen({
   const [pendingPreviewAudioUrl, setPendingPreviewAudioUrl] = useState<string | null>(null)
   const [currentAudioSeconds, setCurrentAudioSeconds] = useState(0)
   const [isSummaryEditorOpen, setIsSummaryEditorOpen] = useState(false)
+  const [forcedTranscriptionStatus, setForcedTranscriptionStatus] = useState<'transcribing' | 'generating' | null>(null)
+  const [isPdfEditorOpen, setIsPdfEditorOpen] = useState(false)
+  const [pdfEditorDraft, setPdfEditorDraft] = useState('')
+  const [pdfEditorTitle, setPdfEditorTitle] = useState<string | undefined>(undefined)
 
   const coacheeButtonRef = useRef<any>(null)
   const templates = data.templates ?? []
   const practiceTintColor = data.practiceSettings.tintColor || colors.selected
   const defaultTemplateId = useMemo(() => {
-    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'standaard verslag')
+    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'standaard samenvatting')
     return (standardTemplate ?? templates[0])?.id ?? null
   }, [templates])
   const selectedTemplate = useMemo(() => templates.find((template) => template.id === selectedTemplateId) ?? null, [selectedTemplateId, templates])
@@ -131,12 +144,20 @@ export function SessieDetailScreen({
   const isCoacheeMenuVisible = isCoacheeMenuOpen
   const inputWebStyle = useMemo(() => ({ outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any), [])
   const isWrittenReportDirty = isWrittenSession && writtenReportDraft !== writtenReportText
+  const effectiveTranscriptionStatus = forcedTranscriptionStatus ?? (session?.transcriptionStatus ?? 'idle')
   const shouldShowQuickStart = chatMessages.length === 0
   const shouldShowClearChat = chatMessages.length > 0
   const chatOverlayOpacity = useRef(new Animated.Value(0)).current
   const chatOverlayScale = useRef(new Animated.Value(0.98)).current
   const previousMessageCountRef = useRef(chatMessages.length)
   const shouldSkipChatSaveRef = useRef(false)
+  const generationRunIdRef = useRef(0)
+  const generationSnapshotRef = useRef<{
+    transcript: string | null
+    summary: string | null
+    transcriptionStatus: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
+    transcriptionError: string | null
+  } | null>(null)
 
   const coacheeMenuEstimatedHeight = useMemo(() => {
     const rowCount = activeCoacheeNames.length + 1
@@ -426,6 +447,64 @@ export function SessieDetailScreen({
     await sendChatMessage(trimmedText)
   }
 
+  function handleRequestPdfEdit(params: { text: string; title?: string }) {
+    setPdfEditorDraft(params.text)
+    setPdfEditorTitle(params.title)
+    setIsPdfEditorOpen(true)
+  }
+
+  function beginGenerationRun() {
+    const runId = startTranscriptionRun(sessionId)
+    generationRunIdRef.current = runId
+    generationSnapshotRef.current = {
+      transcript: session?.transcript ?? null,
+      summary: session?.summary ?? null,
+      transcriptionStatus: session?.transcriptionStatus ?? 'idle',
+      transcriptionError: session?.transcriptionError ?? null,
+    }
+    return runId
+  }
+
+  function isGenerationRunActive(runId: number) {
+    return generationRunIdRef.current === runId && isTranscriptionRunActive(sessionId, runId)
+  }
+
+  function clearGenerationTracking() {
+    setForcedTranscriptionStatus(null)
+    finishTranscriptionRun(sessionId, generationRunIdRef.current)
+    generationSnapshotRef.current = null
+  }
+
+  async function cancelCurrentGeneration() {
+    const cancelledRun = cancelTranscriptionRun(sessionId)
+    generationRunIdRef.current += 1
+    const operationId = cancelledRun.operationId
+    if (operationId) {
+      try {
+        await cancelTranscriptionOperation({ operationId })
+      } catch (error) {
+        console.warn('[SessieDetailScreen] Failed to cancel transcription operation', { sessionId, operationId, error })
+      }
+    }
+
+    const previousSnapshot = generationSnapshotRef.current
+    if (previousSnapshot) {
+      updateSession(sessionId, {
+        transcript: previousSnapshot.transcript,
+        summary: previousSnapshot.summary,
+        transcriptionStatus: previousSnapshot.transcriptionStatus === 'error' ? 'idle' : previousSnapshot.transcriptionStatus,
+        transcriptionError: null,
+      })
+    } else {
+      updateSession(sessionId, {
+        transcriptionStatus: hasTranscript ? 'done' : 'idle',
+        transcriptionError: null,
+      })
+    }
+
+    clearGenerationTracking()
+  }
+
   async function loadDecryptedSessionAudio(audioId: string): Promise<{ audioBlob: Blob; mimeType: string }> {
     try {
       const storedAudio = await loadAudioBlobRemote(audioId)
@@ -451,11 +530,17 @@ export function SessieDetailScreen({
     if (!session?.audioBlobId) return
     if (session?.transcriptionStatus === 'transcribing' || session?.transcriptionStatus === 'generating') return
 
+    const runId = beginGenerationRun()
+    const transcriptionAbortController = new AbortController()
+    setTranscriptionAbortController(sessionId, runId, transcriptionAbortController)
+    setForcedTranscriptionStatus('transcribing')
+
     updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null, summary: null })
 
     try {
       console.log('[transcription][retry] audio-download-start', { sessionId, audioId: session.audioBlobId })
       const decrypted = await loadDecryptedSessionAudio(session.audioBlobId)
+      if (!isGenerationRunActive(runId)) return
       console.log('[transcription][retry] audio-download-done', {
         sessionId,
         mimeType: decrypted.mimeType,
@@ -467,7 +552,16 @@ export function SessieDetailScreen({
         audioBlob: decrypted.audioBlob,
         mimeType: decrypted.mimeType,
         languageCode: 'nl',
+        signal: transcriptionAbortController.signal,
+        progress: {
+          onOperationPrepared: (operationId) => {
+            if (!isGenerationRunActive(runId)) return
+            setTranscriptionOperationId(sessionId, runId, operationId)
+          },
+        },
       })
+      if (!isGenerationRunActive(runId)) return
+      setTranscriptionAbortController(sessionId, runId, null)
       console.log('[transcription][retry] transcript-received', {
         sessionId,
         transcriptLength: transcript.length,
@@ -481,7 +575,11 @@ export function SessieDetailScreen({
           transcriptionStatus: 'done',
           transcriptionError: null,
         })
+        clearGenerationTracking()
       } else {
+        const summaryAbortController = new AbortController()
+        setSummaryAbortController(sessionId, runId, summaryAbortController)
+        setForcedTranscriptionStatus('generating')
         console.log('[transcription][retry] summary-generate-start', { sessionId })
         updateSession(sessionId, {
           transcript,
@@ -489,25 +587,33 @@ export function SessieDetailScreen({
           transcriptionError: null,
           summary: null,
         })
-        const generatedSummary = await generateSummary({ transcript, template: summaryTemplate })
+        const generatedSummary = await generateSummary({ transcript, template: summaryTemplate, signal: summaryAbortController.signal })
+        if (!isGenerationRunActive(runId)) return
         updateSession(sessionId, {
           summary: generatedSummary,
           transcriptionStatus: 'done',
           transcriptionError: null,
         })
         console.log('[transcription][retry] summary-generate-done', { sessionId, summaryLength: generatedSummary.length })
+        clearGenerationTracking()
       }
     } catch (error) {
+      if (!isGenerationRunActive(runId)) return
+      if (isTranscriptionCancelledError(error)) {
+        return
+      }
       console.error('[SessieDetailScreen] Transcription retry failed:', error)
       updateSession(sessionId, {
         transcriptionStatus: 'error',
         transcriptionError: normalizeTranscriptionError(error),
       })
+      clearGenerationTracking()
     }
   }
 
   async function generateReportForTemplate(templateId: string) {
     if (session?.transcriptionStatus === 'transcribing' || session?.transcriptionStatus === 'generating') return
+    const runId = beginGenerationRun()
     const template = templates.find((item) => item.id === templateId) ?? null
     const templateForSummary = template
       ? {
@@ -524,14 +630,18 @@ export function SessieDetailScreen({
       : undefined
 
     try {
+      const transcriptionAbortController = new AbortController()
+      setTranscriptionAbortController(sessionId, runId, transcriptionAbortController)
       let transcript = String(session?.transcript || '').trim()
       if (!transcript) {
+        setForcedTranscriptionStatus('transcribing')
         updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null, summary: null })
         if (!session?.audioBlobId) {
           throw new Error('Geen audio beschikbaar om een transcript te maken.')
         }
         console.log('[transcription][report] audio-download-start', { sessionId, audioId: session.audioBlobId })
         const decrypted = await loadDecryptedSessionAudio(session.audioBlobId)
+        if (!isGenerationRunActive(runId)) return
         console.log('[transcription][report] audio-download-done', {
           sessionId,
           mimeType: decrypted.mimeType,
@@ -542,7 +652,16 @@ export function SessieDetailScreen({
           audioBlob: decrypted.audioBlob,
           mimeType: decrypted.mimeType,
           languageCode: 'nl',
+          signal: transcriptionAbortController.signal,
+          progress: {
+            onOperationPrepared: (operationId) => {
+              if (!isGenerationRunActive(runId)) return
+              setTranscriptionOperationId(sessionId, runId, operationId)
+            },
+          },
         })
+        if (!isGenerationRunActive(runId)) return
+        setTranscriptionAbortController(sessionId, runId, null)
         transcript = String(transcription.transcript || '').trim()
         console.log('[transcription][report] transcript-received', { sessionId, transcriptLength: transcript.length })
         if (!transcript) {
@@ -551,24 +670,35 @@ export function SessieDetailScreen({
         updateSession(sessionId, { transcript })
       }
 
+      const summaryAbortController = new AbortController()
+      setSummaryAbortController(sessionId, runId, summaryAbortController)
+      setForcedTranscriptionStatus('generating')
       updateSession(sessionId, { transcriptionStatus: 'generating', transcriptionError: null, summary: null })
       console.log('[transcription][report] summary-generate-start', { sessionId })
       const summary = await generateSummary({
         transcript,
         template: templateForSummary && templateForSummary.sections.length > 0 ? templateForSummary : undefined,
+        signal: summaryAbortController.signal,
       })
+      if (!isGenerationRunActive(runId)) return
       updateSession(sessionId, {
         summary,
         transcriptionStatus: 'done',
         transcriptionError: null,
       })
       console.log('[transcription][report] summary-generate-done', { sessionId, summaryLength: summary.length })
+      clearGenerationTracking()
     } catch (error) {
+      if (!isGenerationRunActive(runId)) return
+      if (isTranscriptionCancelledError(error)) {
+        return
+      }
       console.error('[SessieDetailScreen] Report generation failed', error)
       updateSession(sessionId, {
         transcriptionStatus: 'error',
         transcriptionError: normalizeTranscriptionError(error),
       })
+      clearGenerationTracking()
     }
   }
 
@@ -646,19 +776,20 @@ export function SessieDetailScreen({
                 />
               ) : null}
               {/* Report */}
-              <View style={styles.reportCard}>
+                <View style={styles.reportCard}>
                   <ReportPanel
-                  templateLabel={selectedTemplateLabel}
-                  onPressTemplate={() => setIsTemplatePickerModalVisible(true)}
-                  isCompact
-                  summary={session?.summary ?? null}
+                    templateLabel={selectedTemplateLabel}
+                    onPressTemplate={() => setIsTemplatePickerModalVisible(true)}
+                    isCompact
+                    summary={session?.summary ?? null}
                     hasTranscript={hasTranscript}
-                  transcriptionStatus={session?.transcriptionStatus ?? 'idle'}
-                  transcriptionError={session?.transcriptionError ?? null}
-                  onEditSummary={() => setIsSummaryEditorOpen(true)}
-                  onRetryTranscription={() => (selectedTemplateId ? generateReportForTemplate(selectedTemplateId) : null)}
-                />
-              </View>
+                    transcriptionStatus={effectiveTranscriptionStatus}
+                    transcriptionError={session?.transcriptionError ?? null}
+                    onEditSummary={() => setIsSummaryEditorOpen(true)}
+                    onRetryTranscription={() => (selectedTemplateId ? generateReportForTemplate(selectedTemplateId) : null)}
+                    onCancelGeneration={cancelCurrentGeneration}
+                  />
+                </View>
               {/* Active tab content */}
               <View style={styles.mobileTabContentCard}>
                 <View style={styles.tabsRow}>
@@ -713,6 +844,7 @@ export function SessieDetailScreen({
                                 text={message.text}
                                 onTranscriptMentionPress={handleTranscriptMentionPress}
                                 exportTitle={editableSessionTitle}
+                                onRequestPdfEdit={({ text, title }) => handleRequestPdfEdit({ text, title })}
                               />
                             ))}
                             {isChatSending ? (
@@ -747,10 +879,11 @@ export function SessieDetailScreen({
                       onChangeSearchValue={setTranscriptSearchText}
                       shouldFillAvailableHeight={false}
                       transcript={session?.transcript ?? null}
-                      transcriptionStatus={session?.transcriptionStatus ?? 'idle'}
+                      transcriptionStatus={effectiveTranscriptionStatus}
                       transcriptionError={session?.transcriptionError ?? null}
                       onSeekToSeconds={(seconds) => audioPlayerRef.current?.seekToSeconds(seconds)}
                       onRetryTranscription={retryTranscription}
+                      onCancelGeneration={cancelCurrentGeneration}
                       currentAudioSeconds={currentAudioSeconds}
                       highlightTintColor={practiceTintColor}
                       audioDurationSeconds={session?.audioDurationSeconds ?? null}
@@ -947,10 +1080,11 @@ export function SessieDetailScreen({
                     isCompact={isCompactLayout}
                     summary={session?.summary ?? null}
                     hasTranscript={hasTranscript}
-                    transcriptionStatus={session?.transcriptionStatus ?? 'idle'}
+                    transcriptionStatus={effectiveTranscriptionStatus}
                     transcriptionError={session?.transcriptionError ?? null}
                     onEditSummary={() => setIsSummaryEditorOpen(true)}
                     onRetryTranscription={() => (selectedTemplateId ? generateReportForTemplate(selectedTemplateId) : null)}
+                    onCancelGeneration={cancelCurrentGeneration}
                   />
                 </View>
               </ScrollView>
@@ -1011,6 +1145,7 @@ export function SessieDetailScreen({
                                 text={message.text}
                                 onTranscriptMentionPress={handleTranscriptMentionPress}
                                 exportTitle={editableSessionTitle}
+                                onRequestPdfEdit={({ text, title }) => handleRequestPdfEdit({ text, title })}
                               />
                             ))}
                             {isChatSending ? (
@@ -1040,10 +1175,11 @@ export function SessieDetailScreen({
                       searchValue={transcriptSearchText}
                       onChangeSearchValue={setTranscriptSearchText}
                       transcript={session?.transcript ?? null}
-                      transcriptionStatus={session?.transcriptionStatus ?? 'idle'}
+                      transcriptionStatus={effectiveTranscriptionStatus}
                       transcriptionError={session?.transcriptionError ?? null}
                       onSeekToSeconds={(seconds) => audioPlayerRef.current?.seekToSeconds(seconds)}
                       onRetryTranscription={retryTranscription}
+                      onCancelGeneration={cancelCurrentGeneration}
                       currentAudioSeconds={currentAudioSeconds}
                       highlightTintColor={practiceTintColor}
                       audioDurationSeconds={session?.audioDurationSeconds ?? null}
@@ -1126,6 +1262,23 @@ export function SessieDetailScreen({
         }}
       />
 
+      <RichTextEditorModal
+        visible={isPdfEditorOpen}
+        title="PDF bewerken"
+        initialValue={pdfEditorDraft}
+        saveLabel="Exporteer PDF"
+        onClose={() => setIsPdfEditorOpen(false)}
+        onSave={(value) => {
+          void exportMessageToPdf(value, pdfEditorTitle, {
+            practiceName: data.practiceSettings.practiceName,
+            website: data.practiceSettings.website,
+            tintColor: data.practiceSettings.tintColor,
+            logoDataUrl: data.practiceSettings.logoDataUrl,
+          })
+          setIsPdfEditorOpen(false)
+        }}
+      />
+
       {isChatMaximizedRendered ? (
         <WebPortal>
           <Animated.View style={[styles.chatOverlay, { opacity: chatOverlayOpacity }]}>
@@ -1173,6 +1326,7 @@ export function SessieDetailScreen({
                           text={message.text}
                           onTranscriptMentionPress={handleTranscriptMentionPress}
                           exportTitle={editableSessionTitle}
+                          onRequestPdfEdit={({ text, title }) => handleRequestPdfEdit({ text, title })}
                         />
                       ))}
                       {isChatSending ? (

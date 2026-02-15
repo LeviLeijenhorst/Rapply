@@ -223,6 +223,7 @@ export async function getPendingPreviewAudio(sessionId: string): Promise<Blob | 
   if (!sessionId) return null
   const record = await readRecord(sessionId)
   if (!record) return null
+  if (!record.shouldSaveAudio) return null
   const nowMs = Date.now()
   if (canDeleteCompleted(record)) {
     await deleteRecord(sessionId)

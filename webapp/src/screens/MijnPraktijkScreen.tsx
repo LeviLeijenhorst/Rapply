@@ -1,26 +1,37 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native'
 
-import { CoachscribeLogo } from '../components/CoachscribeLogo'
 import { PracticeEditFieldIcon } from '../components/icons/PracticeEditFieldIcon'
 import { PracticeExportIcon } from '../components/icons/PracticeExportIcon'
 import { Text } from '../components/Text'
+import { brandColors, fontSizes, radius } from '../foundation/theme/tokens'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { colors } from '../theme/colors'
 
-function normalizeHexColor(value: string, fallback = '#BE0165') {
-  const trimmed = String(value || '').trim().replace(/^#/, '')
-  if (/^[0-9a-fA-F]{6}$/.test(trimmed)) return `#${trimmed.toUpperCase()}`
-  if (/^[0-9a-fA-F]{3}$/.test(trimmed)) {
-    const hex = trimmed
-    return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`.toUpperCase()
-  }
-  return fallback
+function normalizeHexColor(value: string) {
+  const trimmed = String(value || '').trim()
+  if (!/^#[0-9a-fA-F]{6}$/.test(trimmed)) return '#BE0165'
+  return trimmed.toUpperCase()
 }
 
-function isValidHexColor(value: string) {
-  const trimmed = String(value || '').trim().replace(/^#/, '')
-  return /^[0-9a-fA-F]{6}$/.test(trimmed) || /^[0-9a-fA-F]{3}$/.test(trimmed)
+function sanitizeHexInput(value: string) {
+  return String(value || '')
+    .replace('#', '')
+    .replace(/[^0-9a-fA-F]/g, '')
+    .slice(0, 6)
+    .toUpperCase()
+}
+
+function normalizeHexInputOnBlur(input: string) {
+  const sanitized = sanitizeHexInput(input)
+  if (sanitized.length === 3) {
+    return sanitized
+      .split('')
+      .map((character) => `${character}${character}`)
+      .join('')
+  }
+  if (sanitized.length === 6) return sanitized
+  return 'BE0165'
 }
 
 async function readFileAsDataUrl(file: File): Promise<string> {
@@ -38,22 +49,32 @@ export function MijnPraktijkScreen() {
 
   const [practiceNameDraft, setPracticeNameDraft] = useState(settings.practiceName)
   const [websiteDraft, setWebsiteDraft] = useState(settings.website)
-  const [tintColorDraft, setTintColorDraft] = useState(normalizeHexColor(settings.tintColor || '#BE0165'))
-  const [isColorInputHovered, setIsColorInputHovered] = useState(false)
-  const [isColorInputFocused, setIsColorInputFocused] = useState(false)
+  const [tintColorInput, setTintColorInput] = useState(normalizeHexColor(settings.tintColor || '#BE0165').replace('#', ''))
   const [isDragActive, setIsDragActive] = useState(false)
-  const colorInputRef = useRef<TextInput | null>(null)
-  const previewTintColor = isValidHexColor(tintColorDraft) ? normalizeHexColor(tintColorDraft) : normalizeHexColor(settings.tintColor || '#BE0165')
 
   const logoDropAreaRef = useRef<View | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const colorInputRef = useRef<TextInput | null>(null)
 
   const hiddenFileInputStyle = useMemo(() => ({ position: 'absolute', opacity: 0, width: 0, height: 0 }), [])
+
+  const tintColorDraft = useMemo(() => {
+    const normalized = sanitizeHexInput(tintColorInput)
+    if (normalized.length === 3) {
+      const expanded = normalized
+        .split('')
+        .map((character) => `${character}${character}`)
+        .join('')
+      return `#${expanded}`
+    }
+    if (normalized.length === 6) return `#${normalized}`
+    return normalizeHexColor(settings.tintColor || '#BE0165')
+  }, [settings.tintColor, tintColorInput])
 
   useEffect(() => {
     setPracticeNameDraft(settings.practiceName)
     setWebsiteDraft(settings.website)
-    setTintColorDraft(normalizeHexColor(settings.tintColor || '#BE0165'))
+    setTintColorInput(normalizeHexColor(settings.tintColor || '#BE0165').replace('#', ''))
   }, [settings.practiceName, settings.website, settings.tintColor])
 
   useEffect(() => {
@@ -117,13 +138,21 @@ export function MijnPraktijkScreen() {
   }
 
   function persistTintColor(nextColor: string) {
-    const normalized = isValidHexColor(nextColor) ? normalizeHexColor(nextColor) : normalizeHexColor(settings.tintColor || '#BE0165')
-    setTintColorDraft(normalized)
+    const normalized = normalizeHexColor(nextColor)
+    setTintColorInput(normalized.replace('#', ''))
     updatePracticeSettings({ tintColor: normalized })
   }
 
   function handleTintColorChange(nextValue: string) {
-    setTintColorDraft(nextValue)
+    const sanitized = sanitizeHexInput(nextValue)
+    setTintColorInput(sanitized)
+    if (sanitized.length === 6) persistTintColor(`#${sanitized}`)
+  }
+
+  function handleTintColorBlur() {
+    const normalizedWithoutHash = normalizeHexInputOnBlur(tintColorInput)
+    setTintColorInput(normalizedWithoutHash)
+    persistTintColor(`#${normalizedWithoutHash}`)
   }
 
   async function handleLogoFileSelected(file: File | null) {
@@ -137,22 +166,12 @@ export function MijnPraktijkScreen() {
   return (
     <View style={styles.container}>
       <Text isSemibold style={styles.headerTitle}>
-        Mijn praktijk
+        Mijn brand
       </Text>
 
       <View style={styles.formSection}>
-        <LabeledInput
-          label="Naam praktijk"
-          value={practiceNameDraft}
-          onChangeText={setPracticeNameDraft}
-          onBlur={() => persistPracticeName(practiceNameDraft)}
-        />
-        <LabeledInput
-          label="Website"
-          value={websiteDraft}
-          onChangeText={setWebsiteDraft}
-          onBlur={() => persistWebsite(websiteDraft)}
-        />
+        <LabeledInput label="Naam brand" value={practiceNameDraft} onChangeText={setPracticeNameDraft} onBlur={() => persistPracticeName(practiceNameDraft)} />
+        <LabeledInput label="Website" value={websiteDraft} onChangeText={setWebsiteDraft} onBlur={() => persistWebsite(websiteDraft)} />
 
         <View style={styles.logoColorRow}>
           <View style={styles.logoColumn}>
@@ -160,10 +179,7 @@ export function MijnPraktijkScreen() {
               Logo
             </Text>
             <View ref={logoDropAreaRef} style={[styles.logoUploadBox, isDragActive ? styles.logoUploadBoxActive : undefined]}>
-              <Pressable
-                style={({ hovered }) => [styles.logoUploadPressable, hovered ? styles.logoUploadPressableHovered : undefined]}
-                onPress={() => fileInputRef.current?.click()}
-              >
+              <Pressable style={({ hovered }) => [styles.logoUploadPressable, hovered ? styles.logoUploadPressableHovered : undefined]} onPress={() => fileInputRef.current?.click()}>
                 {settings.logoDataUrl ? (
                   <View style={styles.logoPreviewWrap}>
                     <Image source={{ uri: settings.logoDataUrl }} resizeMode="contain" style={styles.logoPreviewImage} />
@@ -193,69 +209,19 @@ export function MijnPraktijkScreen() {
               Kleur
             </Text>
             <View style={styles.colorPickerWrap}>
-              <View style={[styles.colorCard, { backgroundColor: previewTintColor }]}>
-                <Pressable onPress={() => colorInputRef.current?.focus()} onHoverIn={() => setIsColorInputHovered(true)} onHoverOut={() => setIsColorInputHovered(false)}>
-                  <TextInput
-                    ref={colorInputRef}
-                    value={tintColorDraft}
-                    onChangeText={handleTintColorChange}
-                    onBlur={() => {
-                      setIsColorInputFocused(false)
-                      persistTintColor(tintColorDraft)
-                    }}
-                    onFocus={() => setIsColorInputFocused(true)}
-                    onSubmitEditing={() => persistTintColor(tintColorDraft)}
-                    autoCapitalize="characters"
-                    autoCorrect={false}
-                    placeholder="#BE0165"
-                    placeholderTextColor="rgba(255,255,255,0.7)"
-                    maxLength={7}
-                    style={[
-                      styles.colorHexInput,
-                      isColorInputHovered || isColorInputFocused ? styles.colorHexInputActive : undefined,
-                      { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any,
-                    ]}
-                  />
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.previewSection}>
-          <Text isSemibold style={styles.fieldLabelText}>
-            Voorbeeld verslag
-          </Text>
-          <View style={styles.documentCard}>
-            <View style={styles.documentHeader}>
-              <View style={styles.documentHeaderText}>
-                <Text isBold style={[styles.documentTitle, { color: previewTintColor }]}>Titel van het verslag</Text>
-                <Text style={styles.documentDate}>07/02/2026</Text>
-              </View>
-              <View style={styles.documentLogoSlot}>
-                {settings.logoDataUrl ? <Image source={{ uri: settings.logoDataUrl }} resizeMode="contain" style={styles.documentLogoImage} /> : <CoachscribeLogo />}
-              </View>
-            </View>
-            <View style={[styles.documentHeaderDivider, { backgroundColor: previewTintColor }]} />
-
-            <View style={styles.documentBody}>
-              <Text isBold style={styles.documentSectionTitle}>
-                Samenvatting
-              </Text>
-              <Text style={styles.documentParagraph}>Hier komt een korte samenvatting van het gesprek</Text>
-              <Text isBold style={styles.documentSectionTitle}>
-                Actiepunten
-              </Text>
-              <Text style={styles.documentBullet}>- Hier komen de actiepunten overzichtelijk op een rij</Text>
-            </View>
-
-            <View style={styles.documentFooter}>
-              <View style={[styles.documentFooterLine, { backgroundColor: previewTintColor }]} />
-              <View style={styles.documentFooterRow}>
-                <Text style={styles.documentFooterText}>{practiceNameDraft.trim()}</Text>
-                <Text style={styles.documentFooterText}>{websiteDraft.trim()}</Text>
-              </View>
-              <Text style={styles.documentPageNumber}>1</Text>
+              <Pressable onPress={() => colorInputRef.current?.focus()} style={[styles.colorCard, { backgroundColor: tintColorDraft }]}>
+                <TextInput
+                  ref={colorInputRef}
+                  value={tintColorInput}
+                  onChangeText={handleTintColorChange}
+                  onBlur={handleTintColorBlur}
+                  placeholder="BE0165"
+                  placeholderTextColor="rgba(255,255,255,0.85)"
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  style={styles.colorHexInput}
+                />
+              </Pressable>
             </View>
           </View>
         </View>
@@ -272,31 +238,49 @@ type LabeledInputProps = {
 }
 
 function LabeledInput({ label, value, onChangeText, onBlur }: LabeledInputProps) {
+  const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
   const inputRef = useRef<TextInput | null>(null)
   const [isHovered, setIsHovered] = useState(false)
-  const [isFocused, setIsFocused] = useState(false)
-  const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
-  const shouldHighlight = isHovered || isFocused
+  const [isEditHovered, setIsEditHovered] = useState(false)
+
+  function focusInput() {
+    inputRef.current?.focus()
+  }
+
+  function selectAll() {
+    const input = inputRef.current as any
+    input?.focus?.()
+    if (typeof input?.setSelection === 'function') {
+      input.setSelection(0, value.length)
+      return
+    }
+    if (typeof input?.setSelectionRange === 'function') {
+      input.setSelectionRange(0, value.length)
+      return
+    }
+    input?.setNativeProps?.({ selection: { start: 0, end: value.length } })
+  }
 
   return (
     <View style={styles.inputGroup}>
       <Text isSemibold style={styles.fieldLabelText}>
         {label}
       </Text>
-      <Pressable onPress={() => inputRef.current?.focus()} onHoverIn={() => setIsHovered(true)} onHoverOut={() => setIsHovered(false)} style={[styles.inputRow, shouldHighlight ? styles.inputRowActive : undefined]}>
-        <TextInput
-          ref={inputRef}
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => {
-            setIsFocused(false)
-            onBlur()
-          }}
-          placeholderTextColor="#656565"
-          style={[styles.input, styles.inputCursorPointer, inputWebStyle]}
-        />
-        <PracticeEditFieldIcon color={shouldHighlight ? colors.selected : colors.textStrong} />
+      <Pressable
+        onPress={focusInput}
+        onHoverIn={() => setIsHovered(true)}
+        onHoverOut={() => setIsHovered(false)}
+        style={[styles.inputRow, isHovered || isEditHovered ? styles.inputRowHovered : undefined]}
+      >
+        <TextInput ref={inputRef} value={value} onChangeText={onChangeText} onBlur={onBlur} placeholderTextColor="#656565" style={[styles.input, inputWebStyle]} />
+        <Pressable
+          onPress={selectAll}
+          onHoverIn={() => setIsEditHovered(true)}
+          onHoverOut={() => setIsEditHovered(false)}
+          style={({ hovered }) => [styles.editIconButton, hovered ? styles.editIconButtonHovered : undefined]}
+        >
+          <PracticeEditFieldIcon />
+        </Pressable>
       </Pressable>
     </View>
   )
@@ -309,7 +293,7 @@ const styles = StyleSheet.create({
     ...( { overflow: 'visible' } as any ),
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: fontSizes.xl,
     lineHeight: 28,
     color: colors.text,
   },
@@ -322,14 +306,14 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   fieldLabelText: {
-    fontSize: 16,
+    fontSize: fontSizes.md,
     lineHeight: 20,
     color: '#656565',
   },
   inputRow: {
     width: '100%',
     height: 78,
-    borderRadius: 16,
+    borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -339,18 +323,26 @@ const styles = StyleSheet.create({
     gap: 12,
     ...( { cursor: 'pointer' } as any ),
   },
-  inputRowActive: {
+  inputRowHovered: {
     borderColor: colors.selected,
   },
   input: {
     flex: 1,
     padding: 0,
-    fontSize: 16,
+    fontSize: fontSizes.md,
     lineHeight: 20,
     color: colors.textStrong,
-  },
-  inputCursorPointer: {
     ...( { cursor: 'pointer' } as any ),
+  },
+  editIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editIconButtonHovered: {
+    backgroundColor: 'rgba(0,0,0,0.08)',
   },
   logoColorRow: {
     flexDirection: 'row',
@@ -370,7 +362,7 @@ const styles = StyleSheet.create({
   logoUploadBox: {
     width: '100%',
     height: 220,
-    borderRadius: 16,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -378,7 +370,7 @@ const styles = StyleSheet.create({
   },
   logoUploadBoxActive: {
     borderColor: colors.selected,
-    backgroundColor: 'rgba(190,1,101,0.08)',
+    backgroundColor: brandColors.primarySubtle,
   },
   logoUploadPressable: {
     width: '100%',
@@ -396,7 +388,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   logoUploadHint: {
-    fontSize: 14,
+    fontSize: fontSizes.sm,
     lineHeight: 18,
     color: colors.textStrong,
     textAlign: 'center',
@@ -420,121 +412,23 @@ const styles = StyleSheet.create({
     width: 220,
     maxWidth: '100%',
     height: 220,
-    borderRadius: 16,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 0,
-  },
-  colorHexInput: {
-    width: 94,
-    height: 34,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
-    textAlign: 'center',
-    backgroundColor: 'rgba(0,0,0,0.12)',
-    letterSpacing: 0.5,
-    fontSize: 14,
-    lineHeight: 18,
-    color: '#FFFFFF',
     ...( { cursor: 'pointer' } as any ),
   },
-  colorHexInputActive: {
-    borderColor: colors.selected,
-  },
-  previewSection: {
-    gap: 8,
-    paddingBottom: 24,
-  },
-  documentCard: {
-    width: 470,
-    maxWidth: '100%',
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 22,
-    paddingTop: 22,
-    paddingBottom: 18,
-    gap: 10,
-    aspectRatio: 210 / 297,
-    justifyContent: 'flex-start',
-  },
-  documentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  documentHeaderText: {
-    gap: 3,
-  },
-  documentTitle: {
-    fontSize: 14,
-    lineHeight: 18,
-  },
-  documentDate: {
-    fontSize: 10,
-    lineHeight: 14,
-    color: colors.textSecondary,
-  },
-  documentLogoSlot: {
-    width: 110,
-    height: 24,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  documentLogoImage: {
-    width: '100%',
-    height: '100%',
-  },
-  documentHeaderDivider: {
-    width: '100%',
-    height: 1,
-    marginTop: 2,
-    marginBottom: 8,
-  },
-  documentBody: {
-    gap: 14,
-  },
-  documentSectionTitle: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-  },
-  documentParagraph: {
-    fontSize: 10.3,
-    lineHeight: 14,
-    color: colors.text,
-  },
-  documentBullet: {
-    fontSize: 10.3,
-    lineHeight: 14,
-    color: colors.text,
-  },
-  documentFooter: {
-    gap: 4,
-    ...( { marginTop: 'auto' } as any ),
-  },
-  documentFooterLine: {
-    width: '100%',
-    height: 1,
-  },
-  documentFooterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  documentFooterText: {
-    fontSize: 8.5,
-    lineHeight: 11,
-    color: colors.textSecondary,
-  },
-  documentPageNumber: {
-    marginTop: 4,
-    alignSelf: 'flex-end',
-    fontSize: 8.5,
-    lineHeight: 11,
-    color: colors.textSecondary,
+  colorHexInput: {
+    width: 140,
+    height: 42,
+    borderRadius: 0,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 12,
+    textAlign: 'center',
+    fontSize: fontSizes.lg,
+    lineHeight: 22,
+    color: '#FFFFFF',
+    letterSpacing: 1,
+    ...( { outlineStyle: 'none', outlineWidth: 0, cursor: 'pointer' } as any ),
   },
 })

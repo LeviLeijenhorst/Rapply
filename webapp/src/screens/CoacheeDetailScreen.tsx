@@ -23,7 +23,7 @@ import {
   loadQuickQuestionsChatForCoachee,
   saveQuickQuestionsChatForCoachee,
 } from '../local/quickQuestionsChatStore'
-import { buildCoacheeSummariesSystemMessages, buildCoacheeTranscriptsSystemMessages } from '../utils/quickQuestionsContext'
+import { buildCoacheeSummariesSystemMessages } from '../utils/quickQuestionsContext'
 import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
 
 type SessionListItem = {
@@ -149,20 +149,15 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
         .filter((item) => item.coacheeId === coacheeId && item.kind !== 'notes')
         .map((item) => ({ title: item.title, createdAtUnixMs: item.createdAtUnixMs, summary: item.summary }))
 
-      const coacheeTranscriptSessions = data.sessions
-        .filter((item) => item.coacheeId === coacheeId && item.kind !== 'notes')
-        .map((item) => ({ title: item.title, createdAtUnixMs: item.createdAtUnixMs, transcript: item.transcript ?? null }))
-
       const responseText = await completeChat({
         messages: [
-          ...buildCoacheeTranscriptsSystemMessages({
+          ...buildCoacheeSummariesSystemMessages({
             coacheeName,
-            sessions: coacheeTranscriptSessions,
-            maxTotalCharacters: 500000,
-            maxTranscriptCharactersPerSession: 200000,
-            maxSessions: 9999,
+            sessions: coacheeSessions,
+            maxTotalCharacters: 45000,
+            maxSummaryCharactersPerSession: 2500,
+            maxSessions: 80,
           }),
-          ...buildCoacheeSummariesSystemMessages({ coacheeName, sessions: coacheeSessions }),
           ...nextChatMessages.map<LocalChatMessage>((message) => ({
             role: message.role,
             text: message.text,
@@ -581,4 +576,3 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 })
-

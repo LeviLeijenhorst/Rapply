@@ -9,11 +9,15 @@ type SummaryTemplate = {
   sections: { title: string; description: string }[]
 }
 
-export async function generateSummary(params: { transcript: string; template?: SummaryTemplate }): Promise<string> {
-  const response = await callSecureApi<GenerateSummaryResponse>('/summary/generate', {
-    transcript: params.transcript,
-    template: params.template,
-  })
+export async function generateSummary(params: { transcript: string; template?: SummaryTemplate; signal?: AbortSignal }): Promise<string> {
+  const response = await callSecureApi<GenerateSummaryResponse>(
+    '/summary/generate',
+    {
+      transcript: params.transcript,
+      template: params.template,
+    },
+    { signal: params.signal },
+  )
 
   const summary = String(response.summary || '').trim()
   if (!summary) {
@@ -21,4 +25,3 @@ export async function generateSummary(params: { transcript: string; template?: S
   }
   return summary
 }
-

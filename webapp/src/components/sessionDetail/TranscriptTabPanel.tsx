@@ -17,6 +17,7 @@ type Props = {
   transcriptionError: string | null
   onSeekToSeconds?: (seconds: number) => void
   onRetryTranscription?: () => void
+  onCancelGeneration?: () => void
   currentAudioSeconds?: number
   highlightTintColor?: string
   audioDurationSeconds?: number | null
@@ -57,6 +58,7 @@ export function TranscriptTabPanel({
   transcriptionError,
   onSeekToSeconds,
   onRetryTranscription,
+  onCancelGeneration,
   currentAudioSeconds,
   highlightTintColor,
   audioDurationSeconds,
@@ -158,8 +160,18 @@ export function TranscriptTabPanel({
             {/* Loading message */}
             <View style={styles.loadingRow}>
               <ActivityIndicator size="small" color={colors.selected} />
-            <Text style={styles.loadingText}>Transcript wordt gegenereerd</Text>
+              <Text style={styles.loadingText}>Transcript wordt gegenereerd</Text>
             </View>
+            {onCancelGeneration ? (
+              <Pressable
+                onPress={onCancelGeneration}
+                style={({ hovered }) => [styles.cancelButton, hovered ? styles.cancelButtonHovered : undefined]}
+              >
+                <Text isBold style={styles.cancelText}>
+                  annuleren
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : hasError ? (
           <View style={styles.errorContainer}>
@@ -223,6 +235,16 @@ export function TranscriptTabPanel({
         ) : (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>Geen transcriptie beschikbaar</Text>
+            {onRetryTranscription ? (
+              <Pressable
+                onPress={onRetryTranscription}
+                style={({ hovered }) => [styles.retryButton, hovered ? styles.retryButtonHovered : undefined]}
+              >
+                <Text isBold style={styles.retryButtonText}>
+                  Opnieuw proberen
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         )}
       </ScrollView>
@@ -315,6 +337,7 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
   },
   loadingText: {
     fontSize: 14,
@@ -325,6 +348,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  cancelButton: {
+    alignSelf: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  cancelButtonHovered: {
+    opacity: 0.75,
+  },
+  cancelText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.selected,
+    textAlign: 'center',
   },
   errorContainer: {
     width: '100%',
@@ -361,6 +398,7 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
   },
   emptyText: {
     fontSize: 14,

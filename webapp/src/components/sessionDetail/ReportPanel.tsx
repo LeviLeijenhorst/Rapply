@@ -7,6 +7,8 @@ import { StandaardVerslagIcon } from '../icons/StandaardVerslagIcon'
 import { CopyIcon } from '../icons/CopyIcon'
 import { CopiedIcon } from '../icons/CopiedIcon'
 import { EditSmallIcon } from '../icons/EditSmallIcon'
+import { VerslagGenererenIcon } from '../icons/VerslagGenererenIcon'
+import { EditActionIcon } from '../icons/EditActionIcon'
 import { toUserFriendlyTranscriptionError } from '../../utils/transcriptionError'
 
 type Props = {
@@ -19,6 +21,7 @@ type Props = {
   transcriptionError: string | null
   onRetryTranscription?: () => void
   onEditSummary?: () => void
+  onCancelGeneration?: () => void
 }
 
 function renderInlineText(text: string, textStyle: any) {
@@ -99,7 +102,18 @@ function renderSummaryWithHeadings(summary: string) {
   return elements
 }
 
-export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary, hasTranscript, transcriptionStatus, transcriptionError, onRetryTranscription, onEditSummary }: Props) {
+export function ReportPanel({
+  templateLabel,
+  onPressTemplate,
+  isCompact,
+  summary,
+  hasTranscript,
+  transcriptionStatus,
+  transcriptionError,
+  onRetryTranscription,
+  onEditSummary,
+  onCancelGeneration,
+}: Props) {
   const [showCopyNotification, setShowCopyNotification] = useState(false)
 
   const hasSummary = Boolean(summary && summary.trim())
@@ -110,7 +124,7 @@ export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary
   const loadingLabel = !hasTranscript || isTranscribing ? 'Transcript wordt gegenereerd' : 'Verslag wordt gegenereerd'
 
   const reportCopyText = summary || ''
-  const showEditSummaryButton = hasSummary && !shouldShowLoading && !hasError && !!onEditSummary
+  const showEditSummaryButton = !shouldShowLoading && !hasError && !!onEditSummary
 
   return (
     <View style={styles.container}>
@@ -146,6 +160,16 @@ export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary
               <ActivityIndicator size="small" color={colors.selected} />
               <Text style={styles.loadingText}>{loadingLabel}</Text>
             </View>
+            {onCancelGeneration ? (
+              <Pressable
+                onPress={onCancelGeneration}
+                style={({ hovered }) => [styles.cancelButton, hovered ? styles.cancelButtonHovered : undefined]}
+              >
+                <Text isBold style={styles.cancelText}>
+                  annuleren
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : hasError ? (
           <View style={styles.errorContainer}>
@@ -170,7 +194,30 @@ export function ReportPanel({ templateLabel, onPressTemplate, isCompact, summary
           </View>
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Geen verslag beschikbaar</Text>
+            <View style={styles.emptyActions}>
+              {onRetryTranscription ? (
+                <Pressable
+                  onPress={onRetryTranscription}
+                  style={({ hovered }) => [styles.emptyActionButton, hovered ? styles.emptyActionButtonHovered : undefined]}
+                >
+                  <VerslagGenererenIcon size={24} color={colors.selected} />
+                  <Text isBold style={styles.emptyActionText}>
+                    Verslag genereren
+                  </Text>
+                </Pressable>
+              ) : null}
+              {onEditSummary ? (
+                <Pressable
+                  onPress={onEditSummary}
+                  style={({ hovered }) => [styles.emptyActionButton, hovered ? styles.emptyActionButtonHovered : undefined]}
+                >
+                  <EditActionIcon color={colors.selected} size={24} />
+                  <Text isBold style={styles.emptyActionText}>
+                    Verslag schrijven
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         )}
 
@@ -322,6 +369,7 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
   },
   loadingRow: {
     flexDirection: 'row',
@@ -332,6 +380,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: colors.textSecondary,
+  },
+  cancelButton: {
+    alignSelf: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  cancelButtonHovered: {
+    opacity: 0.75,
+  },
+  cancelText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.selected,
+    textAlign: 'center',
   },
   errorContainer: {
     width: '100%',
@@ -368,10 +430,28 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
   },
-  emptyText: {
+  emptyActions: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  emptyActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  emptyActionButtonHovered: {
+    opacity: 0.75,
+  },
+  emptyActionText: {
     fontSize: 14,
-    lineHeight: 20,
-    color: colors.textSecondary,
+    lineHeight: 18,
+    color: colors.selected,
+    textAlign: 'center',
   },
 })

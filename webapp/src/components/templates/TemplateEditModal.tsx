@@ -7,8 +7,7 @@ import { Text } from '../Text'
 import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
 import { PlusIcon } from '../icons/PlusIcon'
 import { TemplateEditIcon } from '../icons/TemplateEditIcon'
-
-type TemplateEditStep = 'details' | 'content'
+import { TrashIcon } from '../icons/TrashIcon'
 
 export type TemplateEditModalSection = {
   id: string
@@ -18,6 +17,7 @@ export type TemplateEditModalSection = {
 
 export type TemplateEditModalTemplate = {
   name: string
+  description: string
   sections: TemplateEditModalSection[]
 }
 
@@ -27,178 +27,178 @@ type Props = {
   template?: TemplateEditModalTemplate
   onClose: () => void
   onSave: (template: TemplateEditModalTemplate) => void
+  onDelete?: () => void
 }
 
+// Creates the default template draft used when opening the create flow.
 function createEmptyTemplate(): TemplateEditModalTemplate {
   return {
     name: 'Custom template #1',
+    description: '',
     sections: [{ id: `section-${Date.now()}`, title: '', description: '' }],
   }
 }
 
-export function TemplateEditModal({ visible, mode, template, onClose, onSave }: Props) {
+// Renders the template editor modal for create/edit, including section management.
+export function TemplateEditModal({ visible, mode, template, onClose, onSave, onDelete }: Props) {
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
-
-  const initialStep = mode === 'create' ? 'details' : 'content'
-
-  const [step, setStep] = useState<TemplateEditStep>(initialStep)
   const [activeTemplate, setActiveTemplate] = useState<TemplateEditModalTemplate>(() => createEmptyTemplate())
+  const [hoveredSectionId, setHoveredSectionId] = useState<string | null>(null)
+  const [hoveredDeleteSectionId, setHoveredDeleteSectionId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!visible) return
-    setStep(initialStep)
     if (mode === 'edit' && template) {
       setActiveTemplate(template)
       return
     }
     setActiveTemplate(createEmptyTemplate())
-  }, [initialStep, mode, template, visible])
+  }, [mode, template, visible])
 
   if (!visible) return null
 
   const title = mode === 'edit' ? activeTemplate.name : 'Template maken'
-  const primaryButtonLabel = mode === 'edit' ? 'Opslaan' : step === 'details' ? 'Doorgaan' : 'Toevoegen'
+  const primaryButtonLabel = mode === 'edit' ? 'Opslaan' : 'Toevoegen'
 
   return (
     <AnimatedOverlayModal visible={visible} onClose={onClose} contentContainerStyle={styles.container}>
-        {/* Modal header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {/* Header icon */}
-            <View style={styles.headerIcon}>
-              <TemplateEditIcon color={colors.selected} size={20} />
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <View style={styles.headerIcon}>
+            <TemplateEditIcon color={colors.selected} size={20} />
+          </View>
+          <Text isBold style={styles.headerTitle}>
+            {title}
+          </Text>
+        </View>
+        <Pressable onPress={onClose} style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}>
+          <ModalCloseDarkIcon />
+        </Pressable>
+      </View>
+
+      <View style={styles.body}>
+        <View style={styles.formFields}>
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>Naam</Text>
+            <View style={styles.textField}>
+              <TextInput
+                value={activeTemplate.name}
+                onChangeText={(name) => setActiveTemplate((previousTemplate) => ({ ...previousTemplate, name }))}
+                placeholder="Template naam..."
+                placeholderTextColor="#656565"
+                style={[styles.textFieldInput, inputWebStyle]}
+              />
             </View>
-            {/* Header title */}
-            <Text isBold style={styles.headerTitle}>
-              {title}
-            </Text>
           </View>
-          <Pressable onPress={onClose} style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}>
-            {/* Close */}
-            <ModalCloseDarkIcon />
+
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>Beschrijving</Text>
+            <View style={styles.textField}>
+              <TextInput
+                value={activeTemplate.description}
+                onChangeText={(description) => setActiveTemplate((previousTemplate) => ({ ...previousTemplate, description }))}
+                placeholder="Korte beschrijving van deze template..."
+                placeholderTextColor="#656565"
+                style={[styles.textFieldInput, inputWebStyle]}
+              />
+            </View>
+          </View>
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator style={styles.sectionsScroll} contentContainerStyle={styles.sectionsScrollContent}>
+          {activeTemplate.sections.map((section, index) => (
+            <Pressable
+              key={section.id}
+              onHoverIn={() => setHoveredSectionId(section.id)}
+              onHoverOut={() => setHoveredSectionId((current) => (current === section.id ? null : current))}
+              style={styles.sectionCard}
+            >
+              <Pressable
+                onHoverIn={() => setHoveredDeleteSectionId(section.id)}
+                onHoverOut={() => setHoveredDeleteSectionId((current) => (current === section.id ? null : current))}
+                onPress={() =>
+                  setActiveTemplate((previousTemplate) => ({
+                    ...previousTemplate,
+                    sections: previousTemplate.sections.filter((item) => item.id !== section.id),
+                  }))
+                }
+                style={({ hovered }) => [
+                  styles.sectionDeleteButton,
+                  hoveredSectionId === section.id || hoveredDeleteSectionId === section.id ? styles.sectionDeleteButtonVisible : styles.sectionDeleteButtonHidden,
+                  hovered ? styles.sectionDeleteButtonHovered : undefined,
+                ]}
+              >
+                <TrashIcon color="#000000" size={16} />
+              </Pressable>
+
+              <TextInput
+                value={section.title}
+                onChangeText={(title) =>
+                  setActiveTemplate((previousTemplate) => ({
+                    ...previousTemplate,
+                    sections: previousTemplate.sections.map((item) => (item.id === section.id ? { ...item, title } : item)),
+                  }))
+                }
+                placeholder={`Onderdeel ${index + 1}...`}
+                placeholderTextColor="#656565"
+                style={[styles.sectionTitleInput, inputWebStyle]}
+              />
+              <View style={styles.sectionTextArea}>
+                <TextInput
+                  value={section.description}
+                  onChangeText={(description) =>
+                    setActiveTemplate((previousTemplate) => ({
+                      ...previousTemplate,
+                      sections: previousTemplate.sections.map((item) => (item.id === section.id ? { ...item, description } : item)),
+                    }))
+                  }
+                  placeholder="Typ hier een duidelijke beschrijving..."
+                  placeholderTextColor="#656565"
+                  multiline
+                  style={[styles.sectionDescriptionInput, inputWebStyle]}
+                />
+              </View>
+            </Pressable>
+          ))}
+
+          <Pressable
+            onPress={() =>
+              setActiveTemplate((previousTemplate) => ({
+                ...previousTemplate,
+                sections: [...previousTemplate.sections, { id: `section-${Date.now()}`, title: '', description: '' }],
+              }))
+            }
+            style={({ hovered }) => [styles.addSectionRow, hovered ? styles.addSectionRowHovered : undefined]}
+          >
+            <PlusIcon color={colors.textStrong} size={18} />
+            <Text style={styles.addSectionText}>Nieuw onderdeel</Text>
           </Pressable>
+        </ScrollView>
+      </View>
+
+      <View style={styles.footer}>
+        <View style={styles.footerLeft}>
+          {mode === 'edit' && onDelete ? (
+            <Pressable onPress={onDelete} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]}>
+              <Text isBold style={styles.secondaryButtonText}>
+                Verwijderen
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
-
-        {/* Modal body */}
-        <View style={styles.body}>
-          {/* Details form */}
-          <View style={styles.formArea}>
-            {mode === 'create' && step === 'details' ? (
-              <View style={styles.formFields}>
-                {/* Name field */}
-                <View style={styles.field}>
-                  {/* Field label */}
-                  <Text style={styles.fieldLabel}>Naam</Text>
-                  {/* Field input */}
-                  <View style={styles.textField}>
-                    <TextInput
-                      value={activeTemplate.name}
-                      onChangeText={(name) => setActiveTemplate((previousTemplate) => ({ ...previousTemplate, name }))}
-                      placeholder="Custom template #1"
-                      placeholderTextColor="#656565"
-                      style={[styles.textFieldInput, inputWebStyle]}
-                    />
-                  </View>
-                </View>
-              </View>
-            ) : null}
-
-            {/* Content editor */}
-            {step === 'content' ? (
-              <View style={styles.contentArea}>
-                {/* Template header fields */}
-                <View style={styles.compactFieldsRow}>
-                  {/* Template name */}
-                  <View style={styles.compactField}>
-                    <TextInput
-                      value={activeTemplate.name}
-                      onChangeText={(name) => setActiveTemplate((previousTemplate) => ({ ...previousTemplate, name }))}
-                      placeholder="Template naam..."
-                      placeholderTextColor="#656565"
-                      style={[styles.compactFieldInput, inputWebStyle]}
-                    />
-                  </View>
-                </View>
-
-                {/* Sections */}
-                <ScrollView showsVerticalScrollIndicator style={styles.sectionsScroll} contentContainerStyle={styles.sectionsScrollContent}>
-                  {activeTemplate.sections.map((section, index) => (
-                    <View key={section.id} style={styles.sectionCard}>
-                      {/* Section title */}
-                      <TextInput
-                        value={section.title}
-                        onChangeText={(title) =>
-                          setActiveTemplate((previousTemplate) => ({
-                            ...previousTemplate,
-                            sections: previousTemplate.sections.map((item) => (item.id === section.id ? { ...item, title } : item)),
-                          }))
-                        }
-                        placeholder={`Onderdeel ${index + 1}...`}
-                        placeholderTextColor="#656565"
-                        style={[styles.sectionTitleInput, inputWebStyle]}
-                      />
-                      {/* Section description */}
-                      <View style={styles.sectionTextArea}>
-                        <TextInput
-                          value={section.description}
-                          onChangeText={(description) =>
-                            setActiveTemplate((previousTemplate) => ({
-                              ...previousTemplate,
-                              sections: previousTemplate.sections.map((item) => (item.id === section.id ? { ...item, description } : item)),
-                            }))
-                          }
-                          placeholder="Typ hier een duidelijke beschrijving..."
-                          placeholderTextColor="#656565"
-                          multiline
-                          style={[styles.sectionDescriptionInput, inputWebStyle]}
-                        />
-                      </View>
-                    </View>
-                  ))}
-
-                  <Pressable
-                    onPress={() =>
-                      setActiveTemplate((previousTemplate) => ({
-                        ...previousTemplate,
-                        sections: [...previousTemplate.sections, { id: `section-${Date.now()}`, title: '', description: '' }],
-                      }))
-                    }
-                    style={({ hovered }) => [styles.addSectionRow, hovered ? styles.addSectionRowHovered : undefined]}
-                  >
-                    {/* Add section */}
-                    <PlusIcon color={colors.textStrong} size={18} />
-                    <Text style={styles.addSectionText}>Nieuw</Text>
-                  </Pressable>
-                </ScrollView>
-              </View>
-            ) : null}
-          </View>
-        </View>
-
-        {/* Modal footer */}
-        <View style={styles.footer}>
+        <View style={styles.footerRight}>
           <Pressable onPress={onClose} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]}>
-            {/* Cancel */}
             <Text isBold style={styles.secondaryButtonText}>
               Annuleren
             </Text>
           </Pressable>
-          <Pressable
-            onPress={() => {
-              if (mode === 'create' && step === 'details') {
-                setStep('content')
-                return
-              }
-              onSave(activeTemplate)
-            }}
-            style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined]}
-          >
-            {/* Primary */}
+          <Pressable onPress={() => onSave(activeTemplate)} style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined]}>
             <Text isBold style={styles.primaryButtonText}>
               {primaryButtonLabel}
             </Text>
           </Pressable>
         </View>
+      </View>
     </AnimatedOverlayModal>
   )
 }
@@ -253,19 +253,16 @@ const styles = StyleSheet.create({
     width: '100%',
     flex: 1,
     padding: 24,
+    gap: 16,
     ...( { overflow: 'hidden' } as any ),
-  },
-  formArea: {
-    flex: 1,
-    width: '100%',
   },
   formFields: {
     width: '100%',
-    gap: 24,
+    gap: 12,
   },
   field: {
     width: '100%',
-    gap: 12,
+    gap: 8,
   },
   fieldLabel: {
     fontSize: 14,
@@ -274,12 +271,12 @@ const styles = StyleSheet.create({
   },
   textField: {
     width: '100%',
-    height: 56,
+    height: 44,
     borderRadius: 12,
     backgroundColor: colors.pageBackground,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
+    padding: 12,
     justifyContent: 'center',
   },
   textFieldInput: {
@@ -289,40 +286,13 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: colors.textStrong,
   },
-  compactFieldsRow: {
-    width: '100%',
-    flexDirection: 'row',
-    gap: 12,
-  },
-  compactField: {
-    flex: 1,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: colors.pageBackground,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 12,
-    justifyContent: 'center',
-  },
-  compactFieldInput: {
-    width: '100%',
-    padding: 0,
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-  },
-  contentArea: {
-    flex: 1,
-    width: '100%',
-    gap: 16,
-  },
   sectionsScroll: {
     flex: 1,
     width: '100%',
   },
   sectionsScrollContent: {
     gap: 16,
-    padding: 0,
+    paddingBottom: 8,
   },
   sectionCard: {
     width: '100%',
@@ -332,10 +302,33 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: 16,
     gap: 12,
+    position: 'relative',
+  },
+  sectionDeleteButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  sectionDeleteButtonVisible: {
+    opacity: 1,
+  },
+  sectionDeleteButtonHidden: {
+    opacity: 0,
+    ...( { pointerEvents: 'none' } as any ),
+  },
+  sectionDeleteButtonHovered: {
+    backgroundColor: 'rgba(0,0,0,0.08)',
   },
   sectionTitleInput: {
     width: '100%',
     padding: 0,
+    paddingRight: 36,
     fontSize: 16,
     lineHeight: 20,
     color: colors.textStrong,
@@ -377,22 +370,25 @@ const styles = StyleSheet.create({
   },
   footer: {
     width: '100%',
-    padding: 0,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 0,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 0,
+  },
+  footerLeft: {
+    minWidth: 160,
+  },
+  footerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   secondaryButton: {
     height: 48,
     borderRadius: 0,
-    borderBottomLeftRadius: 16,
     backgroundColor: colors.surface,
-    borderWidth: 0,
-    borderColor: 'transparent',
     paddingHorizontal: 24,
-    paddingVertical: 0,
     minWidth: 160,
     alignItems: 'center',
     justifyContent: 'center',
@@ -411,7 +407,6 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 16,
     backgroundColor: colors.selected,
     paddingHorizontal: 24,
-    paddingVertical: 0,
     minWidth: 160,
     alignItems: 'center',
     justifyContent: 'center',
@@ -425,4 +420,3 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
-

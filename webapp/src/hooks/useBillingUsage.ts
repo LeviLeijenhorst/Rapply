@@ -5,9 +5,15 @@ import { fetchBillingStatus, type BillingStatus } from '../services/billing'
 type BillingUsage = {
   usedMinutes: number
   totalMinutes: number
+  isLoading: boolean
 }
 
-function buildBillingUsageMinutes(status: BillingStatus | null): BillingUsage {
+type BillingUsageMinutes = {
+  usedMinutes: number
+  totalMinutes: number
+}
+
+function buildBillingUsageMinutes(status: BillingStatus | null): BillingUsageMinutes {
   if (!status) {
     return { usedMinutes: 0, totalMinutes: 0 }
   }
@@ -22,12 +28,14 @@ function buildBillingUsageMinutes(status: BillingStatus | null): BillingUsage {
 export function useBillingUsage(): BillingUsage {
   const [usedMinutes, setUsedMinutes] = useState(0)
   const [totalMinutes, setTotalMinutes] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     let isActive = true
 
     const loadStatus = async () => {
       try {
+        setIsLoading(true)
         const response = await fetchBillingStatus()
         if (!isActive) return
         const usage = buildBillingUsageMinutes(response?.billingStatus ?? null)
@@ -38,6 +46,9 @@ export function useBillingUsage(): BillingUsage {
         console.error('[billing] failed to load status', error)
         setUsedMinutes(0)
         setTotalMinutes(0)
+      } finally {
+        if (!isActive) return
+        setIsLoading(false)
       }
     }
 
@@ -48,5 +59,5 @@ export function useBillingUsage(): BillingUsage {
     }
   }, [])
 
-  return { usedMinutes, totalMinutes }
+  return { usedMinutes, totalMinutes, isLoading }
 }

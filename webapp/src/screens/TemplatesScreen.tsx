@@ -1,99 +1,132 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 
-import { TemplateEditModal } from '../components/templates/TemplateEditModal'
+import { AnimatedMainContent } from '../components/AnimatedMainContent'
+import { AnimatedWidthContainer } from '../components/AnimatedWidthContainer'
 import { SearchIcon } from '../components/icons/SearchIcon'
+import { TemplateSavedIcon } from '../components/icons/TemplateSavedIcon'
+import { TemplatesIcon } from '../components/icons/TemplatesIcon'
+import { ConfirmTemplateDeleteModal } from '../components/templates/ConfirmTemplateDeleteModal'
+import { TemplateEditModal } from '../components/templates/TemplateEditModal'
 import { Text } from '../components/Text'
+import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { colors } from '../theme/colors'
 import { TemplateNotSavedIcon } from '../components/icons/TemplateNotSavedIcon'
-import { TemplateSavedIcon } from '../components/icons/TemplateSavedIcon'
-import { useLocalAppData } from '../local/LocalAppDataProvider'
 
 type SavedFilterKey = 'all' | 'saved'
 
+// Renders the templates overview, filters, and create/edit/delete modal flows.
 export function TemplatesScreen() {
-  const { data, createTemplate, updateTemplate, toggleTemplateSaved } = useLocalAppData()
+  const { data, createTemplate, updateTemplate, deleteTemplate, toggleTemplateSaved } = useLocalAppData()
   const [searchText, setSearchText] = useState('')
   const [activeSavedFilter, setActiveSavedFilter] = useState<SavedFilterKey>('all')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
+  const [pendingDeleteTemplateId, setPendingDeleteTemplateId] = useState<string | null>(null)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const searchInputRef = useRef<TextInput | null>(null)
 
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
   const templates = data.templates ?? []
+  const isSearchExpanded = isSearchOpen || searchText.trim().length > 0
 
   const editingTemplate = useMemo(() => {
     if (!editingTemplateId) return null
     return templates.find((template) => template.id === editingTemplateId) ?? null
   }, [editingTemplateId, templates])
 
+  const pendingDeleteTemplate = useMemo(() => {
+    if (!pendingDeleteTemplateId) return null
+    return templates.find((template) => template.id === pendingDeleteTemplateId) ?? null
+  }, [pendingDeleteTemplateId, templates])
+
   const visibleTemplates = useMemo(() => {
     const normalizedQuery = searchText.trim().toLowerCase()
     return templates
       .filter((template) => (activeSavedFilter === 'saved' ? template.isSaved : true))
-      .filter((template) => (normalizedQuery.length === 0 ? true : template.name.toLowerCase().includes(normalizedQuery)))
+      .filter((template) => {
+        if (normalizedQuery.length === 0) return true
+        return template.name.toLowerCase().includes(normalizedQuery) || template.description.toLowerCase().includes(normalizedQuery)
+      })
   }, [activeSavedFilter, searchText, templates])
+
+  useEffect(() => {
+    if (!isSearchOpen) return
+    const id = setTimeout(() => searchInputRef.current?.focus(), 120)
+    return () => clearTimeout(id)
+  }, [isSearchOpen])
 
   return (
     <View style={styles.container}>
-      {/* Page header */}
       <View style={styles.headerArea}>
         <View style={styles.headerRow}>
-          {/* Page title */}
           <Text isSemibold style={styles.headerTitle}>
             Templates
           </Text>
-          {/* Header actions */}
           <View style={styles.headerActions}>
-            {/* Search input */}
-            <View style={styles.searchInputContainer}>
-              <SearchIcon color="#656565" size={18} />
-              <TextInput
-                value={searchText}
-                onChangeText={setSearchText}
-                placeholder="Zoek templates..."
-                placeholderTextColor="#656565"
-                style={[styles.searchInput, inputWebStyle]}
-              />
-            </View>
-            <Pressable
-              style={({ hovered }) => [styles.headerButton, styles.addButton, hovered ? styles.addButtonHovered : undefined]}
-              onPress={() => setIsCreateModalOpen(true)}
-            >
-              {/* Create template */}
+            <AnimatedWidthContainer width={isSearchExpanded ? 315 : 138} style={styles.searchWidthContainer}>
+              {isSearchExpanded ? (
+                <View style={styles.searchInputContainer}>
+                  <SearchIcon color="#656565" size={18} />
+                  <TextInput
+                    ref={searchInputRef}
+                    value={searchText}
+                    onChangeText={setSearchText}
+                    placeholder="Zoek templates..."
+                    placeholderTextColor="#656565"
+                    onBlur={() => setIsSearchOpen(false)}
+                    style={[styles.searchInput, inputWebStyle]}
+                  />
+                </View>
+              ) : (
+                <Pressable onPress={() => setIsSearchOpen(true)} style={({ hovered }) => [styles.searchInputContainer, hovered ? styles.searchInputContainerHovered : undefined]}>
+                  <SearchIcon color="#656565" size={18} />
+                  <Text isBold style={styles.searchCollapsedText}>
+                    Zoeken
+                  </Text>
+                </Pressable>
+              )}
+            </AnimatedWidthContainer>
+            <Pressable style={({ hovered }) => [styles.headerButton, styles.addButton, hovered ? styles.addButtonHovered : undefined]} onPress={() => setIsCreateModalOpen(true)}>
               <Text numberOfLines={1} isBold style={styles.addButtonText}>
                 + Template maken
               </Text>
             </Pressable>
           </View>
         </View>
-        {/* Template filters */}
-        <View style={styles.filtersRow}>
-          <FilterChip label="Alle templates" isSelected={activeSavedFilter === 'all'} onPress={() => setActiveSavedFilter('all')} />
-          <FilterChip label="Opgeslagen" isSelected={activeSavedFilter === 'saved'} onPress={() => setActiveSavedFilter('saved')} />
+
+        <View style={styles.tabsRow}>
+          <TabButton
+            label="Alle templates"
+            isSelected={activeSavedFilter === 'all'}
+            icon={(color) => <TemplatesIcon color={color} size={18} />}
+            onPress={() => setActiveSavedFilter('all')}
+          />
+          <TabButton
+            label="Opgeslagen"
+            isSelected={activeSavedFilter === 'saved'}
+            icon={(color) => <TemplateSavedIcon color={color} size={18} />}
+            onPress={() => setActiveSavedFilter('saved')}
+          />
         </View>
       </View>
 
-      {/* Templates grid */}
       <View style={styles.gridArea}>
-        <View style={styles.gridRow}>
-          {visibleTemplates.map((template) => (
-            <View key={template.id} style={styles.gridItem}>
-              {(() => {
-                const sections = Array.isArray(template.sections) ? template.sections : []
-                const description = sections[0]?.description ?? ''
-                return (
-              <TemplateCard
-                title={template.name}
-                description={description}
-                isSaved={template.isSaved}
-                onPress={() => setEditingTemplateId(template.id)}
-                onToggleSaved={() => toggleTemplateSaved(template.id)}
-              />
-                )
-              })()}
-            </View>
-          ))}
-        </View>
+        <AnimatedMainContent contentKey={activeSavedFilter}>
+          <View style={styles.gridRow}>
+            {visibleTemplates.map((template) => (
+              <View key={template.id} style={styles.gridItem}>
+                <TemplateCard
+                  title={template.name}
+                  description={template.description}
+                  isSaved={template.isSaved}
+                  onPress={() => setEditingTemplateId(template.id)}
+                  onToggleSaved={() => toggleTemplateSaved(template.id)}
+                />
+              </View>
+            ))}
+          </View>
+        </AnimatedMainContent>
       </View>
 
       <TemplateEditModal
@@ -113,14 +146,35 @@ export function TemplatesScreen() {
           editingTemplate
             ? {
                 name: editingTemplate.name,
+                description: editingTemplate.description,
                 sections: editingTemplate.sections,
               }
             : undefined
         }
         onClose={() => setEditingTemplateId(null)}
+        onDelete={() => {
+          if (!editingTemplateId) return
+          setPendingDeleteTemplateId(editingTemplateId)
+        }}
         onSave={(template) => {
           if (!editingTemplateId) return
-          updateTemplate(editingTemplateId, { name: template.name, sections: template.sections })
+          updateTemplate(editingTemplateId, {
+            name: template.name,
+            description: template.description,
+            sections: template.sections,
+          })
+          setEditingTemplateId(null)
+        }}
+      />
+
+      <ConfirmTemplateDeleteModal
+        visible={Boolean(pendingDeleteTemplateId)}
+        templateName={pendingDeleteTemplate?.name ?? null}
+        onClose={() => setPendingDeleteTemplateId(null)}
+        onConfirm={() => {
+          if (!pendingDeleteTemplateId) return
+          deleteTemplate(pendingDeleteTemplateId)
+          setPendingDeleteTemplateId(null)
           setEditingTemplateId(null)
         }}
       />
@@ -128,26 +182,33 @@ export function TemplatesScreen() {
   )
 }
 
-type FilterChipProps = {
+type TabButtonProps = {
   label: string
   isSelected: boolean
+  icon: (color: string) => React.ReactNode
   onPress: () => void
 }
 
-function FilterChip({ label, isSelected, onPress }: FilterChipProps) {
+// Renders one template-filter tab button.
+function TabButton({ label, isSelected, icon, onPress }: TabButtonProps) {
+  const iconColor = isSelected ? '#FFFFFF' : colors.selected
+  const textColor = isSelected ? '#FFFFFF' : colors.selected
+
   return (
     <Pressable
       onPress={onPress}
       style={({ hovered }) => [
-        styles.filterChip,
-        isSelected ? styles.filterChipSelected : styles.filterChipUnselected,
-        hovered ? (isSelected ? styles.filterChipSelectedHovered : styles.filterChipHovered) : undefined,
+        styles.tabButton,
+        isSelected ? styles.tabButtonSelected : styles.tabButtonUnselected,
+        hovered ? (isSelected ? styles.tabButtonSelectedHovered : styles.tabButtonHovered) : undefined,
       ]}
     >
-      {/* Filter chip */}
-      <Text isSemibold style={[styles.filterChipText, isSelected ? styles.filterChipTextSelected : styles.filterChipTextUnselected]}>
-        {label}
-      </Text>
+      <View style={styles.tabButtonContent}>
+        {icon(iconColor)}
+        <Text isSemibold style={[styles.tabButtonText, { color: textColor }]}>
+          {label}
+        </Text>
+      </View>
     </Pressable>
   )
 }
@@ -160,14 +221,12 @@ type TemplateCardProps = {
   onToggleSaved: () => void
 }
 
+// Renders one template preview card in the grid.
 function TemplateCard({ title, description, isSaved, onPress, onToggleSaved }: TemplateCardProps) {
   return (
     <Pressable onPress={onPress} style={({ hovered }) => [styles.templateCard, hovered ? styles.templateCardHovered : undefined]}>
-      {/* Template card */}
       <View style={styles.templateCardContent}>
-        {/* Template header */}
         <View style={styles.templateCardHeader}>
-          {/* Template title */}
           <Text isBold style={styles.templateCardTitle}>
             {title}
           </Text>
@@ -178,11 +237,9 @@ function TemplateCard({ title, description, isSaved, onPress, onToggleSaved }: T
             }}
             style={({ hovered }) => [styles.templateCardSaveButton, hovered ? styles.templateCardSaveButtonHovered : undefined]}
           >
-            {/* Template saved toggle */}
             {isSaved ? <TemplateSavedIcon color={colors.selected} size={22} /> : <TemplateNotSavedIcon color={colors.textStrong} size={22} />}
           </Pressable>
         </View>
-        {/* Template description */}
         <Text style={styles.templateCardDescription}>{description}</Text>
       </View>
     </Pressable>
@@ -213,8 +270,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  searchWidthContainer: {
+    overflow: 'hidden',
+  },
   searchInputContainer: {
-    width: 315,
     height: 40,
     borderRadius: 12,
     backgroundColor: colors.surface,
@@ -224,6 +283,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  searchInputContainerHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  searchCollapsedText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#656565',
   },
   searchInput: {
     flex: 1,
@@ -253,44 +320,48 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: colors.selected,
   },
-  filtersRow: {
+  tabsRow: {
+    width: 460,
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  filterChip: {
-    height: 36,
+  tabButton: {
+    flex: 1,
+    height: 40,
     borderRadius: 12,
-    padding: 12,
+    padding: 10,
+    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
-  filterChipSelected: {
+  tabButtonSelected: {
     backgroundColor: colors.selected,
-    borderWidth: 1,
     borderColor: colors.selected,
   },
-  filterChipUnselected: {
+  tabButtonSelectedHovered: {
+    backgroundColor: '#A50058',
+    borderColor: '#A50058',
+  },
+  tabButtonUnselected: {
     backgroundColor: colors.surface,
-    borderWidth: 1,
     borderColor: colors.border,
   },
-  filterChipHovered: {
+  tabButtonHovered: {
     backgroundColor: colors.hoverBackground,
   },
-  filterChipSelectedHovered: {
-    backgroundColor: '#A50058',
+  tabButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
-  filterChipText: {
+  tabButtonText: {
     fontSize: 14,
     lineHeight: 18,
-  },
-  filterChipTextSelected: {
-    color: '#FFFFFF',
-  },
-  filterChipTextUnselected: {
-    color: colors.textStrong,
   },
   gridArea: {
     flex: 1,
@@ -301,9 +372,10 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   gridItem: {
-    ...( { width: 'min(360px, 100%)' } as any ),
-    flexGrow: 1,
-    flexBasis: 320,
+    width: 320,
+    maxWidth: '100%',
+    flexGrow: 0,
+    flexShrink: 0,
   },
   templateCard: {
     width: '100%',
@@ -341,6 +413,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 22,
     color: colors.textStrong,
+    flex: 1,
   },
   templateCardDescription: {
     fontSize: 14,
@@ -348,4 +421,3 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 })
-

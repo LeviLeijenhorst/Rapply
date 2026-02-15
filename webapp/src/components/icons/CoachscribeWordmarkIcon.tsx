@@ -1,5 +1,6 @@
 import React from 'react'
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg'
+import { brandColors } from '../../foundation/theme/tokens'
 
 type Props = {
 }
@@ -9,8 +10,8 @@ export function CoachscribeWordmarkIcon(_: Props) {
     <Svg width={125} height={19} viewBox="0 0 125 19" fill="none">
       <Defs>
         <LinearGradient id="paint0_linear_wordmark" x1={0} y1={19} x2={125} y2={0} gradientUnits="userSpaceOnUse">
-          <Stop stopColor="#7E0056" />
-          <Stop offset={1} stopColor="#F20070" />
+          <Stop stopColor={brandColors.coachscribeGradientStart} />
+          <Stop offset={1} stopColor={brandColors.coachscribeGradientEnd} />
         </LinearGradient>
       </Defs>
       <Path

@@ -15,6 +15,7 @@ const ENTRA_CODE_VERIFIER_KEY = 'entra_code_verifier'
 const ENTRA_REDIRECT_URI_KEY = 'entra_redirect_uri'
 const ENTRA_AUTH_START_TIME_KEY = 'entra_auth_start_time'
 const ENTRA_OAUTH_STATE_KEY = 'entra_oauth_state'
+const ENTRA_AUTH_INTENT_KEY = 'entra_auth_intent'
 const ENTRA_ACCESS_TOKEN_KEY = 'entra_access_token'
 const ENTRA_REFRESH_TOKEN_KEY = 'entra_refresh_token'
 
@@ -119,6 +120,20 @@ function clearAuthFlowData() {
   removeStoredValue(ENTRA_OAUTH_STATE_KEY)
 }
 
+function setAuthIntent(intent: 'signup' | 'signin') {
+  setStoredValue(ENTRA_AUTH_INTENT_KEY, intent)
+}
+
+export function getAuthIntent(): 'signup' | 'signin' | null {
+  const raw = getStoredValue(ENTRA_AUTH_INTENT_KEY)
+  if (raw === 'signup' || raw === 'signin') return raw
+  return null
+}
+
+export function clearAuthIntent() {
+  removeStoredValue(ENTRA_AUTH_INTENT_KEY)
+}
+
 function setStoredAccessToken(accessToken: string) {
   accessTokenMemoryCache = accessToken
   setStoredValue(ENTRA_ACCESS_TOKEN_KEY, accessToken)
@@ -133,7 +148,7 @@ function setStoredRefreshToken(refreshToken: string | null) {
   removeStoredValue(ENTRA_REFRESH_TOKEN_KEY)
 }
 
-export async function signInWithEntra(values?: { screenHint?: 'signup' }): Promise<void> {
+export async function signInWithEntra(values?: { screenHint?: 'signup'; prompt?: 'create' }): Promise<void> {
   const discovery = await fetchOpenIdConfiguration()
   const redirectUri = buildRedirectUri()
   const codeVerifier = generateCodeVerifier()
@@ -147,6 +162,7 @@ export async function signInWithEntra(values?: { screenHint?: 'signup' }): Promi
   setStoredValue(ENTRA_REDIRECT_URI_KEY, redirectUri)
   setStoredValue(ENTRA_AUTH_START_TIME_KEY, Date.now().toString())
   setStoredValue(ENTRA_OAUTH_STATE_KEY, state)
+  setAuthIntent(values?.screenHint === 'signup' ? 'signup' : 'signin')
 
   const params = new URLSearchParams({
     client_id: config.entra.clientId,
@@ -161,13 +177,16 @@ export async function signInWithEntra(values?: { screenHint?: 'signup' }): Promi
   if (values?.screenHint) {
     params.set('screen_hint', values.screenHint)
   }
+  if (values?.prompt) {
+    params.set('prompt', values.prompt)
+  }
 
   const authUrl = `${discovery.authorization_endpoint}?${params.toString()}`
   window.location.assign(authUrl)
 }
 
 export async function signUpWithEntra(): Promise<void> {
-  return signInWithEntra({ screenHint: 'signup' })
+  return signInWithEntra({ screenHint: 'signup', prompt: 'create' })
 }
 
 export async function handleAuthCallback(): Promise<EntraAuthResult> {
@@ -254,6 +273,7 @@ export async function handleAuthCallback(): Promise<EntraAuthResult> {
   if (tokenData.refreshToken) {
     setStoredRefreshToken(tokenData.refreshToken)
   }
+  clearAuthIntent()
 
   window.history.replaceState({}, '', '/inloggen')
 
@@ -348,4 +368,9 @@ export async function clearEntraLocalTokens(): Promise<void> {
   removeStoredValue(ENTRA_REFRESH_TOKEN_KEY)
   removeStoredValue(ENTRA_ACCESS_TOKEN_KEY)
   clearAuthFlowData()
+}
+
+// Clears locally stored Entra auth state for sign-out.
+export async function signOutFromEntra(): Promise<void> {
+  await clearEntraLocalTokens()
 }
