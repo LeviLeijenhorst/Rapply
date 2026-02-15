@@ -8,9 +8,6 @@ import { useLiveAudioWaveformBars } from '../../hooks/useLiveAudioWaveformBars'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import { useLocalAppData } from '../../local/LocalAppDataProvider'
 import { useE2ee } from '../../e2ee/E2eeProvider'
-import { createAudioBlobRemote } from '../../services/audioBlobs'
-import { transcribeAudio } from '../../services/transcription'
-import { generateSummary } from '../../services/summary'
 import { colors } from '../../theme/colors'
 import { webTransitionSmooth, webTransitionSlow } from '../../theme/webTransitions'
 import { Text } from '../Text'
@@ -29,8 +26,9 @@ import { SendSquareIcon } from '../icons/SendSquareIcon'
 import { FolderOpenIcon } from '../icons/FolderOpenIcon'
 import { CheckmarkIcon } from '../icons/CheckmarkIcon'
 import { unassignedCoacheeLabel } from '../../utils/coachee'
-import { normalizeTranscriptionError } from '../../utils/transcriptionError'
 import { AudioPlayerCard } from '../sessionDetail/AudioPlayerCard'
+import { setPendingPreviewAudio } from '../../audio/pendingPreviewStore'
+import { processSessionAudio } from '../../audio/processSessionAudio'
 
 type Step = 'select' | 'consent' | 'upload' | 'recording' | 'recorded'
 type OptionKey = 'gesprek' | 'verslag' | 'upload' | 'schrijven'
@@ -65,6 +63,33 @@ function buildDefaultSessionTitle(existingTitles: string[]) {
   })
 
   return `Sessie #${maxSessionNumber + 1} (naamloos)`
+}
+
+const knownAudioMimeByExtension: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  m4a: 'audio/mp4',
+  mp4: 'audio/mp4',
+  aac: 'audio/aac',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
+  opus: 'audio/opus',
+  webm: 'audio/webm',
+  flac: 'audio/flac',
+}
+
+function getFileExtension(fileName: string) {
+  const trimmed = String(fileName || '').trim().toLowerCase()
+  const dotIndex = trimmed.lastIndexOf('.')
+  if (dotIndex < 0 || dotIndex === trimmed.length - 1) return ''
+  return trimmed.slice(dotIndex + 1)
+}
+
+function getAudioMimeTypeFromFile(file: File) {
+  if (file.type && file.type.toLowerCase().startsWith('audio/')) {
+    return file.type
+  }
+  const extension = getFileExtension(file.name)
+  return knownAudioMimeByExtension[extension] ?? 'audio/mpeg'
 }
 
 async function readAudioDurationSeconds(blob: Blob): Promise<number | null> {
@@ -142,19 +167,17 @@ export function NewSessionModal({
   const isUploadDragActiveRef = useRef(false)
   const coacheeTriggerRef = useRef<any>(null)
   const reportTypeTriggerRef = useRef<any>(null)
-  const pendingSessionIdRef = useRef<string | null>(null)
   const [coacheeDropdownMaxHeight, setCoacheeDropdownMaxHeight] = useState<number | null>(null)
   const [reportTypeDropdownMaxHeight, setReportTypeDropdownMaxHeight] = useState<number | null>(null)
 
-  const [audioBlobId, setAudioBlobId] = useState<string | null>(null)
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null)
   const [audioDurationSeconds, setAudioDurationSeconds] = useState<number | null>(null)
-  const [isSavingAudio, setIsSavingAudio] = useState(false)
+  const [shouldSaveAudio, setShouldSaveAudio] = useState(false)
   const [audioForTranscription, setAudioForTranscription] = useState<{ blob: Blob; mimeType: string } | null>(null)
   const { height: windowHeight } = useWindowDimensions()
   const templates = data.templates ?? []
   const defaultTemplateId = useMemo(() => {
-    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'standaard verslag')
+    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'standaard samenvatting')
     return (standardTemplate ?? templates[0])?.id ?? null
   }, [templates])
   const selectedTemplate = useMemo(() => templates.find((template) => template.id === selectedTemplateId) ?? null, [selectedTemplateId, templates])
@@ -183,10 +206,9 @@ export function NewSessionModal({
     setSelectedTemplateId(defaultTemplateId)
     setSessionTitle(buildDefaultSessionTitle(data.sessions.map((session) => session.title)))
     setSelectedAudioFile(null)
-    setAudioBlobId(null)
     setAudioPreviewUrl(null)
     setAudioDurationSeconds(null)
-    setIsSavingAudio(false)
+    setShouldSaveAudio(false)
     setAudioForTranscription(null)
     setIsMinimized(false)
     setIsCloseWarningVisible(false)
@@ -194,7 +216,6 @@ export function NewSessionModal({
     setIsUploadDragActive(false)
     setCoacheeDropdownMaxHeight(null)
     setReportTypeDropdownMaxHeight(null)
-    pendingSessionIdRef.current = null
   }, [visible])
 
   useEffect(() => {
@@ -359,10 +380,10 @@ export function NewSessionModal({
   const title =
     step === 'select'
       ? 'Nieuwe sessie'
-      : step === 'consent'
+        : step === 'consent'
         ? 'Toestemming voor opname bevestigen'
         : step === 'upload'
-          ? 'MP3 bestand uploaden'
+          ? 'Bestand uploaden'
           : step === 'recording'
             ? 'Opnemen'
             : 'Gesprek opgenomen'
@@ -422,10 +443,11 @@ export function NewSessionModal({
     if (typeof document === 'undefined') return
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = 'audio/mpeg,.mp3'
+    input.accept = 'audio/*,.mp3,.m4a,.mp4,.aac,.wav,.ogg,.opus,.webm,.flac'
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
+      if (!isAudioFile(file)) return
       setSelectedAudioFile(file)
     }
     input.click()
@@ -436,15 +458,16 @@ export function NewSessionModal({
     window.open('https://www.coachscribe.nl/toestemming-vragen', '_blank', 'noopener,noreferrer')
   }
 
-  function isMp3File(file: File) {
+  function isAudioFile(file: File) {
     if (!file) return false
-    if (file.type === 'audio/mpeg') return true
-    return file.name.toLowerCase().endsWith('.mp3')
+    if (file.type && file.type.toLowerCase().startsWith('audio/')) return true
+    const extension = getFileExtension(file.name)
+    return Boolean(knownAudioMimeByExtension[extension])
   }
 
   function handleDroppedFile(file: File | null) {
     if (!file) return
-    if (!isMp3File(file)) return
+    if (!isAudioFile(file)) return
     setSelectedAudioFile(file)
   }
 
@@ -518,41 +541,29 @@ export function NewSessionModal({
 
   async function saveSelectedFileToAudioStore() {
     if (!selectedAudioFile) return
-    if (isSavingAudio) return
-    setIsSavingAudio(true)
-    const mimeType = selectedAudioFile.type || 'audio/mpeg'
+    const mimeType = getAudioMimeTypeFromFile(selectedAudioFile)
     const detectedDurationSeconds = await readAudioDurationSeconds(selectedAudioFile)
     setAudioDurationSeconds(detectedDurationSeconds)
     setAudioForTranscription({ blob: selectedAudioFile, mimeType })
     setAudioPreviewUrl(URL.createObjectURL(selectedAudioFile))
     setStep('recorded')
-    try {
-      const encryptedBlob = await e2ee.encryptAudioBlobForStorage({ audioBlob: selectedAudioFile, mimeType })
-      const created = await createAudioBlobRemote({ audioBlob: encryptedBlob, mimeType: 'application/octet-stream' })
-      const nextId = String(created.audioBlobId || '').trim()
-      if (!nextId) {
-        throw new Error('Geen audio id teruggekregen van de server.')
-      }
-      setAudioBlobId(nextId)
-    } catch (error) {
-      console.error('[NewSessionModal] Failed to save uploaded audio file', error)
-    } finally {
-      setIsSavingAudio(false)
-    }
   }
 
   function handleClose() {
     recorder.reset()
     setAudioPreviewUrl(null)
-    setAudioBlobId(null)
     setSelectedAudioFile(null)
-    setIsSavingAudio(false)
+    setShouldSaveAudio(false)
     setAudioForTranscription(null)
     onClose()
   }
 
   function handleBackdropPress() {
-    setIsCloseWarningVisible(true)
+    if (step === 'recording') {
+      setIsMinimized(true)
+      return
+    }
+    handleClose()
   }
 
   async function createAndOpenSession(values: { kind: 'recording' | 'upload' }) {
@@ -562,7 +573,7 @@ export function NewSessionModal({
       coacheeId: selectedCoachee?.id ?? null,
       title: sessionTitle,
       kind: values.kind,
-      audioBlobId: audioBlobId ?? null,
+      audioBlobId: null,
       audioDurationSeconds:
         values.kind === 'recording' ? Math.max(0, recorder.elapsedSeconds) : (Number.isFinite(audioDurationSeconds) ? audioDurationSeconds : null),
       uploadFileName: values.kind === 'upload' ? selectedAudioFile?.name ?? null : null,
@@ -571,70 +582,36 @@ export function NewSessionModal({
     })
 
     if (!createdSessionId) return
-    if (!audioBlobId) {
-      pendingSessionIdRef.current = createdSessionId
+
+    try {
+      await setPendingPreviewAudio({
+        sessionId: createdSessionId,
+        blob: audioForTranscription.blob,
+        mimeType: audioForTranscription.mimeType,
+        shouldSaveAudio,
+        summaryTemplate,
+      })
+    } catch (error) {
+      console.error('[NewSessionModal] Failed to persist raw audio preview', error)
     }
 
     const nextAudioForTranscription = audioForTranscription
     onOpenSession(createdSessionId)
     handleClose()
 
-    void (async () => {
-      try {
-        console.log('[transcription][new-session] start', { sessionId: createdSessionId, mimeType: nextAudioForTranscription.mimeType })
-        const { transcript, summary } = await transcribeAudio({
-          audioBlob: nextAudioForTranscription.blob,
-          mimeType: nextAudioForTranscription.mimeType,
-          languageCode: 'nl',
-        })
-        console.log('[transcription][new-session] transcript-received', {
-          sessionId: createdSessionId,
-          transcriptLength: transcript.length,
-          hasSummary: Boolean(String(summary || '').trim()),
-        })
-        const cleanedSummary = String(summary || '').trim()
-        if (cleanedSummary) {
-          updateSession(createdSessionId, {
-            transcript,
-            summary: cleanedSummary,
-            transcriptionStatus: 'done',
-            transcriptionError: null,
-          })
-        } else {
-          console.log('[transcription][new-session] summary-generate-start', { sessionId: createdSessionId })
-          updateSession(createdSessionId, {
-            transcript,
-            transcriptionStatus: 'generating',
-            transcriptionError: null,
-          })
-          const generatedSummary = await generateSummary({
-            transcript,
-            template: summaryTemplate,
-          })
-          updateSession(createdSessionId, {
-            summary: generatedSummary,
-            transcriptionStatus: 'done',
-            transcriptionError: null,
-          })
-          console.log('[transcription][new-session] summary-generate-done', { sessionId: createdSessionId, summaryLength: generatedSummary.length })
-        }
-      } catch (error) {
-        console.error('[NewSessionModal] Transcription failed:', error)
-        updateSession(createdSessionId, {
-          transcriptionStatus: 'error',
-          transcriptionError: normalizeTranscriptionError(error),
-        })
-      }
-    })()
+    void processSessionAudio({
+      sessionId: createdSessionId,
+      audioBlob: nextAudioForTranscription.blob,
+      mimeType: nextAudioForTranscription.mimeType,
+      shouldSaveAudio,
+      summaryTemplate,
+      initialAudioBlobId: null,
+      e2ee,
+      updateSession,
+    }).catch((error) => {
+      console.error('[NewSessionModal] Session audio processing failed', { sessionId: createdSessionId, error })
+    })
   }
-
-  useEffect(() => {
-    if (!audioBlobId) return
-    const pendingSessionId = pendingSessionIdRef.current
-    if (!pendingSessionId) return
-    updateSession(pendingSessionId, { audioBlobId })
-    pendingSessionIdRef.current = null
-  }, [audioBlobId, updateSession])
 
   useEffect(() => {
     if (!visible) return
@@ -654,7 +631,6 @@ export function NewSessionModal({
     if (step !== 'recording') return
     if (recorder.status !== 'ready') return
     if (!recorder.recordedBlob || !recorder.recordedMimeType) return
-    if (isSavingAudio) return
 
     const blob = recorder.recordedBlob as Blob
     const mimeType = recorder.recordedMimeType as string
@@ -662,24 +638,7 @@ export function NewSessionModal({
     setAudioDurationSeconds(Math.max(0, recorder.elapsedSeconds))
     setAudioPreviewUrl(URL.createObjectURL(blob))
     setStep('recorded')
-
-    setIsSavingAudio(true)
-    ;(async () => {
-      try {
-        const encryptedBlob = await e2ee.encryptAudioBlobForStorage({ audioBlob: blob, mimeType })
-        const created = await createAudioBlobRemote({ audioBlob: encryptedBlob, mimeType: 'application/octet-stream' })
-        const nextId = String(created.audioBlobId || '').trim()
-        if (!nextId) {
-          throw new Error('Geen audio id teruggekregen van de server.')
-        }
-        setAudioBlobId(nextId)
-      } catch (error) {
-        console.error('[NewSessionModal] Failed to save recorded audio', error)
-      } finally {
-        setIsSavingAudio(false)
-      }
-    })()
-  }, [isSavingAudio, recorder.recordedBlob, recorder.recordedMimeType, recorder.status, step])
+  }, [recorder.elapsedSeconds, recorder.recordedBlob, recorder.recordedMimeType, recorder.status, step])
 
   if (!isRendered) return null
 
@@ -837,7 +796,7 @@ export function NewSessionModal({
                 leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
               />
               <SessionOptionRow
-                label="MP3 bestand uploaden"
+                label="Bestand uploaden"
                 isSelected={selectedOption === 'upload'}
                 onPress={() => setSelectedOption('upload')}
                 leftIcon={<Mp3UploadIcon />}
@@ -955,11 +914,21 @@ export function NewSessionModal({
                 <View style={styles.audioPreviewCard}>
                   {/* Audio preview */}
                   <AudioPlayerCard
-                    audioBlobId={audioBlobId}
+                    audioBlobId={null}
                     audioDurationSeconds={audioDurationSeconds}
                     audioUrlOverride={audioPreviewUrl}
-                    isEncrypting={isSavingAudio}
                   />
+                  <Pressable
+                    onPress={() => setShouldSaveAudio((value) => !value)}
+                    style={({ hovered }) => [styles.audioSaveToggleRow, hovered ? styles.audioSaveToggleRowHovered : undefined]}
+                  >
+                    <Text isSemibold style={styles.audioSaveToggleLabel}>
+                      Audio opslaan
+                    </Text>
+                    <View style={[styles.audioSaveToggleTrack, shouldSaveAudio ? styles.audioSaveToggleTrackOn : styles.audioSaveToggleTrackOff]}>
+                      <View style={[styles.audioSaveToggleThumb, shouldSaveAudio ? styles.audioSaveToggleThumbOn : styles.audioSaveToggleThumbOff]} />
+                    </View>
+                  </Pressable>
                 </View>
               ) : null}
               <Pressable
@@ -1340,7 +1309,8 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...( { position: 'absolute', inset: 0 } as any ),
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(16,18,20,0.22)',
+    ...( { backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' } as any ),
     zIndex: 0,
   },
   backdropPressable: {
@@ -1571,7 +1541,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   footerButtonSecondaryHovered: {
-    backgroundColor: colors.hoverBackground,
+    backgroundColor: 'rgba(0,0,0,0.06)',
   },
   footerButtonSecondaryPressed: {},
   footerButtonSecondaryText: {
@@ -1684,7 +1654,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   closeWarningButtonSecondaryHovered: {
-    backgroundColor: colors.hoverBackground,
+    backgroundColor: 'rgba(0,0,0,0.06)',
   },
   closeWarningButtonSecondaryText: {
     fontSize: 14,
@@ -1737,6 +1707,52 @@ const styles = StyleSheet.create({
   audioPreviewCard: {
     width: '100%',
     padding: 0,
+    position: 'relative',
+  },
+  audioSaveToggleRow: {
+    position: 'absolute',
+    right: 12,
+    bottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+  },
+  audioSaveToggleRowHovered: {
+    backgroundColor: 'rgba(249,249,249,0.98)',
+  },
+  audioSaveToggleLabel: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textStrong,
+  },
+  audioSaveToggleTrack: {
+    width: 34,
+    height: 20,
+    borderRadius: 999,
+    paddingHorizontal: 2,
+    justifyContent: 'center',
+  },
+  audioSaveToggleTrackOff: {
+    backgroundColor: '#D2D2D2',
+  },
+  audioSaveToggleTrackOn: {
+    backgroundColor: colors.selected,
+  },
+  audioSaveToggleThumb: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  audioSaveToggleThumbOff: {
+    alignSelf: 'flex-start',
+  },
+  audioSaveToggleThumbOn: {
+    alignSelf: 'flex-end',
   },
   uploadBody: {
     width: '100%',

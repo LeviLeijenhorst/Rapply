@@ -1,44 +1,51 @@
 import React, { useState } from 'react'
-import { Image, Pressable, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 
 import { AuthCard } from '../components/AuthCard'
 import { CoachscribeLogo } from '../../components/CoachscribeLogo'
-import { CheckmarkIcon } from '../../components/icons/CheckmarkIcon'
 import { Text } from '../../components/Text'
 import { colors } from '../../theme/colors'
 
 type Props = {
   mode: 'inloggen' | 'registreren'
   onStartLogin?: () => void
+  errorMessage?: string | null
 }
 
-export function AuthEntryScreen({ mode, onStartLogin }: Props) {
-  const [hasAgreedToPrivacy, setHasAgreedToPrivacy] = useState(false)
-  const [hasAgreedToTerms, setHasAgreedToTerms] = useState(false)
-  const illustrationSource = require('../../../assets/authhumans_1.png')
+export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
+  const { width } = useWindowDimensions()
+  const isCompact = width < 980
+  const illustrationSource = require('../../../assets/authhumans.png')
+  const [isStartingLogin, setIsStartingLogin] = useState(false)
 
   async function startLogin() {
+    if (isStartingLogin) return
+    setIsStartingLogin(true)
     try {
       onStartLogin?.()
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+      const queryMode = urlParams?.get('mode')
+      const shouldSignUp =
+        mode === 'registreren' || queryMode === 'signup' || (mode === 'inloggen' && queryMode !== 'signin')
+
+      if (shouldSignUp) {
+        const { signUpWithEntra } = await import('../entraAuth')
+        await signUpWithEntra()
+        return
+      }
       const { signInWithEntra } = await import('../entraAuth')
       await signInWithEntra()
     } catch (error) {
+      setIsStartingLogin(false)
       console.error('Entra sign in failed:', error)
       alert('Inloggen mislukt. Probeer het opnieuw.')
     }
   }
 
-  const isActionDisabled = !hasAgreedToPrivacy || !hasAgreedToTerms
-
-  function openLegalPage(url: string) {
-    if (typeof window === 'undefined') return
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }
-
   return (
     <AuthCard>
       {/* Welcome layout */}
-      <View style={styles.layoutRow}>
+      <View style={[styles.layoutRow, isCompact ? styles.layoutColumn : undefined]}>
         {/* Branding panel */}
         <View style={styles.brandingPanel}>
           {/* Brand header */}
@@ -50,7 +57,7 @@ export function AuthEntryScreen({ mode, onStartLogin }: Props) {
           </View>
           {/* Welcome illustration */}
           <View style={styles.illustrationContainer}>
-            <Image source={illustrationSource} resizeMode="contain" style={styles.illustrationImage} />
+            <Image source={illustrationSource} resizeMode="contain" style={[styles.illustrationImage, isCompact ? styles.illustrationImageCompact : undefined]} />
           </View>
         </View>
 
@@ -72,53 +79,23 @@ export function AuthEntryScreen({ mode, onStartLogin }: Props) {
             </Text>
             {/* Continue button */}
             <Pressable
-              onPress={isActionDisabled ? undefined : startLogin}
+              disabled={isStartingLogin}
+              onPress={startLogin}
               style={({ hovered }) => [
                 styles.actionButton,
-                hovered ? styles.actionButtonHovered : undefined,
-                isActionDisabled ? styles.actionButtonDisabled : undefined,
+                isStartingLogin ? styles.actionButtonDisabled : undefined,
+                !isStartingLogin && hovered ? styles.actionButtonHovered : undefined,
               ]}
             >
-              <Text isBold style={styles.actionButtonText}>
-                Doorgaan
-              </Text>
-            </Pressable>
-            {/* Agreement checkbox */}
-            <Pressable style={styles.checkboxRow} onPress={() => setHasAgreedToPrivacy((value) => !value)}>
-              <View style={[styles.checkbox, hasAgreedToPrivacy ? styles.checkboxChecked : undefined]}>
-                {hasAgreedToPrivacy ? <CheckmarkIcon color={colors.selected} width={14} height={12} /> : null}
-              </View>
-              <View style={styles.checkboxTextContainer}>
-                <Text style={styles.checkboxText}>Ik ga akkoord met het privacybeleid</Text>
-                <Text
-                  onPress={(event: any) => {
-                    event?.stopPropagation?.()
-                    openLegalPage('https://www.coachscribe.nl/privacybeleid')
-                  }}
-                  style={styles.checkboxLink}
-                >
-                  Bekijk privacybeleid
+              {isStartingLogin ? (
+                <ActivityIndicator size="small" color={colors.selected} />
+              ) : (
+                <Text isBold style={styles.actionButtonText}>
+                  Doorgaan
                 </Text>
-              </View>
+              )}
             </Pressable>
-
-            <Pressable style={styles.checkboxRow} onPress={() => setHasAgreedToTerms((value) => !value)}>
-              <View style={[styles.checkbox, hasAgreedToTerms ? styles.checkboxChecked : undefined]}>
-                {hasAgreedToTerms ? <CheckmarkIcon color={colors.selected} width={14} height={12} /> : null}
-              </View>
-              <View style={styles.checkboxTextContainer}>
-                <Text style={styles.checkboxText}>Ik ga akkoord met de gebruikersovereenkomst</Text>
-                <Text
-                  onPress={(event: any) => {
-                    event?.stopPropagation?.()
-                    openLegalPage('https://www.coachscribe.nl/gebruikersovereenkomst')
-                  }}
-                  style={styles.checkboxLink}
-                >
-                  Bekijk gebruikersovereenkomst
-                </Text>
-              </View>
-            </Pressable>
+            {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
           </View>
         </View>
       </View>
@@ -131,6 +108,10 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     minHeight: 560,
+  },
+  layoutColumn: {
+    flexDirection: 'column',
+    minHeight: 0,
   },
   brandingPanel: {
     flexGrow: 1,
@@ -163,6 +144,10 @@ const styles = StyleSheet.create({
   illustrationImage: {
     width: 420,
     height: 320,
+  },
+  illustrationImageCompact: {
+    width: 300,
+    height: 220,
   },
   welcomePanel: {
     flexGrow: 1,
@@ -206,50 +191,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#F6E6F0',
   },
   actionButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.85,
   },
   actionButtonText: {
     fontSize: 14,
     lineHeight: 18,
     color: colors.selected,
   },
-  checkboxRow: {
-    width: '100%',
-    maxWidth: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#FFFFFF',
-  },
-  checkboxText: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#FFFFFF',
-  },
-  checkboxTextContainer: {
-    flex: 1,
-    gap: 2,
-  },
-  checkboxLink: {
+  errorText: {
     fontSize: 13,
     lineHeight: 18,
-    color: '#FFFFFF',
-    textDecorationLine: 'underline',
-    ...( { cursor: 'pointer' } as any ),
+    color: '#FFE5E5',
   },
 })
 

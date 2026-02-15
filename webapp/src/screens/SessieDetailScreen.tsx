@@ -38,7 +38,7 @@ import {
 import { isUnassignedCoacheeName, unassignedCoacheeLabel } from '../utils/coachee'
 import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
 import { buildCoacheeTranscriptsSystemMessages, buildConversationTranscriptSystemMessages } from '../utils/quickQuestionsContext'
-import { getPendingPreviewAudio } from '../audio/pendingPreviewStore'
+import { getPendingPreviewAudio, retainPendingPreviewAudio } from '../audio/pendingPreviewStore'
 import { RichTextEditorModal } from '../components/editor/RichTextEditorModal'
 import { normalizeTranscriptionError } from '../utils/transcriptionError'
 
@@ -77,6 +77,7 @@ export function SessieDetailScreen({
   const isWrittenSession = session?.kind === 'written'
   const writtenReportText = data.writtenReports.find((report) => report.sessionId === sessionId)?.text ?? ''
   const hasTranscript = Boolean(session?.transcript && session.transcript.trim())
+  const hasSavedAudio = Boolean(String(session?.audioBlobId || '').trim())
 
   const [activeTabKey, setActiveTabKey] = useState<ConversationTabKey>('snelleVragen')
   const [composerText, setComposerText] = useState('')
@@ -161,6 +162,7 @@ export function SessieDetailScreen({
   }
 
   useEffect(() => {
+    const releaseRetention = retainPendingPreviewAudio(sessionId)
     let isCancelled = false
     let nextUrl: string | null = null
 
@@ -184,6 +186,7 @@ export function SessieDetailScreen({
     return () => {
       isCancelled = true
       if (nextUrl) URL.revokeObjectURL(nextUrl)
+      releaseRetention()
     }
   }, [sessionId])
 
@@ -633,14 +636,15 @@ export function SessieDetailScreen({
         ) : (
           <ScrollView style={styles.mobileScroll} contentContainerStyle={styles.mobileScrollContent} showsVerticalScrollIndicator={false}>
             <>
-              {/* Audio */}
-              <AudioPlayerCard
-                ref={audioPlayerRef}
-                audioBlobId={session?.audioBlobId ?? null}
-                audioDurationSeconds={session?.audioDurationSeconds ?? null}
-                audioUrlOverride={pendingPreviewAudioUrl}
-                onCurrentSecondsChange={setCurrentAudioSeconds}
-              />
+              {hasSavedAudio || pendingPreviewAudioUrl ? (
+                <AudioPlayerCard
+                  ref={audioPlayerRef}
+                  audioBlobId={session?.audioBlobId ?? null}
+                  audioDurationSeconds={session?.audioDurationSeconds ?? null}
+                  audioUrlOverride={pendingPreviewAudioUrl}
+                  onCurrentSecondsChange={setCurrentAudioSeconds}
+                />
+              ) : null}
               {/* Report */}
               <View style={styles.reportCard}>
                   <ReportPanel
@@ -926,14 +930,15 @@ export function SessieDetailScreen({
               </View>
             ) : (
               <ScrollView style={styles.leftScroll} contentContainerStyle={styles.leftScrollContent} showsVerticalScrollIndicator={false}>
-                {/* Audio card */}
-                <AudioPlayerCard
-                  ref={audioPlayerRef}
-                  audioBlobId={session?.audioBlobId ?? null}
-                  audioDurationSeconds={session?.audioDurationSeconds ?? null}
-                  audioUrlOverride={pendingPreviewAudioUrl}
-                  onCurrentSecondsChange={setCurrentAudioSeconds}
-                />
+                {hasSavedAudio || pendingPreviewAudioUrl ? (
+                  <AudioPlayerCard
+                    ref={audioPlayerRef}
+                    audioBlobId={session?.audioBlobId ?? null}
+                    audioDurationSeconds={session?.audioDurationSeconds ?? null}
+                    audioUrlOverride={pendingPreviewAudioUrl}
+                    onCurrentSecondsChange={setCurrentAudioSeconds}
+                  />
+                ) : null}
                 {/* Report card */}
                 <View style={styles.reportCard}>
                   <ReportPanel

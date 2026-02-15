@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
+import { Linking, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 
 import { colors } from '../theme/colors'
 import { AnimatedMainContent } from './AnimatedMainContent'
@@ -27,14 +27,15 @@ import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { CoacheeUpsertModal } from './coachees/CoacheeUpsertModal'
 import { EmptyPageMessage } from './EmptyPageMessage'
 import { AppLoadingScreen } from './AppLoadingScreen'
-import { PrivacyPolicyModal } from './settings/PrivacyPolicyModal'
-import { privacyPolicyNlText } from '../content/privacyPolicyNl'
 import { useBillingUsage } from '../hooks/useBillingUsage'
 import { useAudioUploadQueue } from '../audio/useAudioUploadQueue'
 import { callSecureApi } from '../services/secureApi'
 import { useE2ee } from '../e2ee/E2eeProvider'
-import { clearPendingPreviewAudio, listPendingPreviewAudioTasks } from '../audio/pendingPreviewStore'
+import { clearPendingPreviewAudio, clearPendingPreviewAudioIfEligible, listPendingPreviewAudioTasks } from '../audio/pendingPreviewStore'
 import { processSessionAudio } from '../audio/processSessionAudio'
+import { AdminFeedbackScreen } from '../screens/AdminFeedbackScreen'
+import { ChevronRightIcon } from './icons/ChevronRightIcon'
+import { CircleCloseIcon } from './icons/CircleCloseIcon'
 
 type AnchorPoint = { x: number; y: number }
 type OverlayScreenKey = 'archief'
@@ -47,6 +48,7 @@ type RouteState =
   | { kind: 'mijn-praktijk' }
   | { kind: 'geschrevenVerslag' }
   | { kind: 'archief' }
+  | { kind: 'admin' }
 
 function stripPrefix(value: string, prefix: string) {
   return value.startsWith(`${prefix}-`) ? value.slice(prefix.length + 1) : value
@@ -72,6 +74,7 @@ function parseRouteFromPath(pathname: string): RouteState {
   if (parts[0] === 'mijn-praktijk') return { kind: 'mijn-praktijk' }
   if (parts[0] === 'geschreven-verslag') return { kind: 'geschrevenVerslag' }
   if (parts[0] === 'archief') return { kind: 'archief' }
+  if (parts[0] === 'admin') return { kind: 'admin' }
   return { kind: 'coachees' }
 }
 
@@ -83,12 +86,15 @@ function buildPathFromRoute(route: RouteState): string {
   if (route.kind === 'templates') return '/templates'
   if (route.kind === 'mijn-praktijk') return '/mijn-praktijk'
   if (route.kind === 'geschrevenVerslag') return '/geschreven-verslag'
+  if (route.kind === 'admin') return '/admin'
   return '/archief'
 }
 
 type Props = {
   onLogout: () => void
 }
+
+const PRIVACY_BELEID_URL = 'https://www.coachscribe.nl/privacybeleid'
 
 function parseDeleteAccountErrorMessage(error: unknown): string {
   const fallback = 'Verwijderen mislukt. Probeer het alsjeblieft later opnieuw.'
@@ -117,11 +123,11 @@ function parseDeleteAccountErrorMessage(error: unknown): string {
 
 export function AppShell({ onLogout }: Props) {
   const { width } = useWindowDimensions()
-  const isTooSmall = width < 420
+  const isTooSmall = width < 320
   const isSidebarCompact = width < 700
   const { data, createCoachee, isAppDataLoaded, updateSession } = useLocalAppData()
   const e2ee = useE2ee()
-  const { usedMinutes, totalMinutes } = useBillingUsage()
+  const { usedMinutes, totalMinutes, isLoading: isUsageLoading } = useBillingUsage()
   useAudioUploadQueue(true)
   const hasResumedPendingAudioRef = useRef(false)
 
@@ -133,6 +139,7 @@ export function AppShell({ onLogout }: Props) {
   const [newSessionCoacheeId, setNewSessionCoacheeId] = useState<string | null>(null)
   const [isGeschrevenVerslagOpen, setIsGeschrevenVerslagOpen] = useState(false)
   const [overlayScreenKey, setOverlayScreenKey] = useState<OverlayScreenKey | null>(null)
+  const [isAdminScreenOpen, setIsAdminScreenOpen] = useState(false)
 
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false)
   const [settingsMenuAnchorPoint, setSettingsMenuAnchorPoint] = useState<AnchorPoint | null>(null)
@@ -141,11 +148,11 @@ export function AppShell({ onLogout }: Props) {
   const [isMyAccountModalOpen, setIsMyAccountModalOpen] = useState(false)
   const [isMySubscriptionModalOpen, setIsMySubscriptionModalOpen] = useState(false)
   const [isCoacheeModalOpen, setIsCoacheeModalOpen] = useState(false)
-  const [isPrivacyPolicyModalOpen, setIsPrivacyPolicyModalOpen] = useState(false)
   const [previousRoute, setPreviousRoute] = useState<RouteState | null>(null)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [isDeleteAccountConfirmModalOpen, setIsDeleteAccountConfirmModalOpen] = useState(false)
   const [deleteAccountErrorMessage, setDeleteAccountErrorMessage] = useState<string | null>(null)
+  const [isE2eeSetupBannerDismissed, setIsE2eeSetupBannerDismissed] = useState(false)
 
   useEffect(() => {
     if (!isAppDataLoaded) return
@@ -163,8 +170,8 @@ export function AppShell({ onLogout }: Props) {
             await clearPendingPreviewAudio(task.sessionId)
             continue
           }
-          if (session.transcriptionStatus === 'done' && session.audioBlobId) {
-            await clearPendingPreviewAudio(task.sessionId)
+          if (session.transcriptionStatus === 'done' && (!task.shouldSaveAudio || Boolean(session.audioBlobId))) {
+            await clearPendingPreviewAudioIfEligible(task.sessionId)
             continue
           }
 
@@ -173,13 +180,11 @@ export function AppShell({ onLogout }: Props) {
               sessionId: task.sessionId,
               audioBlob: task.blob,
               mimeType: task.mimeType,
+              shouldSaveAudio: task.shouldSaveAudio,
               summaryTemplate: task.summaryTemplate,
               initialAudioBlobId: session.audioBlobId ?? null,
               e2ee,
               updateSession,
-              onAudioUploaded: async () => {
-                await clearPendingPreviewAudio(task.sessionId)
-              },
             })
           } catch (error) {
             console.error('[AppShell] Pending audio resume failed', { sessionId: task.sessionId, error })
@@ -198,6 +203,7 @@ export function AppShell({ onLogout }: Props) {
   const applyRoute = useCallback(
     (route: RouteState) => {
       if (route.kind === 'archief') {
+        setIsAdminScreenOpen(false)
         setOverlayScreenKey('archief')
         setIsGeschrevenVerslagOpen(false)
         setSelectedSessieId(null)
@@ -206,6 +212,7 @@ export function AppShell({ onLogout }: Props) {
         return
       }
       if (route.kind === 'geschrevenVerslag') {
+        setIsAdminScreenOpen(false)
         setOverlayScreenKey(null)
         setIsGeschrevenVerslagOpen(true)
         setSelectedSidebarItemKey('sessies')
@@ -215,6 +222,17 @@ export function AppShell({ onLogout }: Props) {
         return
       }
 
+      if (route.kind === 'admin') {
+        setIsAdminScreenOpen(true)
+        setOverlayScreenKey(null)
+        setIsGeschrevenVerslagOpen(false)
+        setSelectedSessieId(null)
+        setSelectedCoacheeId(null)
+        setSessionOriginRoute(null)
+        return
+      }
+
+      setIsAdminScreenOpen(false)
       setOverlayScreenKey(null)
       setIsGeschrevenVerslagOpen(false)
 
@@ -258,7 +276,15 @@ export function AppShell({ onLogout }: Props) {
       setSelectedCoacheeId(null)
       setSessionOriginRoute(null)
     },
-    [setOverlayScreenKey, setIsGeschrevenVerslagOpen, setSelectedCoacheeId, setSelectedSessieId, setSelectedSidebarItemKey, setSessionOriginRoute],
+    [
+      setIsAdminScreenOpen,
+      setOverlayScreenKey,
+      setIsGeschrevenVerslagOpen,
+      setSelectedCoacheeId,
+      setSelectedSessieId,
+      setSelectedSidebarItemKey,
+      setSessionOriginRoute,
+    ],
   )
 
   const navigateTo = useCallback(
@@ -333,6 +359,8 @@ export function AppShell({ onLogout }: Props) {
 
   const mainContentKey = overlayScreenKey
     ? overlayScreenKey
+    : isAdminScreenOpen
+      ? 'admin'
     : isGeschrevenVerslagOpen
       ? 'geschreven-verslag'
       : selectedSessieId
@@ -387,6 +415,7 @@ export function AppShell({ onLogout }: Props) {
 
   const currentRoute = useMemo<RouteState>(() => {
     if (overlayScreenKey === 'archief') return { kind: 'archief' }
+    if (isAdminScreenOpen) return { kind: 'admin' }
     if (isGeschrevenVerslagOpen) return { kind: 'geschrevenVerslag' }
     if (selectedSessieId) return { kind: 'sessie', sessieId: selectedSessieId }
     if (selectedSidebarItemKey === 'coachees') {
@@ -395,7 +424,7 @@ export function AppShell({ onLogout }: Props) {
     if (selectedSidebarItemKey === 'templates') return { kind: 'templates' }
     if (selectedSidebarItemKey === 'mijnPraktijk') return { kind: 'mijn-praktijk' }
     return { kind: 'sessies' }
-  }, [isGeschrevenVerslagOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
+  }, [isAdminScreenOpen, isGeschrevenVerslagOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
 
   const breadcrumbItems = useMemo(() => {
     if (selectedSessieId) {
@@ -426,6 +455,7 @@ export function AppShell({ onLogout }: Props) {
   }, [data.coachees, data.sessions, navigateTo, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey, sessionOriginRoute])
 
   const hasBreadcrumbs = breadcrumbItems.length >= 2
+  const isE2eeSetupBannerVisible = !e2ee.isEnabled && !isE2eeSetupBannerDismissed
 
   const deleteAccount = useCallback(async () => {
     if (isDeletingAccount) return
@@ -470,9 +500,16 @@ export function AppShell({ onLogout }: Props) {
     }
   }, [])
 
+  const submitFeedback = useCallback(async (feedback: string) => {
+    await callSecureApi<{ ok: true }>('/feedback', { message: feedback })
+  }, [])
+
   function renderMainContent() {
     if (!isAppDataLoaded) {
       return <AppLoadingScreen />
+    }
+    if (isAdminScreenOpen) {
+      return <AdminFeedbackScreen />
     }
     if (overlayScreenKey === 'archief') {
       return <ArchiefScreen />
@@ -593,16 +630,38 @@ export function AppShell({ onLogout }: Props) {
         onLogout={onLogout}
         usedMinutes={usedMinutes}
         totalMinutes={totalMinutes}
+        isUsageLoading={isUsageLoading}
       />
+      {isE2eeSetupBannerVisible ? (
+        <View style={[styles.e2eeSetupBar, isSidebarCompact ? styles.e2eeSetupBarCompact : undefined]}>
+          <View style={styles.e2eeSetupBarContent}>
+            <Pressable onPress={e2ee.beginSetup} style={({ hovered }) => [styles.e2eeSetupTrigger, hovered ? styles.e2eeSetupTriggerHovered : undefined]}>
+              <Text isSemibold style={styles.e2eeSetupTriggerText}>
+                End-to-end encryptie instellen
+              </Text>
+              <ChevronRightIcon color="#FFFFFF" size={16} />
+            </Pressable>
+            <Pressable onPress={() => setIsE2eeSetupBannerDismissed(true)} style={({ hovered }) => [styles.e2eeSetupCloseButton, hovered ? styles.e2eeSetupCloseButtonHovered : undefined]}>
+              <CircleCloseIcon size={24} />
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
       {hasBreadcrumbs ? (
-        <View style={[styles.breadcrumbContainer, isSidebarCompact ? styles.breadcrumbContainerCompact : undefined]}>
+        <View
+          style={[
+            styles.breadcrumbContainer,
+            isSidebarCompact ? styles.breadcrumbContainerCompact : undefined,
+            isE2eeSetupBannerVisible ? styles.breadcrumbContainerWithE2eeBar : undefined,
+          ]}
+        >
           {/* Breadcrumb bar */}
           <BreadcrumbBar items={breadcrumbItems} />
         </View>
       ) : null}
       {isTooSmall ? (
         <View style={styles.tooSmallContainer}>
-          <Text style={styles.tooSmallText}>Deze webapp is niet ontworpen voor apparaten smaller dan 420px.</Text>
+          <Text style={styles.tooSmallText}>Deze webapp is niet ontworpen voor apparaten smaller dan 320px.</Text>
         </View>
       ) : (
         <>
@@ -634,7 +693,13 @@ export function AppShell({ onLogout }: Props) {
               }}
             />
             {/* Main content */}
-            <View style={[styles.mainContent, hasBreadcrumbs ? styles.mainContentWithBreadcrumbs : undefined]}>
+            <View
+              style={[
+                styles.mainContent,
+                hasBreadcrumbs ? styles.mainContentWithBreadcrumbs : undefined,
+                isE2eeSetupBannerVisible ? (hasBreadcrumbs ? styles.mainContentWithE2eeBarAndBreadcrumbs : styles.mainContentWithE2eeBar) : undefined,
+              ]}
+            >
               <AnimatedMainContent contentKey={mainContentKey}>{renderMainContent()}</AnimatedMainContent>
             </View>
           </View>
@@ -668,7 +733,11 @@ export function AppShell({ onLogout }: Props) {
             onOpenPrivacy={() => {
               setIsSettingsMenuOpen(false)
               setSettingsMenuAnchorPoint(null)
-              setIsPrivacyPolicyModalOpen(true)
+              if (typeof window !== 'undefined') {
+                window.open(PRIVACY_BELEID_URL, '_blank', 'noopener,noreferrer')
+                return
+              }
+              void Linking.openURL(PRIVACY_BELEID_URL)
             }}
           />
 
@@ -728,11 +797,10 @@ export function AppShell({ onLogout }: Props) {
           />
 
           <MySubscriptionModal visible={isMySubscriptionModalOpen} onClose={() => setIsMySubscriptionModalOpen(false)} />
-          <FeedbackModal visible={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} />
-          <PrivacyPolicyModal
-            visible={isPrivacyPolicyModalOpen}
-            text={privacyPolicyNlText}
-            onClose={() => setIsPrivacyPolicyModalOpen(false)}
+          <FeedbackModal
+            visible={isFeedbackModalOpen}
+            onClose={() => setIsFeedbackModalOpen(false)}
+            onContinue={submitFeedback}
           />
           <CoacheeUpsertModal
             visible={isCoacheeModalOpen}
@@ -773,8 +841,62 @@ const styles = StyleSheet.create({
     ...( { left: 264, right: 24 } as any ),
     zIndex: 2,
   },
+  breadcrumbContainerWithE2eeBar: {
+    top: 112,
+  },
   breadcrumbContainerCompact: {
     ...( { left: 96, right: 12 } as any ),
+  },
+  e2eeSetupBar: {
+    position: 'absolute',
+    top: 72,
+    ...( { left: 240, right: 0 } as any ),
+    zIndex: 2,
+    height: 40,
+    backgroundColor: colors.selected,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 0,
+  },
+  e2eeSetupBarCompact: {
+    ...( { left: 72, right: 0 } as any ),
+  },
+  e2eeSetupBarContent: {
+    width: '100%',
+    height: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  e2eeSetupTrigger: {
+    height: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'transparent',
+  },
+  e2eeSetupTriggerHovered: {
+    opacity: 0.88,
+  },
+  e2eeSetupTriggerText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#FFFFFF',
+  },
+  e2eeSetupCloseButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    height: 40,
+    minWidth: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  e2eeSetupCloseButtonHovered: {
+    backgroundColor: 'rgba(0,0,0,0.12)',
   },
   contentRow: {
     flex: 1,
@@ -788,6 +910,12 @@ const styles = StyleSheet.create({
   },
   mainContentWithBreadcrumbs: {
     paddingTop: 48,
+  },
+  mainContentWithE2eeBar: {
+    paddingTop: 64,
+  },
+  mainContentWithE2eeBarAndBreadcrumbs: {
+    paddingTop: 88,
   },
   mainContentText: {
     fontSize: 16,
