@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native"
 import { Text } from "./Text"
 import { colors, radius, safeAreaBottom, safeAreaTop, spacing, typography, vibrate } from "./constants"
 import { useNavigation } from "@react-navigation/native"
+import { useRoute } from "@react-navigation/native"
 import LoginArrow from "./svgs/LoginArrow"
 import LogoOnLight from "./svgs/LogoOnLight"
 import { isSignInInFlight, signIn } from "@/services/auth"
@@ -11,7 +12,22 @@ import { Alert } from "react-native"
 
 export default function AuthWelcomeScreen() {
   const navigation = useNavigation<any>()
+  const route = useRoute<any>()
   const [isSigningIn, setIsSigningIn] = React.useState(false)
+  const mode = route?.params?.mode === "signup" ? "signup" : "signin"
+  const autoStart = route?.params?.autoStart === true || route?.params?.direct === true
+
+  function startEntra() {
+    setIsSigningIn(true)
+    signIn(mode === "signup" ? { screenHint: "signup" } : undefined)
+      .then(() => navigation.reset({ index: 0, routes: [{ name: "Loading" }] }))
+      .catch((e: any) => {
+        const message = String(e?.message || e || "Login failed")
+        logger.error("[auth] signIn failed", { message })
+        Alert.alert("Inloggen mislukt", message)
+        setIsSigningIn(false)
+      })
+  }
 
   useEffect(() => {
     // If the app briefly returns to this screen during an auth callback, hide the button to avoid a flash.
@@ -21,6 +37,12 @@ export default function AuthWelcomeScreen() {
       })
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!autoStart) return
+    if (isSigningIn) return
+    startEntra()
+  }, [autoStart, isSigningIn])
 
   return (
     <View style={styles.root}>
@@ -46,15 +68,7 @@ export default function AuthWelcomeScreen() {
               style={({ pressed }) => [styles.secondaryBtn, pressed && { opacity: 0.9 }]}
               onPress={() => {
                 vibrate()
-                setIsSigningIn(true)
-                signIn()
-                  .then(() => navigation.reset({ index: 0, routes: [{ name: "Loading" }] }))
-                  .catch((e: any) => {
-                    const message = String(e?.message || e || "Login failed")
-                    logger.error("[auth] signIn failed", { message })
-                    Alert.alert("Inloggen mislukt", message)
-                    setIsSigningIn(false)
-                  })
+                startEntra()
               }}
             >
               <View style={styles.btnRow}>

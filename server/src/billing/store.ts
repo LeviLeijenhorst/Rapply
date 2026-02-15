@@ -1,4 +1,5 @@
 import { freeSeconds, getIncludedSecondsForPlanKey, type PlanKey } from "./constants"
+import { buildCycleKey, clampNonNegative } from "./cycleMath"
 import { queryOne, execute } from "../db"
 
 export type BillingStatus = {
@@ -15,17 +16,7 @@ export type BillingStatus = {
   remainingSeconds: number
 }
 
-function buildCycleKey(cycleStartMs: number | null, cycleEndMs: number | null): string | null {
-  if (!cycleStartMs || !cycleEndMs) return null
-  return `${cycleStartMs}-${cycleEndMs}`
-}
-
-function clampNonNegative(value: unknown): number {
-  const n = typeof value === "number" ? value : Number(value)
-  if (!Number.isFinite(n)) return 0
-  return Math.max(0, Math.floor(n))
-}
-
+// Intent: ensureBillingUser
 export async function ensureBillingUser(userId: string): Promise<void> {
   await execute(
     `
@@ -37,6 +28,7 @@ export async function ensureBillingUser(userId: string): Promise<void> {
   )
 }
 
+// Intent: readBillingStatus
 export async function readBillingStatus(params: { userId: string; planKey: PlanKey | null; cycleStartMs: number | null; cycleEndMs: number | null }): Promise<BillingStatus> {
   const { userId, planKey, cycleStartMs, cycleEndMs } = params
 

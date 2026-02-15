@@ -6,6 +6,7 @@ export const pool = new Pool({
   ssl: env.databaseSsl ? { rejectUnauthorized: false } : undefined,
 })
 
+// Intent: getDatabaseConnectionInfo
 export function getDatabaseConnectionInfo(): { host: string; port: string; database: string; ssl: "on" | "off"; safeUrl: string } {
   const ssl = env.databaseSsl ? "on" : "off"
   try {
@@ -22,21 +23,25 @@ export function getDatabaseConnectionInfo(): { host: string; port: string; datab
   }
 }
 
+// Intent: testDatabaseConnection
 export async function testDatabaseConnection(): Promise<void> {
   await pool.query("select 1")
 }
 
+// Intent: queryOne
 export async function queryOne<T>(text: string, values: unknown[]): Promise<T | null> {
   const result = await pool.query(text, values)
   if (!result.rows?.length) return null
   return result.rows[0] as T
 }
 
+// Intent: queryMany
 export async function queryMany<T>(text: string, values: unknown[]): Promise<T[]> {
   const result = await pool.query(text, values)
   return (result.rows || []) as T[]
 }
 
+// Intent: execute
 export async function execute(text: string, values: unknown[]): Promise<void> {
   await pool.query(text, values)
 }

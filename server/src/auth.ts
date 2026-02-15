@@ -13,18 +13,21 @@ export type AuthenticatedUser = {
 
 export const authImplementationVersion = 7
 
+// Intent: createAuthError
 function createAuthError(message: string) {
   const err: any = new Error(message)
   err.status = 401
   return err as Error
 }
 
+// Intent: createDependencyError
 function createDependencyError(message: string) {
   const err: any = new Error(message)
   err.status = 503
   return err as Error
 }
 
+// Intent: readBearerToken
 function readBearerToken(req: Request): string {
   const authHeader = String(req.headers.authorization || "")
   const match = authHeader.match(/^Bearer\s+(.+)$/i)
@@ -38,6 +41,7 @@ function readBearerToken(req: Request): string {
   return token
 }
 
+// Intent: requireAuthenticatedUser
 export async function requireAuthenticatedUser(req: Request): Promise<AuthenticatedUser> {
   const token = readBearerToken(req)
 

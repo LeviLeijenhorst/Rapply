@@ -4,10 +4,12 @@ import { env } from "./env"
 const credential = new StorageSharedKeyCredential(env.azureStorageAccountName, env.azureStorageAccountKey)
 const serviceClient = new BlobServiceClient(`https://${env.azureStorageAccountName}.blob.core.windows.net`, credential)
 
+// Intent: getTranscriptionUploadsContainerClient
 export function getTranscriptionUploadsContainerClient() {
   return serviceClient.getContainerClient(env.azureStorageTranscriptionUploadsContainer)
 }
 
+// Intent: encodePathPreservingSlashes
 function encodePathPreservingSlashes(value: string): string {
   return String(value || "")
     .split("/")
@@ -15,6 +17,7 @@ function encodePathPreservingSlashes(value: string): string {
     .join("/")
 }
 
+// Intent: createUploadUrl
 export async function createUploadUrl(params: { blobName: string; expiresInSeconds: number }): Promise<{ uploadUrl: string; uploadHeaders: Record<string, string> }> {
   const containerName = env.azureStorageTranscriptionUploadsContainer
   const blobName = params.blobName.replace(/^\/+/, "")

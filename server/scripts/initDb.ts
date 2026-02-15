@@ -10,6 +10,7 @@ const serverDir = path.resolve(__dirname, "..")
 
 dotenv.config({ override: false, path: path.join(serverDir, ".env") })
 
+// Intent: requireString
 function requireString(name: string): string {
   const value = process.env[name]
   const trimmed = typeof value === "string" ? value.trim() : ""
@@ -19,6 +20,7 @@ function requireString(name: string): string {
   return trimmed
 }
 
+// Intent: readSqlFile
 function readSqlFile(filePath: string): string {
   const sql = fs.readFileSync(filePath, "utf8")
   const trimmed = sql.trim()
@@ -28,6 +30,7 @@ function readSqlFile(filePath: string): string {
   return sql
 }
 
+// Recreates the full database schema from migration files in a deterministic order.
 async function main() {
   const databaseUrl = requireString("DATABASE_URL")
   const databaseSsl = String(process.env.DATABASE_SSL || "").trim() === "1"
@@ -44,18 +47,19 @@ async function main() {
     "002_remove_transcript.sql",
     "003_app_data.sql",
     "004_audio_blobs.sql",
-    "005_e2ee.sql",
     "006_templates.sql",
     "007_audio_duration_seconds.sql",
     "008_audio_streams.sql",
     "009_practice_settings.sql",
-    "010_e2ee_recovery_custody.sql",
+    "011_e2ee_v2.sql",
+    "012_e2ee_custody_mode.sql",
   ].map((name) =>
     path.join(sqlDir, name),
   )
 
   try {
     await pool.query("select 1")
+    await pool.query("drop schema if exists public cascade; create schema public;")
     for (const filePath of sqlFilesInOrder) {
       const sql = readSqlFile(filePath)
       await pool.query(sql)

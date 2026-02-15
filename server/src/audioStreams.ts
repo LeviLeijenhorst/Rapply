@@ -15,6 +15,7 @@ export type AudioStreamManifest = {
   chunks: AudioStreamChunk[]
 }
 
+// Intent: createAudioStream
 export async function createAudioStream(params: { userId: string; mimeType: string; createdAtUnixMilliseconds: number }): Promise<{ id: string }> {
   const id = crypto.randomUUID()
   await execute(
@@ -24,6 +25,7 @@ export async function createAudioStream(params: { userId: string; mimeType: stri
   return { id }
 }
 
+// Intent: updateAudioStreamDetails
 export async function updateAudioStreamDetails(params: {
   userId: string
   id: string
@@ -36,6 +38,7 @@ export async function updateAudioStreamDetails(params: {
   )
 }
 
+// Intent: createAudioStreamChunk
 export async function createAudioStreamChunk(params: {
   userId: string
   audioStreamId: string
@@ -58,6 +61,7 @@ export async function createAudioStreamChunk(params: {
   )
 }
 
+// Intent: readAudioStreamManifest
 export async function readAudioStreamManifest(params: { userId: string; id: string }): Promise<AudioStreamManifest | null> {
   const stream = await queryOne<{
     id: string
@@ -94,6 +98,7 @@ export async function readAudioStreamManifest(params: { userId: string; id: stri
   }
 }
 
+// Intent: readAudioStreamChunk
 export async function readAudioStreamChunk(params: { userId: string; id: string; chunkIndex: number }): Promise<{ bytes: Buffer } | null> {
   const row = await queryOne<{ bytes: Buffer }>(
     "select chunks.bytes from public.audio_stream_chunks as chunks join public.audio_streams as streams on streams.id = chunks.audio_stream_id where chunks.audio_stream_id = $1 and chunks.chunk_index = $2 and streams.user_id = $3",

@@ -1,6 +1,7 @@
 import crypto from "crypto"
 import { execute, queryOne } from "./db"
 
+// Intent: createAudioBlob
 export async function createAudioBlob(params: { userId: string; mimeType: string; bytes: Buffer; createdAtUnixMs: number }): Promise<{ id: string }> {
   const id = crypto.randomUUID()
   await execute(
@@ -10,6 +11,7 @@ export async function createAudioBlob(params: { userId: string; mimeType: string
   return { id }
 }
 
+// Intent: readAudioBlob
 export async function readAudioBlob(params: { userId: string; id: string }): Promise<{ mimeType: string; bytes: Buffer } | null> {
   const row = await queryOne<{ mime_type: string; bytes: Buffer }>(
     "select mime_type, bytes from public.audio_blobs where user_id = $1 and id = $2",

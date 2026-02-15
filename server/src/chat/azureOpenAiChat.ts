@@ -1,10 +1,12 @@
 import { env } from "../env"
 import { completeAzureOpenAiChat, type ChatMessage } from "../ai/azureOpenAi"
 
+// Intent: normalizeText
 function normalizeText(value: string) {
   return String(value || "").trim()
 }
 
+// Intent: safeMessages
 function safeMessages(messages: any): ChatMessage[] {
   const arr = Array.isArray(messages) ? messages : []
   const out: ChatMessage[] = []
@@ -25,6 +27,7 @@ function safeMessages(messages: any): ChatMessage[] {
   return out
 }
 
+// Intent: completeChatWithAzureOpenAi
 export async function completeChatWithAzureOpenAi(params: { messages: any; temperature?: unknown }): Promise<string> {
   const deployment = String(env.azureOpenAiChatDeployment || "").trim()
   if (!deployment) {

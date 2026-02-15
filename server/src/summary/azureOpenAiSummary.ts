@@ -1,10 +1,12 @@
 import { env } from "../env"
 import { completeAzureOpenAiChat, type ChatMessage } from "../ai/azureOpenAi"
 
+// Intent: normalizeText
 function normalizeText(value: unknown) {
   return String(value || "").trim()
 }
 
+// Intent: safeClampTranscript
 function safeClampTranscript(transcript: string) {
   const trimmed = normalizeText(transcript)
   if (!trimmed) {
@@ -17,6 +19,7 @@ function safeClampTranscript(transcript: string) {
   return trimmed
 }
 
+// Intent: generateSummaryWithAzureOpenAi
 export async function generateSummaryWithAzureOpenAi(params: { transcript: string; templateKey?: string; template?: { name: string; sections: { title: string; description: string }[] } }): Promise<string> {
   const deployment = String(env.azureOpenAiSummaryDeployment || "").trim()
   if (!deployment) {
@@ -103,6 +106,7 @@ export async function generateSummaryWithAzureOpenAi(params: { transcript: strin
   return summary
 }
 
+// Intent: buildTemplateStructure
 function buildTemplateStructure(template: { name: string; sections: { title: string; description: string }[] }) {
   const sectionGuide = template.sections
     .map((section) => `- ${section.title}: ${normalizeText(section.description) || "Geen extra toelichting."}`)

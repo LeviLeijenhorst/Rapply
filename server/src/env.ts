@@ -2,6 +2,7 @@ import dotenv from "dotenv"
 
 dotenv.config({ override: true })
 
+// Reads a required environment variable and fails fast when it is missing.
 function requireString(name: string): string {
   const value = process.env[name]
   const trimmed = typeof value === "string" ? value.trim() : ""
@@ -11,12 +12,14 @@ function requireString(name: string): string {
   return trimmed
 }
 
+// Reads an optional environment variable and normalizes empty values to null.
 function optionalString(name: string): string | null {
   const value = process.env[name]
   const trimmed = typeof value === "string" ? value.trim() : ""
   return trimmed || null
 }
 
+// Parses a boolean from common string forms used in env files.
 function optionalBooleanFromString(value: string | null): boolean | null {
   if (!value) return null
   const v = value.trim().toLowerCase()
@@ -25,6 +28,7 @@ function optionalBooleanFromString(value: string | null): boolean | null {
   return null
 }
 
+// Parses a numeric value from an env string and rejects invalid numbers.
 function optionalNumberFromString(value: string | null): number | null {
   if (!value) return null
   const numeric = Number(value)
@@ -32,30 +36,25 @@ function optionalNumberFromString(value: string | null): number | null {
   return numeric
 }
 
+// Reads an optional numeric environment variable.
 function optionalNumber(name: string): number | null {
   return optionalNumberFromString(optionalString(name))
 }
 
-function parseStringList(value: string): string | string[] {
+// Parses comma-separated values into a normalized string array.
+function parseStringList(value: string | null): string[] {
   const trimmed = String(value || "").trim()
-  if (!trimmed) return ""
-  const parts = trimmed
+  if (!trimmed) return []
+  return trimmed
     .split(",")
     .map((p) => p.trim())
     .filter(Boolean)
-  return parts.length <= 1 ? trimmed : parts
 }
 
+// Parses an env value as an email allowlist.
 function normalizeEmailList(value: string | null): string[] {
-  if (!value) return []
-  const parsed = parseStringList(value)
-  if (Array.isArray(parsed)) return parsed
-  return parsed ? [parsed] : []
+  return parseStringList(value)
 }
-
-const entraGraphTenantId = optionalString("ENTRA_GRAPH_TENANT_ID") || optionalString("ENTRA_TENANT_ID") || ""
-const entraGraphClientId = optionalString("ENTRA_GRAPH_CLIENT_ID") || optionalString("ENTRA_CLIENT_ID") || ""
-const entraGraphClientSecret = optionalString("ENTRA_GRAPH_CLIENT_SECRET") || optionalString("ENTRA_CLIENT_SECRET") || ""
 
 export const env = {
   runtimeEnvironment: optionalString("NODE_ENV") || "development",
@@ -69,9 +68,9 @@ export const env = {
   entraClientId: requireString("ENTRA_CLIENT_ID"),
   entraClientSecret: requireString("ENTRA_CLIENT_SECRET"),
   entraAudience: parseStringList(requireString("ENTRA_AUDIENCE")),
-  entraGraphTenantId,
-  entraGraphClientId,
-  entraGraphClientSecret,
+  entraGraphTenantId: optionalString("ENTRA_GRAPH_TENANT_ID") || "",
+  entraGraphClientId: optionalString("ENTRA_GRAPH_CLIENT_ID") || "",
+  entraGraphClientSecret: optionalString("ENTRA_GRAPH_CLIENT_SECRET") || "",
   revenueCatSecretKey: optionalString("REVENUECAT_SECRET_KEY"),
   azureOpenAiEndpoint: optionalString("AZURE_OPENAI_ENDPOINT") || "",
   azureOpenAiKey: optionalString("AZURE_OPENAI_KEY") || "",
@@ -81,7 +80,6 @@ export const env = {
   azureSpeechKey: optionalString("AZURE_SPEECH_KEY") || "",
   azureSpeechRegion: optionalString("AZURE_SPEECH_REGION") || "",
   mistralApiKey: optionalString("MISTRAL_API_KEY") || "",
-  mistralChatModel: optionalString("MISTRAL_CHAT_MODEL") || "mistral-small-latest",
   mistralSummaryModel: optionalString("MISTRAL_SUMMARY_MODEL") || "mistral-small-latest",
   mistralTranscriptionModel: optionalString("MISTRAL_TRANSCRIPTION_MODEL") || "voxtral-mini-latest",
   corsAllowedOrigins: optionalString("CORS_ALLOWED_ORIGINS"),
@@ -92,6 +90,13 @@ export const env = {
   fixedTranscriptionTotalMinutes: optionalNumber("FIXED_TRANSCRIPTION_TOTAL_MINUTES") ?? 0,
   testTranscriptionEmails: normalizeEmailList(optionalString("TEST_TRANSCRIPTION_EMAILS")),
   testTranscriptionTotalHours: optionalNumber("TEST_TRANSCRIPTION_TOTAL_HOURS") ?? 80,
-  e2eeEscrowServiceUrl: optionalString("E2EE_ESCROW_SERVICE_URL") || "",
-  e2eeEscrowServiceApiKey: optionalString("E2EE_ESCROW_SERVICE_API_KEY") || "",
+  adminFeedbackEmails: normalizeEmailList(optionalString("ADMIN_FEEDBACK_EMAILS")),
+  kmsProvider: optionalString("KMS_PROVIDER") || "ovh",
+  localKmsMasterKeyBase64: optionalString("LOCAL_KMS_MASTER_KEY_BASE64") || "",
+  ovhKmsBaseUrl: optionalString("OVH_KMS_BASE_URL") || "",
+  ovhKmsServiceKeyId: optionalString("OVH_KMS_SERVICE_KEY_ID") || "",
+  ovhKmsContext: optionalString("OVH_KMS_CONTEXT") || "coachscribe-user-ark",
+  ovhKmsClientCertPath: optionalString("OVH_KMS_CLIENT_CERT_PATH") || "",
+  ovhKmsClientKeyPath: optionalString("OVH_KMS_CLIENT_KEY_PATH") || "",
+  ovhKmsCaPath: optionalString("OVH_KMS_CA_PATH") || "",
 }

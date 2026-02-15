@@ -1,9 +1,11 @@
 import { Csa1DecryptStream, ensureValidAesKey } from "./csa1"
 
+// Trims text-like inputs to a normalized non-null string.
 function normalizeText(value: string) {
   return String(value || "").trim()
 }
 
+// Normalizes punctuation spacing for cleaner transcript text.
 function normalizeSpacing(value: string) {
   return String(value || "")
     .replace(/\s+([,.;:!?])/g, "$1")
@@ -12,6 +14,7 @@ function normalizeSpacing(value: string) {
     .trim()
 }
 
+// Reads a stream fully into memory while enforcing a strict size cap.
 async function readStreamToBuffer(stream: NodeJS.ReadableStream, maxBytes: number): Promise<Buffer> {
   const chunks: Buffer[] = []
   let total = 0
@@ -26,11 +29,7 @@ async function readStreamToBuffer(stream: NodeJS.ReadableStream, maxBytes: numbe
   return Buffer.concat(chunks)
 }
 
-function pickText(response: any): string {
-  const text = normalizeText(String(response?.text || response?.transcript || response?.transcription || response?.result?.text || response?.data?.text || ""))
-  return text
-}
-
+// Formats a floating-point second value as mm:ss.s.
 function formatTimestamp(seconds: number) {
   const s = Number.isFinite(seconds) ? Math.max(0, seconds) : 0
   const minutes = Math.floor(s / 60)
@@ -40,11 +39,13 @@ function formatTimestamp(seconds: number) {
   return `${mm}:${ss}`
 }
 
+// Normalizes provider speaker labels into a stable string key.
 function normalizeSpeakerLabel(value: unknown) {
   const text = normalizeText(String(value || ""))
   return text || "speaker_1"
 }
 
+// Builds a diarized transcript from provider segment output.
 function buildTranscriptFromSegments(response: any): string {
   const segments = Array.isArray(response?.segments) ? response.segments : Array.isArray(response?.result?.segments) ? response.result.segments : null
   if (!segments) return ""
@@ -70,6 +71,7 @@ function buildTranscriptFromSegments(response: any): string {
   return lines.join("\n").trim()
 }
 
+// Decrypts uploaded audio, submits it to Mistral, and returns diarized transcript text.
 export async function runVoxtralTranscriptionFromEncryptedUpload(params: {
   encryptedStream: NodeJS.ReadableStream
   keyBase64: string

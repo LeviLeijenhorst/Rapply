@@ -36,7 +36,7 @@ export default function SignupScreen() {
           vibrate()
           setError(null)
           setLoading(true)
-          signIn()
+          signIn({ screenHint: "signup" })
             .then(() => navigation.reset({ index: 0, routes: [{ name: "Loading" }] }))
             .catch((e: any) => setError(String(e?.message || e || "Account aanmaken mislukt")))
             .finally(() => setLoading(false))

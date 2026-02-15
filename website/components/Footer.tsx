@@ -9,8 +9,8 @@ const navigationLinks = [
   { label: "Coaches", destination: "/coaches" },
   { label: "Veiligheid", destination: "/veiligheid" },
   { label: "Over Ons", destination: "/over-ons" },
-  { label: "Inloggen", destination: "https://app.coachscribe.nl" },
-  { label: "Probeer Gratis", destination: "https://app.coachscribe.nl" },
+  { label: "Inloggen", destination: "https://app.coachscribe.nl/inloggen?direct=1" },
+  { label: "Probeer Gratis", destination: "https://app.coachscribe.nl/inloggen?mode=signup" },
 ];
 
 export default function Footer() {

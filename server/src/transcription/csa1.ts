@@ -1,6 +1,7 @@
 import crypto from "crypto"
 import { Transform } from "stream"
 
+// Intent: ensureValidAesKey
 export function ensureValidAesKey(keyBase64: string) {
   const key = Buffer.from(String(keyBase64 || ""), "base64")
   if (key.length !== 32 && key.length !== 24 && key.length !== 16) {
@@ -20,6 +21,7 @@ export class Csa1DecryptStream extends Transform {
     this.key = key
   }
 
+  // Intent: decrypts incoming encrypted chunks while preserving trailing auth tag bytes.
   _transform(chunk: Buffer, _encoding: BufferEncoding, callback: (error?: Error | null) => void) {
     try {
       let buf = chunk
@@ -61,6 +63,7 @@ export class Csa1DecryptStream extends Transform {
     }
   }
 
+  // Intent: finalizes AES-GCM decryption after setting the trailing auth tag.
   _flush(callback: (error?: Error | null) => void) {
     try {
       if (!this.decipher) {

@@ -4,6 +4,7 @@ import { Csa1DecryptStream, ensureValidAesKey } from "./csa1"
 const CSA1_OVERHEAD_BYTES = 32
 const DEFAULT_FALLBACK_BITRATE_BPS = 64_000
 
+// Intent: readDurationSeconds
 function readDurationSeconds(metadata: any, decryptedSizeBytes?: number): number {
   const value = typeof metadata?.format?.duration === "number" ? metadata.format.duration : 0
   if (Number.isFinite(value) && value > 0) return value
@@ -25,6 +26,7 @@ function readDurationSeconds(metadata: any, decryptedSizeBytes?: number): number
   return 0
 }
 
+// Intent: estimateDurationSecondsFromSizeOnly
 function estimateDurationSecondsFromSizeOnly(params: { decryptedSizeBytes?: number }): number {
   const { decryptedSizeBytes } = params
   if (typeof decryptedSizeBytes !== "number" || !Number.isFinite(decryptedSizeBytes) || decryptedSizeBytes <= 0) {
@@ -34,6 +36,7 @@ function estimateDurationSecondsFromSizeOnly(params: { decryptedSizeBytes?: numb
   return Number.isFinite(estimated) && estimated > 0 ? estimated : 0
 }
 
+// Intent: computeAudioDurationSecondsFromEncryptedUpload
 export async function computeAudioDurationSecondsFromEncryptedUpload(params: {
   encryptedStream: NodeJS.ReadableStream
   keyBase64: string

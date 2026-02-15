@@ -53,9 +53,15 @@ export const NAVIGATION_PERSISTENCE_KEY = "NAVIGATION_STATE"
 const prefix = Linking.createURL("/")
 const config = {
   screens: {
-    Login: {
-      path: "",
+    AuthWelcome: {
+      path: "inloggen",
+      parse: {
+        mode: (value: string) => (value === "signup" ? "signup" : "signin"),
+        autoStart: (value: string) => value === "1" || value === "true",
+        direct: (value: string) => value === "1" || value === "true",
+      },
     },
+    Signup: "registreren",
     Welcome: "welcome",
     Settings: "settings",
   },

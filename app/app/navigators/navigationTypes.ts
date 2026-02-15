@@ -37,8 +37,15 @@ export type AppStackParamList = {
   Signup: undefined
   VerifyEmail: { message?: string } | undefined
   ResetPassword: undefined
-  AuthWelcome: undefined
+  AuthWelcome:
+    | {
+        mode?: "signin" | "signup"
+        autoStart?: boolean
+        direct?: boolean
+      }
+    | undefined
   Loading: undefined
+  KeyCustodySetup: undefined
   ContactFeedback: undefined
   SettingsAccount: undefined
   ChangePassword: undefined

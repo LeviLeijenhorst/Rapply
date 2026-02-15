@@ -22,10 +22,20 @@ npm install
 - **MISTRAL_TRANSCRIPTION_MODEL**: optional (defaults to Voxtral)
 - **CORS_ALLOWED_ORIGINS**: optional for local dev; required for production (comma-separated list)
 - **RATE_LIMIT_WINDOW_MS** and **RATE_LIMIT_MAX_REQUESTS**: optional
+- **ADMIN_FEEDBACK_EMAILS**: optional comma-separated email allowlist for `/admin/feedback/list` (default: `contact@jnlsolutions.nl`)
 - **UNLIMITED_TRANSCRIPTION_EMAILS**: optional comma-separated email list with effectively unlimited transcription minutes
 - **FIXED_TRANSCRIPTION_EMAILS** and **FIXED_TRANSCRIPTION_TOTAL_MINUTES**: optional comma-separated email list that gets a fixed non-expiring minute pool (for example `2000`)
 
-3. Start the server:
+3. Initialize database schema:
+
+```bash
+cd server
+npm run init-db
+```
+
+`init-db` is a clean-start reset and recreates the `public` schema from migration files.
+
+4. Start the server:
 
 ```bash
 cd server

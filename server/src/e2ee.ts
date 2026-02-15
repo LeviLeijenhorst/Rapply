@@ -1,250 +1,462 @@
+import crypto from "node:crypto"
 import { execute, queryMany, queryOne } from "./db"
+import { kmsUnwrapArkBytes, kmsWrapArkBytes } from "./kms"
 
-export type RecoveryCustodyMode = "self" | "escrow"
+export type RecoveryPolicy = "self_service" | "custodian_only" | "hybrid"
+export type E2eeCustodyMode = "server_managed" | "user_managed"
 
-export async function registerDevice(params: { userId: string; deviceId: string; publicKeyJwk: unknown; createdAtUnixMs: number }): Promise<void> {
+export type UserKeyMaterial = {
+  cryptoVersion: number
+  keyVersion: number
+  argon2Salt: string
+  argon2TimeCost: number
+  argon2MemoryCostKib: number
+  argon2Parallelism: number
+  wrappedArkUserPassphrase: string
+  wrappedArkRecoveryCode: string | null
+  recoveryPolicy: RecoveryPolicy
+  custodianThreshold: number | null
+}
+
+export type BootstrapState = {
+  e2eeConfigured: boolean
+  keyVersion: number | null
+  recoveryPolicy: RecoveryPolicy | null
+  custodyMode: E2eeCustodyMode | null
+}
+
+function createArkBytes(): Uint8Array {
+  return crypto.randomBytes(32)
+}
+
+// Intent: ensureServerManagedUserKey
+export async function ensureServerManagedUserKey(params: { userId: string; nowUnixMs: number }): Promise<void> {
+  const row = await queryOne<{ user_id: string }>("select user_id from public.e2ee_user_keys where user_id = $1", [params.userId])
+  if (row) return
+  const arkBytes = createArkBytes()
+  const wrappedArkServerKms = await kmsWrapArkBytes(arkBytes)
   await execute(
     `
-      insert into public.e2ee_devices (user_id, device_id, public_key_jwk, created_at_unix_ms)
-      values ($1, $2, $3, $4)
-      on conflict (user_id, device_id)
-      do update set public_key_jwk = excluded.public_key_jwk
+      insert into public.e2ee_user_keys (
+        user_id,
+        crypto_version,
+        key_version,
+        argon2_salt,
+        argon2_time_cost,
+        argon2_memory_cost_kib,
+        argon2_parallelism,
+        wrapped_ark_user_passphrase,
+        wrapped_ark_recovery_code,
+        wrapped_ark_server_kms,
+        recovery_policy,
+        custody_mode,
+        custodian_threshold,
+        created_at_unix_ms,
+        updated_at_unix_ms
+      )
+      values ($1, 1, 1, null, null, null, null, null, null, $2, 'self_service', 'server_managed', null, $3, $3)
     `,
-    [params.userId, params.deviceId, params.publicKeyJwk, params.createdAtUnixMs],
-  )
-
-  await execute(
-    `
-      insert into public.e2ee_device_keys (user_id, device_id, wrapped_user_data_key_for_device, updated_at_unix_ms)
-      values ($1, $2, null, $3)
-      on conflict (user_id, device_id)
-      do nothing
-    `,
-    [params.userId, params.deviceId, params.createdAtUnixMs],
+    [params.userId, wrappedArkServerKms, params.nowUnixMs],
   )
 }
 
-export async function bootstrap(params: {
-  userId: string
-  deviceId: string
-}): Promise<{
-  e2eeEnabled: boolean
-  wrappedUserDataKeyForDevice: string | null
-  recoveryKeyUpdatedAtMs: number | null
-  recoveryCustodyMode: RecoveryCustodyMode | null
-  hasEscrowedRecoveryKey: boolean
-}> {
-  const userRow = await queryOne<{
-    wrapped_user_data_key_for_recovery: string
-    recovery_key_updated_at_unix_ms: number
-    recovery_custody_mode: RecoveryCustodyMode | null
-    escrow_reference_id: string | null
-  }>(
-    "select wrapped_user_data_key_for_recovery, recovery_key_updated_at_unix_ms, recovery_custody_mode, escrow_reference_id from public.e2ee_users where user_id = $1",
+// Intent: bootstrap
+export async function bootstrap(params: { userId: string }): Promise<BootstrapState> {
+  const row = await queryOne<{ key_version: number; recovery_policy: RecoveryPolicy; custody_mode: E2eeCustodyMode }>(
+    "select key_version, recovery_policy, custody_mode from public.e2ee_user_keys where user_id = $1",
     [params.userId],
   )
-
-  if (!userRow) {
-    return {
-      e2eeEnabled: false,
-      wrappedUserDataKeyForDevice: null,
-      recoveryKeyUpdatedAtMs: null,
-      recoveryCustodyMode: null,
-      hasEscrowedRecoveryKey: false,
-    }
+  if (!row) {
+    return { e2eeConfigured: false, keyVersion: null, recoveryPolicy: null, custodyMode: null }
   }
-
-  const deviceKeyRow = await queryOne<{ wrapped_user_data_key_for_device: string | null }>(
-    "select wrapped_user_data_key_for_device from public.e2ee_device_keys where user_id = $1 and device_id = $2",
-    [params.userId, params.deviceId],
-  )
-
   return {
-    e2eeEnabled: true,
-    wrappedUserDataKeyForDevice: deviceKeyRow?.wrapped_user_data_key_for_device ?? null,
-    recoveryKeyUpdatedAtMs: userRow.recovery_key_updated_at_unix_ms,
-    recoveryCustodyMode: userRow.recovery_custody_mode || "self",
-    hasEscrowedRecoveryKey: !!userRow.escrow_reference_id,
+    e2eeConfigured: true,
+    keyVersion: row.key_version,
+    recoveryPolicy: row.recovery_policy,
+    custodyMode: row.custody_mode,
   }
 }
 
-export async function setupE2ee(params: {
+// Intent: readServerManagedArkBytes
+export async function readServerManagedArkBytes(params: { userId: string }): Promise<{ arkBytes: Uint8Array; keyVersion: number } | null> {
+  const row = await queryOne<{ wrapped_ark_server_kms: string | null; key_version: number; custody_mode: E2eeCustodyMode }>(
+    `
+      select wrapped_ark_server_kms, key_version, custody_mode
+      from public.e2ee_user_keys
+      where user_id = $1
+    `,
+    [params.userId],
+  )
+  if (!row || row.custody_mode !== "server_managed" || !row.wrapped_ark_server_kms) {
+    return null
+  }
+  const arkBytes = await kmsUnwrapArkBytes(row.wrapped_ark_server_kms)
+  return { arkBytes, keyVersion: row.key_version }
+}
+
+// Intent: setUserManagedCustody
+export async function setUserManagedCustody(params: {
   userId: string
-  deviceId: string
-  wrappedUserDataKeyForDevice?: string | null
-  wrappedUserDataKeyForRecovery: string
-  recoveryCustodyMode?: RecoveryCustodyMode | null
-  escrowReferenceId?: string | null
+  cryptoVersion: number
+  keyVersion: number
+  argon2Salt: string
+  argon2TimeCost: number
+  argon2MemoryCostKib: number
+  argon2Parallelism: number
+  wrappedArkUserPassphrase: string
+  wrappedArkRecoveryCode: string | null
+  recoveryPolicy: RecoveryPolicy
+  custodianThreshold: number | null
   nowUnixMs: number
 }): Promise<void> {
   await execute(
     `
-      insert into public.e2ee_users (
-        user_id,
-        wrapped_user_data_key_for_recovery,
-        recovery_key_updated_at_unix_ms,
-        recovery_custody_mode,
-        escrow_reference_id,
-        escrow_updated_at_unix_ms
-      )
-      values ($1, $2, $3, $4, $5, $6)
-      on conflict (user_id) do nothing
+      update public.e2ee_user_keys
+      set crypto_version = $2,
+          key_version = $3,
+          argon2_salt = $4,
+          argon2_time_cost = $5,
+          argon2_memory_cost_kib = $6,
+          argon2_parallelism = $7,
+          wrapped_ark_user_passphrase = $8,
+          wrapped_ark_recovery_code = $9,
+          wrapped_ark_server_kms = null,
+          recovery_policy = $10,
+          custody_mode = 'user_managed',
+          custodian_threshold = $11,
+          updated_at_unix_ms = $12
+      where user_id = $1
     `,
     [
       params.userId,
-      params.wrappedUserDataKeyForRecovery,
+      params.cryptoVersion,
+      params.keyVersion,
+      params.argon2Salt,
+      params.argon2TimeCost,
+      params.argon2MemoryCostKib,
+      params.argon2Parallelism,
+      params.wrappedArkUserPassphrase,
+      params.wrappedArkRecoveryCode,
+      params.recoveryPolicy,
+      params.custodianThreshold,
       params.nowUnixMs,
-      params.recoveryCustodyMode || "self",
-      params.escrowReferenceId ?? null,
-      params.escrowReferenceId ? params.nowUnixMs : null,
     ],
   )
-
-  if (params.wrappedUserDataKeyForDevice) {
-    await execute(
-      `
-        update public.e2ee_device_keys
-        set wrapped_user_data_key_for_device = $3, updated_at_unix_ms = $4
-        where user_id = $1 and device_id = $2
-      `,
-      [params.userId, params.deviceId, params.wrappedUserDataKeyForDevice, params.nowUnixMs],
-    )
-
-    await execute(
-      `
-        update public.e2ee_devices
-        set approved_at_unix_ms = $3, pairing_expires_at_unix_ms = null
-        where user_id = $1 and device_id = $2
-      `,
-      [params.userId, params.deviceId, params.nowUnixMs],
-    )
-  }
 }
 
-export async function readRecoveryWrappedKey(params: { userId: string }): Promise<{ wrappedUserDataKeyForRecovery: string; recoveryKeyUpdatedAtMs: number } | null> {
-  const row = await queryOne<{ wrapped_user_data_key_for_recovery: string; recovery_key_updated_at_unix_ms: number }>(
-    "select wrapped_user_data_key_for_recovery, recovery_key_updated_at_unix_ms from public.e2ee_users where user_id = $1",
-    [params.userId],
-  )
-  if (!row) return null
-  return { wrappedUserDataKeyForRecovery: row.wrapped_user_data_key_for_recovery, recoveryKeyUpdatedAtMs: row.recovery_key_updated_at_unix_ms }
-}
-
-export async function setWrappedUserDataKeyForDevice(params: { userId: string; deviceId: string; wrappedUserDataKeyForDevice: string; nowUnixMs: number }): Promise<void> {
+// Intent: setServerManagedCustody
+export async function setServerManagedCustody(params: {
+  userId: string
+  keyVersion: number
+  arkBytes: Uint8Array
+  nowUnixMs: number
+}): Promise<void> {
+  const wrappedArkServerKms = await kmsWrapArkBytes(params.arkBytes)
   await execute(
     `
-      update public.e2ee_device_keys
-      set wrapped_user_data_key_for_device = $3, updated_at_unix_ms = $4
-      where user_id = $1 and device_id = $2
-    `,
-    [params.userId, params.deviceId, params.wrappedUserDataKeyForDevice, params.nowUnixMs],
-  )
-
-  await execute(
-    `
-      update public.e2ee_devices
-      set approved_at_unix_ms = $3, pairing_expires_at_unix_ms = null
-      where user_id = $1 and device_id = $2
-    `,
-    [params.userId, params.deviceId, params.nowUnixMs],
-  )
-}
-
-export async function rotateRecoveryWrappedKey(params: { userId: string; wrappedUserDataKeyForRecovery: string; nowUnixMs: number }): Promise<void> {
-  await execute(
-    `
-      update public.e2ee_users
-      set wrapped_user_data_key_for_recovery = $2, recovery_key_updated_at_unix_ms = $3
+      update public.e2ee_user_keys
+      set key_version = $2,
+          wrapped_ark_server_kms = $3,
+          custody_mode = 'server_managed',
+          argon2_salt = null,
+          argon2_time_cost = null,
+          argon2_memory_cost_kib = null,
+          argon2_parallelism = null,
+          wrapped_ark_user_passphrase = null,
+          wrapped_ark_recovery_code = null,
+          updated_at_unix_ms = $4
       where user_id = $1
     `,
-    [params.userId, params.wrappedUserDataKeyForRecovery, params.nowUnixMs],
+    [params.userId, params.keyVersion, wrappedArkServerKms, params.nowUnixMs],
   )
 }
 
-export async function setRecoveryCustody(params: {
+// Intent: setupUserKeys
+export async function setupUserKeys(params: {
   userId: string
-  recoveryCustodyMode: RecoveryCustodyMode
-  escrowReferenceId?: string | null
+  cryptoVersion: number
+  keyVersion: number
+  argon2Salt: string
+  argon2TimeCost: number
+  argon2MemoryCostKib: number
+  argon2Parallelism: number
+  wrappedArkUserPassphrase: string
+  wrappedArkRecoveryCode: string | null
+  recoveryPolicy: RecoveryPolicy
+  custodianThreshold: number | null
   nowUnixMs: number
 }): Promise<void> {
   await execute(
     `
-      update public.e2ee_users
-      set recovery_custody_mode = $2,
-          escrow_reference_id = $3,
-          escrow_updated_at_unix_ms = $4
-      where user_id = $1
+      insert into public.e2ee_user_keys (
+        user_id,
+        crypto_version,
+        key_version,
+        argon2_salt,
+        argon2_time_cost,
+        argon2_memory_cost_kib,
+        argon2_parallelism,
+        wrapped_ark_user_passphrase,
+        wrapped_ark_recovery_code,
+        wrapped_ark_server_kms,
+        recovery_policy,
+        custody_mode,
+        custodian_threshold,
+        created_at_unix_ms,
+        updated_at_unix_ms
+      )
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, null, $10, 'user_managed', $11, $12, $12)
+      on conflict (user_id) do update
+      set crypto_version = excluded.crypto_version,
+          key_version = excluded.key_version,
+          argon2_salt = excluded.argon2_salt,
+          argon2_time_cost = excluded.argon2_time_cost,
+          argon2_memory_cost_kib = excluded.argon2_memory_cost_kib,
+          argon2_parallelism = excluded.argon2_parallelism,
+          wrapped_ark_user_passphrase = excluded.wrapped_ark_user_passphrase,
+          wrapped_ark_recovery_code = excluded.wrapped_ark_recovery_code,
+          wrapped_ark_server_kms = null,
+          recovery_policy = excluded.recovery_policy,
+          custody_mode = 'user_managed',
+          custodian_threshold = excluded.custodian_threshold,
+          updated_at_unix_ms = excluded.updated_at_unix_ms
     `,
-    [params.userId, params.recoveryCustodyMode, params.escrowReferenceId ?? null, params.escrowReferenceId ? params.nowUnixMs : null],
+    [
+      params.userId,
+      params.cryptoVersion,
+      params.keyVersion,
+      params.argon2Salt,
+      params.argon2TimeCost,
+      params.argon2MemoryCostKib,
+      params.argon2Parallelism,
+      params.wrappedArkUserPassphrase,
+      params.wrappedArkRecoveryCode,
+      params.recoveryPolicy,
+      params.custodianThreshold,
+      params.nowUnixMs,
+    ],
   )
 }
 
-export async function requestPairing(params: { userId: string; deviceId: string; expiresAtUnixMs: number }): Promise<void> {
-  await execute(
-    `
-      update public.e2ee_devices
-      set pairing_expires_at_unix_ms = $3
-      where user_id = $1 and device_id = $2 and revoked_at_unix_ms is null
-    `,
-    [params.userId, params.deviceId, params.expiresAtUnixMs],
-  )
-}
-
-export async function approvePairing(params: { userId: string; deviceId: string; wrappedUserDataKeyForDevice: string; nowUnixMs: number }): Promise<void> {
-  await setWrappedUserDataKeyForDevice({
-    userId: params.userId,
-    deviceId: params.deviceId,
-    wrappedUserDataKeyForDevice: params.wrappedUserDataKeyForDevice,
-    nowUnixMs: params.nowUnixMs,
-  })
-}
-
-export async function listDevices(params: { userId: string }): Promise<
-  { deviceId: string; publicKeyJwk: unknown; pairingExpiresAtMs: number | null; approvedAtMs: number | null; revokedAtMs: number | null; createdAtMs: number }[]
-> {
-  const rows = await queryMany<{
-    device_id: string
-    public_key_jwk: unknown
-    pairing_expires_at_unix_ms: number | null
-    approved_at_unix_ms: number | null
-    revoked_at_unix_ms: number | null
-    created_at_unix_ms: number
+// Intent: readUserKeyMaterial
+export async function readUserKeyMaterial(params: { userId: string }): Promise<UserKeyMaterial | null> {
+  const row = await queryOne<{
+    crypto_version: number
+    key_version: number
+    argon2_salt: string | null
+    argon2_time_cost: number | null
+    argon2_memory_cost_kib: number | null
+    argon2_parallelism: number | null
+    wrapped_ark_user_passphrase: string | null
+    wrapped_ark_recovery_code: string | null
+    recovery_policy: RecoveryPolicy
+    custody_mode: E2eeCustodyMode
+    custodian_threshold: number | null
   }>(
     `
-      select device_id, public_key_jwk, pairing_expires_at_unix_ms, approved_at_unix_ms, revoked_at_unix_ms, created_at_unix_ms
-      from public.e2ee_devices
+      select
+        crypto_version,
+        key_version,
+        argon2_salt,
+        argon2_time_cost,
+        argon2_memory_cost_kib,
+        argon2_parallelism,
+        wrapped_ark_user_passphrase,
+        wrapped_ark_recovery_code,
+        recovery_policy,
+        custody_mode,
+        custodian_threshold
+      from public.e2ee_user_keys
       where user_id = $1
-      order by created_at_unix_ms asc
     `,
     [params.userId],
   )
+  if (!row || row.custody_mode !== "user_managed") return null
+  if (!row.argon2_salt || !row.argon2_time_cost || !row.argon2_memory_cost_kib || !row.argon2_parallelism || !row.wrapped_ark_user_passphrase) {
+    return null
+  }
+  return {
+    cryptoVersion: row.crypto_version,
+    keyVersion: row.key_version,
+    argon2Salt: row.argon2_salt,
+    argon2TimeCost: row.argon2_time_cost,
+    argon2MemoryCostKib: row.argon2_memory_cost_kib,
+    argon2Parallelism: row.argon2_parallelism,
+    wrappedArkUserPassphrase: row.wrapped_ark_user_passphrase,
+    wrappedArkRecoveryCode: row.wrapped_ark_recovery_code,
+    recoveryPolicy: row.recovery_policy,
+    custodianThreshold: row.custodian_threshold,
+  }
+}
 
+// Intent: setRecoveryWrappedArk
+export async function setRecoveryWrappedArk(params: { userId: string; wrappedArkRecoveryCode: string | null; nowUnixMs: number }): Promise<void> {
+  await execute(
+    `
+      update public.e2ee_user_keys
+      set wrapped_ark_recovery_code = $2,
+          updated_at_unix_ms = $3
+      where user_id = $1 and custody_mode = 'user_managed'
+    `,
+    [params.userId, params.wrappedArkRecoveryCode, params.nowUnixMs],
+  )
+}
+
+// Intent: rotatePassphraseWrappedArk
+export async function rotatePassphraseWrappedArk(params: {
+  userId: string
+  argon2Salt: string
+  argon2TimeCost: number
+  argon2MemoryCostKib: number
+  argon2Parallelism: number
+  wrappedArkUserPassphrase: string
+  keyVersion: number
+  nowUnixMs: number
+}): Promise<void> {
+  await execute(
+    `
+      update public.e2ee_user_keys
+      set argon2_salt = $2,
+          argon2_time_cost = $3,
+          argon2_memory_cost_kib = $4,
+          argon2_parallelism = $5,
+          wrapped_ark_user_passphrase = $6,
+          key_version = $7,
+          custody_mode = 'user_managed',
+          wrapped_ark_server_kms = null,
+          updated_at_unix_ms = $8
+      where user_id = $1
+    `,
+    [
+      params.userId,
+      params.argon2Salt,
+      params.argon2TimeCost,
+      params.argon2MemoryCostKib,
+      params.argon2Parallelism,
+      params.wrappedArkUserPassphrase,
+      params.keyVersion,
+      params.nowUnixMs,
+    ],
+  )
+}
+
+// Intent: upsertObjectKey
+export async function upsertObjectKey(params: {
+  userId: string
+  objectType: string
+  objectId: string
+  keyVersion: number
+  cryptoVersion: number
+  wrappedDek: string
+  nowUnixMs: number
+}): Promise<void> {
+  await execute(
+    `
+      insert into public.e2ee_object_keys (
+        user_id,
+        object_type,
+        object_id,
+        key_version,
+        crypto_version,
+        wrapped_dek,
+        created_at_unix_ms,
+        updated_at_unix_ms
+      )
+      values ($1, $2, $3, $4, $5, $6, $7, $7)
+      on conflict (user_id, object_type, object_id, key_version) do update
+      set crypto_version = excluded.crypto_version,
+          wrapped_dek = excluded.wrapped_dek,
+          updated_at_unix_ms = excluded.updated_at_unix_ms
+    `,
+    [
+      params.userId,
+      params.objectType,
+      params.objectId,
+      params.keyVersion,
+      params.cryptoVersion,
+      params.wrappedDek,
+      params.nowUnixMs,
+    ],
+  )
+}
+
+// Intent: readObjectKeys
+export async function readObjectKeys(params: { userId: string; objectType: string; objectId: string }): Promise<
+  { keyVersion: number; cryptoVersion: number; wrappedDek: string; updatedAtUnixMs: number }[]
+> {
+  const rows = await queryMany<{
+    key_version: number
+    crypto_version: number
+    wrapped_dek: string
+    updated_at_unix_ms: number
+  }>(
+    `
+      select key_version, crypto_version, wrapped_dek, updated_at_unix_ms
+      from public.e2ee_object_keys
+      where user_id = $1 and object_type = $2 and object_id = $3
+      order by key_version desc
+    `,
+    [params.userId, params.objectType, params.objectId],
+  )
   return rows.map((row) => ({
-    deviceId: row.device_id,
-    publicKeyJwk: row.public_key_jwk,
-    pairingExpiresAtMs: row.pairing_expires_at_unix_ms,
-    approvedAtMs: row.approved_at_unix_ms,
-    revokedAtMs: row.revoked_at_unix_ms,
-    createdAtMs: row.created_at_unix_ms,
+    keyVersion: row.key_version,
+    cryptoVersion: row.crypto_version,
+    wrappedDek: row.wrapped_dek,
+    updatedAtUnixMs: row.updated_at_unix_ms,
   }))
 }
 
-export async function revokeDevice(params: { userId: string; deviceId: string; nowUnixMs: number }): Promise<void> {
-  await execute(
+// Intent: readLatestObjectKeysBatch
+export async function readLatestObjectKeysBatch(params: {
+  userId: string
+  refs: { objectType: string; objectId: string }[]
+}): Promise<{ objectType: string; objectId: string; keyVersion: number; cryptoVersion: number; wrappedDek: string; updatedAtUnixMs: number }[]> {
+  if (!params.refs.length) return []
+
+  const values: unknown[] = [params.userId]
+  const rowSql: string[] = []
+  for (let index = 0; index < params.refs.length; index += 1) {
+    const ref = params.refs[index]
+    const typeParamIndex = values.length + 1
+    const idParamIndex = values.length + 2
+    values.push(ref.objectType, ref.objectId)
+    rowSql.push(`($${typeParamIndex}::text, $${idParamIndex}::text)`)
+  }
+
+  const rows = await queryMany<{
+    object_type: string
+    object_id: string
+    key_version: number
+    crypto_version: number
+    wrapped_dek: string
+    updated_at_unix_ms: number
+  }>(
     `
-      update public.e2ee_devices
-      set revoked_at_unix_ms = $3
-      where user_id = $1 and device_id = $2
+      with refs(object_type, object_id) as (
+        values ${rowSql.join(",\n        ")}
+      )
+      select distinct on (k.object_type, k.object_id)
+        k.object_type,
+        k.object_id,
+        k.key_version,
+        k.crypto_version,
+        k.wrapped_dek,
+        k.updated_at_unix_ms
+      from public.e2ee_object_keys k
+      inner join refs r
+        on r.object_type = k.object_type and r.object_id = k.object_id
+      where k.user_id = $1
+      order by k.object_type, k.object_id, k.key_version desc
     `,
-    [params.userId, params.deviceId, params.nowUnixMs],
+    values,
   )
 
-  await execute(
-    `
-      update public.e2ee_device_keys
-      set wrapped_user_data_key_for_device = null, updated_at_unix_ms = $3
-      where user_id = $1 and device_id = $2
-    `,
-    [params.userId, params.deviceId, params.nowUnixMs],
-  )
+  return rows.map((row) => ({
+    objectType: row.object_type,
+    objectId: row.object_id,
+    keyVersion: row.key_version,
+    cryptoVersion: row.crypto_version,
+    wrappedDek: row.wrapped_dek,
+    updatedAtUnixMs: row.updated_at_unix_ms,
+  }))
 }

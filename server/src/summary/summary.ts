@@ -7,6 +7,7 @@ type GenerateSummaryParams = {
   template?: { name: string; sections: { title: string; description: string }[] }
 }
 
+// Intent: generateSummary
 export async function generateSummary(params: GenerateSummaryParams): Promise<string> {
   const azureConfigured = !!String(env.azureOpenAiSummaryDeployment || "").trim()
   const mistralConfigured = !!env.mistralApiKey && !!env.mistralSummaryModel

@@ -1,24 +1,20 @@
 import { env } from "../env"
+import { isEmailAllowlisted } from "./emailAllowlist"
 import type { BillingStatus } from "./store"
 
-function normalizeEmail(value: string): string {
-  return value.trim().toLowerCase()
-}
-
+// Intent: getTestTranscriptionTotalSeconds
 export function getTestTranscriptionTotalSeconds(): number {
   const totalHours = Number(env.testTranscriptionTotalHours)
   if (!Number.isFinite(totalHours) || totalHours <= 0) return 0
   return Math.floor(totalHours * 3600)
 }
 
+// Intent: isTestTranscriptionEmail
 export function isTestTranscriptionEmail(email: string | null): boolean {
-  const normalizedEmail = email ? normalizeEmail(email) : ""
-  const allowedEmails = env.testTranscriptionEmails.map((allowedEmail) => normalizeEmail(allowedEmail))
-  const isAllowed = !!email && allowedEmails.includes(normalizedEmail)
-  console.log("[billing] test transcription check", { email, normalizedEmail, allowedEmails, isAllowed })
-  return isAllowed
+  return isEmailAllowlisted(email, env.testTranscriptionEmails)
 }
 
+// Intent: applyTestTranscriptionToBillingStatus
 export function applyTestTranscriptionToBillingStatus(status: BillingStatus): BillingStatus {
   const totalSeconds = getTestTranscriptionTotalSeconds()
   if (totalSeconds <= 0) return status

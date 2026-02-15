@@ -21,6 +21,7 @@ type OpenIdConfiguration = {
 let openIdConfigurationCache: OpenIdConfiguration | null = null
 let jwksCache: ReturnType<typeof createRemoteJWKSet> | null = null
 
+// Intent: loadOpenIdConfiguration
 async function loadOpenIdConfiguration(): Promise<OpenIdConfiguration> {
   if (openIdConfigurationCache) return openIdConfigurationCache
 
@@ -46,6 +47,7 @@ async function loadOpenIdConfiguration(): Promise<OpenIdConfiguration> {
   return openIdConfigurationCache
 }
 
+// Intent: getJwks
 async function getJwks(): Promise<ReturnType<typeof createRemoteJWKSet>> {
   if (jwksCache) return jwksCache
   const config = await loadOpenIdConfiguration()
@@ -59,6 +61,7 @@ export type VerifiedEntraIdentity = {
   displayName: string | null
 }
 
+// Intent: verifyEntraAccessToken
 export async function verifyEntraAccessToken(accessToken: string): Promise<VerifiedEntraIdentity> {
   const token = String(accessToken || "").trim()
   if (!token) {

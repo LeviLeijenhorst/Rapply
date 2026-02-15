@@ -20,6 +20,7 @@ import SignupScreen from "@/screens/SignupScreen"
 import ResetPasswordScreen from "@/screens/ResetPasswordScreen"
 import AuthWelcomeScreen from "@/screens/AuthWelcomeScreen"
 import LoadingScreen from "@/screens/LoadingScreen"
+import KeyCustodySetupScreen from "@/screens/KeyCustodySetupScreen"
 import VerifyEmailScreen from "@/screens/VerifyEmailScreen"
 import ContactFeedbackScreen from "@/screens/ContactFeedbackScreen"
 import SettingsAccountScreen from "@/screens/SettingsAccountScreen"
@@ -53,6 +54,7 @@ const AppStack = () => {
       initialRouteName="Loading"
     >
       <Stack.Screen name="Loading" component={LoadingScreen} />
+      <Stack.Screen name="KeyCustodySetup" component={KeyCustodySetupScreen} />
       <Stack.Screen name="AuthWelcome" component={AuthWelcomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Signup" component={SignupScreen} />

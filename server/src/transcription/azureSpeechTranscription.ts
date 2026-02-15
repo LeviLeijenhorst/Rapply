@@ -1,10 +1,12 @@
 import { Csa1DecryptStream, ensureValidAesKey } from "./csa1"
 import { env } from "../env"
 
+// Intent: normalizeText
 function normalizeText(value: string) {
   return String(value || "").trim()
 }
 
+// Intent: normalizeSpacing
 function normalizeSpacing(value: string) {
   return String(value || "")
     .replace(/\s+([,.;:!?])/g, "$1")
@@ -13,15 +15,18 @@ function normalizeSpacing(value: string) {
     .trim()
 }
 
+// Intent: isPlainObject
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value)
 }
 
+// Intent: safeObjectKeys
 function safeObjectKeys(value: unknown): string[] {
   if (!isPlainObject(value)) return []
   return Object.keys(value).slice(0, 50)
 }
 
+// Intent: safeJsonPreview
 function safeJsonPreview(value: unknown): string {
   try {
     const json = JSON.stringify(value)
@@ -32,6 +37,7 @@ function safeJsonPreview(value: unknown): string {
   }
 }
 
+// Intent: readStreamToBuffer
 async function readStreamToBuffer(stream: NodeJS.ReadableStream, maxBytes: number): Promise<Buffer> {
   const chunks: Buffer[] = []
   let total = 0
@@ -46,10 +52,12 @@ async function readStreamToBuffer(stream: NodeJS.ReadableStream, maxBytes: numbe
   return Buffer.concat(chunks)
 }
 
+// Intent: normalizeRegion
 function normalizeRegion(value: string) {
   return normalizeText(value).toLowerCase()
 }
 
+// Intent: normalizeLanguage
 function normalizeLanguage(value: string) {
   const trimmed = normalizeText(value)
   if (!trimmed) return "nl-NL"
@@ -59,6 +67,7 @@ function normalizeLanguage(value: string) {
   return trimmed
 }
 
+// Intent: requestFastTranscription
 async function requestFastTranscription(params: {
   region: string
   key: string
@@ -96,6 +105,7 @@ async function requestFastTranscription(params: {
   return responseText ? JSON.parse(responseText) : null
 }
 
+// Intent: extractTranscript
 function extractTranscript(resultJson: any): { text: string; isDiarized: boolean } {
   const phrases = Array.isArray(resultJson?.phrases) ? resultJson.phrases : []
   const diarizedLines = phrases
@@ -120,6 +130,7 @@ function extractTranscript(resultJson: any): { text: string; isDiarized: boolean
   return { text: combined, isDiarized: false }
 }
 
+// Intent: runAzureSpeechTranscriptionFromEncryptedUpload
 export async function runAzureSpeechTranscriptionFromEncryptedUpload(params: {
   encryptedStream: NodeJS.ReadableStream
   keyBase64: string
@@ -165,3 +176,4 @@ export async function runAzureSpeechTranscriptionFromEncryptedUpload(params: {
   }
   return `[00:00.0] speaker_1: ${transcriptResult.text}`
 }
+
