@@ -45,6 +45,7 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
   const pendingSeekSecondsRef = useRef<number | null>(null)
   const pendingResumeAfterSeekRef = useRef(false)
   const seekResumePlaybackRef = useRef<boolean | null>(null)
+  const previousAudioUrlOverrideRef = useRef<string | null>(null)
 
   function formatTimeLabel(seconds: number) {
     if (!Number.isFinite(seconds) || seconds <= 0) return '00:00'
@@ -110,14 +111,19 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
 
   useEffect(() => {
     if (audioUrlOverride) {
+      const isNewOverrideSource = previousAudioUrlOverrideRef.current !== audioUrlOverride
+      previousAudioUrlOverrideRef.current = audioUrlOverride
       setIsBuffering(false)
-      setIsAudioReady(false)
       setHasAudioError(false)
-      setCurrentSeconds(0)
-      onCurrentSecondsChange?.(0)
       setIsLoadingAudio(false)
+      if (isNewOverrideSource) {
+        setIsAudioReady(false)
+        setCurrentSeconds(0)
+        onCurrentSecondsChange?.(0)
+      }
       return
     }
+    previousAudioUrlOverrideRef.current = null
     let isCancelled = false
 
     async function load() {

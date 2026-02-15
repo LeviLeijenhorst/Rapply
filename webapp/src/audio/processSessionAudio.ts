@@ -10,6 +10,11 @@ import {
   startTranscriptionRun,
 } from '../services/transcriptionRunStore'
 import { normalizeTranscriptionError } from '../utils/transcriptionError'
+import {
+  clearPendingPreviewAudioIfEligible,
+  markPendingPreviewAudioUploaded,
+  setPendingPreviewProcessingState,
+} from './pendingPreviewStore'
 
 type SessionUpdate = {
   audioBlobId?: string | null
@@ -21,12 +26,16 @@ type SessionUpdate = {
 
 type E2eeAudio = {
   encryptAudioBlobForStorage: (params: { audioBlob: Blob; mimeType: string }) => Promise<Blob>
+  shouldStoreAudioAsOctetStream: boolean
 }
+
+const activeProcessingSessionIds = new Set<string>()
 
 export async function processSessionAudio(params: {
   sessionId: string
   audioBlob: Blob
   mimeType: string
+  shouldSaveAudio?: boolean
   summaryTemplate?: {
     name: string
     sections: { title: string; description: string }[]
@@ -34,34 +43,43 @@ export async function processSessionAudio(params: {
   initialAudioBlobId: string | null
   e2ee: E2eeAudio
   updateSession: (sessionId: string, values: SessionUpdate) => void
-  onAudioUploaded?: (audioBlobId: string) => void | Promise<void>
 }): Promise<void> {
-  const { sessionId, audioBlob, mimeType, summaryTemplate, initialAudioBlobId, e2ee, updateSession, onAudioUploaded } = params
+  const { sessionId, audioBlob, mimeType, shouldSaveAudio = true, summaryTemplate, initialAudioBlobId, e2ee, updateSession } = params
+
+  if (activeProcessingSessionIds.has(sessionId)) {
+    return
+  }
+  activeProcessingSessionIds.add(sessionId)
+
   const runId = startTranscriptionRun(sessionId)
 
   let ensuredAudioBlobId = initialAudioBlobId
-  if (!ensuredAudioBlobId) {
-    const encryptedBlob = await e2ee.encryptAudioBlobForStorage({ audioBlob, mimeType })
-    const createdAudio = await createAudioBlobRemote({ audioBlob: encryptedBlob, mimeType: 'application/octet-stream' })
-    const nextId = String(createdAudio.audioBlobId || '').trim()
-    if (!nextId) {
-      throw new Error('Geen audio id teruggekregen van de server.')
-    }
-    ensuredAudioBlobId = nextId
-    updateSession(sessionId, { audioBlobId: ensuredAudioBlobId })
-    if (onAudioUploaded) {
-      await onAudioUploaded(ensuredAudioBlobId)
-    }
-  } else if (onAudioUploaded) {
-    await onAudioUploaded(ensuredAudioBlobId)
-  }
-
-  updateSession(sessionId, {
-    transcriptionStatus: 'transcribing',
-    transcriptionError: null,
-  })
-
   try {
+    if (shouldSaveAudio && !ensuredAudioBlobId) {
+      await setPendingPreviewProcessingState({ sessionId, processingState: 'encrypting', errorMessage: null })
+      const encryptedBlob = await e2ee.encryptAudioBlobForStorage({ audioBlob, mimeType })
+
+      await setPendingPreviewProcessingState({ sessionId, processingState: 'uploading', errorMessage: null })
+      const storageMimeType = e2ee.shouldStoreAudioAsOctetStream ? 'application/octet-stream' : mimeType
+      const createdAudio = await createAudioBlobRemote({ audioBlob: encryptedBlob, mimeType: storageMimeType })
+      const nextId = String(createdAudio.audioBlobId || '').trim()
+      if (!nextId) {
+        throw new Error('Geen audio id teruggekregen van de server.')
+      }
+      ensuredAudioBlobId = nextId
+      updateSession(sessionId, { audioBlobId: ensuredAudioBlobId })
+      await markPendingPreviewAudioUploaded({ sessionId, audioBlobId: ensuredAudioBlobId })
+      await clearPendingPreviewAudioIfEligible(sessionId)
+    } else if (shouldSaveAudio && ensuredAudioBlobId) {
+      await markPendingPreviewAudioUploaded({ sessionId, audioBlobId: ensuredAudioBlobId })
+      await clearPendingPreviewAudioIfEligible(sessionId)
+    }
+
+    updateSession(sessionId, {
+      transcriptionStatus: 'transcribing',
+      transcriptionError: null,
+    })
+
     const transcriptionAbortController = new AbortController()
     setTranscriptionAbortController(sessionId, runId, transcriptionAbortController)
     const { transcript, summary } = await transcribeAudio({
@@ -78,6 +96,7 @@ export async function processSessionAudio(params: {
     })
     if (!isTranscriptionRunActive(sessionId, runId)) return
     setTranscriptionAbortController(sessionId, runId, null)
+
     const cleanedSummary = String(summary || '').trim()
     if (cleanedSummary) {
       updateSession(sessionId, {
@@ -113,15 +132,24 @@ export async function processSessionAudio(params: {
     if (!isTranscriptionRunActive(sessionId, runId)) {
       return
     }
+
+    const errorMessage = normalizeTranscriptionError(error)
     if (isTranscriptionCancelledError(error)) {
       finishTranscriptionRun(sessionId, runId)
       return
     }
+
+    if (shouldSaveAudio && !ensuredAudioBlobId) {
+      await setPendingPreviewProcessingState({ sessionId, processingState: 'failed', errorMessage })
+    }
+
     updateSession(sessionId, {
       transcriptionStatus: 'error',
-      transcriptionError: normalizeTranscriptionError(error),
+      transcriptionError: errorMessage,
     })
     finishTranscriptionRun(sessionId, runId)
     throw error
+  } finally {
+    activeProcessingSessionIds.delete(sessionId)
   }
 }

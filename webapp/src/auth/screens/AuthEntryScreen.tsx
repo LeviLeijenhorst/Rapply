@@ -1,5 +1,5 @@
-import React from 'react'
-import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
+import React, { useState } from 'react'
+import { ActivityIndicator, Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 
 import { AuthCard } from '../components/AuthCard'
 import { CoachscribeLogo } from '../../components/CoachscribeLogo'
@@ -16,8 +16,11 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
   const { width } = useWindowDimensions()
   const isCompact = width < 980
   const illustrationSource = require('../../../assets/authhumans.png')
+  const [isStartingLogin, setIsStartingLogin] = useState(false)
 
   async function startLogin() {
+    if (isStartingLogin) return
+    setIsStartingLogin(true)
     try {
       onStartLogin?.()
       const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
@@ -33,6 +36,7 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
       const { signInWithEntra } = await import('../entraAuth')
       await signInWithEntra()
     } catch (error) {
+      setIsStartingLogin(false)
       console.error('Entra sign in failed:', error)
       alert('Inloggen mislukt. Probeer het opnieuw.')
     }
@@ -75,15 +79,21 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
             </Text>
             {/* Continue button */}
             <Pressable
+              disabled={isStartingLogin}
               onPress={startLogin}
               style={({ hovered }) => [
                 styles.actionButton,
-                hovered ? styles.actionButtonHovered : undefined,
+                isStartingLogin ? styles.actionButtonDisabled : undefined,
+                !isStartingLogin && hovered ? styles.actionButtonHovered : undefined,
               ]}
             >
-              <Text isBold style={styles.actionButtonText}>
-                Doorgaan
-              </Text>
+              {isStartingLogin ? (
+                <ActivityIndicator size="small" color={colors.selected} />
+              ) : (
+                <Text isBold style={styles.actionButtonText}>
+                  Doorgaan
+                </Text>
+              )}
             </Pressable>
             {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
           </View>
@@ -179,6 +189,9 @@ const styles = StyleSheet.create({
   },
   actionButtonHovered: {
     backgroundColor: '#F6E6F0',
+  },
+  actionButtonDisabled: {
+    opacity: 0.85,
   },
   actionButtonText: {
     fontSize: 14,

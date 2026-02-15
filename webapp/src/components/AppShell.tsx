@@ -31,9 +31,11 @@ import { useBillingUsage } from '../hooks/useBillingUsage'
 import { useAudioUploadQueue } from '../audio/useAudioUploadQueue'
 import { callSecureApi } from '../services/secureApi'
 import { useE2ee } from '../e2ee/E2eeProvider'
-import { clearPendingPreviewAudio, listPendingPreviewAudioTasks } from '../audio/pendingPreviewStore'
+import { clearPendingPreviewAudio, clearPendingPreviewAudioIfEligible, listPendingPreviewAudioTasks } from '../audio/pendingPreviewStore'
 import { processSessionAudio } from '../audio/processSessionAudio'
 import { AdminFeedbackScreen } from '../screens/AdminFeedbackScreen'
+import { ChevronRightIcon } from './icons/ChevronRightIcon'
+import { CircleCloseIcon } from './icons/CircleCloseIcon'
 
 type AnchorPoint = { x: number; y: number }
 type OverlayScreenKey = 'archief'
@@ -150,6 +152,7 @@ export function AppShell({ onLogout }: Props) {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [isDeleteAccountConfirmModalOpen, setIsDeleteAccountConfirmModalOpen] = useState(false)
   const [deleteAccountErrorMessage, setDeleteAccountErrorMessage] = useState<string | null>(null)
+  const [isE2eeSetupBannerDismissed, setIsE2eeSetupBannerDismissed] = useState(false)
 
   useEffect(() => {
     if (!isAppDataLoaded) return
@@ -167,8 +170,8 @@ export function AppShell({ onLogout }: Props) {
             await clearPendingPreviewAudio(task.sessionId)
             continue
           }
-          if (session.transcriptionStatus === 'done' && session.audioBlobId) {
-            await clearPendingPreviewAudio(task.sessionId)
+          if (session.transcriptionStatus === 'done' && (!task.shouldSaveAudio || Boolean(session.audioBlobId))) {
+            await clearPendingPreviewAudioIfEligible(task.sessionId)
             continue
           }
 
@@ -177,13 +180,11 @@ export function AppShell({ onLogout }: Props) {
               sessionId: task.sessionId,
               audioBlob: task.blob,
               mimeType: task.mimeType,
+              shouldSaveAudio: task.shouldSaveAudio,
               summaryTemplate: task.summaryTemplate,
               initialAudioBlobId: session.audioBlobId ?? null,
               e2ee,
               updateSession,
-              onAudioUploaded: async () => {
-                await clearPendingPreviewAudio(task.sessionId)
-              },
             })
           } catch (error) {
             console.error('[AppShell] Pending audio resume failed', { sessionId: task.sessionId, error })
@@ -454,6 +455,7 @@ export function AppShell({ onLogout }: Props) {
   }, [data.coachees, data.sessions, navigateTo, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey, sessionOriginRoute])
 
   const hasBreadcrumbs = breadcrumbItems.length >= 2
+  const isE2eeSetupBannerVisible = !e2ee.isEnabled && !isE2eeSetupBannerDismissed
 
   const deleteAccount = useCallback(async () => {
     if (isDeletingAccount) return
@@ -630,8 +632,29 @@ export function AppShell({ onLogout }: Props) {
         totalMinutes={totalMinutes}
         isUsageLoading={isUsageLoading}
       />
+      {isE2eeSetupBannerVisible ? (
+        <View style={[styles.e2eeSetupBar, isSidebarCompact ? styles.e2eeSetupBarCompact : undefined]}>
+          <View style={styles.e2eeSetupBarContent}>
+            <Pressable onPress={e2ee.beginSetup} style={({ hovered }) => [styles.e2eeSetupTrigger, hovered ? styles.e2eeSetupTriggerHovered : undefined]}>
+              <Text isSemibold style={styles.e2eeSetupTriggerText}>
+                End-to-end encryptie instellen
+              </Text>
+              <ChevronRightIcon color="#FFFFFF" size={16} />
+            </Pressable>
+            <Pressable onPress={() => setIsE2eeSetupBannerDismissed(true)} style={({ hovered }) => [styles.e2eeSetupCloseButton, hovered ? styles.e2eeSetupCloseButtonHovered : undefined]}>
+              <CircleCloseIcon size={24} />
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
       {hasBreadcrumbs ? (
-        <View style={[styles.breadcrumbContainer, isSidebarCompact ? styles.breadcrumbContainerCompact : undefined]}>
+        <View
+          style={[
+            styles.breadcrumbContainer,
+            isSidebarCompact ? styles.breadcrumbContainerCompact : undefined,
+            isE2eeSetupBannerVisible ? styles.breadcrumbContainerWithE2eeBar : undefined,
+          ]}
+        >
           {/* Breadcrumb bar */}
           <BreadcrumbBar items={breadcrumbItems} />
         </View>
@@ -670,7 +693,13 @@ export function AppShell({ onLogout }: Props) {
               }}
             />
             {/* Main content */}
-            <View style={[styles.mainContent, hasBreadcrumbs ? styles.mainContentWithBreadcrumbs : undefined]}>
+            <View
+              style={[
+                styles.mainContent,
+                hasBreadcrumbs ? styles.mainContentWithBreadcrumbs : undefined,
+                isE2eeSetupBannerVisible ? (hasBreadcrumbs ? styles.mainContentWithE2eeBarAndBreadcrumbs : styles.mainContentWithE2eeBar) : undefined,
+              ]}
+            >
               <AnimatedMainContent contentKey={mainContentKey}>{renderMainContent()}</AnimatedMainContent>
             </View>
           </View>
@@ -812,8 +841,62 @@ const styles = StyleSheet.create({
     ...( { left: 264, right: 24 } as any ),
     zIndex: 2,
   },
+  breadcrumbContainerWithE2eeBar: {
+    top: 112,
+  },
   breadcrumbContainerCompact: {
     ...( { left: 96, right: 12 } as any ),
+  },
+  e2eeSetupBar: {
+    position: 'absolute',
+    top: 72,
+    ...( { left: 240, right: 0 } as any ),
+    zIndex: 2,
+    height: 40,
+    backgroundColor: colors.selected,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 0,
+  },
+  e2eeSetupBarCompact: {
+    ...( { left: 72, right: 0 } as any ),
+  },
+  e2eeSetupBarContent: {
+    width: '100%',
+    height: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  e2eeSetupTrigger: {
+    height: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'transparent',
+  },
+  e2eeSetupTriggerHovered: {
+    opacity: 0.88,
+  },
+  e2eeSetupTriggerText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#FFFFFF',
+  },
+  e2eeSetupCloseButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    height: 40,
+    minWidth: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  e2eeSetupCloseButtonHovered: {
+    backgroundColor: 'rgba(0,0,0,0.12)',
   },
   contentRow: {
     flex: 1,
@@ -827,6 +910,12 @@ const styles = StyleSheet.create({
   },
   mainContentWithBreadcrumbs: {
     paddingTop: 48,
+  },
+  mainContentWithE2eeBar: {
+    paddingTop: 64,
+  },
+  mainContentWithE2eeBarAndBreadcrumbs: {
+    paddingTop: 88,
   },
   mainContentText: {
     fontSize: 16,

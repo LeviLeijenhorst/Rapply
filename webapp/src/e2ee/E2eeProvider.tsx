@@ -19,7 +19,16 @@ import {
 } from './crypto'
 import { clearRememberedArk, loadRememberedArk, saveRememberedArk } from './rememberedArkStore'
 import { createArgon2SaltBase64Url, defaultArgon2Params, derivePassphraseKeyBytes } from './passphraseKdf'
-import { e2eeBootstrap, e2eeGetUserKeyMaterial, e2eeSetRecoveryCode, e2eeSetup, type E2eeUserKeyMaterial } from '../services/e2ee'
+import {
+  e2eeBootstrap,
+  e2eeDisableUserManagedCustody,
+  e2eeEnableUserManagedCustody,
+  e2eeGetUserKeyMaterial,
+  e2eeSetRecoveryCode,
+  e2eeSetup,
+  e2eeUnlockServerManaged,
+  type E2eeUserKeyMaterial,
+} from '../services/e2ee'
 
 type E2eeContextValue = {
   encryptText: (value: string) => Promise<string>
@@ -32,6 +41,11 @@ type E2eeContextValue = {
   encryptAudioChunkForStorage: (params: { audioBytes: Uint8Array }) => Promise<Uint8Array>
   decryptAudioChunkFromStorage: (params: { encryptedChunk: Uint8Array }) => Promise<Uint8Array>
   rotateRecoveryKey: () => Promise<string>
+  isConfigured: boolean
+  isEnabled: boolean
+  setEnabled: (nextEnabled: boolean) => Promise<void>
+  beginSetup: () => void
+  shouldStoreAudioAsOctetStream: boolean
 }
 
 type SetupMode = 'none' | 'new' | 'recovered'
@@ -62,6 +76,23 @@ function downloadTextFile(params: { fileName: string; text: string }) {
   URL.revokeObjectURL(url)
 }
 
+function decodeBase64ToBytes(value: string): Uint8Array {
+  const binary = atob(value)
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index)
+  }
+  return bytes
+}
+
+function encodeBytesToBase64(bytes: Uint8Array): string {
+  let binary = ''
+  for (let index = 0; index < bytes.length; index += 1) {
+    binary += String.fromCharCode(bytes[index])
+  }
+  return btoa(binary)
+}
+
 // Derives an AES key from the entered passphrase and Argon2 metadata.
 async function createPassphraseKey(params: { passphrase: string; material: Pick<E2eeUserKeyMaterial, 'argon2Salt' | 'argon2TimeCost' | 'argon2MemoryCostKib' | 'argon2Parallelism'> }): Promise<CryptoKey> {
   const passphraseBytes = await derivePassphraseKeyBytes({
@@ -80,6 +111,9 @@ async function createPassphraseKey(params: { passphrase: string; material: Pick<
 export function E2eeProvider({ isAuthenticated, children }: Props) {
   const [stage, setStage] = useState<E2eeStage>('unauthenticated')
   const [userDataKey, setUserDataKey] = useState<CryptoKey | null>(null)
+  const [isConfigured, setIsConfigured] = useState(false)
+  const [isEnabled, setIsEnabled] = useState(false)
+  const [activeKeyVersion, setActiveKeyVersion] = useState<number | null>(null)
   const [setupMode, setSetupMode] = useState<SetupMode>('none')
   const [setupRecoveryKey, setSetupRecoveryKey] = useState<string | null>(null)
   const [isRecoveryConfirmed, setIsRecoveryConfirmed] = useState(false)
@@ -96,7 +130,7 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
   const [pendingMaterial, setPendingMaterial] = useState<E2eeUserKeyMaterial | null>(null)
 
   useLayoutEffect(() => {
-    if (!isAuthenticated) {
+      if (!isAuthenticated) {
       setStage('unauthenticated')
       return
     }
@@ -107,6 +141,9 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
     if (!isAuthenticated) {
       setStage('unauthenticated')
       setUserDataKey(null)
+      setIsConfigured(false)
+      setIsEnabled(false)
+      setActiveKeyVersion(null)
       setSetupMode('none')
       setSetupRecoveryKey(null)
       setIsRecoveryConfirmed(false)
@@ -132,10 +169,28 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
         setStatusMessage(null)
         const bootstrap = await e2eeBootstrap()
 
-        if (!bootstrap.e2eeConfigured) {
+        if (!bootstrap.e2eeConfigured || !bootstrap.custodyMode) {
           if (!isActive) return
-          setSetupMode('new')
-          setStage('setupPassphrase')
+          setIsConfigured(false)
+          setIsEnabled(false)
+          setUserDataKey(null)
+          setActiveKeyVersion(null)
+          setStage('loading')
+          return
+        }
+
+        setIsConfigured(true)
+        setIsEnabled(bootstrap.custodyMode === 'user_managed')
+
+        if (bootstrap.custodyMode === 'server_managed') {
+          const unlocked = await e2eeUnlockServerManaged()
+          const arkBytes = decodeBase64ToBytes(unlocked.arkBase64)
+          await saveRememberedArk({ keyVersion: unlocked.keyVersion, arkBytes })
+          const nextUserDataKey = await importAesKey(arkBytes)
+          if (!isActive) return
+          setActiveKeyVersion(unlocked.keyVersion)
+          setUserDataKey(nextUserDataKey)
+          setStage('ready')
           return
         }
 
@@ -144,19 +199,25 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
         if (rememberedArk && rememberedArk.keyVersion === material.keyVersion) {
           const nextUserDataKey = await importAesKey(rememberedArk.arkBytes)
           if (!isActive) return
+          setActiveKeyVersion(material.keyVersion)
           setUserDataKey(nextUserDataKey)
           setStage('ready')
           return
         }
 
         if (!isActive) return
+        setActiveKeyVersion(material.keyVersion)
         setPendingMaterial(material)
         setStage('unlockWithPassphrase')
       } catch (error) {
         console.error('[E2eeProvider] Failed to initialize', error)
         if (!isActive) return
+        setIsConfigured(false)
+        setIsEnabled(false)
+        setActiveKeyVersion(null)
+        setUserDataKey(null)
         setStatusMessage(error instanceof Error ? error.message : 'E2EE initialisatie mislukt')
-        setStage('unlockWithPassphrase')
+        setStage('loading')
       } finally {
         if (isActive) setIsBusy(false)
       }
@@ -185,7 +246,14 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
     try {
       await yieldToUiThread()
       if (setupMode === 'new') {
-        const userDataKeyBytes = createUserDataKeyBytes()
+        let userDataKeyBytes: Uint8Array | null = pendingArkBytes
+        if (!userDataKeyBytes && userDataKey) {
+          userDataKeyBytes = new Uint8Array(await crypto.subtle.exportKey('raw', userDataKey))
+        }
+        if (!userDataKeyBytes) {
+          userDataKeyBytes = createUserDataKeyBytes()
+        }
+        const nextKeyVersion = activeKeyVersion ?? 1
         const nextRecoveryKey = createRecoveryKey()
         const argon2Salt = createArgon2SaltBase64Url()
         const passphraseKey = await createPassphraseKey({
@@ -199,9 +267,9 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
         })
         const wrappedArkUserPassphrase = await encryptBytesWithAesGcm({ key: passphraseKey, plaintext: userDataKeyBytes })
         const wrappedArkRecoveryCode = await wrapUserDataKeyForRecovery({ recoveryKey: nextRecoveryKey, userDataKeyBytes })
-        await e2eeSetup({
+        await e2eeEnableUserManagedCustody({
           cryptoVersion: 1,
-          keyVersion: 1,
+          keyVersion: nextKeyVersion,
           argon2Salt,
           argon2TimeCost: defaultArgon2Params.timeCost,
           argon2MemoryCostKib: defaultArgon2Params.memoryCostKib,
@@ -211,11 +279,15 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
           recoveryPolicy: 'self_service',
           custodianThreshold: null,
         })
-        await saveRememberedArk({ keyVersion: 1, arkBytes: userDataKeyBytes })
+        await saveRememberedArk({ keyVersion: nextKeyVersion, arkBytes: userDataKeyBytes })
         const nextUserDataKey = await importAesKey(userDataKeyBytes)
         setUserDataKey(nextUserDataKey)
+        setIsConfigured(true)
+        setIsEnabled(true)
+        setActiveKeyVersion(nextKeyVersion)
         setSetupRecoveryKey(nextRecoveryKey)
         setIsRecoveryConfirmed(false)
+        setPendingArkBytes(null)
         setStage('setupRecoveryKey')
         return
       }
@@ -246,6 +318,9 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
         })
         await saveRememberedArk({ keyVersion: pendingMaterial.keyVersion, arkBytes: pendingArkBytes })
         setUserDataKey(await importAesKey(pendingArkBytes))
+        setIsConfigured(true)
+        setIsEnabled(true)
+        setActiveKeyVersion(pendingMaterial.keyVersion)
         setPendingArkBytes(null)
         setPendingMaterial(null)
         setStage('ready')
@@ -281,6 +356,9 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
       await saveRememberedArk({ keyVersion: material.keyVersion, arkBytes })
       const nextUserDataKey = await importAesKey(arkBytes)
       setUserDataKey(nextUserDataKey)
+      setIsConfigured(true)
+      setIsEnabled(true)
+      setActiveKeyVersion(material.keyVersion)
       setStage('ready')
     } catch (error) {
       console.error('[E2eeProvider] Passphrase unlock failed', error)
@@ -319,37 +397,97 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
     }
   }
 
+  function closeOptionalSetupModal() {
+    if (isBusy) return
+    if (setupMode !== 'new') return
+    setSetupMode('none')
+    setStatusMessage(null)
+    setPassphraseInput('')
+    setPassphraseConfirmInput('')
+    setIsPassphraseVisible(false)
+    setIsPassphraseConfirmVisible(false)
+    setSetupRecoveryKey(null)
+    setIsRecoveryConfirmed(false)
+    setStage('ready')
+  }
+
   const value = useMemo<E2eeContextValue | null>(() => {
+    if (!isConfigured || !activeKeyVersion) return null
     if (!userDataKey) return null
+    const activeUserDataKey = userDataKey
 
     return {
-      encryptText: (text) => encryptText({ key: userDataKey, plaintext: text }),
-      decryptText: (text) => decryptText({ key: userDataKey, encrypted: text }),
-      encryptOptionalText: async (text) => (text === null ? null : encryptText({ key: userDataKey, plaintext: text })),
-      decryptOptionalText: async (text) => (text === null ? null : decryptText({ key: userDataKey, encrypted: text })),
-      encryptAudioBlobForStorage: ({ audioBlob, mimeType }) => encryptAudioForStorage({ key: userDataKey, audioBlob, mimeType }),
-      decryptAudioBlobFromStorage: (encryptedBlob) => decryptAudioFromStorage({ key: userDataKey, encryptedBlob }),
-      decryptAudioStreamFromStorage: (encryptedStream) => decryptAudioStreamFromStorage({ key: userDataKey, encryptedStream }),
-      encryptAudioChunkForStorage: ({ audioBytes }) => encryptAudioChunkForStorage({ key: userDataKey, audioBytes }),
-      decryptAudioChunkFromStorage: ({ encryptedChunk }) => decryptAudioChunkFromStorage({ key: userDataKey, encryptedChunk }),
+      encryptText: (text) => encryptText({ key: activeUserDataKey, plaintext: text }),
+      decryptText: (text) => decryptText({ key: activeUserDataKey, encrypted: text }),
+      encryptOptionalText: async (text) => (text === null ? null : encryptText({ key: activeUserDataKey, plaintext: text })),
+      decryptOptionalText: async (text) => (text === null ? null : decryptText({ key: activeUserDataKey, encrypted: text })),
+      encryptAudioBlobForStorage: ({ audioBlob, mimeType }) => encryptAudioForStorage({ key: activeUserDataKey, audioBlob, mimeType }),
+      decryptAudioBlobFromStorage: (encryptedBlob) => decryptAudioFromStorage({ key: activeUserDataKey, encryptedBlob }),
+      decryptAudioStreamFromStorage: (encryptedStream) => decryptAudioStreamFromStorage({ key: activeUserDataKey, encryptedStream }),
+      encryptAudioChunkForStorage: ({ audioBytes }) => encryptAudioChunkForStorage({ key: activeUserDataKey, audioBytes }),
+      decryptAudioChunkFromStorage: ({ encryptedChunk }) => decryptAudioChunkFromStorage({ key: activeUserDataKey, encryptedChunk }),
       rotateRecoveryKey: async () => {
         const nextRecoveryKey = createRecoveryKey()
-        const userDataKeyBytes = await crypto.subtle.exportKey('raw', userDataKey).then((buffer) => new Uint8Array(buffer))
+        const userDataKeyBytes = await crypto.subtle.exportKey('raw', activeUserDataKey).then((buffer) => new Uint8Array(buffer))
         const wrappedUserDataKeyForRecovery = await wrapUserDataKeyForRecovery({ recoveryKey: nextRecoveryKey, userDataKeyBytes })
         await e2eeSetRecoveryCode({ wrappedArkRecoveryCode: wrappedUserDataKeyForRecovery })
         return nextRecoveryKey
       },
+      isConfigured: true,
+      isEnabled,
+      setEnabled: async (nextEnabled) => {
+        if (nextEnabled === isEnabled) return
+        if (nextEnabled) {
+          setSetupMode('new')
+          setStatusMessage(null)
+          setPassphraseInput('')
+          setPassphraseConfirmInput('')
+          setIsPassphraseVisible(false)
+          setIsPassphraseConfirmVisible(false)
+          setSetupRecoveryKey(null)
+          setIsRecoveryConfirmed(false)
+          setStage('setupPassphrase')
+          return
+        }
+
+        const userDataKeyBytes = new Uint8Array(await crypto.subtle.exportKey('raw', activeUserDataKey))
+        await e2eeDisableUserManagedCustody({
+          keyVersion: activeKeyVersion,
+          arkBase64: encodeBytesToBase64(userDataKeyBytes),
+        })
+        setIsEnabled(false)
+      },
+      beginSetup: () => {
+        if (isEnabled) return
+        setSetupMode('new')
+        setStatusMessage(null)
+        setPassphraseInput('')
+        setPassphraseConfirmInput('')
+        setIsPassphraseVisible(false)
+        setIsPassphraseConfirmVisible(false)
+        setSetupRecoveryKey(null)
+        setIsRecoveryConfirmed(false)
+        setStage('setupPassphrase')
+      },
+      shouldStoreAudioAsOctetStream: true,
     }
-  }, [userDataKey])
+  }, [activeKeyVersion, isConfigured, isEnabled, userDataKey])
 
   if (!isAuthenticated) {
     return <E2eeContext.Provider value={null}>{children}</E2eeContext.Provider>
   }
 
+  const shouldRenderChildren =
+    Boolean(value) &&
+    (stage === 'ready' || stage === 'setupPassphrase' || (stage === 'setupRecoveryKey' && setupMode === 'new'))
+
   return (
     <E2eeContext.Provider value={value}>
+      {shouldRenderChildren ? children : null}
+
       {stage === 'setupPassphrase' ? (
         <View style={styles.overlay}>
+          <Pressable style={styles.overlayBackdropPressable} onPress={closeOptionalSetupModal} />
           <View style={styles.card}>
             <Text isBold style={styles.title}>
               {setupMode === 'recovered' ? 'Nieuwe passphrase instellen' : 'Passphrase instellen'}
@@ -402,6 +540,7 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
         </View>
       ) : stage === 'setupRecoveryKey' && setupRecoveryKey && !isRecoveryConfirmed ? (
         <View style={styles.overlay}>
+          <Pressable style={styles.overlayBackdropPressable} onPress={closeOptionalSetupModal} />
           <View style={styles.card}>
             <Text isBold style={styles.title}>
               CoachScribe-code opslaan
@@ -438,7 +577,9 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
             </Pressable>
           </View>
         </View>
-      ) : stage === 'unlockWithPassphrase' ? (
+      ) : null}
+
+      {stage === 'unlockWithPassphrase' ? (
         <View style={styles.overlay}>
           <View style={styles.card}>
             <Text isBold style={styles.title}>
@@ -475,7 +616,9 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
             </Pressable>
           </View>
         </View>
-      ) : stage === 'recoveryRequired' ? (
+      ) : null}
+
+      {stage === 'recoveryRequired' ? (
         <View style={styles.overlay}>
           <View style={styles.card}>
             <Text isBold style={styles.title}>
@@ -503,9 +646,9 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
             </Pressable>
           </View>
         </View>
-      ) : stage === 'ready' && value ? (
-        children
-      ) : (
+      ) : null}
+
+      {stage === 'loading' ? (
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingContent}>
             <Text isBold style={styles.loadingTitle}>
@@ -514,7 +657,7 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
             <Text style={styles.loadingText}>{statusMessage ?? 'Even geduld.'}</Text>
           </View>
         </View>
-      )}
+      ) : null}
     </E2eeContext.Provider>
   )
 }
@@ -542,6 +685,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
+  } as any,
+  overlayBackdropPressable: {
+    position: 'absolute',
+    inset: 0,
   } as any,
   loadingOverlay: {
     position: 'absolute',
@@ -578,6 +725,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: 24,
     gap: 12,
+    zIndex: 1,
   } as any,
   title: {
     fontSize: 18,

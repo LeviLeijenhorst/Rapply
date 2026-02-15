@@ -1,6 +1,7 @@
 import { callSecureApi } from './secureApi'
 
 export type E2eeRecoveryPolicy = 'self_service' | 'custodian_only' | 'hybrid'
+export type E2eeCustodyMode = 'server_managed' | 'user_managed'
 
 export type E2eeObjectType =
   | 'coachee'
@@ -30,6 +31,7 @@ export async function e2eeBootstrap(): Promise<{
   e2eeConfigured: boolean
   keyVersion: number | null
   recoveryPolicy: E2eeRecoveryPolicy | null
+  custodyMode: E2eeCustodyMode | null
 }> {
   return callSecureApi('/e2ee/bootstrap', {})
 }
@@ -50,9 +52,38 @@ export async function e2eeSetup(params: {
   await callSecureApi('/e2ee/setup', params)
 }
 
+// Enables user-managed custody and removes server-managed KMS custody.
+export async function e2eeEnableUserManagedCustody(params: {
+  cryptoVersion?: number
+  keyVersion?: number
+  argon2Salt: string
+  argon2TimeCost: number
+  argon2MemoryCostKib: number
+  argon2Parallelism: number
+  wrappedArkUserPassphrase: string
+  wrappedArkRecoveryCode?: string | null
+  recoveryPolicy?: E2eeRecoveryPolicy
+  custodianThreshold?: number | null
+}): Promise<void> {
+  await callSecureApi('/e2ee/custody/enable-user-managed', params)
+}
+
+// Disables user-managed custody and stores ARK in server-managed KMS custody.
+export async function e2eeDisableUserManagedCustody(params: {
+  keyVersion: number
+  arkBase64: string
+}): Promise<void> {
+  await callSecureApi('/e2ee/custody/disable-user-managed', params)
+}
+
 // Reads the current user's key material needed for unlock and recovery.
 export async function e2eeGetUserKeyMaterial(): Promise<E2eeUserKeyMaterial> {
   return callSecureApi('/e2ee/user-key-material', {})
+}
+
+// Reads ARK for server-managed custody to unlock encryption without passphrase.
+export async function e2eeUnlockServerManaged(): Promise<{ arkBase64: string; keyVersion: number }> {
+  return callSecureApi('/e2ee/server-managed/unlock', {})
 }
 
 // Stores or clears the recovery-code wrapped ARK value.

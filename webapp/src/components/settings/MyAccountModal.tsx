@@ -59,11 +59,45 @@ export function MyAccountModal({
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
         <View style={styles.e2eeCard}>
           <Text isSemibold style={styles.e2eeTitle}>
-            CoachScribe-code
+            End-to-end encryptie
           </Text>
           <Text style={styles.e2eeText}>
-            Je CoachScribe-code is nodig om toegang te krijgen tot je data op andere apparaten of een andere browser. Bewaar hem op een veilige plek.
+            {e2ee.isConfigured
+              ? e2ee.isEnabled
+                ? 'End-to-end encryptie staat aan voor deze browser.'
+                : 'End-to-end encryptie staat uit voor deze browser.'
+              : 'End-to-end encryptie staat nog uit voor dit account.'}
           </Text>
+          <Pressable
+            onPress={() => {
+              if (isE2eeBusy) return
+              setIsE2eeBusy(true)
+              setE2eeStatus(null)
+              void e2ee
+                .setEnabled(!e2ee.isEnabled)
+                .then(() => {
+                  setE2eeStatus(e2ee.isEnabled ? 'End-to-end encryptie is uitgezet voor dit account.' : 'Stel nu je passphrase in om end-to-end encryptie te activeren.')
+                })
+                .catch((error) => setE2eeStatus(error instanceof Error ? error.message : 'Aanpassen van end-to-end encryptie mislukt'))
+                .finally(() => setIsE2eeBusy(false))
+            }}
+            style={({ hovered }) => [styles.e2eeButton, hovered ? styles.e2eeButtonHovered : undefined, isE2eeBusy ? styles.e2eeButtonDisabled : undefined]}
+            disabled={isE2eeBusy}
+          >
+            <Text isBold style={styles.e2eeButtonText}>
+              {!e2ee.isConfigured ? 'End-to-end encryptie aanzetten' : e2ee.isEnabled ? 'End-to-end encryptie uitzetten' : 'End-to-end encryptie aanzetten'}
+            </Text>
+          </Pressable>
+        </View>
+
+        {e2ee.isEnabled ? (
+          <View style={styles.e2eeCard}>
+            <Text isSemibold style={styles.e2eeTitle}>
+              CoachScribe-code
+            </Text>
+            <Text style={styles.e2eeText}>
+              Je CoachScribe-code is nodig om toegang te krijgen tot je data op andere apparaten of een andere browser. Bewaar hem op een veilige plek.
+            </Text>
           {rotatedRecoveryKey ? (
             <View style={styles.e2eeCodeBox}>
               <Text isSemibold style={styles.e2eeCodeText}>
@@ -100,7 +134,8 @@ export function MyAccountModal({
               Nieuwe CoachScribe-code maken
             </Text>
           </Pressable>
-        </View>
+          </View>
+        ) : null}
 
         {e2eeStatus ? <Text style={styles.e2eeStatusText}>{e2eeStatus}</Text> : null}
 
