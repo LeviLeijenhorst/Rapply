@@ -1,3 +1,5 @@
+"use client";
+
 import Image, { StaticImageData } from "next/image";
 import { ReactNode } from "react";
 import Button from "@/components/Button";
@@ -207,7 +209,7 @@ const impactItems: ImpactItem[] = [
   {
     title: "Overzicht",
     description:
-      "Alle sessies en context komen samen op een plek, per client en per traject. Zo behoud je overzicht, ook wanneer je meerdere clienten en gesprekken tegelijk begeleidt.",
+      "Alle sessies en context komen samen op één plek, per client en per traject. Zo behoud je overzicht, ook wanneer je meerdere clienten en gesprekken tegelijk begeleidt.",
     image: imageA,
     icon: searchIcon,
   },
@@ -250,43 +252,48 @@ const impactItems: ImpactItem[] = [
 
 export default function ProductImpactSection() {
   return (
-    <SectionContainer className="bg-[#EDF4FF]">
-      <div className="flex w-full flex-col items-center gap-8">
-        <h2 className="text-center text-3xl font-semibold text-[#1D0A00] md:text-5xl">
+    <SectionContainer
+      className="bg-white bg-[linear-gradient(to_bottom_right,_rgba(169,217,243,0.5),_rgba(237,194,217,0.5))]"
+      contentClassName="md:pt-[60px] md:pb-[60px]"
+    >
+      <div className="flex w-full flex-col items-center">
+        <h2 className="text-center font-[var(--font-catamaran)] text-[64px] font-medium leading-[110%] text-black">
           De <span className="text-[#BD0265]">impact</span> van CoachScribe
         </h2>
-        <div className="grid w-full gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-10 grid w-full gap-6 md:grid-cols-2 xl:grid-cols-3">
           {impactItems.map((impactItem) => (
             <article
               key={impactItem.title}
-              className="flex min-h-[420px] w-full flex-col rounded-2xl bg-white p-6"
+              className="flex min-h-[420px] w-full flex-col rounded-2xl bg-white p-6 px-8"
             >
               <div className="mb-3 flex items-center gap-3">
                 {impactItem.icon}
-                <h3 className="text-3xl font-semibold text-[#BD0265] md:text-4xl">
+                <h3 className="font-[var(--font-catamaran)] text-[40px] font-medium text-[#BD0265]">
                   {impactItem.title}
                 </h3>
               </div>
-              <div className="mb-4 mt-1 flex justify-center">
+              <div className="mb-4 mt-1 flex h-[180px] items-center justify-center">
                 <Image
                   src={impactItem.image}
                   alt={impactItem.title}
-                  className="h-auto w-full max-w-[164px] object-contain"
+                  className="h-auto max-h-full w-full max-w-[164px] object-contain"
                 />
               </div>
-              <p className="text-base font-normal leading-relaxed text-[#1D0A00]">
+              <p className="text-[16px] font-normal text-black/70">
                 {impactItem.description}
               </p>
             </article>
           ))}
         </div>
-        <Button
-          label="Probeer Gratis"
-          destination="https://app.coachscribe.nl"
-          variant="primary"
-          showArrow
-          className="font-normal"
-        />
+        <div className="mt-10">
+          <Button
+            label="Wachtlijst"
+            destination="/wachtlijst"
+            variant="primary"
+            showArrow
+            className="font-normal"
+          />
+        </div>
       </div>
     </SectionContainer>
   );

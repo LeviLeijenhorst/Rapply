@@ -4,7 +4,6 @@ import ProductImpactSection from "@/components/product/ProductImpactSection";
 import ProductCoachesSection from "@/components/product/ProductCoachesSection";
 import SecuritySection from "@/components/home/SecuritySection";
 import AvailabilitySection from "@/components/home/AvailabilitySection";
-import PricingSection from "@/components/home/PricingSection";
 import ProductFrequentlyAskedQuestionsSection from "@/components/product/ProductFrequentlyAskedQuestionsSection";
 
 export default function ProductPage() {
@@ -17,7 +16,7 @@ export default function ProductPage() {
         <ProductCoachesSection />
         <SecuritySection />
         <AvailabilitySection />
-        <PricingSection />
+        {/* <PricingSection /> */}
         <ProductFrequentlyAskedQuestionsSection />
       </div>
     </div>

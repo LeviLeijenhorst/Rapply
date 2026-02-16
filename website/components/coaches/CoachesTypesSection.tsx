@@ -75,16 +75,19 @@ const coachTypes: CoachType[] = [
 
 export default function CoachesTypesSection() {
   return (
-    <SectionContainer className="bg-[#F5F5F5]">
+    <SectionContainer
+      className="bg-[rgba(245,245,245,0.5)] md:mt-4"
+      contentClassName="pt-[60px] md:pb-20"
+    >
       <div className="flex w-full flex-col gap-8 md:gap-10">
-        <h2 className="text-center text-4xl font-semibold leading-tight text-[#1D0A00] md:text-7xl">
+        <h2 className="text-center text-3xl font-semibold leading-tight text-black md:text-4xl">
           Coach: een breed begrip
         </h2>
         <div className="grid w-full gap-6 md:grid-cols-2 xl:grid-cols-3">
           {coachTypes.map((coachType) => (
             <article
               key={coachType.title}
-              className="flex w-full flex-col gap-4 rounded-2xl border border-[#DDDDDD] bg-[#F5F5F5] p-6"
+              className="flex w-full flex-col gap-4 rounded-2xl border border-[#DDDDDD] bg-white p-6"
             >
               <h3 className="flex items-center gap-3 text-[20px] font-semibold text-[#BD0265]">
                 <Image src={coachType.icon} alt="" width={20} height={20} />

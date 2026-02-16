@@ -1,0 +1,25 @@
+{
+  "app": {
+    "[project]/Coachscribe/website/app/(site)/coaches/page": [
+      "static/media/83459a130389a713-s.p.d10ff594.woff2"
+    ],
+    "[project]/Coachscribe/website/app/(site)/gebruikersovereenkomst/page": [
+      "static/media/83459a130389a713-s.p.d10ff594.woff2"
+    ],
+    "[project]/Coachscribe/website/app/(site)/over-ons/page": [
+      "static/media/83459a130389a713-s.p.d10ff594.woff2"
+    ],
+    "[project]/Coachscribe/website/app/(site)/page": [
+      "static/media/83459a130389a713-s.p.d10ff594.woff2"
+    ],
+    "[project]/Coachscribe/website/app/(site)/product/page": [
+      "static/media/83459a130389a713-s.p.d10ff594.woff2"
+    ],
+    "[project]/Coachscribe/website/app/(site)/veiligheid/page": [
+      "static/media/83459a130389a713-s.p.d10ff594.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}

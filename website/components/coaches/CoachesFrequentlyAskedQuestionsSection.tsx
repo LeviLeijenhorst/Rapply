@@ -7,33 +7,33 @@ const questions = [
   {
     question: "Voor welke coaches is CoachScribe geschikt?",
     answer:
-      "CoachScribe is geschikt voor coaches die gesprekken voeren en achteraf tijd willen besparen op verslaglegging en administratie.",
+      "CoachScribe is geschikt voor alle professionals die gesprekken voeren met cliënten en daar gestructureerde verslagen van willen bijhouden. Het helpt coaches overzicht te houden, informatie veilig te bewaren en sneller terug te vinden wat belangrijk is uit sessies.",
   },
   {
     question: "Kan CoachScribe worden gebruikt door loopbaancoaches?",
     answer:
-      "Ja, loopbaancoaches kunnen CoachScribe gebruiken voor intakegesprekken, reflecties en voortgangsverslagen.",
+      "Ja. Loopbaancoaches kunnen CoachScribe gebruiken om gesprekken met cliënten vast te leggen, verslagen te maken en belangrijke inzichten overzichtelijk bij te houden. Dit maakt het makkelijker om trajecten te volgen en opvolging te plannen.",
   },
   {
     question:
       "Kan ik CoachScribe gebruiken als zelfstandig coach of alleen in een organisatie?",
     answer:
-      "Je kunt CoachScribe zowel zelfstandig als binnen teams of organisaties gebruiken.",
+      "CoachScribe is geschikt voor zowel zelfstandige coaches als coaches die in een organisatie werken.",
   },
   {
     question: "Is er een minimum aantal cliënten of sessies nodig om te beginnen?",
     answer:
-      "Nee, je kunt starten vanaf je eerste cliënt. Er is geen minimum aantal sessies vereist.",
+      "Nee. Je kunt CoachScribe vanaf het eerste gesprek gebruiken, ongeacht het aantal cliënten of sessies. Het systeem werkt direct, waardoor je meteen overzicht krijgt en efficiënt notities en verslagen kunt bijhouden.",
   },
   {
     question: "Kunnen onderwijscoaches of begeleiders CoachScribe gebruiken?",
     answer:
-      "Ja, ook onderwijscoaches en begeleiders kunnen CoachScribe inzetten om gesprekken sneller en consistenter vast te leggen.",
+      "Ja. CoachScribe kan worden ingezet door onderwijscoaches, mentoren en begeleiders om gesprekken met studenten of leerlingen gestructureerd vast te leggen. Het biedt een veilig overzicht van sessies en maakt het eenvoudiger om belangrijke informatie terug te vinden en te gebruiken voor begeleiding.",
   },
   {
     question: "Is CoachScribe geschikt voor nieuwe coaches zonder veel ervaring?",
     answer:
-      "Ja, dankzij templates en structuur is CoachScribe ook geschikt voor coaches die net zijn gestart.",
+      "Ja. CoachScribe ondersteunt zowel ervaren als nieuwe coaches door structuur en overzicht te bieden bij sessies en verslaglegging. Het helpt nieuwe coaches om gespreksinformatie efficiënt te beheren en sneller vertrouwd te raken met het bijhouden van professionele verslagen.",
   },
 ];
 
@@ -41,7 +41,7 @@ export default function CoachesFrequentlyAskedQuestionsSection() {
   const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
 
   return (
-    <SectionContainer className="bg-[#F8F9F9]">
+    <SectionContainer className="bg-[#F8F9F9]" contentClassName="md:pt-20 md:pb-20">
       <div id="faq" className="flex w-full flex-col gap-8">
         <h2 className="text-4xl font-semibold text-[#1D0A00] md:text-6xl">
           Veel gestelde vragen
@@ -57,6 +57,7 @@ export default function CoachesFrequentlyAskedQuestionsSection() {
                 <button
                   type="button"
                   aria-expanded={isExpanded}
+                  aria-controls={`faq-answer-${index}`}
                   onClick={() =>
                     setExpandedQuestion((previousQuestion) =>
                       previousQuestion === questionItem.question
@@ -71,16 +72,46 @@ export default function CoachesFrequentlyAskedQuestionsSection() {
                   </span>
                   <span
                     aria-hidden="true"
-                    className={`shrink-0 text-2xl leading-none transition-transform ${isExpanded ? "rotate-45" : ""}`}
+                    className={`shrink-0 transition-transform duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                      isExpanded ? "rotate-45" : ""
+                    }`}
                   >
-                    +
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M6 12H18"
+                        stroke="#1D0A00"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M12 18V6"
+                        stroke="#1D0A00"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </span>
                 </button>
-                {isExpanded ? (
-                  <p className="pb-5 text-base font-normal leading-relaxed text-[#1D0A00]">
+                <div
+                  id={`faq-answer-${index}`}
+                  className="grid overflow-hidden transition-[grid-template-rows,opacity] duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+                  style={{
+                    gridTemplateRows: isExpanded ? "1fr" : "0fr",
+                    opacity: isExpanded ? 1 : 0,
+                  }}
+                >
+                  <p className="overflow-hidden pb-5 text-base font-normal leading-relaxed text-[#1D0A00]">
                     {questionItem.answer}
                   </p>
-                ) : null}
+                </div>
               </div>
             );
           })}

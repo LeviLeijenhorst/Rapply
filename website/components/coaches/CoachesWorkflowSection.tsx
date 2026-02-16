@@ -4,14 +4,14 @@ import workflowImage from "@/coaches/coaches-3.png";
 
 export default function CoachesWorkflowSection() {
   return (
-    <section className="w-full bg-[linear-gradient(135deg,#A9D9F3_0%,#EDC2D9_100%)]">
-      <SectionContainer>
-        <div className="grid w-full items-center gap-10 lg:grid-cols-2">
-          <div className="flex w-full flex-col items-start gap-6">
-            <h1 className="text-4xl font-semibold leading-tight text-[#1D0A00] md:text-6xl">
+    <section className="w-full pb-[20px] bg-white bg-[linear-gradient(135deg,rgba(169,217,243,0.5)_0%,rgba(237,194,217,0.5)_100%)]">
+      <SectionContainer contentClassName="pt-[60px] pb-[60px]">
+        <div className="grid w-full items-start gap-10 lg:grid-cols-2">
+          <div className="flex w-full flex-col items-start gap-4 lg:self-center">
+            <h1 className="font-[var(--font-catamaran)] text-[64px] font-medium leading-[110%] text-black">
               Jouw <span className="text-[#BD0265]">werkwijze</span>
             </h1>
-            <div className="max-w-xl space-y-5 text-lg font-normal leading-relaxed text-[#243747]">
+            <div className="max-w-xl space-y-5 text-[16px] font-medium text-black/70">
               <p>
                 Elke coach heeft een eigen werkwijze. Daarom werkt CoachScribe
                 met templates die zijn afgestemd op verschillende
@@ -29,7 +29,7 @@ export default function CoachesWorkflowSection() {
               </p>
             </div>
           </div>
-          <div className="flex w-full justify-center lg:justify-end">
+          <div className="mt-5 flex w-full justify-center lg:justify-end">
             <Image
               src={workflowImage}
               alt="CoachScribe templates op laptop"

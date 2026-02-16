@@ -10,13 +10,14 @@ type ButtonProps = {
   variant?: ButtonVariant;
   className?: string;
   showArrow?: boolean;
+  openInNewTab?: boolean;
 };
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-[#BD0265] text-white border-2 border-[#BD0265] hover:text-white hover:shadow-[inset_0_0_0_2px_#ffffff,inset_0_0_0_999px_#BD0265]",
+    "border-2 border-[#BD0265] bg-[#BD0265] text-white hover:border-[#A00256] hover:bg-[#A00256]",
   secondary:
-    "bg-white text-[#BD0265] border border-[#BD0265] hover:text-white hover:shadow-[inset_0_0_0_2px_#ffffff,inset_0_0_0_999px_#BD0265]",
+    "border border-[#BD0265] bg-white text-[#BD0265] hover:bg-[#FBE8F1]",
 };
 
 export default function Button({
@@ -25,13 +26,16 @@ export default function Button({
   variant = "primary",
   className,
   showArrow = false,
+  openInNewTab = false,
 }: ButtonProps) {
   return (
     <>
       {/* Button */}
       <Link
         href={destination}
-        className={`group inline-flex h-12 items-center justify-center gap-2 rounded-full p-3 text-base font-semibold transition-all ${variantClasses[variant]} ${className ?? ""}`}
+        target={openInNewTab ? "_blank" : undefined}
+        rel={openInNewTab ? "noopener noreferrer" : undefined}
+        className={`inline-flex h-12 items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${variantClasses[variant]} ${className ?? ""}`}
       >
         <span>{label}</span>
         {showArrow ? (
@@ -40,7 +44,6 @@ export default function Button({
             alt=""
             width={20}
             height={20}
-            className="transition-transform duration-200 group-hover:translate-x-1"
           />
         ) : null}
       </Link>

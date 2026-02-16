@@ -5,30 +5,35 @@ import ctaImage from "@/coaches/coaches-1.jpg";
 
 export default function CoachesCtaSection() {
   return (
-    <SectionContainer className="bg-white">
+    <SectionContainer className="bg-white" contentClassName="md:pb-0">
       <div className="grid w-full items-center gap-10 lg:grid-cols-2">
-        <div className="flex w-full flex-col items-start gap-6">
-          <h2 className="text-4xl font-semibold leading-tight text-[#1D0A00] md:text-7xl">
-            <span className="block">Is CoachScribe</span>
-            <span className="block text-[#BD0265]">iets voor jou?</span>
-          </h2>
-          <p className="max-w-xl text-lg font-normal leading-relaxed text-[#243747]">
-            Ben jij een coach en ervaar je mentale druk door het bijhouden van
-            sessies en cliënten? Ben je teveel tijd kwijt aan voorbereiding en
-            naslagwerk? Wellicht dat wij jou kunnen helpen :)
-          </p>
-          <Button
-            label="Probeer Gratis"
-            destination="https://app.coachscribe.nl"
-            showArrow
-            className="font-normal"
-          />
+        <div className="flex w-full flex-col items-start lg:-translate-y-[30px]">
+          <div className="flex w-full flex-col items-start gap-4">
+            <h1 className="font-[var(--font-catamaran)] text-[64px] font-medium leading-[110%] text-black">
+              <span className="block">Is CoachScribe</span>
+              <span className="block text-[#BD0265]">iets voor jou?</span>
+            </h1>
+            <p className="max-w-xl text-[16px] font-medium text-black/70">
+              Ben jij een coach en ervaar je mentale druk door het bijhouden van
+              sessies en cliënten? Ben je teveel tijd kwijt aan voorbereiding en
+              naslagwerk? Wellicht dat wij jou kunnen helpen :)
+            </p>
+          </div>
+          <div className="mt-6">
+            <Button
+              label="Wachtlijst"
+              destination="/wachtlijst"
+              showArrow
+              className="font-normal"
+            />
+          </div>
         </div>
         <div className="flex w-full justify-center lg:justify-end">
           <Image
             src={ctaImage}
             alt="CoachScribe helpt coaches vliegen"
-            className="h-auto w-full max-w-[500px] object-contain"
+            className="h-auto w-full max-w-[500px] object-contain lg:origin-top-right lg:-translate-x-[30px] lg:scale-[0.86]"
+            priority
           />
         </div>
       </div>

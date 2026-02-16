@@ -1,0 +1,26 @@
+globalThis.__BUILD_MANIFEST = {
+  "pages": {
+    "/_app": []
+  },
+  "devFiles": [],
+  "polyfillFiles": [
+    "static/chunks/3215b_next_dist_build_polyfills_polyfill-nomodule.js"
+  ],
+  "lowPriorityFiles": [],
+  "rootMainFiles": [
+    "static/chunks/[turbopack]_browser_dev_hmr-client_hmr-client_ts_69524b68._.js",
+    "static/chunks/3215b_next_dist_compiled_react-dom_1edc4d45._.js",
+    "static/chunks/3215b_next_dist_compiled_react-server-dom-turbopack_7f6f7a82._.js",
+    "static/chunks/3215b_next_dist_compiled_next-devtools_index_44a56803.js",
+    "static/chunks/3215b_next_dist_compiled_543c4177._.js",
+    "static/chunks/3215b_next_dist_client_7dc91558._.js",
+    "static/chunks/3215b_next_dist_1baa2b39._.js",
+    "static/chunks/3215b_@swc_helpers_cjs_ccdbf7f4._.js",
+    "static/chunks/Coachscribe_website_a0ff3932._.js",
+    "static/chunks/turbopack-Coachscribe_website_85946c3f._.js"
+  ]
+};
+globalThis.__BUILD_MANIFEST.lowPriorityFiles = [
+"/static/" + process.env.__NEXT_BUILD_ID + "/_buildManifest.js",
+"/static/" + process.env.__NEXT_BUILD_ID + "/_ssgManifest.js"
+];

@@ -2,7 +2,6 @@ import HeroSection from "@/components/home/HeroSection";
 import FeaturesSection from "@/components/home/FeaturesSection";
 import AvailabilitySection from "@/components/home/AvailabilitySection";
 import SecuritySection from "@/components/home/SecuritySection";
-import PricingSection from "@/components/home/PricingSection";
 import FrequentlyAskedQuestionsSection from "@/components/home/FrequentlyAskedQuestionsSection";
 
 export default function HomePage() {
@@ -19,7 +18,7 @@ export default function HomePage() {
         {/* Availability */}
         <AvailabilitySection />
         {/* Pricing */}
-        <PricingSection />
+        {/* <PricingSection /> */}
         {/* Frequently asked questions */}
         <FrequentlyAskedQuestionsSection />
       </div>

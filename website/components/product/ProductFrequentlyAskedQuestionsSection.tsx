@@ -7,32 +7,32 @@ const questions = [
   {
     question: "Kan ik templates gebruiken voor mijn verslagen?",
     answer:
-      "Ja, je kunt werken met templates zodat elk verslag een vaste structuur heeft die past bij jouw manier van coachen.",
+      "Ja. Je kunt vooraf ingestelde templates gebruiken om snel gestructureerde verslagen te maken. Zo hoef je niet telkens vanaf nul te beginnen en houd je verslagen consistent en overzichtelijk. Zit er geen template tussen die bij jouw workflow past? Geen probleem, het is ook mogelijk om je eigen templates te maken.",
   },
   {
     question: "Kan ik mijn huisstijl toevoegen aan verslagen?",
     answer:
-      "Ja, je kunt verslagen delen in een opmaak die aansluit op jouw professionele uitstraling en werkwijze.",
+      "Ja. Je kunt je eigen logo en praktijk kleur toevoegen, zodat elk verslag direct herkenbaar is en professioneel oogt. Zo blijft de uitstraling consistent en duidelijk voor jou en je cliënten.",
   },
   {
     question: "Is er een app voor CoachScribe?",
     answer:
-      "CoachScribe is beschikbaar via de browser op desktop en mobiel. Een native app wordt verder ontwikkeld.",
+      "Ja. CoachScribe is beschikbaar als mobiele app, zodat je ten alle tijde sessies kunt opnemen, verslagen kunt bekijken en notities kunt maken, waar je ook bent.",
   },
   {
-    question: "Kan ik verslagen delen met clienten?",
+    question: "Kan ik verslagen delen met cliënten?",
     answer:
-      "Ja, je kunt verslagen eenvoudig delen zodat clienten de juiste samenvatting en opvolging ontvangen.",
+      "Ja. Je kunt verslagen eenvoudig delen met cliënten of collega’s, en ze worden gedeeld in jouw huisstijl met logo en praktijkkleur, zodat alles herkenbaar en professioneel blijft.",
   },
   {
     question: "Kan ik zelf notities maken?",
     answer:
-      "Ja, naast automatische verslaglegging kun je handmatig notities toevoegen en bewerken wanneer je wilt.",
+      "Ja. Je kunt altijd zelf notities toevoegen bij een sessie, zodat belangrijke informatie niet verloren gaat en je later snel terug kunt vinden wat er besproken is.",
   },
   {
     question: "Kan ik specifieke momenten in sessies terugluisteren?",
     answer:
-      "Ja, je kunt sessies terugluisteren en relevante momenten gebruiken om context en voortgang nauwkeurig op te volgen.",
+      "Ja. De audio wordt veilig opgeslagen en je kunt in de transcriptie klikken op elk moment van de sessie en direct de audio terugluisteren, zodat je gemakkelijk belangrijke stukken opnieuw kunt horen.",
   },
 ];
 
@@ -40,7 +40,7 @@ export default function ProductFrequentlyAskedQuestionsSection() {
   const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
 
   return (
-    <SectionContainer className="bg-[#F8F9F9]">
+    <SectionContainer className="bg-[#F8F9F9]" contentClassName="md:pt-20 md:pb-20">
       <div className="flex w-full flex-col gap-8">
         <h2 className="text-4xl font-semibold text-[#1D0A00] md:text-6xl">
           Veel gestelde vragen
@@ -56,6 +56,7 @@ export default function ProductFrequentlyAskedQuestionsSection() {
                 <button
                   type="button"
                   aria-expanded={isExpanded}
+                  aria-controls={`faq-answer-${index}`}
                   onClick={() =>
                     setExpandedQuestion((previousQuestion) =>
                       previousQuestion === questionItem.question
@@ -70,16 +71,46 @@ export default function ProductFrequentlyAskedQuestionsSection() {
                   </span>
                   <span
                     aria-hidden="true"
-                    className={`shrink-0 text-2xl leading-none transition-transform ${isExpanded ? "rotate-45" : ""}`}
+                    className={`shrink-0 transition-transform duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                      isExpanded ? "rotate-45" : ""
+                    }`}
                   >
-                    +
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M6 12H18"
+                        stroke="#1D0A00"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M12 18V6"
+                        stroke="#1D0A00"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </span>
                 </button>
-                {isExpanded ? (
-                  <p className="pb-5 text-base font-normal leading-relaxed text-[#1D0A00]">
+                <div
+                  id={`faq-answer-${index}`}
+                  className="grid overflow-hidden transition-[grid-template-rows,opacity] duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+                  style={{
+                    gridTemplateRows: isExpanded ? "1fr" : "0fr",
+                    opacity: isExpanded ? 1 : 0,
+                  }}
+                >
+                  <p className="overflow-hidden pb-5 text-base font-normal leading-relaxed text-[#1D0A00]">
                     {questionItem.answer}
                   </p>
-                ) : null}
+                </div>
               </div>
             );
           })}

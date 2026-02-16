@@ -5,8 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Button from "@/components/Button";
-import logoIcon from "@/home/coachscribe-logo-icon.svg";
-import logoText from "@/home/coachscribe-logo-text.svg";
+import logo from "@/home/logo.png";
 
 const navigationLinks = [
   { label: "Product", destination: "/product" },
@@ -14,15 +13,20 @@ const navigationLinks = [
   { label: "Veiligheid", destination: "/veiligheid" },
   { label: "Over Ons", destination: "/over-ons" },
 ];
+const NAV_EXPAND_SCROLL_THRESHOLD = 48;
+const NAV_EXPAND_ANIMATION_MS = 450;
+const NAV_RADIUS_ANIMATION_MS = 180;
 
 export default function NavigationBar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
+  const isActiveDestination = (destination: string) =>
+    pathname === destination || pathname.startsWith(`${destination}/`);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 12);
+      setIsScrolled(window.scrollY > NAV_EXPAND_SCROLL_THRESHOLD);
     };
 
     handleScroll();
@@ -34,53 +38,53 @@ export default function NavigationBar() {
     <header className="fixed left-0 top-0 z-50 w-full font-inter">
       {/* Navigation bar container */}
       <div
-        className={`relative mx-auto w-full transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          isScrolled
-            ? "max-w-full px-0 pb-0 pt-0"
-            : "max-w-6xl px-6 pb-8 pt-8 md:px-10"
+        className={`relative mx-auto w-full max-w-full px-0 pb-0 pt-0 transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          isScrolled ? "md:px-0 md:pb-0 md:pt-0" : "md:px-20 md:pb-8 md:pt-8"
         }`}
+        style={{ transitionDuration: `${NAV_EXPAND_ANIMATION_MS}ms` }}
       >
         {/* Navigation bar top accent */}
         <div
-          className={`absolute left-6 right-6 top-0 h-[72px] bg-transparent transition-opacity duration-300 md:left-10 md:right-10 ${
+          className={`absolute left-6 right-6 top-0 hidden h-[72px] bg-transparent transition-opacity duration-300 md:block md:left-10 md:right-10 ${
             isScrolled ? "opacity-0" : "opacity-100"
           }`}
         />
         {/* Navigation bar surface */}
         <div
-          className={`relative flex w-full items-center justify-between gap-6 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          className={`relative flex h-20 w-full items-center justify-between gap-6 rounded-[0px] bg-white/70 px-4 shadow-[0_8px_24px_rgba(0,0,0,0.14)] backdrop-blur-xl md:px-10 ${
             isScrolled
-              ? "h-20 rounded-none bg-white/70 px-4 shadow-[0_8px_24px_rgba(0,0,0,0.14)] backdrop-blur-xl md:px-10"
-              : "h-20 rounded-full bg-white/75 px-4 shadow-[0_4px_16px_rgba(0,0,0,0.18)] backdrop-blur-xl md:px-8"
+              ? "md:rounded-[0px] md:bg-white/70 md:px-10 md:shadow-[0_8px_24px_rgba(0,0,0,0.14)]"
+              : "md:rounded-[40px] md:bg-white/75 md:px-8 md:shadow-[0_4px_16px_rgba(0,0,0,0.18)]"
           }`}
+          style={{
+            transitionProperty:
+              "border-radius, padding-left, padding-right, background-color, box-shadow",
+            transitionDuration: `${NAV_RADIUS_ANIMATION_MS}ms, ${NAV_EXPAND_ANIMATION_MS}ms, ${NAV_EXPAND_ANIMATION_MS}ms, ${NAV_EXPAND_ANIMATION_MS}ms, ${NAV_EXPAND_ANIMATION_MS}ms`,
+            transitionTimingFunction: "cubic-bezier(0.22,1,0.36,1)",
+            transitionDelay: "0ms, 0ms, 0ms, 0ms, 0ms",
+          }}
         >
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3">
-            {/* Logo icon */}
+          <Link href="/" className="flex items-center">
             <Image
-              src={logoIcon}
-              alt="CoachScribe logo icon"
-              width={24}
-              height={24}
-            />
-            {/* Logo text */}
-            <Image
-              src={logoText}
-              alt="CoachScribe logo text"
-              width={130}
-              height={24}
+              src={logo}
+              alt="CoachScribe logo"
+              width={261}
+              height={132}
+              className="-translate-x-[50px] translate-y-[28px] h-[132px] w-[261px] object-contain"
+              priority
             />
           </Link>
           {/* Navigation links */}
-          <nav className="hidden items-center gap-10 text-base font-normal text-black md:flex">
+          <nav className="hidden items-center gap-10 text-[16px] font-medium text-black md:absolute md:left-1/2 md:flex md:-translate-x-1/2">
             {navigationLinks.map((navigationLink) => (
               <Link
                 key={navigationLink.label}
                 href={navigationLink.destination}
                 className={`transition-colors hover:text-[#BD0265] ${
-                  pathname === navigationLink.destination
-                    ? "font-semibold text-black"
-                    : "font-normal text-black"
+                  isActiveDestination(navigationLink.destination)
+                    ? "font-bold text-[#BD0265]"
+                    : "font-medium text-black"
                 }`}
               >
                 {navigationLink.label}
@@ -88,16 +92,10 @@ export default function NavigationBar() {
             ))}
           </nav>
           {/* Navigation actions */}
-          <div className="hidden items-center gap-4 lg:flex">
+          <div className="hidden items-center lg:flex">
             <Button
-              label="Inloggen"
-              destination="https://app.coachscribe.nl/inloggen?direct=1"
-              variant="secondary"
-              className="font-normal"
-            />
-            <Button
-              label="Probeer Gratis"
-              destination="https://app.coachscribe.nl/inloggen?mode=signup"
+              label="Wachtlijst"
+              destination="/wachtlijst"
               variant="primary"
               className="font-normal"
             />
@@ -210,8 +208,8 @@ export default function NavigationBar() {
                 href={navigationLink.destination}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`transition-colors hover:text-[#BD0265] ${
-                  pathname === navigationLink.destination
-                    ? "font-semibold text-black"
+                  isActiveDestination(navigationLink.destination)
+                    ? "font-bold text-[#BD0265]"
                     : "font-normal text-black"
                 }`}
               >
@@ -220,16 +218,10 @@ export default function NavigationBar() {
             ))}
           </nav>
           {/* Mobile menu actions */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col">
             <Button
-              label="Inloggen"
-              destination="https://app.coachscribe.nl/inloggen?direct=1"
-              variant="secondary"
-              className="font-normal"
-            />
-            <Button
-              label="Probeer Gratis"
-              destination="https://app.coachscribe.nl/inloggen?mode=signup"
+              label="Wachtlijst"
+              destination="/wachtlijst"
               variant="primary"
               className="font-normal"
             />
@@ -239,4 +231,3 @@ export default function NavigationBar() {
     </header>
   );
 }
-

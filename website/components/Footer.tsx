@@ -1,98 +1,135 @@
 import Image from "next/image";
 import Link from "next/link";
-import logoIcon from "@/home/coachscribe-logo-icon.svg";
-import logoText from "@/home/coachscribe-logo-text.svg";
+import logo from "@/home/logo.png";
 import linkedinIcon from "@/home/LinkedIn.svg";
+import tiktokIcon from "@/home/TikTok.svg";
+import facebookIcon from "@/home/Facebook.svg";
+import instagramIcon from "@/home/Instagram.svg";
 
 const navigationLinks = [
   { label: "Product", destination: "/product" },
   { label: "Coaches", destination: "/coaches" },
   { label: "Veiligheid", destination: "/veiligheid" },
   { label: "Over Ons", destination: "/over-ons" },
-  { label: "Inloggen", destination: "https://app.coachscribe.nl/inloggen?direct=1" },
-  { label: "Probeer Gratis", destination: "https://app.coachscribe.nl/inloggen?mode=signup" },
+  { label: "Wachtlijst", destination: "/wachtlijst" },
+];
+
+const connectLinks = [
+  {
+    label: "LinkdIn",
+    destination: "https://www.linkedin.com/company/110146544",
+    icon: linkedinIcon,
+    iconClassName: "scale-[1.9]",
+  },
+  { label: "TikTok", destination: "https://www.tiktok.com", icon: tiktokIcon },
+  {
+    label: "Facebook",
+    destination: "https://www.facebook.com",
+    icon: facebookIcon,
+  },
+  {
+    label: "Instagram",
+    destination: "https://www.instagram.com",
+    icon: instagramIcon,
+    iconClassName: "scale-[1.15]",
+  },
 ];
 
 export default function Footer() {
   return (
-    <footer className="w-full bg-[linear-gradient(135deg,rgba(169,217,243,0.5)_0%,rgba(237,194,217,0.5)_100%)] font-inter text-black">
+    <footer className="w-full bg-[linear-gradient(110deg,rgba(184,212,255,0.45)_0%,rgba(198,175,255,0.25)_55%,rgba(255,224,236,0.45)_100%)] text-[#1D0A00]">
       {/* Footer container */}
-      <div className="mx-auto w-full max-w-6xl p-8">
+      <div className="mx-auto w-full max-w-6xl px-8 pb-8 pt-20">
         {/* Footer content */}
-        <div className="grid w-full grid-cols-1 gap-12 lg:grid-cols-[1fr_auto] lg:gap-10">
+        <div className="grid w-full grid-cols-2 gap-x-8 gap-y-14 md:gap-x-16 lg:grid-cols-[max-content_max-content_max-content] lg:items-start lg:justify-between lg:gap-0">
           {/* Footer brand */}
-          <div className="flex w-full max-w-[560px] flex-col gap-6 lg:max-w-[50%]">
-            {/* Brand logo */}
-            <div className="flex items-center gap-3">
-              {/* Brand logo icon */}
-              <Image
-                src={logoIcon}
-                alt="CoachScribe logo icon"
-                width={28}
-                height={28}
-              />
-              {/* Brand logo text */}
-              <Image
-                src={logoText}
-                alt="CoachScribe logo text"
-                width={150}
-                height={28}
-              />
+          <div className="col-span-2 flex w-full max-w-[430px] flex-col lg:col-span-1 lg:w-fit lg:max-w-none">
+            <div className="flex flex-col gap-6">
+              {/* Brand logo */}
+              <div className="-mb-16 flex items-center">
+                <Image
+                  src={logo}
+                  alt="CoachScribe logo"
+                  width={261}
+                  height={132}
+                  className="-translate-x-[53px] -translate-y-[20px] h-[132px] w-[261px] object-contain"
+                />
+              </div>
+              {/* Brand description */}
+              <p className="text-[16px] font-medium leading-relaxed">
+                CoachScribe neemt sessies op van coaches
+                <br />
+                en zet deze om in praktische verslagen die
+                <br />
+                aansluiten op de behoefte van de coach.
+              </p>
             </div>
-            {/* Brand description */}
-            <p className="text-sm font-normal leading-relaxed">
-              CoachScribe neemt sessies op van coaches en zet deze om in
-              praktische verslagen die aansluiten op de behoefte van de coach.
-            </p>
             {/* Brand contact */}
             <a
               href="mailto:contact@coachscribe.nl"
-              className="text-sm font-semibold"
+              className="mt-8 text-[16px] font-medium"
             >
               contact@coachscribe.nl
             </a>
-            <a
-              href="https://www.linkedin.com/company/110146544"
-              className="flex w-fit items-center gap-3 text-sm font-normal transition-colors hover:text-[#BD0265]"
-              rel="noreferrer"
-              target="_blank"
-            >
-              <Image
-                src={linkedinIcon}
-                alt="LinkedIn icon"
-                width={22}
-                height={22}
-                className="h-[22px] w-[22px] object-contain"
-              />
-              <span>LinkedIn</span>
-            </a>
           </div>
-          <div className="flex w-full flex-col gap-12 lg:justify-self-end">
-            {/* Footer navigation */}
-            <div className="flex w-full flex-col gap-4 lg:items-end">
-              {/* Navigation title */}
-              <h2 className="text-base font-semibold">Navigatie</h2>
-              {/* Navigation links */}
-              <nav className="flex flex-col gap-2 text-sm font-normal lg:items-end">
-                {navigationLinks.map((navigationLink) => (
-                  <Link
-                    key={navigationLink.label}
-                    href={navigationLink.destination}
-                    className="w-fit underline transition-colors hover:text-[#BD0265]"
-                  >
-                    {navigationLink.label}
-                  </Link>
-                ))}
-              </nav>
+          {/* Footer navigation */}
+          <div className="justify-self-start lg:justify-self-auto">
+            <div className="flex w-fit flex-col gap-6">
+            {/* Navigation title */}
+            <h2 className="text-base font-semibold md:text-xl">
+              Navigatie
+            </h2>
+            {/* Navigation links */}
+            <nav className="flex flex-col gap-2 text-[16px] font-medium leading-tight">
+              {navigationLinks.map((navigationLink) => (
+                <Link
+                  key={navigationLink.label}
+                  href={navigationLink.destination}
+                  className="w-fit underline transition-colors hover:text-[#BD0265]"
+                >
+                  {navigationLink.label}
+                </Link>
+              ))}
+            </nav>
+            </div>
+          </div>
+          {/* Footer connect */}
+          <div className="-translate-x-6 justify-self-start lg:translate-x-0 lg:justify-self-auto">
+            <div className="flex w-fit flex-col gap-6 lg:-translate-x-[8px]">
+            <h2 className="text-base font-semibold md:text-xl">
+              Connect
+            </h2>
+            <div className="flex flex-col gap-2 text-[16px] font-medium leading-tight">
+              {connectLinks.map((connectLink) => (
+                <a
+                  key={connectLink.label}
+                  href={connectLink.destination}
+                  className="flex w-fit items-center gap-3 transition-colors hover:text-[#BD0265]"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <span className="relative h-[22px] w-[22px] overflow-hidden rounded-[5px]">
+                    <Image
+                      src={connectLink.icon}
+                      alt={`${connectLink.label} icon`}
+                      fill
+                      sizes="22px"
+                      className={`object-contain ${connectLink.iconClassName ?? ""}`}
+                    />
+                  </span>
+                  <span>{connectLink.label}</span>
+                </a>
+              ))}
+            </div>
             </div>
           </div>
         </div>
         {/* Footer legal */}
-        <div className="mt-12 flex w-full flex-col gap-4 text-sm font-normal text-black lg:flex-row lg:items-center lg:justify-between">
+        <div className="mt-40 flex w-full flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[16px] font-medium text-[#2D3B4A]">
           {/* Copyright */}
-          <span>Copyright (c) 2026 CoachScribe. Alle rechten voorbehouden.</span>
+          <span>Copyright © 2026 CoachScribe. Alle rechten voorbehouden.</span>
           {/* Legal links */}
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
             <Link
               href="/privacybeleid"
               className="w-fit underline transition-colors hover:text-[#BD0265]"
@@ -111,4 +148,3 @@ export default function Footer() {
     </footer>
   );
 }
-

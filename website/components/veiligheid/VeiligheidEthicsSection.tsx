@@ -1,3 +1,5 @@
+"use client";
+
 import Image, { StaticImageData } from "next/image";
 import SectionContainer from "@/components/home/SectionContainer";
 import supportImage from "@/veiligheid/veiligheid-2.jpg";
@@ -33,10 +35,10 @@ const ethicsItems: EthicsItem[] = [
 
 export default function VeiligheidEthicsSection() {
   return (
-    <SectionContainer className="bg-[#F8F9F9]">
+    <SectionContainer className="bg-[#F8F9F9]" contentClassName="pt-20">
       <div className="flex w-full flex-col gap-10">
-        <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 text-center">
-          <h2 className="text-4xl font-semibold text-[#1D0A00]">
+        <div className="mx-auto flex max-w-4xl flex-col items-center gap-[16px] text-center">
+          <h2 className="font-[var(--font-catamaran)] text-[40px] font-medium leading-[120%] text-black">
             <span className="text-[#BD0265]">Ethiek</span> als uitgangspunt
           </h2>
           <p className="text-base font-normal leading-relaxed text-[#1D0A00]">
@@ -47,22 +49,24 @@ export default function VeiligheidEthicsSection() {
           </p>
         </div>
         <div className="grid w-full gap-6 md:grid-cols-3">
-          {ethicsItems.map((ethicsItem) => (
+          {ethicsItems.map((ethicsItem, index) => (
             <article
               key={ethicsItem.title}
-              className="flex min-h-[380px] flex-col items-center rounded-2xl border border-black/10 bg-white p-6 text-center"
+              className="relative mx-auto flex h-[408px] w-full max-w-[364px] flex-col items-center overflow-hidden rounded-2xl border border-black/10 bg-white p-6 pb-8 pt-8 text-center"
             >
-              <h3 className="text-4xl font-semibold text-[#BD0265] md:text-5xl">
-                {ethicsItem.title}
-              </h3>
-              <div className="my-6 flex flex-1 items-center justify-center">
+              <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
                 <Image
                   src={ethicsItem.image}
                   alt={ethicsItem.title}
-                  className="h-auto w-full max-w-[140px]"
+                  className={`h-auto w-full max-w-[140px] object-contain ${
+                    index === 1 ? "scale-[1.5]" : "scale-[1.6]"
+                  }`}
                 />
               </div>
-              <p className="text-base font-normal leading-relaxed text-[#1D0A00]">
+              <h3 className="relative z-10 font-[var(--font-catamaran)] text-[40px] font-medium leading-[120%] text-[#BD0265]">
+                {ethicsItem.title}
+              </h3>
+              <p className="relative z-10 mt-auto text-base font-normal leading-relaxed text-[#1D0A00]">
                 {ethicsItem.description}
               </p>
             </article>

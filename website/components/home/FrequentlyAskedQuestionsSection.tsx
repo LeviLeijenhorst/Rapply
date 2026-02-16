@@ -7,33 +7,32 @@ const questions = [
   {
     question: "Wat is CoachScribe?",
     answer:
-      "CoachScribe neemt je sessies op en zet ze om in duidelijke verslagen zodat jij je volledig kunt richten op het gesprek.",
+      "CoachScribe is een AI-ondersteunde tool voor coaches om gesprekken eenvoudig op te nemen, automatisch te laten samenvatten en overzichtelijke verslagen te maken. Het helpt je om minder tijd kwijt te zijn aan administratie, terwijl je wel grip houdt op inhoud, nuance en context.",
   },
   {
     question: "Is CoachScribe veilig?",
     answer:
-      "Je data wordt beschermd opgeslagen en alleen jij hebt toegang tot je gesprekken en verslagen.",
+      "Ja. CoachScribe is veilig ingericht met sterke technische en organisatorische maatregelen om jouw gegevens te beschermen. Alle data wordt versleuteld opgeslagen en verwerkt binnen de Europese Unie, in overeenstemming met de AVG. Jouw gegevens worden niet gebruikt om AI-modellen te trainen en alleen bewaard zolang dat functioneel nodig is.",
   },
   {
-    question:
-      "Worden modellen voor kunstmatige intelligentie getraind met mijn informatie?",
+    question: "Worden er AI modellen getraind met mijn informatie?",
     answer:
-      "Nee, jouw gesprekken worden niet gebruikt om modellen te trainen.",
-  },
-  {
-    question: "Voor wie is CoachScribe?",
-    answer:
-      "CoachScribe is gemaakt voor coaches die hun administratie willen versimpelen en meer focus willen houden op hun clienten.",
-  },
-  {
-    question: "Is CoachScribe een vervanging voor een menselijke coach?",
-    answer:
-      "Nee, CoachScribe ondersteunt jouw werk en neemt alleen de verslaglegging uit handen.",
+      "Nee. Jouw gegevens worden niet gebruikt om AI-modellen te trainen of te verbeteren. Ze worden uitsluitend verwerkt om de functionaliteiten van CoachScribe voor jou uit te voeren.",
   },
   {
     question: "Voor wie is CoachScribe bedoeld?",
     answer:
-      "CoachScribe is bedoeld voor zelfstandige coaches en teams die efficiënt willen samenwerken.",
+      "CoachScribe is bedoeld voor coaches en begeleiders die werken met gesprekken en daar gestructureerde, heldere verslagen van willen maken. Denk aan coaches in het onderwijs, zorg, loopbaanbegeleiding en persoonlijke ontwikkeling.",
+  },
+  {
+    question: "Is CoachScribe een vervanging voor een menselijke coach?",
+    answer:
+      "Nee. CoachScribe ondersteunt coaches met automatisering van taken zoals notities maken en verslaglegging, maar vervangt nooit het menselijke oordeel, de contextbegrip of de relatie tussen coach en client.",
+  },
+  {
+    question: "Kan ik niet gewoon ChatGPT gebruiken?",
+    answer:
+      "Nee. ChatGPT is een algemene AI en beschikt niet over de functionaliteit voor sessie opname, gestructureerde verslaglegging of AVG-proof beheer van cliëntgegevens, waardoor het niet geschikt is voor dit soort toepassingen. Daarnaast is CoachScribe ontworpen speciaal voor coaches en kan het dus een stuk gerichter te werk gaan.",
   },
 ];
 
@@ -41,7 +40,7 @@ export default function FrequentlyAskedQuestionsSection() {
   const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
 
   return (
-    <SectionContainer className="bg-[#F8F9F9]">
+    <SectionContainer className="bg-[#F8F9F9]" contentClassName="md:pt-20 md:pb-20">
       <div className="flex w-full flex-col gap-8">
         <h2 className="text-4xl font-semibold text-[#1D0A00] md:text-6xl">
           Veel gestelde vragen
@@ -57,6 +56,7 @@ export default function FrequentlyAskedQuestionsSection() {
                 <button
                   type="button"
                   aria-expanded={isExpanded}
+                  aria-controls={`faq-answer-${index}`}
                   onClick={() =>
                     setExpandedQuestion((previousQuestion) =>
                       previousQuestion === questionItem.question
@@ -71,16 +71,46 @@ export default function FrequentlyAskedQuestionsSection() {
                   </span>
                   <span
                     aria-hidden="true"
-                    className={`shrink-0 text-2xl leading-none transition-transform ${isExpanded ? "rotate-45" : ""}`}
+                    className={`shrink-0 transition-transform duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                      isExpanded ? "rotate-45" : ""
+                    }`}
                   >
-                    +
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M6 12H18"
+                        stroke="#1D0A00"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M12 18V6"
+                        stroke="#1D0A00"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </span>
                 </button>
-                {isExpanded ? (
-                  <p className="pb-5 text-base font-normal leading-relaxed text-[#1D0A00]">
+                <div
+                  id={`faq-answer-${index}`}
+                  className="grid overflow-hidden transition-[grid-template-rows,opacity] duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+                  style={{
+                    gridTemplateRows: isExpanded ? "1fr" : "0fr",
+                    opacity: isExpanded ? 1 : 0,
+                  }}
+                >
+                  <p className="overflow-hidden pb-5 text-base font-normal leading-relaxed text-[#1D0A00]">
                     {questionItem.answer}
                   </p>
-                ) : null}
+                </div>
               </div>
             );
           })}

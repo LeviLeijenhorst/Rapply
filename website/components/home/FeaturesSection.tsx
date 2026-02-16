@@ -1,69 +1,210 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Button from "@/components/Button";
 import SectionContainer from "@/components/home/SectionContainer";
-import productOneImage from "@/home/product-1.jpg";
-import productTwoImage from "@/home/product-2.jpg";
-import productThreeImage from "@/home/product-3.jpg";
-import productFourImage from "@/home/product-4.jpg";
+import productOneImage from "@/home/Product BG 1 2.png";
+import productFgOneImage from "@/home/Product FG 1.png";
+import productFgTwoImage from "@/home/Product FG 2.png";
+import productFgThreeImage from "@/home/Product FG 3.png";
+import productFgFourImage from "@/home/Product FG 4.png";
+import productTwoImage from "@/home/Product BG 2.jpg";
+import productThreeImage from "@/home/Product BG 4.jpg";
+import productFourImage from "@/home/Product BG 3.jpg";
+
+const FG1_WHITE_TO_BOUNDING_LEFT_PX = 14;
+const FG1_WHITE_TO_BOUNDING_BOTTOM_PX = 14;
+const FG2_WHITE_TO_BOUNDING_LEFT_PX = 14;
+const FG2_WHITE_TO_BOUNDING_BOTTOM_PX = 14;
+const FG_REVEAL_DURATION_MS = 3000;
+const fgRevealTransitionStyle = {
+  transitionProperty: "translate, transform",
+  transitionDuration: `${FG_REVEAL_DURATION_MS}ms, ${FG_REVEAL_DURATION_MS}ms`,
+  transitionTimingFunction:
+    "cubic-bezier(0.22,1,0.36,1), cubic-bezier(0.22,1,0.36,1)",
+};
 
 const featureItems = [
   {
-    title: "Record je sessie met een klik",
+    title: "Leg je sessie vast",
     description:
-      "Zet de opname aan voor of tijdens je gesprek en laat CoachScribe het werk doen. Jij blijft bij je client.",
+      "Zet de opname aan en focus je volledig op jouw cliënt. CoachScribe neemt het gehele gesprek veilig op terwijl jij je bezig houdt met waar je goed in bent; mensen helpen.\n\nCoachScript is gebouwd voor maximale focus.",
     image: productOneImage,
   },
   {
-    title: "Selecteer een template",
+    title: "Kies jouw workflow",
     description:
-      "Kies een structuur die past bij jouw manier van werken. Het verslag past zich aan jouw voorkeuren aan.",
+      "Er zijn meerdere templates inbegrepen die je kan gebruiken zodat de sessie wordt vastgelegd zoals jij dat wil. Gebruik je liever je eigen template? geen probleem!\n\nOntworpen om aan te sluiten op jouw workflow.",
     image: productTwoImage,
   },
   {
     title: "Beheer de sessie",
     description:
-      "Controleer, vul aan en organiseer alles op één plek. Zo blijft je dossier overzichtelijk.",
+      "Lees het automatische verslag en pas aan waar nodig, stel snelle vragen aan de slimme AI-Chat, maak notities en lees of luister specifieke momenten terug uit het gesprek.\n\nOverzichtelijk, simpel en alles op één plek.",
     image: productFourImage,
   },
   {
     title: "Deel in jouw huisstijl",
     description:
-      "Deel verslagen direct met je client of team. Voeg je eigen branding toe voor een professionele uitstraling.",
+      "Deel verslagen direct met je coachee, in jouw eigen huisstijl. Voeg je logo en praktijkkleur toe, zodat elke PDF direct herkenbaar en professioneel oogt.\n\nGemaakt met oog op coach én coachee.",
     image: productThreeImage,
   },
 ];
 
 export default function FeaturesSection() {
+  const firstFeatureContainerRef = useRef<HTMLDivElement | null>(null);
+  const secondFeatureContainerRef = useRef<HTMLDivElement | null>(null);
+  const thirdFeatureContainerRef = useRef<HTMLDivElement | null>(null);
+  const fourthFeatureContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isFirstFeatureFgVisible, setIsFirstFeatureFgVisible] = useState(false);
+  const [isSecondFeatureFgVisible, setIsSecondFeatureFgVisible] = useState(false);
+  const [isThirdFeatureFgVisible, setIsThirdFeatureFgVisible] = useState(false);
+  const [isFourthFeatureFgVisible, setIsFourthFeatureFgVisible] = useState(false);
+
+  useEffect(() => {
+    const element = firstFeatureContainerRef.current;
+    if (!element) return;
+
+    if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
+      setIsFirstFeatureFgVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        if (entry.intersectionRatio < 0.7) return;
+        setIsFirstFeatureFgVisible(true);
+        observer.disconnect();
+      },
+      { threshold: [0, 0.7, 1] }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const element = secondFeatureContainerRef.current;
+    if (!element) return;
+
+    if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
+      setIsSecondFeatureFgVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        if (entry.intersectionRatio < 0.7) return;
+        setIsSecondFeatureFgVisible(true);
+        observer.disconnect();
+      },
+      { threshold: [0, 0.7, 1] }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const element = thirdFeatureContainerRef.current;
+    if (!element) return;
+
+    if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
+      setIsThirdFeatureFgVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        if (entry.intersectionRatio < 0.7) return;
+        setIsThirdFeatureFgVisible(true);
+        observer.disconnect();
+      },
+      { threshold: [0, 0.7, 1] }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const element = fourthFeatureContainerRef.current;
+    if (!element) return;
+
+    if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
+      setIsFourthFeatureFgVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        if (entry.intersectionRatio < 0.7) return;
+        setIsFourthFeatureFgVisible(true);
+        observer.disconnect();
+      },
+      { threshold: [0, 0.7, 1] }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <SectionContainer className="bg-white">
+    <SectionContainer className="bg-white" contentClassName="md:pt-[160px] md:pb-20">
       {/* Features content */}
       <div className="flex w-full flex-col gap-10">
         {/* Features list */}
-        <div className="flex w-full flex-col gap-8">
+        <div className="flex w-full flex-col gap-10">
           {featureItems.map((featureItem, index) => {
             const isReversed = index % 2 === 1;
+            const containerGapClass =
+              index === 1
+                ? "md:gap-[80px]"
+                : index === 3
+                  ? "md:gap-[80px]"
+                  : "md:gap-10";
             return (
               <div
                 key={featureItem.title}
-                className={`flex w-full flex-col gap-6 rounded-3xl bg-[#F8FAFC] p-6 md:items-center md:gap-10 ${
+                ref={
+                  index === 0
+                    ? firstFeatureContainerRef
+                    : index === 1
+                      ? secondFeatureContainerRef
+                      : index === 2
+                        ? thirdFeatureContainerRef
+                        : index === 3
+                          ? fourthFeatureContainerRef
+                          : undefined
+                }
+                className={`mx-auto flex w-full max-w-[1147px] flex-col gap-6 rounded-3xl bg-[#F8FAFC] px-[80px] py-6 md:h-[480px] md:items-center ${containerGapClass} ${
                   isReversed ? "md:flex-row-reverse" : "md:flex-row"
                 }`}
               >
                 {/* Feature text */}
-                <div className="flex w-full flex-col gap-4 md:w-1/2">
+                <div className="flex w-full flex-col gap-6 md:w-1/2">
                   {/* Feature title */}
-                  <h3 className="text-xl font-semibold text-black">
+                  <h3
+                    className={`font-[var(--font-catamaran)] text-[40px] font-medium leading-[120%] text-black ${
+                      index === 3 ? "whitespace-nowrap" : ""
+                    }`}
+                  >
                     {featureItem.title}
                   </h3>
                   {/* Feature description */}
-                  <p className="text-sm font-normal text-black/70">
+                  <p className="whitespace-pre-line text-[16px] font-medium text-black/70">
                     {featureItem.description}
                   </p>
                   {/* Feature action */}
                   <div className="flex w-full">
                     <Button
-                      label="Probeer Gratis"
-                      destination="https://app.coachscribe.nl"
+                      label="Wachtlijst"
+                      destination="/wachtlijst"
                       variant="primary"
                       showArrow
                       className="font-normal"
@@ -71,12 +212,86 @@ export default function FeaturesSection() {
                   </div>
                 </div>
                 {/* Feature image */}
-                <div className="group flex w-full overflow-hidden rounded-2xl md:w-1/2">
+                <div
+                  className={`relative group flex w-full overflow-hidden rounded-2xl md:h-[480px] md:w-[572px] md:shrink-0 ${
+                    isReversed ? "md:-ml-[80px]" : "md:-mr-[80px]"
+                  }`}
+                >
                   <Image
                     src={featureItem.image}
                     alt={featureItem.title}
-                    className="h-auto w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    className="h-full w-full object-cover"
                   />
+                  {index === 0 ? (
+                    <div
+                      className="absolute z-10"
+                      style={{
+                        left: `${20 - FG1_WHITE_TO_BOUNDING_LEFT_PX - 25}px`,
+                        bottom: `${80 - FG1_WHITE_TO_BOUNDING_BOTTOM_PX - 50}px`,
+                      }}
+                    >
+                      <Image
+                        src={productFgOneImage}
+                        alt=""
+                        className={`${
+                          isFirstFeatureFgVisible
+                            ? "translate-y-0"
+                            : "translate-y-[80px]"
+                        }`}
+                        style={fgRevealTransitionStyle}
+                      />
+                    </div>
+                  ) : null}
+                  {index === 1 ? (
+                    <div
+                      className="absolute z-10"
+                      style={{
+                        left: "calc(130px + 30% + 20px)",
+                        bottom: "calc(109px + 20% + 30px)",
+                      }}
+                    >
+                      <Image
+                        src={productFgTwoImage}
+                        alt=""
+                        className={`origin-top-right scale-[2.2] ${
+                          isSecondFeatureFgVisible
+                            ? "translate-y-0"
+                            : "translate-y-[80px]"
+                        }`}
+                        style={fgRevealTransitionStyle}
+                      />
+                    </div>
+                  ) : null}
+                  {index === 2 ? (
+                    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+                      <Image
+                        src={productFgThreeImage}
+                        alt=""
+                        style={{
+                          ...fgRevealTransitionStyle,
+                          opacity: 1,
+                          transform: isThirdFeatureFgVisible
+                            ? "translateY(8%) scale(1.17)"
+                            : "translateY(calc(8% + 80px)) scale(1.053)",
+                          transformOrigin: "center center",
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                  {index === 3 ? (
+                    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+                      <Image
+                        src={productFgFourImage}
+                        alt=""
+                        className={`scale-[0.7] translate-x-[16%] ${
+                          isFourthFeatureFgVisible
+                            ? "translate-y-0"
+                            : "translate-y-[80px]"
+                        }`}
+                        style={fgRevealTransitionStyle}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </div>
             );

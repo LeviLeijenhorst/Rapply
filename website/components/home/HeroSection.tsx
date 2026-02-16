@@ -7,23 +7,25 @@ export default function HeroSection() {
       {/* Hero content */}
       <div className="flex w-full flex-col gap-10">
         {/* Hero text */}
-        <div className="flex w-full flex-col items-center gap-6 text-center">
+        <div className="flex w-full flex-col items-center gap-6 text-center lg:translate-y-[56px]">
           {/* Hero title */}
-          <h1 className="text-4xl font-semibold text-black md:text-5xl">
+          <h1 className="font-[var(--font-catamaran)] text-[64px] font-medium leading-[120%] text-black">
             Betere coaching begint bij
-            <span className="block text-[#BD0265]">Volledige aandacht</span>
+            <span className="block text-[#BD0265]">volledige aandacht</span>
           </h1>
           {/* Hero description */}
-          <p className="max-w-2xl text-base font-normal text-black/70 md:text-lg">
-            CoachScribe helpt coaches bij de verslaglegging van hun sessies en
-            het bewaren van het overzicht. Gesprekken worden veilig vastgelegd
-            en georganiseerd, zodat jij je volledig kunt focussen op de client.
+          <p className="max-w-3xl text-[16px] font-medium text-black/70">
+            CoachScribe helpt coaches bij verslaglegging van hun sessies en het
+            bewaren van overzicht.
+            <br />
+            Gesprekken worden veilig vastgelegd en georganiseerd, zodat jij je
+            volledig kan focussen op de cliënt.
           </p>
           {/* Hero actions */}
           <div className="flex w-full flex-wrap items-center justify-center gap-4">
             <Button
-              label="Probeer Gratis"
-              destination="https://app.coachscribe.nl"
+              label="Wachtlijst"
+              destination="/wachtlijst"
               variant="primary"
               showArrow
               className="font-normal"
