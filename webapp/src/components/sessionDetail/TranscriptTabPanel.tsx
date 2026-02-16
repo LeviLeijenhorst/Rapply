@@ -20,6 +20,7 @@ type Props = {
   onCancelGeneration?: () => void
   currentAudioSeconds?: number
   highlightTintColor?: string
+  useTintColors?: boolean
   audioDurationSeconds?: number | null
 }
 
@@ -61,6 +62,7 @@ export function TranscriptTabPanel({
   onCancelGeneration,
   currentAudioSeconds,
   highlightTintColor,
+  useTintColors = true,
   audioDurationSeconds,
 }: Props) {
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
@@ -89,6 +91,9 @@ export function TranscriptTabPanel({
   const firstSpeakerKey = parsedTranscriptLinesWithFallback.find((line) => line.speakerKey)?.speakerKey ?? ''
   const hasSearch = searchValue.trim().length > 0
   const normalizedAudioDurationSeconds = Number.isFinite(audioDurationSeconds) && Number(audioDurationSeconds) > 0 ? Number(audioDurationSeconds) : null
+  const shouldShowSpeakerSplitColors = useTintColors && normalizedAudioDurationSeconds !== null
+  const activeLineBorderColor = useTintColors && highlightTintColor ? highlightTintColor : colors.border
+  const activeLineBackgroundColor = useTintColors && highlightTintColor ? `${highlightTintColor}22` : colors.hoverBackground
 
   useEffect(() => {
     setVisibleLineCount(INITIAL_VISIBLE_LINE_COUNT)
@@ -209,13 +214,13 @@ export function TranscriptTabPanel({
                   style={({ hovered }) => [
                     styles.row,
                     styles.messageRow,
-                    isFirstSpeaker ? styles.messageRowPrimary : styles.messageRowSecondary,
+                    shouldShowSpeakerSplitColors && isFirstSpeaker ? styles.messageRowPrimary : styles.messageRowSecondary,
                     isSeekEnabled ? styles.messageRowClickable : undefined,
                     isSeekEnabled && hovered ? styles.messageRowHovered : undefined,
                     isActiveLine
                       ? {
-                          borderColor: highlightTintColor || colors.selected,
-                          backgroundColor: `${highlightTintColor || colors.selected}22`,
+                          borderColor: activeLineBorderColor,
+                          backgroundColor: activeLineBackgroundColor,
                         }
                       : undefined,
                   ]}

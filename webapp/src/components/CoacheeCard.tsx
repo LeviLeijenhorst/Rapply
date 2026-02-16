@@ -53,7 +53,7 @@ export function CoacheeCard({ name, detailLabel, onPress, onPressEdit, onPressMo
       {/* Coachee text */}
       <View style={styles.textColumn}>
         {/* Coachee name */}
-        <Text isSemibold numberOfLines={1} style={styles.name}>
+        <Text numberOfLines={1} style={styles.name}>
           {name}
         </Text>
         {/* Coachee detail */}
@@ -74,7 +74,7 @@ export function CoacheeCard({ name, detailLabel, onPress, onPressEdit, onPressMo
             {/* Edit icon */}
             <EditActionIcon color="#656565" size={18} />
             {/* Edit label */}
-            <Text isBold style={styles.editButtonText}>
+            <Text style={styles.editButtonText}>
               Bewerken
             </Text>
           </View>
@@ -98,15 +98,16 @@ export function CoacheeCard({ name, detailLabel, onPress, onPressEdit, onPressMo
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    height: 72,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    height: 80,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
   cardHovered: {
     backgroundColor: colors.hoverBackground,
-    ...( { boxShadow: '0 10px 24px rgba(0,0,0,0.05)' } as any ),
   },
   iconCircle: {
     width: 36,
@@ -137,12 +138,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   editButton: {
-    height: 32,
-    borderRadius: 8,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: colors.pageBackground,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 8,
+    padding: 10,
     justifyContent: 'center',
   },
   editButtonHovered: {
@@ -160,9 +161,9 @@ const styles = StyleSheet.create({
     color: '#656565',
   },
   moreButton: {
-    height: 32,
-    width: 32,
-    borderRadius: 8,
+    height: 36,
+    width: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },

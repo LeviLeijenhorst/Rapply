@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { colors } from '../../theme/colors'
@@ -8,6 +8,7 @@ import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
 import { PlusIcon } from '../icons/PlusIcon'
 import { TemplateEditIcon } from '../icons/TemplateEditIcon'
 import { TrashIcon } from '../icons/TrashIcon'
+import { ConfirmDeleteDialog } from '../../foundation/ui/modals/ConfirmDeleteDialog'
 
 export type TemplateEditModalSection = {
   id: string
@@ -41,13 +42,17 @@ function createEmptyTemplate(): TemplateEditModalTemplate {
 
 // Renders the template editor modal for create/edit, including section management.
 export function TemplateEditModal({ visible, mode, template, onClose, onSave, onDelete }: Props) {
+  const { width: windowWidth } = useWindowDimensions()
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
   const [activeTemplate, setActiveTemplate] = useState<TemplateEditModalTemplate>(() => createEmptyTemplate())
   const [hoveredSectionId, setHoveredSectionId] = useState<string | null>(null)
   const [hoveredDeleteSectionId, setHoveredDeleteSectionId] = useState<string | null>(null)
+  const [pendingDeleteSectionId, setPendingDeleteSectionId] = useState<string | null>(null)
+  const isCompactFooter = windowWidth <= 640
 
   useEffect(() => {
     if (!visible) return
+    setPendingDeleteSectionId(null)
     if (mode === 'edit' && template) {
       setActiveTemplate(template)
       return
@@ -116,12 +121,7 @@ export function TemplateEditModal({ visible, mode, template, onClose, onSave, on
               <Pressable
                 onHoverIn={() => setHoveredDeleteSectionId(section.id)}
                 onHoverOut={() => setHoveredDeleteSectionId((current) => (current === section.id ? null : current))}
-                onPress={() =>
-                  setActiveTemplate((previousTemplate) => ({
-                    ...previousTemplate,
-                    sections: previousTemplate.sections.filter((item) => item.id !== section.id),
-                  }))
-                }
+                onPress={() => setPendingDeleteSectionId(section.id)}
                 style={({ hovered }) => [
                   styles.sectionDeleteButton,
                   hoveredSectionId === section.id || hoveredDeleteSectionId === section.id ? styles.sectionDeleteButtonVisible : styles.sectionDeleteButtonHidden,
@@ -177,28 +177,59 @@ export function TemplateEditModal({ visible, mode, template, onClose, onSave, on
       </View>
 
       <View style={styles.footer}>
-        <View style={styles.footerLeft}>
+        <View
+          style={[
+            styles.footerLeft,
+            isCompactFooter ? styles.footerColumnCompact : undefined,
+            isCompactFooter && mode !== 'edit' ? styles.footerLeftHidden : undefined,
+          ]}
+        >
           {mode === 'edit' && onDelete ? (
-            <Pressable onPress={onDelete} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]}>
+            <Pressable
+              onPress={onDelete}
+              style={({ hovered }) => [styles.secondaryButton, isCompactFooter ? styles.footerButtonCompact : undefined, hovered ? styles.secondaryButtonHovered : undefined]}
+            >
               <Text isBold style={styles.secondaryButtonText}>
                 Verwijderen
               </Text>
             </Pressable>
           ) : null}
         </View>
-        <View style={styles.footerRight}>
-          <Pressable onPress={onClose} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]}>
+        <View style={[styles.footerRight, isCompactFooter ? styles.footerColumnCompact : undefined]}>
+          <Pressable
+            onPress={onClose}
+            style={({ hovered }) => [styles.secondaryButton, isCompactFooter ? styles.footerButtonCompact : undefined, hovered ? styles.secondaryButtonHovered : undefined]}
+          >
             <Text isBold style={styles.secondaryButtonText}>
               Annuleren
             </Text>
           </Pressable>
-          <Pressable onPress={() => onSave(activeTemplate)} style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined]}>
+          <Pressable
+            onPress={() => onSave(activeTemplate)}
+            style={({ hovered }) => [styles.primaryButton, isCompactFooter ? styles.footerButtonCompact : undefined, hovered ? styles.primaryButtonHovered : undefined]}
+          >
             <Text isBold style={styles.primaryButtonText}>
               {primaryButtonLabel}
             </Text>
           </Pressable>
         </View>
       </View>
+      <ConfirmDeleteDialog
+        visible={Boolean(pendingDeleteSectionId)}
+        title="Onderdeel verwijderen"
+        description="Weet je zeker dat je dit onderdeel wilt verwijderen? Dit kan niet ongedaan worden gemaakt."
+        confirmLabel="Verwijderen"
+        cancelLabel="Annuleren"
+        onClose={() => setPendingDeleteSectionId(null)}
+        onConfirm={() => {
+          if (!pendingDeleteSectionId) return
+          setActiveTemplate((previousTemplate) => ({
+            ...previousTemplate,
+            sections: previousTemplate.sections.filter((item) => item.id !== pendingDeleteSectionId),
+          }))
+          setPendingDeleteSectionId(null)
+        }}
+      />
     </AnimatedOverlayModal>
   )
 }
@@ -383,6 +414,20 @@ const styles = StyleSheet.create({
   footerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  footerColumnCompact: {
+    flex: 1,
+    minWidth: 0,
+  },
+  footerLeftHidden: {
+    flex: 0,
+    width: 0,
+    minWidth: 0,
+  },
+  footerButtonCompact: {
+    minWidth: 0,
+    width: '100%',
+    paddingHorizontal: 12,
   },
   secondaryButton: {
     height: 48,

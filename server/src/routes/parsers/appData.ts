@@ -56,6 +56,7 @@ export function readNote(value: unknown): Note {
   return {
     id: readId(payload.id, "note.id"),
     sessionId: readId(payload.sessionId, "note.sessionId"),
+    title: typeof payload.title === "string" ? payload.title.trim() : "",
     text: readText(payload.text, "note.text"),
     createdAtUnixMs,
     updatedAtUnixMs,

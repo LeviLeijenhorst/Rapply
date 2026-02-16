@@ -6,7 +6,6 @@ const TRANSCRIPTION_START_TIMEOUT_MS = 3 * 60 * 60_000
 const TRANSCRIPTION_OPERATION_TIMEOUT_MS = 4 * 60 * 60_000
 const TRANSCRIPTION_PREFLIGHT_MAX_RETRIES = 2
 const TRANSCRIPTION_UPLOAD_MAX_RETRIES = 2
-const AZURE_SPEECH_MAX_AUDIO_BYTES = 250 * 1024 * 1024
 const AZURE_WAV_TARGET_SAMPLE_RATE = 16_000
 const ABORTED_REQUEST_ERROR = 'Request aborted'
 
@@ -28,6 +27,12 @@ function mapTranscriptionErrorMessage(rawMessage: string): string {
 
   if (indicatesNoSpeech) {
     return 'Er is geen spraak gedetecteerd in deze opname. Probeer opnieuw en spreek duidelijk in de microfoon.'
+  }
+  if (normalized.includes('notreadableerror')) {
+    return 'Het audiobestand kon niet worden gelezen. Sluit het bronbestand en probeer opnieuw.'
+  }
+  if (normalized.includes('did not return diarized segments')) {
+    return 'Transcriptie mislukt: er kwam geen bruikbare transcriptie terug van de provider.'
   }
   return rawMessage
 }
@@ -352,6 +357,7 @@ export async function transcribeAudio(params: {
           planKey?: string
           transcriptionProvider?: string
           requiresWav?: boolean
+          maxAudioBytes?: number
         } | null = null
         for (let attempt = 0; attempt <= TRANSCRIPTION_PREFLIGHT_MAX_RETRIES; attempt += 1) {
           try {
@@ -365,6 +371,7 @@ export async function transcribeAudio(params: {
               planKey?: string
               transcriptionProvider?: string
               requiresWav?: boolean
+              maxAudioBytes?: number
             }
             break
           } catch (error) {
@@ -378,11 +385,13 @@ export async function transcribeAudio(params: {
         }
 
         const preflightProvider = String(preflight.transcriptionProvider || '').trim().toLowerCase()
-        const requiresWav = preflight.requiresWav === undefined ? preflightProvider !== 'mistral' : Boolean(preflight.requiresWav)
-        const normalized = await normalizeAudioForTranscription({ audioBlob, mimeType, requiresWav })
-        if (preflightProvider === 'azure-speech' && normalized.audioBlob.size > AZURE_SPEECH_MAX_AUDIO_BYTES) {
-          throw new Error('Audio bestand is te groot voor transcriptie met de huidige provider.')
+        const requiresWav = preflight.requiresWav === undefined ? false : Boolean(preflight.requiresWav)
+        const maxAudioBytes = typeof preflight.maxAudioBytes === 'number' && Number.isFinite(preflight.maxAudioBytes) ? Math.max(1, Math.floor(preflight.maxAudioBytes)) : null
+        if (maxAudioBytes !== null && audioBlob.size > maxAudioBytes) {
+          const maxMb = (maxAudioBytes / (1024 * 1024)).toFixed(0)
+          throw new Error(`Audio bestand is te groot voor transcriptie (max ${maxMb} MB).`)
         }
+        const normalized = await normalizeAudioForTranscription({ audioBlob, mimeType, requiresWav })
         console.log('[transcription] starting', {
           mimeType: normalized.mimeType,
           audioSize: normalized.audioBlob.size,
@@ -400,6 +409,7 @@ export async function transcribeAudio(params: {
           planKey: preflight.planKey,
           provider: preflightProvider || 'unknown',
           requiresWav,
+          maxAudioBytes,
         })
 
         if (!preflight.allowed) {

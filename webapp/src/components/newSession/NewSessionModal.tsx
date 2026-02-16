@@ -29,6 +29,7 @@ import { unassignedCoacheeLabel } from '../../utils/coachee'
 import { AudioPlayerCard } from '../sessionDetail/AudioPlayerCard'
 import { setPendingPreviewAudio } from '../../audio/pendingPreviewStore'
 import { processSessionAudio } from '../../audio/processSessionAudio'
+import { AnimatedMainContent } from '../AnimatedMainContent'
 
 type Step = 'select' | 'consent' | 'upload' | 'recording' | 'recorded'
 type OptionKey = 'gesprek' | 'verslag' | 'upload' | 'schrijven'
@@ -160,7 +161,7 @@ export function NewSessionModal({
   const [selectedAudioFile, setSelectedAudioFile] = useState<File | null>(null)
   const [isUploadDragActive, setIsUploadDragActive] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [isCloseWarningVisible, setIsCloseWarningVisible] = useState(false)
+  const [isMinimizedCloseWarningVisible, setIsMinimizedCloseWarningVisible] = useState(false)
   const [hasRecordingConsent, setHasRecordingConsent] = useState(false)
   const sessionTitleInputRef = useRef<TextInput | null>(null)
   const uploadDropAreaRef = useRef<View | null>(null)
@@ -174,7 +175,7 @@ export function NewSessionModal({
   const [audioDurationSeconds, setAudioDurationSeconds] = useState<number | null>(null)
   const [shouldSaveAudio, setShouldSaveAudio] = useState(false)
   const [audioForTranscription, setAudioForTranscription] = useState<{ blob: Blob; mimeType: string } | null>(null)
-  const { height: windowHeight } = useWindowDimensions()
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions()
   const templates = data.templates ?? []
   const defaultTemplateId = useMemo(() => {
     const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'standaard samenvatting')
@@ -194,6 +195,9 @@ export function NewSessionModal({
   const modalOpacity = useRef(new Animated.Value(0)).current
   const modalScale = useRef(new Animated.Value(0.98)).current
   const modalTranslateY = useRef(new Animated.Value(10)).current
+  const minimizeProgress = useRef(new Animated.Value(0)).current
+  const [isMinimizeAnimating, setIsMinimizeAnimating] = useState(false)
+  const [isRestoringFromMinimized, setIsRestoringFromMinimized] = useState(false)
 
   useEffect(() => {
     if (!visible) return
@@ -211,7 +215,7 @@ export function NewSessionModal({
     setShouldSaveAudio(false)
     setAudioForTranscription(null)
     setIsMinimized(false)
-    setIsCloseWarningVisible(false)
+    setIsMinimizedCloseWarningVisible(false)
     setHasRecordingConsent(false)
     setIsUploadDragActive(false)
     setCoacheeDropdownMaxHeight(null)
@@ -242,11 +246,15 @@ export function NewSessionModal({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       event.preventDefault()
+      if (step === 'recording') {
+        startMinimizeModal()
+        return
+      }
       handleClose()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [handleClose, visible])
+  }, [handleClose, startMinimizeModal, step, visible])
 
   const activeCoachees = useMemo(() => data.coachees.filter((c) => !c.isArchived), [data.coachees])
 
@@ -364,7 +372,7 @@ export function NewSessionModal({
     isActive: step === 'recording' && (recorder.status === 'recording' || recorder.status === 'paused'),
   })
   const isRecordingPaused = recorder.status === 'paused'
-  const shouldShowMinimized = step === 'recording' && isMinimized
+  const shouldShowMinimized = step === 'recording' && isMinimized && !isRestoringFromMinimized
 
 
   useEffect(() => {
@@ -386,13 +394,70 @@ export function NewSessionModal({
           ? 'Bestand uploaden'
           : step === 'recording'
             ? 'Opnemen'
-            : 'Gesprek opgenomen'
+            : 'Verslag opgenomen'
   const showFooter = step !== 'recording'
   const isUploadStep = step === 'upload'
+  const isConsentStep = step === 'consent'
+  const isCompactUploadFooter = isUploadStep && windowWidth <= 700
+  const isCompactFooter = windowWidth <= 520
+  const isCompactConsent = step === 'consent' && windowWidth <= 520
   const modalHeight = Math.min(533, windowHeight * 0.9)
+  const modalWidth = Math.min(1088, windowWidth * 0.9)
   const modalTop = (windowHeight - modalHeight) / 2
+  const minimizedLeft = windowWidth < 700 ? 72 : 240
+  const minimizedBarWidth = Math.min(520, windowWidth * 0.7)
+  const modalCenterX = windowWidth / 2
+  const modalCenterY = windowHeight / 2
+  const minimizedCenterX = minimizedLeft + minimizedBarWidth / 2
+  const minimizedCenterY = 36
+  const minimizeTranslateX = minimizedCenterX - modalCenterX
+  const minimizeTranslateY = minimizedCenterY - modalCenterY
+  const minimizeScaleX = minimizedBarWidth / Math.max(1, modalWidth)
+  const minimizeScaleY = 40 / Math.max(1, modalHeight)
   const dropdownSafeBottom = 12
   const defaultDropdownMaxHeight = Math.max(120, windowHeight - modalTop - 72 - dropdownSafeBottom)
+
+  function startMinimizeModal() {
+    if (isMinimizeAnimating || isRestoringFromMinimized) return
+    if (isReducedMotionEnabled) {
+      setIsMinimized(true)
+      return
+    }
+    setIsMinimizeAnimating(true)
+    minimizeProgress.setValue(0)
+    Animated.timing(minimizeProgress, {
+      toValue: 1,
+      duration: 220,
+      easing: Easing.inOut(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (!finished) return
+      setIsMinimizeAnimating(false)
+      setIsMinimized(true)
+      minimizeProgress.setValue(0)
+    })
+  }
+
+  function startRestoreModal() {
+    if (isRestoringFromMinimized || isMinimizeAnimating) return
+    if (isReducedMotionEnabled) {
+      setIsMinimized(false)
+      return
+    }
+    setIsMinimized(false)
+    setIsRestoringFromMinimized(true)
+    minimizeProgress.setValue(1)
+    Animated.timing(minimizeProgress, {
+      toValue: 0,
+      duration: 220,
+      easing: Easing.inOut(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (!finished) return
+      setIsRestoringFromMinimized(false)
+      minimizeProgress.setValue(0)
+    })
+  }
 
   function updateDropdownMaxHeight(targetRef: React.RefObject<any>, setMaxHeight: (value: number) => void) {
     if (typeof window === 'undefined') {
@@ -555,12 +620,13 @@ export function NewSessionModal({
     setSelectedAudioFile(null)
     setShouldSaveAudio(false)
     setAudioForTranscription(null)
+    setIsMinimizedCloseWarningVisible(false)
     onClose()
   }
 
   function handleBackdropPress() {
     if (step === 'recording') {
-      setIsMinimized(true)
+      startMinimizeModal()
       return
     }
     handleClose()
@@ -644,84 +710,135 @@ export function NewSessionModal({
 
   if (shouldShowMinimized) {
     return (
-      <View style={styles.minimizedOverlay} pointerEvents="box-none">
-        {/* Minimized recording bar */}
-        <Pressable onPress={() => setIsMinimized(false)} style={styles.minimizedBar}>
-          <View style={styles.minimizedInfo}>
-            {/* Recording time */}
-            <View style={styles.minimizedTimeContainer}>
-              <Text isSemibold style={styles.minimizedTimeText}>
-                {formatTimeLabel(recorder.elapsedSeconds)}
-              </Text>
+      <>
+        <View style={styles.minimizedOverlay} pointerEvents="box-none">
+          {/* Minimized recording bar */}
+          <Pressable onPress={startRestoreModal} style={styles.minimizedBar}>
+            <View style={styles.minimizedInfo}>
+              {/* Recording time */}
+              <View style={styles.minimizedTimeContainer}>
+                <Text isSemibold style={styles.minimizedTimeText}>
+                  {formatTimeLabel(recorder.elapsedSeconds)}
+                </Text>
+              </View>
+              {/* Recording waveform */}
+              <View style={styles.minimizedWaveform}>
+                {bars.map((index) => {
+                  const rawHeight = liveWaveHeights[index] ?? 6
+                  const normalizedHeight = Math.min(1, Math.max(0, (rawHeight - 6) / 194))
+                  const height = 4 + normalizedHeight * 12
+                  return <View key={index} style={[styles.minimizedWaveBar, { height }]} />
+                })}
+              </View>
             </View>
-            {/* Recording waveform */}
-            <View style={styles.minimizedWaveform}>
-              {bars.map((index) => {
-                const rawHeight = liveWaveHeights[index] ?? 6
-                const normalizedHeight = Math.min(1, Math.max(0, (rawHeight - 6) / 194))
-                const height = 4 + normalizedHeight * 12
-                return <View key={index} style={[styles.minimizedWaveBar, { height }]} />
-              })}
+            {/* Minimized controls */}
+            <View style={styles.minimizedControls}>
+              <Pressable
+                onPress={(event) => {
+                  event.stopPropagation?.()
+                  if (recorder.status === 'recording') {
+                    recorder.pause()
+                    return
+                  }
+                  if (recorder.status === 'paused') {
+                    recorder.resume()
+                  }
+                }}
+                style={({ hovered }) => [
+                  styles.minimizedControlButton,
+                  styles.minimizedSoftButton,
+                  hovered ? styles.minimizedSoftButtonHovered : undefined,
+                ]}
+              >
+                {/* Pause or play */}
+                {isRecordingPaused ? (
+                  <View style={styles.minimizedPlayIconWrapper}>
+                    <PlaySmallIcon size={10} />
+                  </View>
+                ) : (
+                  <PauseIcon size={12} />
+                )}
+              </Pressable>
+              <Pressable
+                onPress={(event) => {
+                  event.stopPropagation?.()
+                  recorder.stop()
+                }}
+                style={({ hovered }) => [styles.minimizedStopButton, hovered ? styles.minimizedStopButtonHovered : undefined]}
+              >
+                {/* Stop */}
+                <StopSquareIcon size={12} />
+              </Pressable>
+              <Pressable
+                onPress={(event) => {
+                  event.stopPropagation?.()
+                  setIsMinimizedCloseWarningVisible(true)
+                }}
+                style={({ hovered }) => [
+                  styles.minimizedControlButton,
+                  styles.minimizedSoftButton,
+                  hovered ? styles.minimizedSoftButtonHovered : undefined,
+                ]}
+              >
+                {/* Close */}
+                <ModalCloseIcon size={22} />
+              </Pressable>
+            </View>
+          </Pressable>
+        </View>
+
+        <AnimatedOverlayModal
+          visible={isMinimizedCloseWarningVisible}
+          onClose={() => setIsMinimizedCloseWarningVisible(false)}
+          contentContainerStyle={styles.closeWarningContainer}
+        >
+          {/* Close warning */}
+          <View style={styles.closeWarningContent}>
+            {/* Warning title */}
+            <Text isBold style={styles.closeWarningTitle}>
+              Weet je zeker dat je wil sluiten?
+            </Text>
+            {/* Warning text */}
+            <Text style={styles.closeWarningText}>
+              Als je sluit, gaat je huidige opname of invoer verloren.
+            </Text>
+            {/* Warning actions */}
+            <View style={styles.closeWarningActions}>
+              <Pressable
+                onPress={() => setIsMinimizedCloseWarningVisible(false)}
+                style={({ hovered }) => [
+                  styles.closeWarningButton,
+                  styles.closeWarningButtonSecondary,
+                  hovered ? styles.closeWarningButtonSecondaryHovered : undefined,
+                ]}
+              >
+                {/* Keep */}
+                <Text isBold style={styles.closeWarningButtonSecondaryText}>
+                  Annuleren
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setIsMinimizedCloseWarningVisible(false)
+                  handleClose()
+                }}
+                style={({ hovered }) => [
+                  styles.closeWarningButton,
+                  styles.closeWarningButtonPrimary,
+                  hovered ? styles.closeWarningButtonPrimaryHovered : undefined,
+                ]}
+              >
+                {/* Close */}
+                <Text isBold style={styles.closeWarningButtonPrimaryText}>
+                  Sluiten
+                </Text>
+              </Pressable>
             </View>
           </View>
-          {/* Minimized controls */}
-          <View style={styles.minimizedControls}>
-            <Pressable
-              onPress={(event) => {
-                event.stopPropagation?.()
-                if (recorder.status === 'recording') {
-                  recorder.pause()
-                  return
-                }
-                if (recorder.status === 'paused') {
-                  recorder.resume()
-                }
-              }}
-              style={({ hovered }) => [
-                styles.minimizedControlButton,
-                styles.minimizedSoftButton,
-                hovered ? styles.minimizedSoftButtonHovered : undefined,
-              ]}
-            >
-              {/* Pause or play */}
-              {isRecordingPaused ? (
-                <View style={styles.minimizedPlayIconWrapper}>
-                  <PlaySmallIcon size={10} />
-                </View>
-              ) : (
-                <PauseIcon size={12} />
-              )}
-            </Pressable>
-            <Pressable
-              onPress={(event) => {
-                event.stopPropagation?.()
-                recorder.stop()
-              }}
-              style={({ hovered }) => [styles.minimizedStopButton, hovered ? styles.minimizedStopButtonHovered : undefined]}
-            >
-              {/* Stop */}
-              <StopSquareIcon size={12} />
-            </Pressable>
-            <Pressable
-              onPress={(event) => {
-                event.stopPropagation?.()
-                handleClose()
-              }}
-              style={({ hovered }) => [
-                styles.minimizedControlButton,
-                styles.minimizedSoftButton,
-                hovered ? styles.minimizedSoftButtonHovered : undefined,
-              ]}
-            >
-              {/* Close */}
-              <ModalCloseIcon size={22} />
-            </Pressable>
-          </View>
-        </Pressable>
-      </View>
+        </AnimatedOverlayModal>
+      </>
     )
   }
-
   return (
     <View style={styles.overlay} pointerEvents="auto">
       <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} pointerEvents="none" />
@@ -732,7 +849,34 @@ export function NewSessionModal({
           styles.container,
           {
             opacity: modalOpacity,
-            transform: [{ translateY: modalTranslateY }, { scale: modalScale }],
+            transform: [
+              { translateY: modalTranslateY },
+              { scale: modalScale },
+              {
+                translateX: minimizeProgress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, minimizeTranslateX],
+                }),
+              },
+              {
+                translateY: minimizeProgress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, minimizeTranslateY],
+                }),
+              },
+              {
+                scaleX: minimizeProgress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, minimizeScaleX],
+                }),
+              },
+              {
+                scaleY: minimizeProgress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, minimizeScaleY],
+                }),
+              },
+            ],
           },
         ]}
       >
@@ -746,7 +890,7 @@ export function NewSessionModal({
             {step === 'recording' ? (
               <>
                 <Pressable
-                  onPress={() => setIsMinimized(true)}
+                  onPress={startMinimizeModal}
                   style={({ hovered }) => [styles.iconButton, webTransitionSmooth, hovered ? styles.iconButtonHovered : undefined]}
                 >
                   {/* Minimize */}
@@ -781,61 +925,66 @@ export function NewSessionModal({
 
         {/* Modal body */}
         <View style={styles.body}>
-          {step === 'select' ? (
-            <View style={styles.selectList}>
-              <SessionOptionRow
-                label="Gesprek opnemen"
-                isSelected={selectedOption === 'gesprek'}
-                onPress={() => setSelectedOption('gesprek')}
-                leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
-              />
-              <SessionOptionRow
-                label="Verslag opnemen"
-                isSelected={selectedOption === 'verslag'}
-                onPress={() => setSelectedOption('verslag')}
-                leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
-              />
-              <SessionOptionRow
-                label="Bestand uploaden"
-                isSelected={selectedOption === 'upload'}
-                onPress={() => setSelectedOption('upload')}
-                leftIcon={<Mp3UploadIcon />}
-              />
-              <SessionOptionRow
-                label="Verslag schrijven"
-                isSelected={selectedOption === 'schrijven'}
-                onPress={() => setSelectedOption('schrijven')}
-                leftIcon={<VerslagSchrijvenIcon />}
-              />
-            </View>
-          ) : null}
-
-          {step === 'upload' ? (
-            <View style={styles.uploadBody}>
-              {/* Upload drop area */}
-              <View ref={uploadDropAreaRef} style={[styles.uploadDropArea, isUploadDragActive ? styles.uploadDropAreaActive : undefined]}>
-                <Pressable
-                  onPress={openFilePicker}
-                  style={({ hovered }) => [styles.uploadPressable, hovered ? styles.uploadDropAreaHovered : undefined]}
-                >
-                  <View style={styles.uploadCenter}>
-                    {/* Upload icon */}
-                    <SendSquareIcon size={80} color="#656565" />
-                    <Text isSemibold style={styles.uploadHintText}>
-                      Sleep bestand hierin
-                    </Text>
-                    {selectedAudioFile ? (
-                      <Text style={styles.uploadFileNameText} numberOfLines={1}>
-                        {selectedAudioFile.name}
-                      </Text>
-                    ) : null}
-                  </View>
-                </Pressable>
+          <AnimatedMainContent contentKey={step} style={styles.stepContent}>
+            {step === 'select' ? (
+            <ScrollView style={styles.stepScroll} contentContainerStyle={styles.stepScrollContent} showsVerticalScrollIndicator={false}>
+              <View style={styles.selectList}>
+                <SessionOptionRow
+                  label="Gesprek opnemen"
+                  isSelected={selectedOption === 'gesprek'}
+                  onPress={() => setSelectedOption('gesprek')}
+                  leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
+                />
+                <SessionOptionRow
+                  label="Verslag opnemen"
+                  isSelected={selectedOption === 'verslag'}
+                  onPress={() => setSelectedOption('verslag')}
+                  leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
+                />
+                <SessionOptionRow
+                  label="Bestand uploaden"
+                  isSelected={selectedOption === 'upload'}
+                  onPress={() => setSelectedOption('upload')}
+                  leftIcon={<Mp3UploadIcon />}
+                />
+                <SessionOptionRow
+                  label="Verslag schrijven"
+                  isSelected={selectedOption === 'schrijven'}
+                  onPress={() => setSelectedOption('schrijven')}
+                  leftIcon={<VerslagSchrijvenIcon />}
+                />
               </View>
-            </View>
-          ) : null}
+            </ScrollView>
+            ) : null}
 
-          {step === 'recording' ? (
+            {step === 'upload' ? (
+            <ScrollView style={styles.stepScroll} contentContainerStyle={styles.stepScrollContent} showsVerticalScrollIndicator={false}>
+              <View style={styles.uploadBody}>
+                {/* Upload drop area */}
+                <View ref={uploadDropAreaRef} style={[styles.uploadDropArea, isUploadDragActive ? styles.uploadDropAreaActive : undefined]}>
+                  <Pressable
+                    onPress={openFilePicker}
+                    style={({ hovered }) => [styles.uploadPressable, hovered ? styles.uploadDropAreaHovered : undefined]}
+                  >
+                    <View style={styles.uploadCenter}>
+                      {/* Upload icon */}
+                      <SendSquareIcon size={80} color="#656565" />
+                      <Text isSemibold style={styles.uploadHintText}>
+                        Sleep bestand hierin
+                      </Text>
+                      {selectedAudioFile ? (
+                        <Text style={styles.uploadFileNameText} numberOfLines={1}>
+                          {selectedAudioFile.name}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                </View>
+              </View>
+            </ScrollView>
+            ) : null}
+
+            {step === 'recording' ? (
             <View style={styles.recordingBody}>
               {/* Recording waveform */}
               <View
@@ -906,9 +1055,9 @@ export function NewSessionModal({
                 </View>
               ) : null}
             </View>
-          ) : null}
+            ) : null}
 
-          {step === 'recorded' ? (
+            {step === 'recorded' ? (
             <View style={styles.recordedBody}>
               {audioPreviewUrl ? (
                 <View style={styles.audioPreviewCard}>
@@ -1069,52 +1218,83 @@ export function NewSessionModal({
                 </View>
               </View>
             </View>
-          ) : null}
+            ) : null}
 
-          {step === 'consent' ? (
-            <View style={styles.consentBody}>
-              <View style={styles.consentIconCircle}>
-                <MicrophoneSmallIcon color={colors.textStrong} size={28} />
-              </View>
-              <Text isBold style={styles.consentTitle}>
-                Ik heb expliciete toestemming van mijn coachee
-              </Text>
-              <Text style={styles.consentDescription}>
-                Door verder te gaan bevestig je dat alle deelnemers vooraf zijn geinformeerd over de opname en vrijwillig toestemming hebben gegeven.
-              </Text>
-              <Pressable
-                onPress={() => setHasRecordingConsent((value) => !value)}
-                style={({ hovered }) => [styles.consentCheckboxRow, hovered ? styles.consentCheckboxRowHovered : undefined]}
-              >
-                <View style={[styles.consentCheckbox, hasRecordingConsent ? styles.consentCheckboxChecked : undefined]}>
-                  {hasRecordingConsent ? <CheckmarkIcon color={colors.selected} width={14} height={12} /> : null}
+            {step === 'consent' ? (
+            <ScrollView style={styles.stepScroll} contentContainerStyle={styles.stepScrollContent} showsVerticalScrollIndicator={false}>
+              <View style={styles.consentBody}>
+                <View style={styles.consentIconCircle}>
+                  <MicrophoneSmallIcon color={colors.textStrong} size={28} />
                 </View>
-                <Text style={styles.consentCheckboxLabel}>
-                  Ik bevestig dat ik toestemming heb.
+                <Text isBold style={[styles.consentTitle, isCompactConsent ? styles.consentTitleCompact : undefined]}>
+                  Ik heb expliciete toestemming van mijn coachee
                 </Text>
-              </Pressable>
-              <Pressable
-                onPress={openConsentHelpPage}
-                style={({ hovered }) => [styles.consentHelpLinkRow, hovered ? styles.consentHelpLinkRowHovered : undefined]}
-              >
-                <Text isSemibold style={styles.consentHelpLinkText}>
-                  Hoe geef ik toestemming?
+                <Text style={[styles.consentDescription, isCompactConsent ? styles.consentDescriptionCompact : undefined]}>
+                  Door verder te gaan bevestig je dat alle deelnemers vooraf zijn geinformeerd over de opname en vrijwillig toestemming hebben gegeven.
                 </Text>
-              </Pressable>
-            </View>
-          ) : null}
+                <Pressable
+                  onPress={() => setHasRecordingConsent((value) => !value)}
+                  style={({ hovered }) => [styles.consentCheckboxRow, hovered ? styles.consentCheckboxRowHovered : undefined]}
+                >
+                  <View style={[styles.consentCheckbox, hasRecordingConsent ? styles.consentCheckboxChecked : undefined]}>
+                    {hasRecordingConsent ? <CheckmarkIcon color={colors.selected} width={14} height={12} /> : null}
+                  </View>
+                  <Text style={styles.consentCheckboxLabel}>
+                    Ik bevestig dat ik toestemming heb.
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={openConsentHelpPage}
+                  style={({ hovered }) => [styles.consentHelpLinkRow, hovered ? styles.consentHelpLinkRowHovered : undefined]}
+                >
+                  <Text isSemibold style={styles.consentHelpLinkText}>
+                    Hoe geef ik toestemming?
+                  </Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+            ) : null}
+          </AnimatedMainContent>
         </View>
 
         {/* Modal footer */}
         {showFooter ? (
-          <View style={[step === 'recorded' ? styles.footerInline : styles.footerFloating, isUploadStep ? styles.footerSplit : undefined]}>
+          <View
+            style={[
+              step === 'recorded' ? styles.footerInline : styles.footerFloating,
+              (isUploadStep && !isCompactUploadFooter) || isConsentStep ? styles.footerSplit : undefined,
+              isCompactUploadFooter ? styles.footerStacked : undefined,
+            ]}
+          >
+            {isConsentStep ? (
+              <Pressable
+                onPress={() => {
+                  setHasRecordingConsent(false)
+                  setStep('select')
+                }}
+                style={({ hovered, pressed }) => [
+                  styles.footerButtonBase,
+                  styles.footerButtonSecondary,
+                  styles.footerButtonLeft,
+                  isCompactFooter ? styles.footerButtonCompact : undefined,
+                  webTransitionSmooth,
+                  hovered ? styles.footerButtonSecondaryHovered : undefined,
+                  pressed ? styles.footerButtonSecondaryPressed : undefined,
+                ]}
+              >
+                <Text isBold style={styles.footerButtonSecondaryText}>
+                  Terug
+                </Text>
+              </Pressable>
+            ) : null}
             {step === 'upload' ? (
               <Pressable
                 onPress={openFilePicker}
                 style={({ hovered }) => [
                   styles.footerButtonBase,
                   styles.footerButtonSecondary,
-                  styles.footerButtonLeft,
+                  isCompactUploadFooter ? styles.footerButtonUploadTop : styles.footerButtonLeft,
+                  isCompactFooter ? styles.footerButtonCompact : undefined,
                   hovered ? styles.footerButtonSecondaryHovered : undefined,
                 ]}
               >
@@ -1127,13 +1307,21 @@ export function NewSessionModal({
                 </View>
               </Pressable>
             ) : null}
-            <View style={[styles.footerRightGroup, isUploadStep ? undefined : styles.footerRightGroupAlignEnd]}>
+            <View
+              style={[
+                styles.footerRightGroup,
+                isCompactUploadFooter ? styles.footerRightGroupStacked : undefined,
+                isUploadStep ? undefined : styles.footerRightGroupAlignEnd,
+              ]}
+            >
               <Pressable
-                onPress={() => setIsCloseWarningVisible(true)}
+                onPress={handleClose}
                 style={({ hovered, pressed }) => [
                   styles.footerButtonBase,
                   styles.footerButtonSecondary,
-                  isUploadStep ? styles.footerButtonMiddle : styles.footerButtonLeft,
+                  isUploadStep && !isCompactUploadFooter ? styles.footerButtonMiddle : styles.footerButtonLeft,
+                  isCompactUploadFooter ? styles.footerButtonStackedSplit : undefined,
+                  isCompactFooter ? styles.footerButtonCompact : undefined,
                   webTransitionSmooth,
                   hovered ? styles.footerButtonSecondaryHovered : undefined,
                   pressed ? styles.footerButtonSecondaryPressed : undefined,
@@ -1185,6 +1373,8 @@ export function NewSessionModal({
                   styles.footerButtonBase,
                   styles.footerButtonPrimary,
                   styles.footerButtonRight,
+                  isCompactUploadFooter ? styles.footerButtonStackedSplit : undefined,
+                  isCompactFooter ? styles.footerButtonCompact : undefined,
                   step === 'upload' && !selectedAudioFile ? styles.primaryButtonDisabled : undefined,
                   !selectedOption && step === 'select' ? styles.primaryButtonDisabled : undefined,
                   step === 'consent' && !hasRecordingConsent ? styles.primaryButtonDisabled : undefined,
@@ -1217,56 +1407,6 @@ export function NewSessionModal({
           </View>
         ) : null}
       </Animated.View>
-
-      <AnimatedOverlayModal
-        visible={isCloseWarningVisible}
-        onClose={() => setIsCloseWarningVisible(false)}
-        contentContainerStyle={styles.closeWarningContainer}
-      >
-        {/* Close warning */}
-        <View style={styles.closeWarningContent}>
-          {/* Warning title */}
-          <Text isBold style={styles.closeWarningTitle}>
-            Weet je zeker dat je wil sluiten?
-          </Text>
-          {/* Warning text */}
-          <Text style={styles.closeWarningText}>
-            Als je sluit, gaat je huidige opname of invoer verloren.
-          </Text>
-          {/* Warning actions */}
-          <View style={styles.closeWarningActions}>
-            <Pressable
-              onPress={() => setIsCloseWarningVisible(false)}
-              style={({ hovered }) => [
-                styles.closeWarningButton,
-                styles.closeWarningButtonSecondary,
-                hovered ? styles.closeWarningButtonSecondaryHovered : undefined,
-              ]}
-            >
-              {/* Keep */}
-              <Text isBold style={styles.closeWarningButtonSecondaryText}>
-                Annuleren
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                setIsCloseWarningVisible(false)
-                handleClose()
-              }}
-              style={({ hovered }) => [
-                styles.closeWarningButton,
-                styles.closeWarningButtonPrimary,
-                hovered ? styles.closeWarningButtonPrimaryHovered : undefined,
-              ]}
-            >
-              {/* Close */}
-              <Text isBold style={styles.closeWarningButtonPrimaryText}>
-                Sluiten
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </AnimatedOverlayModal>
     </View>
   )
 }
@@ -1458,6 +1598,17 @@ const styles = StyleSheet.create({
     ...( { overflow: 'visible' } as any ),
     zIndex: 1,
   },
+  stepContent: {
+    width: '100%',
+    flex: 1,
+  },
+  stepScroll: {
+    width: '100%',
+    flex: 1,
+  },
+  stepScrollContent: {
+    paddingBottom: 8,
+  },
   selectList: {
     gap: 16,
   },
@@ -1510,6 +1661,11 @@ const styles = StyleSheet.create({
   footerSplit: {
     justifyContent: 'space-between',
   },
+  footerStacked: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    justifyContent: 'flex-end',
+  },
   footerButtonBase: {
     height: 48,
     borderRadius: 0,
@@ -1532,8 +1688,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
   },
+  footerRightGroupStacked: {
+    width: '100%',
+  },
   footerRightGroupAlignEnd: {
     marginLeft: 'auto',
+  },
+  footerButtonStackedSplit: {
+    flex: 1,
+    minWidth: 0,
+  },
+  footerButtonUploadTop: {
+    width: '100%',
+    borderRadius: 0,
   },
   footerButtonSecondary: {
     backgroundColor: colors.surface,
@@ -1709,6 +1876,11 @@ const styles = StyleSheet.create({
     padding: 0,
     position: 'relative',
   },
+  footerButtonCompact: {
+    minWidth: 0,
+    flex: 1,
+    paddingHorizontal: 12,
+  },
   audioSaveToggleRow: {
     position: 'absolute',
     right: 12,
@@ -1782,12 +1954,20 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
     textAlign: 'center',
   },
+  consentTitleCompact: {
+    fontSize: 22,
+    lineHeight: 30,
+  },
   consentDescription: {
     fontSize: 15,
     lineHeight: 22,
     color: colors.text,
     textAlign: 'center',
     maxWidth: 640,
+  },
+  consentDescriptionCompact: {
+    fontSize: 14,
+    lineHeight: 21,
   },
   consentCheckboxRow: {
     width: '100%',

@@ -140,7 +140,12 @@ export function ChatComposer({
             if (isSendDisabled) return
             onSend()
           }}
-          style={({ hovered }) => [styles.sendButton, isSendDisabled ? styles.sendButtonDisabled : undefined, hovered ? styles.sendButtonHovered : undefined]}
+          style={({ hovered }) => [
+            styles.sendButton,
+            { width: inputHeight, height: inputHeight, borderRadius: inputHeight / 2 },
+            isSendDisabled ? styles.sendButtonDisabled : undefined,
+            hovered ? styles.sendButtonHovered : undefined,
+          ]}
         >
           {/* Send button */}
           <SendIcon size={24} />
@@ -156,7 +161,7 @@ export function ChatComposer({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    gap: 6,
+    gap: 8,
   },
   row: {
     width: '100%',
@@ -177,14 +182,12 @@ const styles = StyleSheet.create({
   input: {
     padding: 0,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 22,
+    paddingBottom: 2,
     color: colors.text,
     flex: 1,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     backgroundColor: colors.selected,
     flexDirection: 'row',
     alignItems: 'center',
@@ -207,6 +210,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     paddingRight: 52,
+    paddingTop: 2,
   },
 })
 

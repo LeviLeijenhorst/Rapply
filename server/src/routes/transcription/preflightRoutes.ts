@@ -7,7 +7,7 @@ import { randomBase64Url } from "../../transcription/random"
 import { createEncryptedUploadUrl } from "../../transcription/storage"
 import { createUploadToken } from "../../transcription/store"
 import { applyEmailBillingOverrides } from "../billingOverrides"
-import { resolveTranscriptionProvider } from "./helpers"
+import { getProviderMaxAudioBytes, resolveTranscriptionProvider } from "./helpers"
 import type { RegisterTranscriptionRoutesParams } from "./types"
 
 // Registers transcription preflight endpoint.
@@ -29,7 +29,8 @@ export function registerTranscriptionPreflightRoutes(app: Express, params: Regis
       })
       const status = applyEmailBillingOverrides(statusRaw, user.email)
       const transcriptionProvider = resolveTranscriptionProvider()
-      const requiresWav = transcriptionProvider === "azure-speech"
+      const requiresWav = false
+      const maxAudioBytes = getProviderMaxAudioBytes(transcriptionProvider)
 
       if (status.remainingSeconds <= 0) {
         res.status(200).json({
@@ -38,6 +39,7 @@ export function registerTranscriptionPreflightRoutes(app: Express, params: Regis
           planKey: status.planKey,
           transcriptionProvider,
           requiresWav,
+          maxAudioBytes,
         })
         return
       }
@@ -59,6 +61,7 @@ export function registerTranscriptionPreflightRoutes(app: Express, params: Regis
         uploadTokenExpiresAtMs: token.expiresAtMs,
         transcriptionProvider,
         requiresWav,
+        maxAudioBytes,
       })
     }),
   )

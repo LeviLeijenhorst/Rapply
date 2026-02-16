@@ -34,6 +34,16 @@ function isContentFilterMessage(message: string): boolean {
   return CONTENT_FILTER_HINTS.some((hint) => lowered.includes(hint))
 }
 
+function hasTechnicalErrorCode(message: string): boolean {
+  const lowered = String(message || '').toLowerCase()
+  if (lowered.includes('api error:')) return true
+  if (lowered.includes('status code')) return true
+  if (lowered.includes('error code')) return true
+  if (/(?:^|\s)code[:=]/i.test(message)) return true
+  if (/\b[A-Z]{3,}_[A-Z0-9_]{2,}\b/.test(message)) return true
+  return false
+}
+
 export function toUserFriendlyTranscriptionError(rawMessage: string | null | undefined, fallback: string): string {
   const decoded = decodePossibleJsonError(String(rawMessage || ''))
   const lowered = decoded.toLowerCase()
@@ -47,6 +57,7 @@ export function toUserFriendlyTranscriptionError(rawMessage: string | null | und
   }
 
   const cleaned = decoded.trim()
+  if (hasTechnicalErrorCode(cleaned)) return fallback
   return cleaned || fallback
 }
 

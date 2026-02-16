@@ -3,7 +3,7 @@ export const brandColors = {
   primaryHover: "#A50058",
   primarySubtle: "rgba(190,1,101,0.08)",
   coachscribeGradientStart: "#7E0056",
-  coachscribeGradientEnd: "#F20070",
+  coachscribeGradientEnd: "#C30064",
   white: "#FFFFFF",
   neutral700: "#656565",
 } as const;

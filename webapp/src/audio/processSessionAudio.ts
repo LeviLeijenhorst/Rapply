@@ -12,6 +12,7 @@ import {
 import { normalizeTranscriptionError } from '../utils/transcriptionError'
 import {
   clearPendingPreviewAudioIfEligible,
+  markPendingPreviewTranscriptionSucceeded,
   markPendingPreviewAudioUploaded,
   setPendingPreviewProcessingState,
 } from './pendingPreviewStore'
@@ -105,6 +106,8 @@ export async function processSessionAudio(params: {
         transcriptionStatus: 'done',
         transcriptionError: null,
       })
+      await markPendingPreviewTranscriptionSucceeded(sessionId)
+      await clearPendingPreviewAudioIfEligible(sessionId)
       finishTranscriptionRun(sessionId, runId)
       return
     }
@@ -127,6 +130,8 @@ export async function processSessionAudio(params: {
       transcriptionStatus: 'done',
       transcriptionError: null,
     })
+    await markPendingPreviewTranscriptionSucceeded(sessionId)
+    await clearPendingPreviewAudioIfEligible(sessionId)
     finishTranscriptionRun(sessionId, runId)
   } catch (error) {
     if (!isTranscriptionRunActive(sessionId, runId)) {

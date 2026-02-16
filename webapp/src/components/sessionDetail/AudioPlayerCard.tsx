@@ -73,11 +73,12 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
 
   function seekToSecondsInternal(seconds: number, preservePlayState: boolean) {
     const audio = audioRef.current
+    const activeAudioSource = audioUrlOverride ?? audioUrl
     if (!Number.isFinite(seconds)) return
     const target = Math.max(0, Math.min(durationSeconds || Number.MAX_SAFE_INTEGER, seconds))
     setCurrentSeconds(target)
     onCurrentSecondsChange?.(target)
-    if (!audio || !audioUrl) {
+    if (!audio || !activeAudioSource) {
       pendingSeekSecondsRef.current = target
       return
     }
@@ -280,11 +281,13 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
 
   const waveformBarWidth = 2
   const waveformBarGap = 2
+  const waveformHorizontalPadding = 2
   const waveformBarStep = waveformBarWidth + waveformBarGap
   const waveformBarCount = useMemo(() => {
     if (waveformWidth <= 0) return 120
-    return Math.max(12, Math.floor((waveformWidth + waveformBarGap) / waveformBarStep))
-  }, [waveformWidth])
+    const availableWidth = Math.max(0, waveformWidth - waveformHorizontalPadding * 2)
+    return Math.max(12, Math.floor((availableWidth + waveformBarGap) / waveformBarStep))
+  }, [waveformWidth, waveformHorizontalPadding, waveformBarGap, waveformBarStep])
   const waveformHeights = useMemo(() => {
     return Array.from({ length: waveformBarCount }, (_, index) => {
       const noise = Math.abs(Math.sin(index * 0.61) * 0.7 + Math.sin(index * 0.17 + 1.3) * 0.3)
@@ -319,7 +322,7 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
             {waveformHeights.map((height, index) => {
               const ratio = (index + 1) / waveformBarCount
               const isPlayed = ratio <= playedRatio
-              return <View key={index} style={[styles.waveformBar, { height, backgroundColor: isPlayed ? colors.selected : '#C9C5C2' }]} />
+              return <View key={index} style={[styles.waveformBar, { width: waveformBarWidth, height, backgroundColor: isPlayed ? colors.selected : '#C9C5C2' }]} />
             })}
           </View>
           <input
@@ -408,7 +411,9 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
               ) : isPlaying ? (
                 <PauseIcon size={20} color="#FFFFFF" />
               ) : (
-                <PlaySmallIcon size={20} color="#FFFFFF" />
+                <View style={styles.playIconWrap}>
+                  <PlaySmallIcon size={20} color="#FFFFFF" />
+                </View>
               )}
             </Pressable>
 
@@ -420,12 +425,14 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
             <Text style={styles.bufferHint}>{''}</Text>
           </View>
         </View>
-        {showStatus ? (
-          <View style={styles.statusRow}>
-            {showEncryptingStatus ? <AudioEncryptedIcon size={14} color="#171717" /> : <AudioDecryptedIcon size={14} color="#171717" />}
-            <Text style={styles.statusText}>{showEncryptingStatus ? 'Audio wordt versleuteld' : 'Audio wordt ontsleuteld'}</Text>
-          </View>
-        ) : null}
+        <View style={styles.statusRow}>
+          {showStatus ? (
+            <>
+              {showEncryptingStatus ? <AudioEncryptedIcon size={14} color="#171717" /> : <AudioDecryptedIcon size={14} color="#171717" />}
+              <Text style={styles.statusText}>{showEncryptingStatus ? 'Audio wordt versleuteld' : 'Audio wordt ontsleuteld'}</Text>
+            </>
+          ) : null}
+        </View>
       </View>
     </View>
   )
@@ -465,7 +472,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   waveformBar: {
-    width: 2,
+    minWidth: 1,
+    flexShrink: 0,
     borderRadius: 999,
   },
   waveformRangeInput: {
@@ -524,6 +532,9 @@ const styles = StyleSheet.create({
   },
   playButtonHovered: {
     opacity: 0.9,
+  },
+  playIconWrap: {
+    marginLeft: 1,
   },
   timeLabel: {
     color: colors.textSecondary,

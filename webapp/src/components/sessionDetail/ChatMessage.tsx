@@ -9,6 +9,7 @@ import { SharePdfIcon } from '../icons/SharePdfIcon'
 import { parseTimeLabelToSeconds } from '../../utils/time'
 import { useLocalAppData } from '../../local/LocalAppDataProvider'
 import { buildReportFooterLine, formatReportDate } from '../../report/layout'
+import { parseRichTextMarkdown, RichTextInlineSegment } from '../../utils/richTextFormatting'
 
 type Props = {
   role: 'user' | 'assistant'
@@ -17,11 +18,6 @@ type Props = {
   onTranscriptMentionPress?: (seconds: number) => void
   exportTitle?: string
   onRequestPdfEdit?: (params: { text: string; title?: string; practiceSettings: PdfPracticeSettings }) => void
-}
-
-type ChatLine = {
-  kind: 'header' | 'bullet' | 'divider' | 'text' | 'empty'
-  text: string
 }
 
 const pdfStartToken = '[[PDF_START]]'
@@ -54,7 +50,8 @@ type DocumentSegment = {
 }
 
 type DocumentLine = {
-  kind: 'header' | 'bullet' | 'divider' | 'text' | 'empty'
+  kind: 'headingTwo' | 'headingThree' | 'bullet' | 'numbered' | 'quote' | 'divider' | 'paragraph' | 'empty'
+  number?: number
   segments: DocumentSegment[]
 }
 
@@ -214,18 +211,24 @@ function wrapSegmentsToLines(document: any, segments: DocumentSegment[], maxWidt
 }
 
 function buildDocumentLines(messageText: string): DocumentLine[] {
-  const rawLines = String(messageText || '').replace(/\r/g, '').split('\n')
-  return rawLines.map((line) => {
-    const parsed = parseChatLine(line)
-    if (parsed.kind === 'header') return { kind: parsed.kind, segments: splitBoldSegments(parsed.text, true) }
-    if (parsed.kind === 'bullet') return { kind: parsed.kind, segments: splitBoldSegments(parsed.text) }
-    if (parsed.kind === 'text') return { kind: parsed.kind, segments: splitBoldSegments(parsed.text) }
-    return { kind: parsed.kind, segments: [] }
+  const lines = parseRichTextMarkdown(messageText)
+  return lines.map((line) => {
+    if (line.kind === 'headingTwo' || line.kind === 'headingThree') {
+      const text = line.segments.map((segment) => segment.text).join('')
+      return { kind: line.kind, segments: splitBoldSegments(text, true) }
+    }
+    if (line.kind === 'bullet' || line.kind === 'paragraph' || line.kind === 'quote') {
+      return { kind: line.kind, segments: splitBoldSegments(line.text) }
+    }
+    if (line.kind === 'numbered') {
+      return { kind: line.kind, number: line.number, segments: splitBoldSegments(line.text) }
+    }
+    return { kind: line.kind, segments: [] }
   })
 }
 
 function guessTitleFromLines(lines: DocumentLine[]) {
-  const firstHeader = lines.find((l) => l.kind === 'header')
+  const firstHeader = lines.find((l) => l.kind === 'headingTwo' || l.kind === 'headingThree')
   const raw = firstHeader?.segments.map((s) => s.text).join('')?.trim()
   return raw || 'CoachScribe export'
 }
@@ -340,7 +343,7 @@ export async function exportMessageToPdf(messageText: string, reportTitle: strin
   let cursorY = marginTop
 
   const lines = buildDocumentLines(messageText)
-  const headerLineIndexes = lines.flatMap((line, index) => (line.kind === 'header' ? [index] : []))
+  const headerLineIndexes = lines.flatMap((line, index) => (line.kind === 'headingTwo' || line.kind === 'headingThree' ? [index] : []))
   const fallbackTitle = lines[headerLineIndexes[0]]?.segments.map((segment) => segment.text).join('').trim()
   const title = String(reportTitle || '').trim() || fallbackTitle || 'CoachScribe export'
   const dateLabel = formatReportDate(new Date())
@@ -419,7 +422,7 @@ export async function exportMessageToPdf(messageText: string, reportTitle: strin
       return
     }
 
-    if (line.kind === 'header') {
+    if (line.kind === 'headingTwo' || line.kind === 'headingThree') {
       const wrapped = wrapSegmentsToLines(doc, line.segments, maxWidth, headerFontSize)
       wrapped.forEach((segments, idx) => {
         ensureSpace(lineHeight)
@@ -443,6 +446,43 @@ export async function exportMessageToPdf(messageText: string, reportTitle: strin
       wrapped.forEach((segments) => {
         ensureSpace(lineHeight)
         let x = contentX
+        segments.forEach((seg) => {
+          doc.setFont('Helvetica', seg.isBold ? 'bold' : 'normal')
+          doc.setFontSize(textFontSize)
+          doc.setTextColor(textColor.r, textColor.g, textColor.b)
+          doc.text(seg.text, x, cursorY)
+          x += doc.getTextWidth(seg.text)
+        })
+        cursorY += lineHeight
+      })
+      return
+    }
+
+    if (line.kind === 'numbered') {
+      const wrapped = wrapSegmentsToLines(doc, [{ text: `${line.number || 1}. `, isBold: false }, ...line.segments], maxWidth, textFontSize)
+      wrapped.forEach((segments) => {
+        ensureSpace(lineHeight)
+        let x = contentX
+        segments.forEach((seg) => {
+          doc.setFont('Helvetica', seg.isBold ? 'bold' : 'normal')
+          doc.setFontSize(textFontSize)
+          doc.setTextColor(textColor.r, textColor.g, textColor.b)
+          doc.text(seg.text, x, cursorY)
+          x += doc.getTextWidth(seg.text)
+        })
+        cursorY += lineHeight
+      })
+      return
+    }
+
+    if (line.kind === 'quote') {
+      const wrapped = wrapSegmentsToLines(doc, line.segments, maxWidth - 8, textFontSize)
+      wrapped.forEach((segments) => {
+        ensureSpace(lineHeight)
+        doc.setDrawColor(210, 210, 210)
+        doc.setLineWidth(1)
+        doc.line(contentX, cursorY - 11, contentX, cursorY + 3)
+        let x = contentX + 8
         segments.forEach((seg) => {
           doc.setFont('Helvetica', seg.isBold ? 'bold' : 'normal')
           doc.setFontSize(textFontSize)
@@ -483,15 +523,56 @@ export async function exportMessageToPdf(messageText: string, reportTitle: strin
   doc.save(buildPdfFileName(title))
 }
 
-function parseChatLine(line: string): ChatLine {
-  const trimmedLine = line.trim()
-  if (!trimmedLine) return { kind: 'empty', text: '' }
-  if (trimmedLine === '---') return { kind: 'divider', text: '' }
-  if (trimmedLine.startsWith('####') || trimmedLine.startsWith('###')) {
-    return { kind: 'header', text: trimmedLine.replace(/^#{3,4}\s*/, '').trim() }
-  }
-  if (trimmedLine.startsWith('- ')) return { kind: 'bullet', text: trimmedLine.replace('- ', '').trim() }
-  return { kind: 'text', text: line }
+function renderInlineSegments({
+  segments,
+  textStyle,
+  boldStyle,
+  onTranscriptMentionPress,
+}: {
+  segments: RichTextInlineSegment[]
+  textStyle: any
+  boldStyle?: any
+  onTranscriptMentionPress?: (seconds: number) => void
+}) {
+  return (
+    <Text style={textStyle}>
+      {segments.map((segment, segmentIndex) => {
+        const segmentTokens = buildMentionTokens(segment.text)
+        return segmentTokens.map((token, tokenIndex) => {
+          if (token.kind === 'mention') {
+            const seconds = token.timeLabel ? parseTimeLabelToSeconds(token.timeLabel) : null
+            if (seconds === null || !onTranscriptMentionPress) {
+              return (
+                <Text key={`mention-${segmentIndex}-${tokenIndex}`} style={segment.isItalic ? styles.italicText : undefined} isBold={segment.isBold}>
+                  {token.text}
+                </Text>
+              )
+            }
+            return (
+              <TranscriptMention
+                key={`mention-${segmentIndex}-${tokenIndex}`}
+                label={token.text}
+                seconds={seconds}
+                onPress={onTranscriptMentionPress}
+              />
+            )
+          }
+          return (
+            <Text
+              key={`text-${segmentIndex}-${tokenIndex}`}
+              isBold={segment.isBold}
+              style={[
+                segment.isItalic ? styles.italicText : undefined,
+                segment.isBold ? boldStyle : undefined,
+              ]}
+            >
+              {token.text}
+            </Text>
+          )
+        })
+      })}
+    </Text>
+  )
 }
 
 export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, exportTitle, onRequestPdfEdit }: Props) {
@@ -509,7 +590,7 @@ export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, e
   const [showCopyNotification, setShowCopyNotification] = useState(false)
   const exportableText = extractExportableText(text)
   const displayText = removeExportMarkers(text)
-  const lines = String(displayText || '').split('\n').map(parseChatLine)
+  const lines = parseRichTextMarkdown(displayText || '')
   const isExportable = isAssistant && Boolean(exportableText)
 
   if (isAssistant) {
@@ -534,15 +615,16 @@ export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, e
                         </View>
                       )
                     }
-                    if (line.kind === 'header') {
+                    if (line.kind === 'headingTwo' || line.kind === 'headingThree') {
                       return (
-                        <MessageText
-                          key={`line-${lineIndex}`}
-                          text={line.text}
-                          textStyle={styles.headerText}
-                          boldStyle={styles.headerTextBold}
-                          onTranscriptMentionPress={onTranscriptMentionPress}
-                        />
+                        <View key={`line-${lineIndex}`}>
+                          {renderInlineSegments({
+                            segments: line.segments,
+                            textStyle: styles.headerText,
+                            boldStyle: styles.headerTextBold,
+                            onTranscriptMentionPress,
+                          })}
+                        </View>
                       )
                     }
                     if (line.kind === 'bullet') {
@@ -550,12 +632,41 @@ export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, e
                         <View key={`line-${lineIndex}`} style={styles.bulletRow}>
                           <View style={styles.bulletDot} />
                           <View style={styles.bulletText}>
-                            <MessageText text={line.text} textStyle={styles.messageText} onTranscriptMentionPress={onTranscriptMentionPress} />
+                            {renderInlineSegments({ segments: line.segments, textStyle: styles.messageText, onTranscriptMentionPress })}
                           </View>
                         </View>
                       )
                     }
-                    return <MessageText key={`line-${lineIndex}`} text={line.text} textStyle={styles.messageText} onTranscriptMentionPress={onTranscriptMentionPress} />
+                    if (line.kind === 'numbered') {
+                      return (
+                        <View key={`line-${lineIndex}`} style={styles.bulletRow}>
+                          <Text style={styles.numberedPrefix}>{`${line.number}.`}</Text>
+                          <View style={styles.bulletText}>
+                            {renderInlineSegments({ segments: line.segments, textStyle: styles.messageText, onTranscriptMentionPress })}
+                          </View>
+                        </View>
+                      )
+                    }
+                    if (line.kind === 'quote') {
+                      return (
+                        <View key={`line-${lineIndex}`} style={styles.quoteRow}>
+                          {renderInlineSegments({
+                            segments: line.segments,
+                            textStyle: styles.quoteText,
+                            onTranscriptMentionPress,
+                          })}
+                        </View>
+                      )
+                    }
+                    return (
+                      <View key={`line-${lineIndex}`}>
+                        {renderInlineSegments({
+                          segments: line.segments,
+                          textStyle: styles.messageText,
+                          onTranscriptMentionPress,
+                        })}
+                      </View>
+                    )
                   })}
                 </View>
               </View>
@@ -620,9 +731,13 @@ const styles = StyleSheet.create({
   formattedLines: { gap: 8 },
   headerText: { fontSize: 16, lineHeight: 22, color: colors.text },
   headerTextBold: { fontSize: 16, lineHeight: 22, color: colors.text },
+  italicText: { fontStyle: 'italic' },
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   bulletDot: { width: 6, height: 6, borderRadius: 999, backgroundColor: colors.text, marginTop: 7 },
   bulletText: { flex: 1 },
+  numberedPrefix: { fontSize: 14, lineHeight: 20, color: colors.text, minWidth: 20 },
+  quoteRow: { borderLeftWidth: 2, borderLeftColor: colors.border, paddingLeft: 10 },
+  quoteText: { fontSize: 14, lineHeight: 20, color: colors.textSecondary },
   dividerRow: { width: '100%', paddingVertical: 6 },
   dividerLine: { width: '100%', height: 1, backgroundColor: colors.border },
   emptyLine: { height: 8 },

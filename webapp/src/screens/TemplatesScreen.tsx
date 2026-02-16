@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { Pressable, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native'
 
 import { AnimatedMainContent } from '../components/AnimatedMainContent'
 import { AnimatedWidthContainer } from '../components/AnimatedWidthContainer'
+import { PlusIcon } from '../components/icons/PlusIcon'
 import { SearchIcon } from '../components/icons/SearchIcon'
 import { TemplateSavedIcon } from '../components/icons/TemplateSavedIcon'
 import { TemplatesIcon } from '../components/icons/TemplatesIcon'
@@ -11,12 +12,15 @@ import { TemplateEditModal } from '../components/templates/TemplateEditModal'
 import { Text } from '../components/Text'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { colors } from '../theme/colors'
+import { typography } from '../theme/typography'
+import { webTransitionSmooth } from '../theme/webTransitions'
 import { TemplateNotSavedIcon } from '../components/icons/TemplateNotSavedIcon'
 
 type SavedFilterKey = 'all' | 'saved'
 
 // Renders the templates overview, filters, and create/edit/delete modal flows.
 export function TemplatesScreen() {
+  const { width: windowWidth } = useWindowDimensions()
   const { data, createTemplate, updateTemplate, deleteTemplate, toggleTemplateSaved } = useLocalAppData()
   const [searchText, setSearchText] = useState('')
   const [activeSavedFilter, setActiveSavedFilter] = useState<SavedFilterKey>('all')
@@ -29,6 +33,9 @@ export function TemplatesScreen() {
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
   const templates = data.templates ?? []
   const isSearchExpanded = isSearchOpen || searchText.trim().length > 0
+  const isCompactHeader = windowWidth <= 820
+  const compactSearchExpandedWidth = Math.min(240, Math.max(140, windowWidth - 380))
+  const expandedSearchWidth = isCompactHeader ? compactSearchExpandedWidth : 315
 
   const editingTemplate = useMemo(() => {
     if (!editingTemplateId) return null
@@ -49,6 +56,13 @@ export function TemplatesScreen() {
         return template.name.toLowerCase().includes(normalizedQuery) || template.description.toLowerCase().includes(normalizedQuery)
       })
   }, [activeSavedFilter, searchText, templates])
+  const hasSearchQuery = searchText.trim().length > 0
+  const isSavedFilter = activeSavedFilter === 'saved'
+  const emptyTemplatesText = hasSearchQuery
+    ? 'Geen templates gevonden.'
+    : isSavedFilter
+      ? 'Er zijn nog geen opgeslagen templates.'
+      : 'Er zijn nog geen templates.'
 
   useEffect(() => {
     if (!isSearchOpen) return
@@ -60,11 +74,18 @@ export function TemplatesScreen() {
     <View style={styles.container}>
       <View style={styles.headerArea}>
         <View style={styles.headerRow}>
-          <Text isSemibold style={styles.headerTitle}>
-            Templates
-          </Text>
-          <View style={styles.headerActions}>
-            <AnimatedWidthContainer width={isSearchExpanded ? 315 : 138} style={styles.searchWidthContainer}>
+          {isCompactHeader ? null : (
+            <Text isSemibold style={styles.headerTitle}>
+              Templates
+            </Text>
+          )}
+          <View style={[styles.headerActions, isCompactHeader ? styles.headerActionsCompact : undefined]}>
+            {isCompactHeader ? (
+              <Text isSemibold style={styles.headerTitle}>
+                Templates
+              </Text>
+            ) : null}
+            <AnimatedWidthContainer width={isSearchExpanded ? expandedSearchWidth : 138} style={styles.searchWidthContainer}>
               {isSearchExpanded ? (
                 <View style={styles.searchInputContainer}>
                   <SearchIcon color="#656565" size={18} />
@@ -81,21 +102,25 @@ export function TemplatesScreen() {
               ) : (
                 <Pressable onPress={() => setIsSearchOpen(true)} style={({ hovered }) => [styles.searchInputContainer, hovered ? styles.searchInputContainerHovered : undefined]}>
                   <SearchIcon color="#656565" size={18} />
-                  <Text isBold style={styles.searchCollapsedText}>
+                  <Text style={styles.searchCollapsedText}>
                     Zoeken
                   </Text>
                 </Pressable>
               )}
             </AnimatedWidthContainer>
-            <Pressable style={({ hovered }) => [styles.headerButton, styles.addButton, hovered ? styles.addButtonHovered : undefined]} onPress={() => setIsCreateModalOpen(true)}>
-              <Text numberOfLines={1} isBold style={styles.addButtonText}>
-                + Template maken
+            <Pressable
+              style={({ hovered }) => [styles.addButton, webTransitionSmooth, hovered ? styles.addButtonHovered : undefined]}
+              onPress={() => setIsCreateModalOpen(true)}
+            >
+              <PlusIcon color="#FFFFFF" size={22} />
+              <Text numberOfLines={1} style={styles.addButtonText}>
+                Template maken
               </Text>
             </Pressable>
           </View>
         </View>
 
-        <View style={styles.tabsRow}>
+        <View style={[styles.tabsRow, styles.tabsRowWeb]}>
           <TabButton
             label="Alle templates"
             isSelected={activeSavedFilter === 'all'}
@@ -113,19 +138,25 @@ export function TemplatesScreen() {
 
       <View style={styles.gridArea}>
         <AnimatedMainContent contentKey={activeSavedFilter}>
-          <View style={styles.gridRow}>
-            {visibleTemplates.map((template) => (
-              <View key={template.id} style={styles.gridItem}>
-                <TemplateCard
-                  title={template.name}
-                  description={template.description}
-                  isSaved={template.isSaved}
-                  onPress={() => setEditingTemplateId(template.id)}
-                  onToggleSaved={() => toggleTemplateSaved(template.id)}
-                />
-              </View>
-            ))}
-          </View>
+          {visibleTemplates.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>{emptyTemplatesText}</Text>
+            </View>
+          ) : (
+            <View style={styles.gridRow}>
+              {visibleTemplates.map((template) => (
+                <View key={template.id} style={styles.gridItem}>
+                  <TemplateCard
+                    title={template.name}
+                    description={template.description}
+                    isSaved={template.isSaved}
+                    onPress={() => setEditingTemplateId(template.id)}
+                    onToggleSaved={() => toggleTemplateSaved(template.id)}
+                  />
+                </View>
+              ))}
+            </View>
+          )}
         </AnimatedMainContent>
       </View>
 
@@ -259,6 +290,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
   },
   headerTitle: {
     fontSize: 24,
@@ -270,19 +303,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  headerActionsCompact: {
+    width: '100%',
+    justifyContent: 'flex-start',
+    flexWrap: 'wrap',
+  },
   searchWidthContainer: {
-    overflow: 'hidden',
+    height: 40,
   },
   searchInputContainer: {
+    width: '100%',
     height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: colors.border,
     padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    ...( { overflow: 'hidden' } as any ),
   },
   searchInputContainerHovered: {
     backgroundColor: colors.hoverBackground,
@@ -291,34 +331,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: '#656565',
+    ...( { transform: [{ translateY: 1 }] } as any ),
   },
   searchInput: {
     flex: 1,
     padding: 0,
     fontSize: 14,
     lineHeight: 18,
+    fontFamily: typography.fontFamilyRegular,
     color: '#656565',
+    ...( { transform: [{ translateY: 1 }] } as any ),
   },
-  headerButton: {
+  addButton: {
+    width: 162,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 10,
+    backgroundColor: colors.selected,
+    borderWidth: 1,
+    borderColor: colors.selected,
     padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  addButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: colors.selected,
+    gap: 8,
   },
   addButtonHovered: {
-    backgroundColor: 'rgba(190,1,101,0.08)',
+    backgroundColor: '#A50058',
   },
   addButtonText: {
     fontSize: 14,
     lineHeight: 18,
-    color: colors.selected,
+    color: '#FFFFFF',
+    ...( { transform: [{ translateY: 1 }] } as any ),
   },
   tabsRow: {
     width: 460,
@@ -326,6 +370,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  tabsRowWeb: {
+    ...( { overflowX: 'auto', overflowY: 'hidden' } as any ),
+    ...( { scrollbarWidth: 'none' } as any ),
+    ...( { msOverflowStyle: 'none' } as any ),
   },
   tabButton: {
     flex: 1,
@@ -365,6 +414,18 @@ const styles = StyleSheet.create({
   },
   gridArea: {
     flex: 1,
+  },
+  emptyState: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   gridRow: {
     flexDirection: 'row',

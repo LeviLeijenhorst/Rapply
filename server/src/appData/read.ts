@@ -77,12 +77,13 @@ export async function readAppData(userId: string): Promise<AppData> {
   const notes = await queryMany<{
     id: string
     session_id: string
+    title: string | null
     text: string
     created_at_unix_ms: number
     updated_at_unix_ms: number
   }>(
     `
-    select id, session_id, text, created_at_unix_ms, updated_at_unix_ms
+    select id, session_id, coalesce(title, '') as title, text, created_at_unix_ms, updated_at_unix_ms
     from public.session_notes
     where user_id = $1
     order by updated_at_unix_ms desc
@@ -154,6 +155,7 @@ export async function readAppData(userId: string): Promise<AppData> {
     notes: notes.map((row) => ({
       id: row.id,
       sessionId: row.session_id,
+      title: row.title ?? "",
       text: row.text,
       createdAtUnixMs: Number(row.created_at_unix_ms),
       updatedAtUnixMs: Number(row.updated_at_unix_ms),

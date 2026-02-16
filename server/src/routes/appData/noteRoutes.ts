@@ -22,9 +22,10 @@ export function registerNoteRoutes(app: Express): void {
       const user = await requireAuthenticatedUser(req)
       const payload = req.body || {}
       const id = readId(payload.id, "id")
+      const title = typeof payload.title === "string" ? payload.title.trim() : ""
       const text = readText(payload.text, "text")
       const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs, "updatedAtUnixMs")
-      await updateNote(user.userId, { id, text, updatedAtUnixMs })
+      await updateNote(user.userId, { id, title, text, updatedAtUnixMs })
       res.status(200).json({ ok: true })
     }),
   )

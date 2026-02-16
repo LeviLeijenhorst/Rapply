@@ -78,8 +78,8 @@ type ContextValue = {
   ) => void
   deleteSession: (sessionId: string) => void
 
-  createNote: (sessionId: string, text: string) => void
-  updateNote: (noteId: string, text: string) => void
+  createNote: (sessionId: string, values: { title: string; text: string }) => void
+  updateNote: (noteId: string, values: { title?: string; text: string }) => void
   deleteNote: (noteId: string) => void
 
   setWrittenReport: (sessionId: string, text: string) => void
@@ -156,7 +156,11 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
 
     const notes: Note[] = []
     for (const note of remote.notes) {
-      notes.push({ ...note, text: await decryptTextCompat(note.text) })
+      notes.push({
+        ...note,
+        title: (note as any).title ? await decryptTextCompat((note as any).title) : "",
+        text: await decryptTextCompat(note.text),
+      })
     }
 
     const writtenReports: WrittenReport[] = []
@@ -200,7 +204,11 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
 
   async function encryptNote(note: Note): Promise<Note> {
     if (!e2ee) return note
-    return { ...note, text: await e2ee.encryptText(note.text) }
+    return {
+      ...note,
+      title: await e2ee.encryptText(note.title ?? ""),
+      text: await e2ee.encryptText(note.text),
+    }
   }
 
   async function encryptWrittenReport(report: WrittenReport): Promise<WrittenReport> {
@@ -475,13 +483,15 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         runRemoteAction(deleteSessionRemote(sessionId))
       },
 
-      createNote: (sessionId, text) => {
-        const trimmedText = text.trim()
+      createNote: (sessionId, values) => {
+        const trimmedText = values.text.trim()
         if (!trimmedText) return
+        const trimmedTitle = (values.title ?? "").trim()
         const now = Date.now()
         const note: Note = {
-          id: createId('note'),
+          id: createId("note"),
           sessionId,
+          title: trimmedTitle,
           text: trimmedText,
           createdAtUnixMs: now,
           updatedAtUnixMs: now,
@@ -494,11 +504,22 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           runRemoteAction(encryptNote(note).then(createNoteRemote))
         }
       },
-      updateNote: (noteId, text) => {
+      updateNote: (noteId, values) => {
         const updatedAtUnixMs = Date.now()
-        setData((previous) => updateNote(previous, noteId, text))
+        setData((previous) => updateNote(previous, noteId, values))
         if (!e2ee) return
-        runRemoteAction(e2ee.encryptText(text.trim()).then((encrypted) => updateNoteRemote({ id: noteId, text: encrypted, updatedAtUnixMs })))
+        void (async () => {
+          const encryptedTitle = values.title !== undefined ? await e2ee.encryptText(values.title.trim()) : undefined
+          const encryptedText = await e2ee.encryptText(values.text.trim())
+          await updateNoteRemote({
+            id: noteId,
+            title: encryptedTitle,
+            text: encryptedText,
+            updatedAtUnixMs,
+          })
+        })()
+          .then(refreshFromServer)
+          .catch((error: unknown) => console.error("[LocalAppDataProvider] Remote update failed", error))
       },
       deleteNote: (noteId) => {
         setData((previous) => deleteNote(previous, noteId))

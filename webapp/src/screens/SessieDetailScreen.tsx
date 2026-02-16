@@ -18,6 +18,7 @@ import { QuickQuestionsStart } from '../components/sessionDetail/QuickQuestionsS
 import { ReportPanel } from '../components/sessionDetail/ReportPanel'
 import { NotesTabPanel } from '../components/sessionDetail/NotesTabPanel'
 import { TranscriptTabPanel } from '../components/sessionDetail/TranscriptTabPanel'
+import { ConfirmTranscriptionCancelModal } from '../components/sessionDetail/ConfirmTranscriptionCancelModal'
 import { TemplatePickerModal } from '../components/sessionDetail/TemplatePickerModal'
 import { EditSessieModal } from '../components/sessionDetail/EditSessieModal'
 import { WebPortal } from '../components/WebPortal'
@@ -47,9 +48,18 @@ import {
 import { isUnassignedCoacheeName, unassignedCoacheeLabel } from '../utils/coachee'
 import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
 import { buildCoacheeTranscriptsSystemMessages, buildConversationTranscriptSystemMessages } from '../utils/quickQuestionsContext'
-import { getPendingPreviewAudio, retainPendingPreviewAudio } from '../audio/pendingPreviewStore'
+import {
+  clearPendingPreviewAudio,
+  clearPendingPreviewAudioIfEligible,
+  getPendingPreviewAudio,
+  getPendingPreviewAudioForTranscription,
+  getPendingPreviewShouldSaveAudio,
+  markPendingPreviewTranscriptionSucceeded,
+  retainPendingPreviewAudio,
+} from '../audio/pendingPreviewStore'
 import { RichTextEditorModal } from '../components/editor/RichTextEditorModal'
 import { normalizeTranscriptionError } from '../utils/transcriptionError'
+import { ConfirmChatClearModal } from '../components/sessionDetail/ConfirmChatClearModal'
 
 type Props = {
   sessionId: string
@@ -102,13 +112,16 @@ export function SessieDetailScreen({
   const [isChatMaximizedRendered, setIsChatMaximizedRendered] = useState(false)
   const [writtenReportDraft, setWrittenReportDraft] = useState(writtenReportText)
   const [isDeleteSessieModalVisible, setIsDeleteSessieModalVisible] = useState(false)
+  const [isClearChatModalVisible, setIsClearChatModalVisible] = useState(false)
   const [pendingPreviewAudioUrl, setPendingPreviewAudioUrl] = useState<string | null>(null)
+  const [pendingPreviewShouldSaveAudio, setPendingPreviewShouldSaveAudio] = useState<boolean | null>(null)
   const [currentAudioSeconds, setCurrentAudioSeconds] = useState(0)
   const [isSummaryEditorOpen, setIsSummaryEditorOpen] = useState(false)
   const [forcedTranscriptionStatus, setForcedTranscriptionStatus] = useState<'transcribing' | 'generating' | null>(null)
   const [isPdfEditorOpen, setIsPdfEditorOpen] = useState(false)
   const [pdfEditorDraft, setPdfEditorDraft] = useState('')
   const [pdfEditorTitle, setPdfEditorTitle] = useState<string | undefined>(undefined)
+  const [isCancelTranscriptionModalVisible, setIsCancelTranscriptionModalVisible] = useState(false)
 
   const coacheeButtonRef = useRef<any>(null)
   const templates = data.templates ?? []
@@ -147,6 +160,7 @@ export function SessieDetailScreen({
   const effectiveTranscriptionStatus = forcedTranscriptionStatus ?? (session?.transcriptionStatus ?? 'idle')
   const shouldShowQuickStart = chatMessages.length === 0
   const shouldShowClearChat = chatMessages.length > 0
+  const shouldUseTranscriptTint = hasSavedAudio || pendingPreviewShouldSaveAudio === true
   const chatOverlayOpacity = useRef(new Animated.Value(0)).current
   const chatOverlayScale = useRef(new Animated.Value(0.98)).current
   const previousMessageCountRef = useRef(chatMessages.length)
@@ -188,6 +202,9 @@ export function SessieDetailScreen({
     let nextUrl: string | null = null
 
     void (async () => {
+      const shouldSaveAudio = await getPendingPreviewShouldSaveAudio(sessionId)
+      if (isCancelled) return
+      setPendingPreviewShouldSaveAudio(shouldSaveAudio)
       const pendingPreview = await getPendingPreviewAudio(sessionId)
       if (isCancelled) return
       if (!pendingPreview) {
@@ -354,6 +371,10 @@ export function SessieDetailScreen({
     scrollChatToEnd()
   }
 
+  function requestResetChat() {
+    setIsClearChatModalVisible(true)
+  }
+
   function handleTranscriptMentionPress(seconds: number) {
     audioPlayerRef.current?.seekToSeconds(seconds)
   }
@@ -367,9 +388,9 @@ export function SessieDetailScreen({
     const systemMessage: LocalChatMessage = {
       role: 'system',
       text:
-        'Je antwoord moet duidelijk en beknopt zijn. Gebruik nooit labels zoals "speaker_3". Als je een spreker moet noemen, zeg dan "coachee", "coach" of "de spreker". Als je verwijst naar een specifiek moment in het transcript, schrijf het dan als [[timestamp=MM:SS|hier]] en gebruik dat alleen voor klikbare tijdstippen. Als het antwoord geschikt is om als PDF te downloaden, zet dan alleen de gewenste inhoud tussen deze twee regels. Gebruik exact deze regels op een eigen regel: ' +
-        `${pdfStartToken} en ${pdfEndToken}. ` +
-        'Plaats geen andere tekst tussen die regels dan de inhoud die in de PDF hoort. Zet alle overige uitleg buiten die blokken.',
+      'Deze chatbot bevindt zich onder het kopje "Snelle vragen" binnen CoachScribe. Coaches gebruiken deze chat om korte, gerichte vragen te stellen over het lopende coachtraject op basis van het transcript. De chatbot begrijpt dat het gaat om een coachgesprek en antwoordt vanuit de context van het traject. Je antwoorden zijn altijd duidelijk en beknopt. Geef geen lange uitleg, herhaal de vraag niet en voeg geen meta-uitleg toe. Gebruik geen emoji’s. Gebruik nooit labels zoals "speaker_3" en gebruik geen andere termen voor sprekers dan "coach" of "coachee". Wanneer je verwijst naar een specifiek moment in het transcript, gebruik dan de notatie [[timestamp=MM:SS|zichtbare tekst]]. MM:SS is het tijdstip in het transcript en de tekst na de | is de klikbare tekst zoals die in de zin wordt weergegeven. Verwerk deze verwijzing vloeiend in de zin en gebruik dit actief wanneer dat helpt om het antwoord concreet en controleerbaar te maken. Als het antwoord geschikt is om als PDF te downloaden, zet dan alleen de gewenste inhoud tussen deze twee regels. Gebruik exact deze regels op een eigen regel: ' +
+      `${pdfStartToken} en ${pdfEndToken}. ` +
+      'Plaats geen andere tekst tussen die regels dan de inhoud die in de PDF hoort. Zet alle overige uitleg buiten die blokken.',    
     }
 
     const nextUserMessage: ChatStateMessage = {
@@ -505,6 +526,32 @@ export function SessieDetailScreen({
     clearGenerationTracking()
   }
 
+  async function handleCancelGeneration() {
+    if (pendingPreviewShouldSaveAudio === false) {
+      setIsCancelTranscriptionModalVisible(true)
+      return
+    }
+    await cancelCurrentGeneration()
+  }
+
+  async function handleConfirmCancelTranscription() {
+    setIsCancelTranscriptionModalVisible(false)
+    const cancelledRun = cancelTranscriptionRun(sessionId)
+    generationRunIdRef.current += 1
+    const operationId = cancelledRun.operationId
+    if (operationId) {
+      try {
+        await cancelTranscriptionOperation({ operationId })
+      } catch (error) {
+        console.warn('[SessieDetailScreen] Failed to cancel transcription operation', { sessionId, operationId, error })
+      }
+    }
+    await clearPendingPreviewAudio(sessionId)
+    clearQuickQuestionsChatForSession(sessionId)
+    deleteSession(sessionId)
+    onBack()
+  }
+
   async function loadDecryptedSessionAudio(audioId: string): Promise<{ audioBlob: Blob; mimeType: string }> {
     try {
       const storedAudio = await loadAudioBlobRemote(audioId)
@@ -526,8 +573,22 @@ export function SessieDetailScreen({
     }
   }
 
+  async function loadAudioForTranscription(): Promise<{ audioBlob: Blob; mimeType: string }> {
+    const audioId = String(session?.audioBlobId || '').trim()
+    if (audioId) {
+      return loadDecryptedSessionAudio(audioId)
+    }
+    const pendingPreview = await getPendingPreviewAudioForTranscription(sessionId)
+    if (pendingPreview) {
+      return {
+        audioBlob: pendingPreview.blob,
+        mimeType: pendingPreview.mimeType,
+      }
+    }
+    throw new Error('Geen audio beschikbaar om een transcript te maken.')
+  }
+
   async function retryTranscription() {
-    if (!session?.audioBlobId) return
     if (session?.transcriptionStatus === 'transcribing' || session?.transcriptionStatus === 'generating') return
 
     const runId = beginGenerationRun()
@@ -535,11 +596,10 @@ export function SessieDetailScreen({
     setTranscriptionAbortController(sessionId, runId, transcriptionAbortController)
     setForcedTranscriptionStatus('transcribing')
 
-    updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null, summary: null })
-
     try {
-      console.log('[transcription][retry] audio-download-start', { sessionId, audioId: session.audioBlobId })
-      const decrypted = await loadDecryptedSessionAudio(session.audioBlobId)
+      updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null, summary: null })
+      console.log('[transcription][retry] audio-download-start', { sessionId, audioId: session?.audioBlobId ?? null })
+      const decrypted = await loadAudioForTranscription()
       if (!isGenerationRunActive(runId)) return
       console.log('[transcription][retry] audio-download-done', {
         sessionId,
@@ -575,6 +635,8 @@ export function SessieDetailScreen({
           transcriptionStatus: 'done',
           transcriptionError: null,
         })
+        await markPendingPreviewTranscriptionSucceeded(sessionId)
+        await clearPendingPreviewAudioIfEligible(sessionId)
         clearGenerationTracking()
       } else {
         const summaryAbortController = new AbortController()
@@ -594,6 +656,8 @@ export function SessieDetailScreen({
           transcriptionStatus: 'done',
           transcriptionError: null,
         })
+        await markPendingPreviewTranscriptionSucceeded(sessionId)
+        await clearPendingPreviewAudioIfEligible(sessionId)
         console.log('[transcription][retry] summary-generate-done', { sessionId, summaryLength: generatedSummary.length })
         clearGenerationTracking()
       }
@@ -635,13 +699,10 @@ export function SessieDetailScreen({
       let transcript = String(session?.transcript || '').trim()
       if (!transcript) {
         setForcedTranscriptionStatus('transcribing')
-        updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null, summary: null })
-        if (!session?.audioBlobId) {
-          throw new Error('Geen audio beschikbaar om een transcript te maken.')
-        }
-        console.log('[transcription][report] audio-download-start', { sessionId, audioId: session.audioBlobId })
-        const decrypted = await loadDecryptedSessionAudio(session.audioBlobId)
+        console.log('[transcription][report] audio-download-start', { sessionId, audioId: session?.audioBlobId ?? null })
+        const decrypted = await loadAudioForTranscription()
         if (!isGenerationRunActive(runId)) return
+        updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null, summary: null })
         console.log('[transcription][report] audio-download-done', {
           sessionId,
           mimeType: decrypted.mimeType,
@@ -668,6 +729,8 @@ export function SessieDetailScreen({
           throw new Error('No transcript returned')
         }
         updateSession(sessionId, { transcript })
+        await markPendingPreviewTranscriptionSucceeded(sessionId)
+        await clearPendingPreviewAudioIfEligible(sessionId)
       }
 
       const summaryAbortController = new AbortController()
@@ -787,7 +850,7 @@ export function SessieDetailScreen({
                     transcriptionError={session?.transcriptionError ?? null}
                     onEditSummary={() => setIsSummaryEditorOpen(true)}
                     onRetryTranscription={() => (selectedTemplateId ? generateReportForTemplate(selectedTemplateId) : null)}
-                    onCancelGeneration={cancelCurrentGeneration}
+                    onCancelGeneration={handleCancelGeneration}
                   />
                 </View>
               {/* Active tab content */}
@@ -811,7 +874,7 @@ export function SessieDetailScreen({
                 {activeTabKey === 'snelleVragen' && shouldShowClearChat ? (
                   <View style={styles.chatActionsRowMobile}>
                     <Pressable
-                      onPress={resetChat}
+                      onPress={requestResetChat}
                       style={({ hovered }) => [styles.chatActionButton, hovered ? styles.chatActionButtonHovered : undefined]}
                     >
                       {/* Clear chat */}
@@ -871,7 +934,7 @@ export function SessieDetailScreen({
                   ) : null}
 
                   {activeTabKey === 'notities' ? (
-                    <NotesTabPanel sessionId={sessionId} dateTimeLabel="Jan 22 2026 om 20:04" shouldFillAvailableHeight={false} />
+                    <NotesTabPanel sessionId={sessionId} shouldFillAvailableHeight={false} />
                   ) : null}
                   {activeTabKey === 'volledigeSessie' ? (
                     <TranscriptTabPanel
@@ -883,9 +946,10 @@ export function SessieDetailScreen({
                       transcriptionError={session?.transcriptionError ?? null}
                       onSeekToSeconds={(seconds) => audioPlayerRef.current?.seekToSeconds(seconds)}
                       onRetryTranscription={retryTranscription}
-                      onCancelGeneration={cancelCurrentGeneration}
+                      onCancelGeneration={handleCancelGeneration}
                       currentAudioSeconds={currentAudioSeconds}
                       highlightTintColor={practiceTintColor}
+                      useTintColors={shouldUseTranscriptTint}
                       audioDurationSeconds={session?.audioDurationSeconds ?? null}
                     />
                   ) : null}
@@ -1084,7 +1148,7 @@ export function SessieDetailScreen({
                     transcriptionError={session?.transcriptionError ?? null}
                     onEditSummary={() => setIsSummaryEditorOpen(true)}
                     onRetryTranscription={() => (selectedTemplateId ? generateReportForTemplate(selectedTemplateId) : null)}
-                    onCancelGeneration={cancelCurrentGeneration}
+                    onCancelGeneration={handleCancelGeneration}
                   />
                 </View>
               </ScrollView>
@@ -1102,7 +1166,7 @@ export function SessieDetailScreen({
                     <View style={styles.tabsRight}>
                       {shouldShowClearChat ? (
                         <Pressable
-                          onPress={resetChat}
+                          onPress={requestResetChat}
                           style={({ hovered }) => [styles.chatActionButton, hovered ? styles.chatActionButtonHovered : undefined]}
                         >
                           {/* Clear chat */}
@@ -1168,7 +1232,7 @@ export function SessieDetailScreen({
                     </View>
                   ) : null}
 
-                  {activeTabKey === 'notities' ? <NotesTabPanel sessionId={sessionId} dateTimeLabel="Jan 22 2026 om 20:04" /> : null}
+                  {activeTabKey === 'notities' ? <NotesTabPanel sessionId={sessionId} /> : null}
 
                   {activeTabKey === 'volledigeSessie' ? (
                     <TranscriptTabPanel
@@ -1179,9 +1243,10 @@ export function SessieDetailScreen({
                       transcriptionError={session?.transcriptionError ?? null}
                       onSeekToSeconds={(seconds) => audioPlayerRef.current?.seekToSeconds(seconds)}
                       onRetryTranscription={retryTranscription}
-                      onCancelGeneration={cancelCurrentGeneration}
+                      onCancelGeneration={handleCancelGeneration}
                       currentAudioSeconds={currentAudioSeconds}
                       highlightTintColor={practiceTintColor}
+                      useTintColors={shouldUseTranscriptTint}
                       audioDurationSeconds={session?.audioDurationSeconds ?? null}
                     />
                   ) : null}
@@ -1279,6 +1344,22 @@ export function SessieDetailScreen({
         }}
       />
 
+      <ConfirmTranscriptionCancelModal
+        visible={isCancelTranscriptionModalVisible}
+        onClose={() => setIsCancelTranscriptionModalVisible(false)}
+        onConfirm={() => {
+          void handleConfirmCancelTranscription()
+        }}
+      />
+      <ConfirmChatClearModal
+        visible={isClearChatModalVisible}
+        onClose={() => setIsClearChatModalVisible(false)}
+        onConfirm={() => {
+          setIsClearChatModalVisible(false)
+          resetChat()
+        }}
+      />
+
       {isChatMaximizedRendered ? (
         <WebPortal>
           <Animated.View style={[styles.chatOverlay, { opacity: chatOverlayOpacity }]}>
@@ -1290,7 +1371,7 @@ export function SessieDetailScreen({
                 <View style={styles.chatOverlayActions}>
                   {shouldShowClearChat ? (
                     <Pressable
-                      onPress={resetChat}
+                      onPress={requestResetChat}
                       style={({ hovered }) => [styles.chatActionButton, hovered ? styles.chatActionButtonHovered : undefined]}
                     >
                       {/* Clear chat */}

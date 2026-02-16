@@ -20,6 +20,8 @@ import { FeedbackModal } from './help/FeedbackModal'
 import { SettingsMenu } from './settings/SettingsMenu'
 import { MyAccountModal } from './settings/MyAccountModal'
 import { MySubscriptionModal } from './settings/MySubscriptionModal'
+import { ShareCoachscribeModal } from './settings/ShareCoachscribeModal'
+import { ContactModal } from './settings/ContactModal'
 import { DeleteAccountConfirmModal } from './settings/DeleteAccountConfirmModal'
 import { DeleteAccountErrorModal } from './settings/DeleteAccountErrorModal'
 import { ArchiefScreen } from '../screens/ArchiefScreen'
@@ -36,6 +38,8 @@ import { processSessionAudio } from '../audio/processSessionAudio'
 import { AdminFeedbackScreen } from '../screens/AdminFeedbackScreen'
 import { ChevronRightIcon } from './icons/ChevronRightIcon'
 import { CircleCloseIcon } from './icons/CircleCloseIcon'
+import { readJsonFromLocalStorage, writeJsonToLocalStorage } from '../local/localStorageJson'
+import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
 
 type AnchorPoint = { x: number; y: number }
 type OverlayScreenKey = 'archief'
@@ -95,30 +99,13 @@ type Props = {
 }
 
 const PRIVACY_BELEID_URL = 'https://www.coachscribe.nl/privacybeleid'
+const E2EE_SETUP_BANNER_DISMISSED_STORAGE_KEY = 'coachscribe:e2ee-setup-banner-dismissed'
 
 function parseDeleteAccountErrorMessage(error: unknown): string {
-  const fallback = 'Verwijderen mislukt. Probeer het alsjeblieft later opnieuw.'
-  if (!(error instanceof Error)) return fallback
-
-  const rawMessage = String(error.message || '').trim()
-  if (!rawMessage) return fallback
-
-  const jsonStartIndex = rawMessage.indexOf('{')
-  if (jsonStartIndex >= 0) {
-    try {
-      const parsed = JSON.parse(rawMessage.slice(jsonStartIndex))
-      if (typeof parsed?.error === 'string' && parsed.error.trim()) {
-        return parsed.error.trim()
-      }
-    } catch {
-      // ignore parse errors and continue with fallback parsing
-    }
-  }
-
-  const apiErrorMatch = rawMessage.match(/^API error:\s*\d+\s*(.+)$/)
-  if (apiErrorMatch?.[1]?.trim()) return apiErrorMatch[1].trim()
-
-  return fallback
+  return toUserFriendlyErrorMessage(error, {
+    fallback: 'Verwijderen mislukt. Probeer het alsjeblieft later opnieuw.',
+    forbiddenMessage: 'Je hebt geen toegang om een account te verwijderen.',
+  })
 }
 
 export function AppShell({ onLogout }: Props) {
@@ -147,12 +134,17 @@ export function AppShell({ onLogout }: Props) {
 
   const [isMyAccountModalOpen, setIsMyAccountModalOpen] = useState(false)
   const [isMySubscriptionModalOpen, setIsMySubscriptionModalOpen] = useState(false)
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false)
   const [isCoacheeModalOpen, setIsCoacheeModalOpen] = useState(false)
   const [previousRoute, setPreviousRoute] = useState<RouteState | null>(null)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [isDeleteAccountConfirmModalOpen, setIsDeleteAccountConfirmModalOpen] = useState(false)
   const [deleteAccountErrorMessage, setDeleteAccountErrorMessage] = useState<string | null>(null)
-  const [isE2eeSetupBannerDismissed, setIsE2eeSetupBannerDismissed] = useState(false)
+  const [isE2eeSetupBannerDismissed, setIsE2eeSetupBannerDismissed] = useState<boolean>(() => {
+    const stored = readJsonFromLocalStorage<boolean>(E2EE_SETUP_BANNER_DISMISSED_STORAGE_KEY)
+    return stored.ok ? Boolean(stored.value) : false
+  })
 
   useEffect(() => {
     if (!isAppDataLoaded) return
@@ -170,7 +162,11 @@ export function AppShell({ onLogout }: Props) {
             await clearPendingPreviewAudio(task.sessionId)
             continue
           }
-          if (session.transcriptionStatus === 'done' && (!task.shouldSaveAudio || Boolean(session.audioBlobId))) {
+          if (session.transcriptionStatus === 'done' && !task.shouldSaveAudio) {
+            await clearPendingPreviewAudio(task.sessionId)
+            continue
+          }
+          if (session.transcriptionStatus === 'done' && Boolean(session.audioBlobId)) {
             await clearPendingPreviewAudioIfEligible(task.sessionId)
             continue
           }
@@ -203,6 +199,7 @@ export function AppShell({ onLogout }: Props) {
   const applyRoute = useCallback(
     (route: RouteState) => {
       if (route.kind === 'archief') {
+        setSelectedSidebarItemKey('archief')
         setIsAdminScreenOpen(false)
         setOverlayScreenKey('archief')
         setIsGeschrevenVerslagOpen(false)
@@ -454,8 +451,13 @@ export function AppShell({ onLogout }: Props) {
     return []
   }, [data.coachees, data.sessions, navigateTo, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey, sessionOriginRoute])
 
+  const dismissE2eeSetupBanner = useCallback(() => {
+    setIsE2eeSetupBannerDismissed(true)
+    writeJsonToLocalStorage(E2EE_SETUP_BANNER_DISMISSED_STORAGE_KEY, true)
+  }, [])
+
   const hasBreadcrumbs = breadcrumbItems.length >= 2
-  const isE2eeSetupBannerVisible = !e2ee.isEnabled && !isE2eeSetupBannerDismissed
+  const isE2eeSetupBannerVisible = !isTooSmall && !e2ee.isEnabled && !isE2eeSetupBannerDismissed
 
   const deleteAccount = useCallback(async () => {
     if (isDeletingAccount) return
@@ -474,31 +476,6 @@ export function AppShell({ onLogout }: Props) {
       setIsDeletingAccount(false)
     }
   }, [isDeletingAccount, onLogout])
-
-  const shareCoachscribe = useCallback(async () => {
-    const shareUrl = 'https://www.coachscribe.nl'
-    const shareText = 'Bekijk CoachScribe op www.coachscribe.nl'
-    try {
-      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-        await navigator.share({
-          title: 'CoachScribe',
-          text: shareText,
-          url: shareUrl,
-        })
-        return
-      }
-
-      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(shareUrl)
-      }
-
-      if (typeof window !== 'undefined') {
-        window.alert('Delen is niet beschikbaar op dit apparaat. Link gekopieerd: www.coachscribe.nl')
-      }
-    } catch (error) {
-      console.error('[AppShell] Delen mislukt', error)
-    }
-  }, [])
 
   const submitFeedback = useCallback(async (feedback: string) => {
     await callSecureApi<{ ok: true }>('/feedback', { message: feedback })
@@ -627,7 +604,6 @@ export function AppShell({ onLogout }: Props) {
     <View style={styles.page}>
       {/* Top navigation bar */}
       <Navbar
-        onLogout={onLogout}
         usedMinutes={usedMinutes}
         totalMinutes={totalMinutes}
         isUsageLoading={isUsageLoading}
@@ -641,8 +617,8 @@ export function AppShell({ onLogout }: Props) {
               </Text>
               <ChevronRightIcon color="#FFFFFF" size={16} />
             </Pressable>
-            <Pressable onPress={() => setIsE2eeSetupBannerDismissed(true)} style={({ hovered }) => [styles.e2eeSetupCloseButton, hovered ? styles.e2eeSetupCloseButtonHovered : undefined]}>
-              <CircleCloseIcon size={24} />
+            <Pressable onPress={dismissE2eeSetupBanner} style={({ hovered }) => [styles.e2eeSetupCloseButton, hovered ? styles.e2eeSetupCloseButtonHovered : undefined]}>
+              <CircleCloseIcon size={24} color="#FFFFFF" />
             </Pressable>
           </View>
         </View>
@@ -678,6 +654,8 @@ export function AppShell({ onLogout }: Props) {
                       ? { kind: 'templates' }
                       : sidebarItemKey === 'mijnPraktijk'
                         ? { kind: 'mijn-praktijk' }
+                      : sidebarItemKey === 'archief'
+                        ? { kind: 'archief' }
                       : { kind: 'sessies' },
                 )
                 setIsSettingsMenuOpen(false)
@@ -724,11 +702,12 @@ export function AppShell({ onLogout }: Props) {
             onOpenContact={() => {
               setIsSettingsMenuOpen(false)
               setSettingsMenuAnchorPoint(null)
+              setIsContactModalOpen(true)
             }}
             onOpenShare={() => {
               setIsSettingsMenuOpen(false)
               setSettingsMenuAnchorPoint(null)
-              void shareCoachscribe()
+              setIsShareModalOpen(true)
             }}
             onOpenPrivacy={() => {
               setIsSettingsMenuOpen(false)
@@ -797,6 +776,14 @@ export function AppShell({ onLogout }: Props) {
           />
 
           <MySubscriptionModal visible={isMySubscriptionModalOpen} onClose={() => setIsMySubscriptionModalOpen(false)} />
+          <ShareCoachscribeModal
+            visible={isShareModalOpen}
+            onClose={() => setIsShareModalOpen(false)}
+          />
+          <ContactModal
+            visible={isContactModalOpen}
+            onClose={() => setIsContactModalOpen(false)}
+          />
           <FeedbackModal
             visible={isFeedbackModalOpen}
             onClose={() => setIsFeedbackModalOpen(false)}

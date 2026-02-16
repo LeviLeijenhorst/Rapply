@@ -10,11 +10,13 @@ import { QuickQuestionsStart } from '../components/sessionDetail/QuickQuestionsS
 import { NotesTabPanel } from '../components/sessionDetail/NotesTabPanel'
 import { PopoverMenu } from '../components/PopoverMenu'
 import { ChevronLeftIcon } from '../components/icons/ChevronLeftIcon'
+import { PlusIcon } from '../components/icons/PlusIcon'
 import { SearchIcon } from '../components/icons/SearchIcon'
 import { TrashIcon } from '../components/icons/TrashIcon'
 import { Text } from '../components/Text'
 import { colors } from '../theme/colors'
 import { typography } from '../theme/typography'
+import { webTransitionSmooth } from '../theme/webTransitions'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { completeChat, LocalChatMessage } from '../services/chat'
 import { ChatStateMessage, createChatMessageId } from '../utils/chatState'
@@ -25,12 +27,14 @@ import {
 } from '../local/quickQuestionsChatStore'
 import { buildCoacheeSummariesSystemMessages } from '../utils/quickQuestionsContext'
 import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
+import { ConfirmChatClearModal } from '../components/sessionDetail/ConfirmChatClearModal'
 
 type SessionListItem = {
   id: string
   title: string
   dateLabel: string
   timeLabel: string
+  durationLabel: string
   isReport: boolean
   createdAtUnixMs: number
   transcriptionStatus: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
@@ -41,6 +45,17 @@ type Props = {
   onBack: () => void
   onSelectSession: (sessionId: string) => void
   onPressCreateSession: () => void
+}
+
+function formatDurationLabel(durationSeconds: number | null): string {
+  if (!Number.isFinite(durationSeconds) || durationSeconds === null || durationSeconds <= 0) return ''
+  const roundedSeconds = Math.max(0, Math.round(durationSeconds))
+  const hours = Math.floor(roundedSeconds / 3600)
+  const minutes = Math.floor((roundedSeconds % 3600) / 60)
+  const seconds = roundedSeconds % 60
+  const paddedMinutes = String(minutes).padStart(hours > 0 ? 2 : 1, '0')
+  const paddedSeconds = String(seconds).padStart(2, '0')
+  return hours > 0 ? `${hours}:${paddedMinutes}:${paddedSeconds}` : `${minutes}:${paddedSeconds}`
 }
 
 export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPressCreateSession }: Props) {
@@ -56,6 +71,7 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
         title: item.title,
         dateLabel: new Date(item.createdAtUnixMs).toLocaleDateString('nl-NL', { month: 'short', day: 'numeric', year: 'numeric' }),
         timeLabel: new Date(item.createdAtUnixMs).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
+        durationLabel: formatDurationLabel(item.audioDurationSeconds),
         isReport: item.kind === 'written',
         createdAtUnixMs: item.createdAtUnixMs,
         transcriptionStatus: item.transcriptionStatus,
@@ -74,15 +90,13 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
   const [menuAnchorPoint, setMenuAnchorPoint] = useState<{ x: number; y: number } | null>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null)
+  const [isClearChatModalVisible, setIsClearChatModalVisible] = useState(false)
 
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const filteredSessions = sessions.filter((item) => item.title.toLowerCase().includes(normalizedQuery))
   const notesSession = useMemo(() => {
     return data.sessions.find((item) => item.coacheeId === coacheeId && item.kind === 'notes') ?? null
   }, [coacheeId, data.sessions])
-  const notesDateTimeLabel = notesSession
-    ? `${new Date(notesSession.createdAtUnixMs).toLocaleDateString('nl-NL', { month: 'short', day: 'numeric', year: 'numeric' })}, ${new Date(notesSession.createdAtUnixMs).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`
-    : ''
 
   const isMenuVisible = !!menuSessionId && !!menuAnchorPoint
   const pendingDeleteSessionTitle = pendingDeleteSessionId ? data.sessions.find((item) => item.id === pendingDeleteSessionId)?.title : null
@@ -92,11 +106,6 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
   const shouldShowClearChat = chatMessages.length > 0
   const previousMessageCountRef = useRef(chatMessages.length)
   const shouldSkipChatSaveRef = useRef(false)
-
-  useEffect(() => {
-    const id = setTimeout(() => searchInputRef.current?.focus(), 0)
-    return () => clearTimeout(id)
-  }, [activeTabKey])
 
   useEffect(() => {
     shouldSkipChatSaveRef.current = true
@@ -127,6 +136,10 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
     setIsChatSending(false)
     clearQuickQuestionsChatForCoachee(coacheeId)
     scrollChatToEnd()
+  }
+
+  function requestResetChat() {
+    setIsClearChatModalVisible(true)
   }
 
   async function sendChatMessage(messageText: string) {
@@ -231,7 +244,7 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
             <View style={styles.tabsRight}>
               {activeTabKey === 'snelleVragen' && shouldShowClearChat ? (
                 <Pressable
-                  onPress={resetChat}
+                  onPress={requestResetChat}
                   style={({ hovered }) => [styles.chatActionButton, hovered ? styles.chatActionButtonHovered : undefined]}
                 >
                   {/* Clear chat */}
@@ -241,12 +254,13 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
                 </Pressable>
               ) : null}
               <Pressable
-                style={({ hovered }) => [styles.newSessionButton, hovered ? styles.newSessionButtonHovered : undefined]}
+                style={({ hovered }) => [styles.newSessionButton, webTransitionSmooth, hovered ? styles.newSessionButtonHovered : undefined]}
                 onPress={onPressCreateSession}
               >
                 {/* New session button */}
-                <Text numberOfLines={1} isBold style={styles.newSessionButtonText}>
-                  + Nieuwe sessie
+                <PlusIcon color="#FFFFFF" size={22} />
+                <Text numberOfLines={1} style={styles.newSessionButtonText}>
+                  Nieuwe sessie
                 </Text>
               </Pressable>
             </View>
@@ -264,7 +278,10 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
                 ) : (
                   <>
                     {/* Sessions search */}
-                    <View style={styles.searchInputContainer}>
+                    <Pressable
+                      onPress={() => searchInputRef.current?.focus()}
+                      style={({ hovered }) => [styles.searchInputContainer, hovered ? styles.searchInputContainerHovered : undefined]}
+                    >
                       {/* Search icon */}
                       <SearchIcon color="#656565" size={18} />
                       {/* Search input */}
@@ -276,7 +293,7 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
                         placeholderTextColor="#656565"
                         style={[styles.searchInput, searchInputWebStyle]}
                       />
-                    </View>
+                    </Pressable>
 
                     {/* Sessions list */}
                     <ScrollView style={styles.sessionsScroll} contentContainerStyle={styles.sessionsScrollContent} showsVerticalScrollIndicator={false}>
@@ -285,11 +302,16 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
                         <View key={item.id} style={styles.sessionsListItem}>
                           <SessieListItemCard
                             title={item.title}
-                            dateTimeLabel={`${item.dateLabel}, ${item.timeLabel}`}
+                            dateLabel={item.dateLabel}
+                            timeLabel={item.timeLabel}
+                            durationLabel={item.durationLabel}
                             isReport={item.isReport}
                             transcriptionStatus={item.transcriptionStatus}
                             onPress={() => onSelectSession(item.id)}
-                            onPressEdit={() => onSelectSession(item.id)}
+                            onPressEdit={(anchorPoint) => {
+                              setMenuAnchorPoint(anchorPoint)
+                              setMenuSessionId(item.id)
+                            }}
                             onPressMore={(anchorPoint) => {
                               setMenuAnchorPoint(anchorPoint)
                               setMenuSessionId(item.id)
@@ -343,7 +365,6 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
             {activeTabKey === 'notities' ? (
               <NotesTabPanel
                 sessionId={notesSession?.id}
-                dateTimeLabel={notesDateTimeLabel}
                 coacheeIdForNewNotes={coacheeId}
                 contentHorizontalPadding={12}
               />
@@ -391,6 +412,14 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
           deleteSession(pendingDeleteSessionId)
           setIsDeleteModalOpen(false)
           setPendingDeleteSessionId(null)
+        }}
+      />
+      <ConfirmChatClearModal
+        visible={isClearChatModalVisible}
+        onClose={() => setIsClearChatModalVisible(false)}
+        onConfirm={() => {
+          setIsClearChatModalVisible(false)
+          resetChat()
         }}
       />
     </View>
@@ -444,11 +473,11 @@ const styles = StyleSheet.create({
   },
   card: {
     flex: 1,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
+    borderRadius: 10,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderColor: 'transparent',
+    padding: 0,
     gap: 16,
     ...( { overflow: 'hidden' } as any ),
   },
@@ -477,7 +506,7 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     width: '100%',
     height: 40,
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: colors.border,
@@ -485,36 +514,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    ...( { cursor: 'pointer' } as any ),
+  },
+  searchInputContainerHovered: {
+    backgroundColor: colors.hoverBackground,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
     lineHeight: 18,
-    fontFamily: typography.fontFamilyMedium,
+    fontFamily: typography.fontFamilyRegular,
     color: '#656565',
     padding: 0,
     height: '100%',
     ...( { textAlignVertical: 'center' } as any ),
+    ...( { transform: [{ translateY: 1 }] } as any ),
+    ...( { cursor: 'pointer' } as any ),
   },
   newSessionButton: {
+    width: 162,
     height: 40,
-    borderRadius: 12,
-    backgroundColor: 'transparent',
-    borderWidth: 2,
+    borderRadius: 10,
+    backgroundColor: colors.selected,
+    borderWidth: 1,
     borderColor: colors.selected,
     padding: 12,
+    flexDirection: 'row',
+    gap: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   newSessionButtonHovered: {
-    backgroundColor: 'rgba(190,1,101,0.08)',
+    backgroundColor: '#A50058',
   },
   newSessionButtonText: {
     fontSize: 14,
     lineHeight: 18,
-    color: colors.selected,
+    color: '#FFFFFF',
     textAlign: 'center',
-    ...( { transform: [{ translateY: -1 }] } as any ),
+    ...( { transform: [{ translateY: 1 }] } as any ),
   },
   sessionsScroll: {
     flex: 1,

@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   templateRowSelected: {
-    backgroundColor: '#FFE5F6',
+    backgroundColor: colors.hoverBackground,
   },
   templateRowUnselected: {
     backgroundColor: 'transparent',

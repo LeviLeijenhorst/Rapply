@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 0,
     paddingVertical: 0,
   },
   rowWeb: {
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   },
   tabButton: {
     height: 40,
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 10,
     borderWidth: 1,
     flexDirection: 'row',

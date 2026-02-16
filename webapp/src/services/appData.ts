@@ -45,7 +45,12 @@ export async function createNoteRemote(note: Note): Promise<void> {
   await callSecureApi('/notes/create', { note })
 }
 
-export async function updateNoteRemote(params: { id: string; text: string; updatedAtUnixMs: number }): Promise<void> {
+export async function updateNoteRemote(params: {
+  id: string
+  title?: string
+  text: string
+  updatedAtUnixMs: number
+}): Promise<void> {
   await callSecureApi('/notes/update', params)
 }
 

@@ -9,6 +9,7 @@ import { TrashIcon } from '../icons/TrashIcon'
 import { MijnAccountIcon } from '../icons/MijnAccountIcon'
 import { LogoutIcon } from '../icons/LogoutIcon'
 import { useE2ee } from '../../e2ee/E2eeProvider'
+import { toUserFriendlyErrorMessage } from '../../utils/userFriendlyError'
 
 type Props = {
   visible: boolean
@@ -71,14 +72,25 @@ export function MyAccountModal({
           <Pressable
             onPress={() => {
               if (isE2eeBusy) return
+              const nextEnabled = !e2ee.isEnabled
               setIsE2eeBusy(true)
               setE2eeStatus(null)
               void e2ee
-                .setEnabled(!e2ee.isEnabled)
+                .setEnabled(nextEnabled)
                 .then(() => {
-                  setE2eeStatus(e2ee.isEnabled ? 'End-to-end encryptie is uitgezet voor dit account.' : 'Stel nu je passphrase in om end-to-end encryptie te activeren.')
+                  if (nextEnabled) {
+                    onClose()
+                    return
+                  }
+                  setE2eeStatus('End-to-end encryptie is uitgezet voor dit account.')
                 })
-                .catch((error) => setE2eeStatus(error instanceof Error ? error.message : 'Aanpassen van end-to-end encryptie mislukt'))
+                .catch((error) =>
+                  setE2eeStatus(
+                    toUserFriendlyErrorMessage(error, {
+                      fallback: 'Aanpassen van end-to-end encryptie mislukt',
+                    }),
+                  ),
+                )
                 .finally(() => setIsE2eeBusy(false))
             }}
             style={({ hovered }) => [styles.e2eeButton, hovered ? styles.e2eeButtonHovered : undefined, isE2eeBusy ? styles.e2eeButtonDisabled : undefined]}
@@ -124,7 +136,13 @@ export function MyAccountModal({
                   link.remove()
                   URL.revokeObjectURL(url)
                 })
-                .catch((error) => setE2eeStatus(error instanceof Error ? error.message : 'CoachScribe-code roteren mislukt'))
+                .catch((error) =>
+                  setE2eeStatus(
+                    toUserFriendlyErrorMessage(error, {
+                      fallback: 'CoachScribe-code roteren mislukt',
+                    }),
+                  ),
+                )
                 .finally(() => setIsE2eeBusy(false))
             }}
             style={({ hovered }) => [styles.e2eeButton, hovered ? styles.e2eeButtonHovered : undefined, isE2eeBusy ? styles.e2eeButtonDisabled : undefined]}

@@ -15,6 +15,18 @@ function normalizeSpacing(value: string) {
     .trim()
 }
 
+// Intent: guessUploadFileName
+function guessUploadFileName(contentType: string): string {
+  const normalized = normalizeText(contentType).toLowerCase()
+  if (normalized.includes("mpeg") || normalized.includes("mp3")) return "audio.mp3"
+  if (normalized.includes("mp4") || normalized.includes("m4a") || normalized.includes("aac")) return "audio.mp4"
+  if (normalized.includes("ogg") || normalized.includes("opus")) return "audio.ogg"
+  if (normalized.includes("webm")) return "audio.webm"
+  if (normalized.includes("flac")) return "audio.flac"
+  if (normalized.includes("wav")) return "audio.wav"
+  return "audio.bin"
+}
+
 // Intent: isPlainObject
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value)
@@ -87,7 +99,7 @@ async function requestFastTranscription(params: {
   const formData = new FormData()
   const audioBytes = new Uint8Array(params.audioBuffer)
   const audioBlob = new Blob([audioBytes], { type: params.contentType })
-  formData.append("audio", audioBlob, "audio.wav")
+  formData.append("audio", audioBlob, guessUploadFileName(params.contentType))
   formData.append("definition", JSON.stringify(definition))
   const response = await fetch(url, {
     method: "POST",
@@ -147,10 +159,7 @@ export async function runAzureSpeechTranscriptionFromEncryptedUpload(params: {
   }
 
   const { encryptedStream, keyBase64, mimeType, languageCode } = params
-  const contentType = normalizeText(mimeType).toLowerCase()
-  if (!contentType.startsWith("audio/wav")) {
-    throw new Error("Azure Speech transcription requires audio/wav")
-  }
+  const contentType = normalizeText(mimeType).toLowerCase() || "application/octet-stream"
 
   const aesKey = ensureValidAesKey(keyBase64)
   const decryptedAudioStream = encryptedStream.pipe(new Csa1DecryptStream(aesKey))
@@ -158,7 +167,7 @@ export async function runAzureSpeechTranscriptionFromEncryptedUpload(params: {
   const maxBytes = 250 * 1024 * 1024
   const audioBuffer = await readStreamToBuffer(decryptedAudioStream, maxBytes)
   const locale = normalizeLanguage(languageCode)
-  const resultJson = await requestFastTranscription({ region, key, locale, audioBuffer, contentType: "audio/wav" })
+  const resultJson = await requestFastTranscription({ region, key, locale, audioBuffer, contentType })
   const transcriptResult = extractTranscript(resultJson)
   if (!transcriptResult.text) {
     const preview = safeJsonPreview(resultJson)

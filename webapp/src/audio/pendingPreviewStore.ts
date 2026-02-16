@@ -11,6 +11,7 @@ type PendingPreviewRecord = {
   }
   processingState: PendingPreviewProcessingState
   audioBlobId: string | null
+  transcriptionSucceeded: boolean
   lastError: string | null
   retryCount: number
   createdAtMs: number
@@ -28,6 +29,7 @@ export type PendingPreviewTask = {
   }
   processingState: PendingPreviewProcessingState
   audioBlobId: string | null
+  transcriptionSucceeded: boolean
 }
 
 const databaseName = 'coachscribe-pending-audio'
@@ -67,6 +69,7 @@ function openDatabase(): Promise<IDBDatabase> {
             summaryTemplate: raw?.summaryTemplate,
             processingState: (raw?.processingState as PendingPreviewProcessingState) || 'queued',
             audioBlobId: typeof raw?.audioBlobId === 'string' && raw.audioBlobId.trim() ? raw.audioBlobId.trim() : null,
+            transcriptionSucceeded: raw?.transcriptionSucceeded === true,
             lastError: typeof raw?.lastError === 'string' && raw.lastError.trim() ? raw.lastError.trim() : null,
             retryCount: Number.isFinite(raw?.retryCount) ? Number(raw.retryCount) : 0,
             createdAtMs: Number.isFinite(raw?.createdAtMs) ? Number(raw.createdAtMs) : nowMs,
@@ -119,7 +122,7 @@ function canDeleteExpired(record: PendingPreviewRecord, nowMs: number): boolean 
 
 function canDeleteCompleted(record: PendingPreviewRecord): boolean {
   if (isRetained(record.sessionId)) return false
-  return Boolean(record.audioBlobId)
+  return Boolean(record.audioBlobId) || record.transcriptionSucceeded
 }
 
 async function readRecord(sessionId: string): Promise<PendingPreviewRecord | null> {
@@ -212,6 +215,7 @@ export async function setPendingPreviewAudio(task: {
     summaryTemplate: task.summaryTemplate,
     processingState: 'queued',
     audioBlobId: null,
+    transcriptionSucceeded: false,
     lastError: null,
     retryCount: 0,
     createdAtMs: nowMs,
@@ -242,6 +246,50 @@ export async function getPendingPreviewAudio(sessionId: string): Promise<Blob | 
   return record.blob
 }
 
+export async function getPendingPreviewAudioForTranscription(sessionId: string): Promise<{ blob: Blob; mimeType: string } | null> {
+  if (!sessionId) return null
+  const record = await readRecord(sessionId)
+  if (!record) return null
+  const nowMs = Date.now()
+  if (canDeleteCompleted(record)) {
+    await deleteRecord(sessionId)
+    return null
+  }
+  if (canDeleteExpired(record, nowMs)) {
+    await deleteRecord(sessionId)
+    return null
+  }
+  if (!isRetained(sessionId)) {
+    await writeRecord({
+      ...record,
+      updatedAtMs: nowMs,
+    })
+  }
+  return { blob: record.blob, mimeType: record.mimeType || 'application/octet-stream' }
+}
+
+export async function getPendingPreviewShouldSaveAudio(sessionId: string): Promise<boolean | null> {
+  if (!sessionId) return null
+  const record = await readRecord(sessionId)
+  if (!record) return null
+  const nowMs = Date.now()
+  if (canDeleteCompleted(record)) {
+    await deleteRecord(sessionId)
+    return null
+  }
+  if (canDeleteExpired(record, nowMs)) {
+    await deleteRecord(sessionId)
+    return null
+  }
+  if (!isRetained(sessionId)) {
+    await writeRecord({
+      ...record,
+      updatedAtMs: nowMs,
+    })
+  }
+  return record.shouldSaveAudio !== false
+}
+
 export async function setPendingPreviewProcessingState(params: {
   sessionId: string
   processingState: PendingPreviewProcessingState
@@ -268,6 +316,18 @@ export async function markPendingPreviewAudioUploaded(params: { sessionId: strin
     ...record,
     audioBlobId: normalizedAudioBlobId,
     processingState: 'uploaded',
+    transcriptionSucceeded: record.transcriptionSucceeded,
+    lastError: null,
+    updatedAtMs: Date.now(),
+  }))
+}
+
+export async function markPendingPreviewTranscriptionSucceeded(sessionId: string): Promise<void> {
+  if (!sessionId) return
+  await mutateRecord(sessionId, (record) => ({
+    ...record,
+    transcriptionSucceeded: true,
+    processingState: record.audioBlobId ? 'uploaded' : record.processingState,
     lastError: null,
     updatedAtMs: Date.now(),
   }))
@@ -295,6 +355,7 @@ export async function listPendingPreviewAudioTasks(): Promise<PendingPreviewTask
 
     return records
       .filter((record) => !deleteSessionIds.includes(record.sessionId))
+      .filter((record) => !record.transcriptionSucceeded)
       .filter((record) => !record.audioBlobId)
       .filter((record) => record.processingState !== 'uploaded')
       .map((record) => ({
@@ -305,6 +366,7 @@ export async function listPendingPreviewAudioTasks(): Promise<PendingPreviewTask
         summaryTemplate: record.summaryTemplate,
         processingState: record.processingState,
         audioBlobId: record.audioBlobId,
+        transcriptionSucceeded: record.transcriptionSucceeded,
       }))
   } finally {
     database.close()

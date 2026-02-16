@@ -6,11 +6,21 @@ import { fetchEncryptedUploadStream } from "../../transcription/storage"
 import { runVoxtralTranscriptionFromEncryptedUpload } from "../../transcription/voxtral"
 import type { StartRequest, TranscriptionProvider } from "./types"
 
+const MISTRAL_MAX_AUDIO_BYTES = 200 * 1024 * 1024
+const AZURE_SPEECH_MAX_AUDIO_BYTES = 250 * 1024 * 1024
+
 // Chooses the configured transcription provider based on available secrets.
 export function resolveTranscriptionProvider(): TranscriptionProvider {
-  if (env.mistralApiKey) return "mistral"
   if (env.azureSpeechKey && env.azureSpeechRegion) return "azure-speech"
+  if (env.mistralApiKey) return "mistral"
   return "none"
+}
+
+// Returns the max source-audio size in bytes for the selected provider.
+export function getProviderMaxAudioBytes(provider: TranscriptionProvider): number | null {
+  if (provider === "azure-speech") return AZURE_SPEECH_MAX_AUDIO_BYTES
+  if (provider === "mistral") return MISTRAL_MAX_AUDIO_BYTES
+  return null
 }
 
 // Parses and validates required start-route fields from the request body.

@@ -1,12 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native'
 
-import { PracticeEditFieldIcon } from '../components/icons/PracticeEditFieldIcon'
+import { CircleCloseIcon } from '../components/icons/CircleCloseIcon'
+import { EditSmallIcon } from '../components/icons/EditSmallIcon'
 import { PracticeExportIcon } from '../components/icons/PracticeExportIcon'
 import { Text } from '../components/Text'
+import { ConfirmDeleteDialog } from '../foundation/ui/modals/ConfirmDeleteDialog'
 import { brandColors, fontSizes, radius } from '../foundation/theme/tokens'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { colors } from '../theme/colors'
+
+const brandControlSize = 110
 
 function normalizeHexColor(value: string) {
   const trimmed = String(value || '').trim()
@@ -51,6 +55,8 @@ export function MijnPraktijkScreen() {
   const [websiteDraft, setWebsiteDraft] = useState(settings.website)
   const [tintColorInput, setTintColorInput] = useState(normalizeHexColor(settings.tintColor || '#BE0165').replace('#', ''))
   const [isDragActive, setIsDragActive] = useState(false)
+  const [isLogoHovered, setIsLogoHovered] = useState(false)
+  const [isRemoveLogoConfirmOpen, setIsRemoveLogoConfirmOpen] = useState(false)
 
   const logoDropAreaRef = useRef<View | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -163,47 +169,22 @@ export function MijnPraktijkScreen() {
     updatePracticeSettings({ logoDataUrl: dataUrl })
   }
 
+  function handleRemoveLogoConfirm() {
+    updatePracticeSettings({ logoDataUrl: null })
+    setIsRemoveLogoConfirmOpen(false)
+  }
+
   return (
     <View style={styles.container}>
       <Text isSemibold style={styles.headerTitle}>
-        Mijn brand
+        Mijn praktijk
       </Text>
 
       <View style={styles.formSection}>
-        <LabeledInput label="Naam brand" value={practiceNameDraft} onChangeText={setPracticeNameDraft} onBlur={() => persistPracticeName(practiceNameDraft)} />
+        <LabeledInput label="Naam praktijk" value={practiceNameDraft} onChangeText={setPracticeNameDraft} onBlur={() => persistPracticeName(practiceNameDraft)} />
         <LabeledInput label="Website" value={websiteDraft} onChangeText={setWebsiteDraft} onBlur={() => persistWebsite(websiteDraft)} />
 
         <View style={styles.logoColorRow}>
-          <View style={styles.logoColumn}>
-            <Text isSemibold style={styles.fieldLabelText}>
-              Logo
-            </Text>
-            <View ref={logoDropAreaRef} style={[styles.logoUploadBox, isDragActive ? styles.logoUploadBoxActive : undefined]}>
-              <Pressable style={({ hovered }) => [styles.logoUploadPressable, hovered ? styles.logoUploadPressableHovered : undefined]} onPress={() => fileInputRef.current?.click()}>
-                {settings.logoDataUrl ? (
-                  <View style={styles.logoPreviewWrap}>
-                    <Image source={{ uri: settings.logoDataUrl }} resizeMode="contain" style={styles.logoPreviewImage} />
-                  </View>
-                ) : (
-                  <View style={styles.logoUploadCenter}>
-                    <PracticeExportIcon />
-                    <Text style={styles.logoUploadHint}>Sleep in of upload van je computer</Text>
-                  </View>
-                )}
-              </Pressable>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={(event) => {
-                  void handleLogoFileSelected(event.currentTarget.files?.[0] ?? null)
-                  event.currentTarget.value = ''
-                }}
-                style={hiddenFileInputStyle as any}
-              />
-            </View>
-          </View>
-
           <View style={styles.colorColumn}>
             <Text isSemibold style={styles.fieldLabelText}>
               Kleur
@@ -224,8 +205,63 @@ export function MijnPraktijkScreen() {
               </Pressable>
             </View>
           </View>
+
+          <View style={styles.logoColumn}>
+            <Text isSemibold style={styles.fieldLabelText}>
+              Logo
+            </Text>
+            <View
+              ref={logoDropAreaRef}
+              style={[styles.logoUploadBox, isDragActive ? styles.logoUploadBoxActive : undefined]}
+              {...( { onMouseEnter: () => settings.logoDataUrl && setIsLogoHovered(true), onMouseLeave: () => setIsLogoHovered(false) } as any )}
+            >
+              <Pressable
+                style={({ hovered }) => [styles.logoUploadPressable, hovered ? styles.logoUploadPressableHovered : undefined]}
+                onPress={() => fileInputRef.current?.click()}
+              >
+                {settings.logoDataUrl ? (
+                  <View style={styles.logoPreviewWrap}>
+                    <Image source={{ uri: settings.logoDataUrl }} resizeMode="contain" style={styles.logoPreviewImage} />
+                  </View>
+                ) : (
+                  <View style={styles.logoUploadCenter}>
+                    <PracticeExportIcon />
+                    <Text style={styles.logoUploadHint}>Sleep in of upload van je computer</Text>
+                  </View>
+                )}
+              </Pressable>
+              {settings.logoDataUrl && isLogoHovered ? (
+                <Pressable
+                  onPress={() => setIsRemoveLogoConfirmOpen(true)}
+                  style={({ hovered }) => [styles.logoRemoveButton, hovered ? styles.logoRemoveButtonHovered : undefined]}
+                >
+                  <CircleCloseIcon size={22} color={colors.textStrong} />
+                </Pressable>
+              ) : null}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={(event) => {
+                  void handleLogoFileSelected(event.currentTarget.files?.[0] ?? null)
+                  event.currentTarget.value = ''
+                }}
+                style={hiddenFileInputStyle as any}
+              />
+            </View>
+          </View>
         </View>
       </View>
+
+      <ConfirmDeleteDialog
+        visible={isRemoveLogoConfirmOpen}
+        title="Logo verwijderen"
+        description="Weet je zeker dat je het logo wilt verwijderen?"
+        confirmLabel="Verwijderen"
+        cancelLabel="Annuleren"
+        onClose={() => setIsRemoveLogoConfirmOpen(false)}
+        onConfirm={handleRemoveLogoConfirm}
+      />
     </View>
   )
 }
@@ -279,7 +315,7 @@ function LabeledInput({ label, value, onChangeText, onBlur }: LabeledInputProps)
           onHoverOut={() => setIsEditHovered(false)}
           style={({ hovered }) => [styles.editIconButton, hovered ? styles.editIconButtonHovered : undefined]}
         >
-          <PracticeEditFieldIcon />
+          <EditSmallIcon color={isEditHovered ? colors.selected : colors.textSecondary} size={17} />
         </Pressable>
       </Pressable>
     </View>
@@ -312,12 +348,12 @@ const styles = StyleSheet.create({
   },
   inputRow: {
     width: '100%',
-    height: 78,
+    height: 40,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -335,8 +371,8 @@ const styles = StyleSheet.create({
     ...( { cursor: 'pointer' } as any ),
   },
   editIconButton: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
@@ -345,23 +381,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.08)',
   },
   logoColorRow: {
-    flexDirection: 'row',
-    gap: 32,
-    flexWrap: 'wrap',
+    flexDirection: 'column',
+    gap: 14,
   },
   logoColumn: {
-    width: 220,
+    width: brandControlSize * 3,
     maxWidth: '100%',
     gap: 8,
   },
   colorColumn: {
-    width: 220,
+    width: brandControlSize,
     maxWidth: '100%',
     gap: 8,
   },
   logoUploadBox: {
     width: '100%',
-    height: 220,
+    height: brandControlSize,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -400,6 +435,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
   },
+  logoRemoveButton: {
+    ...( { position: 'absolute', top: 4, right: 4 } as any ),
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoRemoveButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
   logoPreviewImage: {
     width: '100%',
     height: '100%',
@@ -409,23 +455,23 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   colorCard: {
-    width: 220,
+    width: brandControlSize,
     maxWidth: '100%',
-    height: 220,
+    height: brandControlSize,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     ...( { cursor: 'pointer' } as any ),
   },
   colorHexInput: {
-    width: 140,
+    width: 88,
     height: 42,
     borderRadius: 0,
     borderWidth: 0,
     backgroundColor: 'transparent',
     paddingHorizontal: 12,
     textAlign: 'center',
-    fontSize: fontSizes.lg,
+    fontSize: fontSizes.md,
     lineHeight: 22,
     color: '#FFFFFF',
     letterSpacing: 1,

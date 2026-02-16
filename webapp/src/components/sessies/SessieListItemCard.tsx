@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native'
 
 import { colors } from '../../theme/colors'
 import { webTransitionSmooth } from '../../theme/webTransitions'
@@ -12,19 +12,23 @@ import { Text } from '../Text'
 
 type Props = {
   title: string
-  dateTimeLabel: string
+  dateLabel: string
+  timeLabel: string
+  durationLabel: string
   coacheeName?: string
   isReport: boolean
   transcriptionStatus?: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
   onPress: () => void
-  onPressEdit: () => void
+  onPressEdit: (anchorPoint: { x: number; y: number }) => void
   onPressMore: (anchorPoint: { x: number; y: number }) => void
   showCoachee?: boolean
 }
 
 export function SessieListItemCard({
   title,
-  dateTimeLabel,
+  dateLabel,
+  timeLabel,
+  durationLabel,
   coacheeName,
   isReport,
   transcriptionStatus = 'idle',
@@ -33,10 +37,16 @@ export function SessieListItemCard({
   onPressMore,
   showCoachee = true,
 }: Props) {
+  const { width: windowWidth } = useWindowDimensions()
   const menuWidth = 220
   const moreButtonRef = useRef<any>(null)
   const isTranscriptionActive = transcriptionStatus === 'transcribing' || transcriptionStatus === 'generating'
-  const transcriptionLabel = transcriptionStatus === 'transcribing' ? 'Transcript wordt gemaakt' : 'Verslag wordt gemaakt'
+  const transcriptionLabel = transcriptionStatus === 'transcribing' ? 'Transcript wordt gegenereerd' : 'Verslag wordt gegenereerd'
+  const shouldCompactForNarrowView = showCoachee
+  const showTranscriptionText = !shouldCompactForNarrowView || windowWidth > 1180
+  const showDateTime = !shouldCompactForNarrowView || windowWidth > 1060
+  const showCoacheeInfo = showCoachee && windowWidth > 930
+  const showEditButton = !shouldCompactForNarrowView || windowWidth > 820
 
   function getMenuAnchorPointFromEvent(event: any): { x: number; y: number } {
     const rectFromRef = moreButtonRef.current?.getBoundingClientRect?.()
@@ -70,35 +80,39 @@ export function SessieListItemCard({
             {isReport ? <StandaardVerslagIcon color={colors.selected} size={20} /> : <MicrophoneSmallIcon color={colors.selected} size={20} />}
           </View>
           {/* Session title */}
-          <Text numberOfLines={1} isBold style={styles.title}>
+          <Text numberOfLines={1} style={styles.title}>
             {title}
           </Text>
         </View>
 
         {isTranscriptionActive ? (
-          <View style={styles.statusColumn}>
+          <View style={[styles.statusColumn, !showTranscriptionText ? styles.statusColumnCompact : undefined]}>
             <View style={styles.transcriptionStatus}>
               <ActivityIndicator size="small" color={colors.selected} />
-              <Text style={styles.transcriptionStatusText}>{transcriptionLabel}</Text>
+              {showTranscriptionText ? <Text style={styles.transcriptionStatusText}>{transcriptionLabel}</Text> : null}
             </View>
           </View>
         ) : (
-          <View style={styles.statusColumn} />
+          <View style={styles.statusColumnSpacer} />
         )}
 
         {/* Session date and duration */}
-        <View style={styles.dateColumn}>
-          <Text isBold style={styles.dateTime}>
-            {dateTimeLabel}
-          </Text>
-        </View>
+        {showDateTime ? (
+          <View style={styles.dateColumn}>
+            <Text style={styles.dateTime}>
+              <Text isBold>{dateLabel}</Text>
+              {isReport ? null : <Text>{` ${timeLabel}`}</Text>}
+            </Text>
+            <Text style={styles.duration}>{durationLabel}</Text>
+          </View>
+        ) : null}
       </View>
 
       {/* Coachee */}
-      {showCoachee ? (
+      {showCoacheeInfo ? (
         <View style={styles.coacheeColumn}>
           <CoacheeAvatarIcon color={colors.selected} size={24} />
-          <Text numberOfLines={1} isSemibold style={styles.coacheeName}>
+          <Text numberOfLines={1} style={styles.coacheeName}>
             {coacheeName ?? 'Coachee'}
           </Text>
         </View>
@@ -106,21 +120,23 @@ export function SessieListItemCard({
 
       {/* Actions */}
       <View style={styles.actionsColumn}>
-        <Pressable
-          onPress={(event) => {
-            ;(event as any)?.stopPropagation?.()
-            onPressEdit()
-          }}
-          style={({ hovered }) => [styles.editButton, webTransitionSmooth, hovered ? styles.editButtonHovered : undefined]}
-        >
-          {/* Edit action */}
-          <View style={styles.editButtonContent}>
-            <EditActionIcon color="#656565" size={18} />
-            <Text isBold style={styles.editButtonText}>
-              Bewerken
-            </Text>
-          </View>
-        </Pressable>
+        {showEditButton ? (
+          <Pressable
+            onPress={(event) => {
+              ;(event as any)?.stopPropagation?.()
+              onPressEdit(getMenuAnchorPointFromEvent(event))
+            }}
+            style={({ hovered }) => [styles.editButton, webTransitionSmooth, hovered ? styles.editButtonHovered : undefined]}
+          >
+            {/* Edit action */}
+            <View style={styles.editButtonContent}>
+              <EditActionIcon color="#656565" size={18} />
+              <Text style={styles.editButtonText}>
+                Bewerken
+              </Text>
+            </View>
+          </Pressable>
+        ) : null}
         <Pressable
           ref={moreButtonRef}
           onPress={(event) => {
@@ -140,18 +156,19 @@ export function SessieListItemCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
     gap: 12,
     width: '100%',
-    height: 72,
+    height: 80,
   },
   cardHovered: {
     backgroundColor: colors.hoverBackground,
-    ...( { boxShadow: '0 10px 24px rgba(0,0,0,0.05)' } as any ),
   },
   iconContainer: {
     width: 28,
@@ -186,6 +203,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  statusColumnCompact: {
+    flex: 0,
+  },
+  statusColumnSpacer: {
+    flex: 1,
+    minWidth: 0,
+  },
   transcriptionStatus: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -204,6 +228,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: colors.text,
+  },
+  duration: {
+    fontSize: 13,
+    lineHeight: 16,
+    color: colors.textSecondary,
   },
   coacheeColumn: {
     width: 200,
@@ -224,12 +253,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   editButton: {
-    height: 32,
-    borderRadius: 8,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: colors.pageBackground,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 8,
+    padding: 10,
     justifyContent: 'center',
   },
   editButtonHovered: {
@@ -247,9 +276,9 @@ const styles = StyleSheet.create({
     color: '#656565',
   },
   moreButton: {
-    height: 32,
-    width: 32,
-    borderRadius: 8,
+    height: 36,
+    width: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },

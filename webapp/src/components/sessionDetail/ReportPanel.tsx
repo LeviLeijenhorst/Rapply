@@ -8,8 +8,9 @@ import { CopyIcon } from '../icons/CopyIcon'
 import { CopiedIcon } from '../icons/CopiedIcon'
 import { EditSmallIcon } from '../icons/EditSmallIcon'
 import { VerslagGenererenIcon } from '../icons/VerslagGenererenIcon'
-import { EditActionIcon } from '../icons/EditActionIcon'
+import { VerslagSchrijvenIcon } from '../icons/VerslagSchrijvenIcon'
 import { toUserFriendlyTranscriptionError } from '../../utils/transcriptionError'
+import { parseRichTextMarkdown, RichTextInlineSegment, richTextSharedFormatting } from '../../utils/richTextFormatting'
 
 type Props = {
   templateLabel: string
@@ -24,82 +25,20 @@ type Props = {
   onCancelGeneration?: () => void
 }
 
-function renderInlineText(text: string, textStyle: any) {
-  const parts = String(text || '').split('**')
+function renderInlineSegments(segments: RichTextInlineSegment[], textStyle: any) {
   return (
     <Text style={textStyle}>
-      {parts.map((part, index) =>
-        index % 2 === 1 ? (
-          <Text key={`bold-${index}`} isBold>
-            {part}
-          </Text>
-        ) : (
-          <Text key={`text-${index}`}>{part}</Text>
-        ),
-      )}
+      {segments.map((segment, index) => (
+        <Text
+          key={`${segment.text}-${index}`}
+          isBold={segment.isBold}
+          style={segment.isItalic ? styles.italicText : undefined}
+        >
+          {segment.text}
+        </Text>
+      ))}
     </Text>
   )
-}
-
-function renderSummaryWithHeadings(summary: string) {
-  const lines = summary.replace(/\r/g, '').split('\n')
-  const elements: React.ReactNode[] = []
-
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i]
-
-    const dividerMatch = line.match(/^\s*---\s*$/)
-    if (dividerMatch) {
-      elements.push(
-        <View key={`hr-${i}`} style={styles.dividerRow}>
-          <View style={styles.dividerLine} />
-        </View>,
-      )
-      continue
-    }
-
-    const headingMatch = line.match(/^\s*###\s*(.+?)\s*$/)
-    if (headingMatch) {
-      const rawText = headingMatch[1]
-      const cleanText = rawText.replace(/^\s*#\s*/, '').trim()
-      elements.push(<View key={`h-${i}`}>{renderInlineText(cleanText, styles.sectionTitle)}</View>)
-      continue
-    }
-
-    const bulletMatch = line.match(/^\s*[-*]\s+(.+?)\s*$/)
-    if (bulletMatch) {
-      const items: string[] = []
-      let index = i
-      while (index < lines.length) {
-        const currentLine = lines[index]
-        const match = currentLine.match(/^\s*[-*]\s+(.+?)\s*$/)
-        if (!match) break
-        items.push(match[1])
-        index += 1
-      }
-      i = index - 1
-
-      elements.push(
-        <View key={`ul-${i}`} style={styles.bullets}>
-          {items.map((item, itemIndex) => (
-            <View key={`li-${i}-${itemIndex}`} style={styles.bulletRow}>
-              <Text style={styles.bulletSymbol}>•</Text>
-              <View style={styles.bulletTextContainer}>{renderInlineText(item, styles.bulletText)}</View>
-            </View>
-          ))}
-        </View>,
-      )
-      continue
-    }
-
-    if (line.trim()) {
-      elements.push(<View key={`p-${i}`}>{renderInlineText(line, styles.paragraph)}</View>)
-    } else if (i < lines.length - 1) {
-      elements.push(<View key={`spacer-${i}`} style={{ height: 8 }} />)
-    }
-  }
-
-  return elements
 }
 
 export function ReportPanel({
@@ -125,6 +64,8 @@ export function ReportPanel({
 
   const reportCopyText = summary || ''
   const showEditSummaryButton = !shouldShowLoading && !hasError && !!onEditSummary
+
+  const summaryLines = parseRichTextMarkdown(summary || '')
 
   return (
     <View style={styles.container}>
@@ -190,7 +131,43 @@ export function ReportPanel({
           </View>
         ) : hasSummary ? (
           <View style={styles.summaryContent}>
-            {renderSummaryWithHeadings(summary || '')}
+            {summaryLines.map((line, index) => {
+              if (line.kind === 'empty') return <View key={`empty-${index}`} style={styles.emptyRow} />
+              if (line.kind === 'divider') {
+                return (
+                  <View key={`divider-${index}`} style={styles.dividerRow}>
+                    <View style={styles.dividerLine} />
+                  </View>
+                )
+              }
+              if (line.kind === 'headingTwo' || line.kind === 'headingThree') {
+                return <View key={`heading-${index}`}>{renderInlineSegments(line.segments, styles.sectionTitle)}</View>
+              }
+              if (line.kind === 'bullet') {
+                return (
+                  <View key={`bullet-${index}`} style={styles.bulletRow}>
+                    <View style={styles.bulletSymbol} />
+                    <View style={styles.bulletTextContainer}>{renderInlineSegments(line.segments, styles.bulletText)}</View>
+                  </View>
+                )
+              }
+              if (line.kind === 'numbered') {
+                return (
+                  <View key={`numbered-${index}`} style={styles.bulletRow}>
+                    <Text style={styles.bulletNumber}>{`${line.number}.`}</Text>
+                    <View style={styles.bulletTextContainer}>{renderInlineSegments(line.segments, styles.bulletText)}</View>
+                  </View>
+                )
+              }
+              if (line.kind === 'quote') {
+                return (
+                  <View key={`quote-${index}`} style={styles.quoteRow}>
+                    {renderInlineSegments(line.segments, styles.quoteText)}
+                  </View>
+                )
+              }
+              return <View key={`paragraph-${index}`}>{renderInlineSegments(line.segments, styles.paragraph)}</View>
+            })}
           </View>
         ) : (
           <View style={styles.emptyContainer}>
@@ -211,7 +188,7 @@ export function ReportPanel({
                   onPress={onEditSummary}
                   style={({ hovered }) => [styles.emptyActionButton, hovered ? styles.emptyActionButtonHovered : undefined]}
                 >
-                  <EditActionIcon color={colors.selected} size={24} />
+                  <VerslagSchrijvenIcon size={24} color={colors.selected} />
                   <Text isBold style={styles.emptyActionText}>
                     Verslag schrijven
                   </Text>
@@ -294,13 +271,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   paragraph: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: richTextSharedFormatting.editorFontSize,
+    lineHeight: richTextSharedFormatting.editorLineHeight,
     color: colors.text,
   },
   sectionTitle: {
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: richTextSharedFormatting.headingFontSize,
+    lineHeight: richTextSharedFormatting.headingLineHeight,
+    fontWeight: richTextSharedFormatting.headingFontWeight,
     color: colors.textStrong,
   },
   dividerRow: {
@@ -321,17 +299,42 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   bulletSymbol: {
-    fontSize: 17,
-    lineHeight: 24,
-    color: colors.text,
+    width: 5,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: colors.text,
+    marginTop: 10,
   },
   bulletText: {
-    fontSize: 17,
-    lineHeight: 24,
+    fontSize: richTextSharedFormatting.listFontSize,
+    lineHeight: richTextSharedFormatting.listLineHeight,
     color: colors.text,
   },
   bulletTextContainer: {
     flex: 1,
+  },
+  bulletNumber: {
+    fontSize: richTextSharedFormatting.listFontSize,
+    lineHeight: richTextSharedFormatting.listLineHeight,
+    fontWeight: richTextSharedFormatting.listMarkerFontWeight,
+    color: colors.text,
+    minWidth: 20,
+  },
+  italicText: {
+    fontStyle: 'italic',
+  },
+  emptyRow: {
+    height: 8,
+  },
+  quoteRow: {
+    borderLeftWidth: 2,
+    borderLeftColor: colors.border,
+    paddingLeft: 10,
+  },
+  quoteText: {
+    fontSize: richTextSharedFormatting.editorFontSize,
+    lineHeight: richTextSharedFormatting.editorLineHeight,
+    color: colors.textSecondary,
   },
   actionsRow: {
     flexDirection: 'row',

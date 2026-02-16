@@ -36,8 +36,15 @@ export function saveLocalAppData(data: LocalAppData) {
 
 function normalizeLocalAppData(data: LocalAppData): LocalAppData {
   const fallback = createDefaultLocalAppData()
+  const notes = Array.isArray(data.notes)
+    ? data.notes.map((n) => ({
+        ...n,
+        title: typeof (n as any).title === "string" ? (n as any).title : "",
+      }))
+    : fallback.notes
   return {
     ...data,
+    notes,
     templates: Array.isArray(data.templates)
       ? data.templates.map((template) => ({
           ...template,
@@ -139,14 +146,25 @@ export function listNotesForSession(data: LocalAppData, sessionId: string): Note
 }
 
 export function createNote(data: LocalAppData, note: Note): { data: LocalAppData; noteId: string } {
-  return { data: { ...data, notes: [note, ...data.notes] }, noteId: note.id }
+  const noteWithTitle = { ...note, title: typeof note.title === "string" ? note.title : "" }
+  return { data: { ...data, notes: [noteWithTitle, ...data.notes] }, noteId: note.id }
 }
 
-export function updateNote(data: LocalAppData, noteId: string, text: string): LocalAppData {
-  const trimmedText = text.trim()
+export function updateNote(
+  data: LocalAppData,
+  noteId: string,
+  values: { title?: string; text: string },
+): LocalAppData {
+  const trimmedText = values.text.trim()
   if (!trimmedText) return data
   const now = Date.now()
-  return { ...data, notes: data.notes.map((n) => (n.id === noteId ? { ...n, text: trimmedText, updatedAtUnixMs: now } : n)) }
+  const title = typeof values.title === "string" ? values.title.trim() : ""
+  return {
+    ...data,
+    notes: data.notes.map((n) =>
+      n.id === noteId ? { ...n, title, text: trimmedText, updatedAtUnixMs: now } : n,
+    ),
+  }
 }
 
 export function deleteNote(data: LocalAppData, noteId: string): LocalAppData {

@@ -5,13 +5,15 @@ import { colors } from '../theme/colors'
 import { CoacheesIcon } from './icons/CoacheesIcon'
 import { FeedbackIcon } from './icons/FeedbackIcon'
 import { MijnPraktijkIcon } from './icons/MijnPraktijkIcon'
+import { PlusIcon } from './icons/PlusIcon'
 import { SessiesIcon } from './icons/SessiesIcon'
 import { SettingsIcon } from './icons/SettingsIcon'
 import { TemplatesIcon } from './icons/TemplatesIcon'
+import { ArchiefMenuIcon } from './icons/ArchiefMenuIcon'
 import { SidebarItem } from './SidebarItem'
 import { Text } from './Text'
 
-export type SidebarItemKey = 'coachees' | 'sessies' | 'templates' | 'mijnPraktijk'
+export type SidebarItemKey = 'coachees' | 'sessies' | 'templates' | 'mijnPraktijk' | 'archief'
 
 type AnchorPoint = { x: number; y: number }
 
@@ -58,13 +60,13 @@ export function Sidebar({ selectedSidebarItemKey, onSelectSidebarItem, onPressCr
         >
           {/* Nieuwe sessie button */}
           <View style={[styles.createSessionButtonContent, isCompact ? styles.createSessionButtonContentCompact : undefined]}>
+            <PlusIcon color="#FFFFFF" size={22} />
             {/* Nieuwe sessie button label */}
             <Text
               numberOfLines={1}
-              isBold
               style={[styles.createSessionButtonText, isCompact ? styles.createSessionButtonTextCompact : undefined]}
             >
-              {isCompact ? '+' : '+ Nieuwe sessie'}
+              {isCompact ? '' : 'Nieuwe sessie'}
             </Text>
           </View>
         </Pressable>
@@ -93,12 +95,21 @@ export function Sidebar({ selectedSidebarItemKey, onSelectSidebarItem, onPressCr
             isCompact={isCompact}
           />
           <SidebarItem
-            label="Mijn brand"
+            label="Mijn praktijk"
             isSelected={selectedSidebarItemKey === 'mijnPraktijk'}
             onPress={() => onSelectSidebarItem('mijnPraktijk')}
             icon={<MijnPraktijkIcon color={selectedSidebarItemKey === 'mijnPraktijk' ? selectedColor : unselectedColor} size={24} />}
             isCompact={isCompact}
           />
+          {selectedSidebarItemKey === 'archief' ? (
+            <SidebarItem
+              label="Archief"
+              isSelected
+              onPress={() => onSelectSidebarItem('archief')}
+              icon={<ArchiefMenuIcon color={selectedColor} size={24} />}
+              isCompact={isCompact}
+            />
+          ) : null}
         </View>
       </View>
 
@@ -146,9 +157,9 @@ const styles = StyleSheet.create({
   createSessionButton: {
     width: 188,
     height: 40,
-    borderRadius: 12,
-    backgroundColor: 'transparent',
-    borderWidth: 2,
+    borderRadius: 10,
+    backgroundColor: colors.selected,
+    borderWidth: 1,
     borderColor: colors.selected,
     padding: 12,
     justifyContent: 'center',
@@ -156,18 +167,19 @@ const styles = StyleSheet.create({
   createSessionButtonCompact: {
     width: 48,
     height: 48,
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
   createSessionButtonHovered: {
-    backgroundColor: 'rgba(190,1,101,0.08)',
+    backgroundColor: '#A50058',
   },
   createSessionButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
     width: '100%',
   },
   createSessionButtonContentCompact: {
@@ -179,12 +191,14 @@ const styles = StyleSheet.create({
   createSessionButtonText: {
     fontSize: 14,
     lineHeight: 18,
-    color: colors.selected,
+    color: '#FFFFFF',
     textAlign: 'center',
+    ...( { transform: [{ translateY: 1 }] } as any ),
   },
   createSessionButtonTextCompact: {
-    fontSize: 28,
-    lineHeight: 32,
+    fontSize: 0,
+    lineHeight: 0,
+    width: 0,
   },
   menuItems: {
     gap: 8,

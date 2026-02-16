@@ -1,12 +1,13 @@
-import React from 'react'
+import React, { useRef, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
 import { colors } from '../theme/colors'
 import { webTransitionSmooth } from '../theme/webTransitions'
 import { CoacheeAvatarIcon } from './icons/CoacheeAvatarIcon'
+import { MoreOptionsIcon } from './icons/MoreOptionsIcon'
+import { PopoverMenu } from './PopoverMenu'
 import { TrashIcon } from './icons/TrashIcon'
 import { Text } from './Text'
-import { IconNumber } from './IconNumber'
 
 type Props = {
   name: string
@@ -15,39 +16,100 @@ type Props = {
 }
 
 export function ArchivedCoacheeCard({ name, onRestore, onDelete }: Props) {
+  const menuWidth = 220
+  const moreButtonRef = useRef<any>(null)
+  const [isMenuVisible, setIsMenuVisible] = useState(false)
+  const [menuAnchorPoint, setMenuAnchorPoint] = useState<{ x: number; y: number } | null>(null)
+
+  function getMenuAnchorPointFromEvent(event: any): { x: number; y: number } {
+    const rectFromRef = moreButtonRef.current?.getBoundingClientRect?.()
+    const rectFromCurrentTarget = event?.currentTarget?.getBoundingClientRect?.()
+    const rectFromNativeTarget = event?.nativeEvent?.target?.getBoundingClientRect?.()
+    const rect = rectFromRef ?? rectFromCurrentTarget ?? rectFromNativeTarget
+
+    const clientX = event?.nativeEvent?.clientX
+    const clientY = event?.nativeEvent?.clientY
+    const pageX = event?.nativeEvent?.pageX
+    const pageY = event?.nativeEvent?.pageY
+
+    const scrollX = typeof window !== 'undefined' ? window.scrollX : 0
+    const scrollY = typeof window !== 'undefined' ? window.scrollY : 0
+
+    const xFromPointer = typeof clientX === 'number' ? clientX : typeof pageX === 'number' ? pageX - scrollX : 0
+    const yFromPointer = typeof clientY === 'number' ? clientY : typeof pageY === 'number' ? pageY - scrollY : 0
+
+    const x = rect ? rect.right - menuWidth : xFromPointer - menuWidth
+    const y = rect ? rect.bottom : yFromPointer
+    return { x, y }
+  }
+
+  function closeMenu() {
+    setIsMenuVisible(false)
+    setMenuAnchorPoint(null)
+  }
+
   return (
-    <View style={styles.card}>
-      {/* Archived coachee card */}
-      <View style={styles.iconCircle}>
-        {/* Coachee icon */}
-        <CoacheeAvatarIcon color={colors.selected} size={24} />
-      </View>
+    <>
+      <View style={styles.card}>
+        {/* Archived coachee card */}
+        <View style={styles.iconCircle}>
+          {/* Coachee icon */}
+          <CoacheeAvatarIcon color={colors.selected} size={24} />
+        </View>
 
-      {/* Coachee text */}
-      <View style={styles.textColumn}>
-        {/* Coachee name */}
-        <Text isSemibold numberOfLines={1} style={styles.name}>
-          {name}
-        </Text>
-      </View>
+        {/* Coachee text */}
+        <View style={styles.textColumn}>
+          {/* Coachee name */}
+          <Text isSemibold numberOfLines={1} style={styles.name}>
+            {name}
+          </Text>
+        </View>
 
-      {/* Coachee actions */}
-      <View style={styles.actions}>
-        <Pressable onPress={onRestore} style={({ hovered }) => [styles.restoreButton, webTransitionSmooth, hovered ? styles.restoreButtonHovered : undefined]}>
-          {/* Restore coachee */}
-          <View style={styles.restoreButtonContent}>
-            <IconNumber value={1} />
-            <Text isBold style={styles.restoreButtonText}>
-              Terugzetten
-            </Text>
-          </View>
-        </Pressable>
-        <Pressable onPress={onDelete} style={({ hovered }) => [styles.deleteButton, webTransitionSmooth, hovered ? styles.deleteButtonHovered : undefined]}>
-          {/* Delete coachee */}
-          <TrashIcon color={colors.selected} size={20} />
-        </Pressable>
+        {/* Coachee actions */}
+        <View style={styles.actions}>
+          <Pressable
+            ref={moreButtonRef}
+            onPress={(event) => {
+              ;(event as any)?.stopPropagation?.()
+              setMenuAnchorPoint(getMenuAnchorPointFromEvent(event))
+              setIsMenuVisible(true)
+            }}
+            style={({ hovered }) => [styles.moreButton, webTransitionSmooth, hovered ? styles.moreButtonHovered : undefined]}
+          >
+            {/* More options */}
+            <MoreOptionsIcon color="#656565" size={24} />
+          </Pressable>
+        </View>
       </View>
-    </View>
+      <PopoverMenu
+        visible={isMenuVisible}
+        anchorPoint={menuAnchorPoint}
+        placement="below"
+        width={menuWidth}
+        estimatedHeight={108}
+        items={[
+          {
+            key: 'delete',
+            label: 'Verwijderen',
+            icon: <TrashIcon color={colors.selected} size={18} />,
+            isDanger: true,
+            onPress: () => {
+              closeMenu()
+              onDelete()
+            },
+          },
+          {
+            key: 'restore',
+            label: 'Terugzetten',
+            onPress: () => {
+              closeMenu()
+              onRestore()
+            },
+          },
+        ]}
+        onClose={closeMenu}
+      />
+    </>
   )
 }
 
@@ -85,37 +147,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  restoreButton: {
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: colors.pageBackground,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 8,
-    justifyContent: 'center',
-  },
-  restoreButtonHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  restoreButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  restoreButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: '#656565',
-  },
-  deleteButton: {
-    height: 32,
-    width: 32,
-    borderRadius: 8,
+  moreButton: {
+    height: 36,
+    width: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  deleteButtonHovered: {
+  moreButtonHovered: {
     backgroundColor: colors.hoverBackground,
   },
 })

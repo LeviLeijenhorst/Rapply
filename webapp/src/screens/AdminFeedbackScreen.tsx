@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { callSecureApi } from '../services/secureApi'
 import { colors } from '../theme/colors'
 import { Text } from '../components/Text'
+import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
 
 type FeedbackItem = {
   id: string
@@ -26,14 +27,10 @@ function formatDateTime(value: string): string {
 }
 
 function parseApiError(error: unknown): string {
-  const fallback = 'Feedback ophalen mislukt.'
-  if (!(error instanceof Error)) return fallback
-  const raw = String(error.message || '').trim()
-  if (!raw) return fallback
-  if (raw.includes('API error: 403')) {
-    return 'Geen toegang. Alleen contact@jnlsolutions.nl mag deze pagina openen.'
-  }
-  return raw
+  return toUserFriendlyErrorMessage(error, {
+    fallback: 'Feedback ophalen mislukt.',
+    forbiddenMessage: 'Geen toegang. Alleen contact@jnlsolutions.nl mag deze pagina openen.',
+  })
 }
 
 export function AdminFeedbackScreen() {

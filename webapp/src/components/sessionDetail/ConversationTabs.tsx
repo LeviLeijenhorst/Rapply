@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   },
   tabButton: {
     height: 40,
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 10,
     borderWidth: 1,
     flexDirection: 'row',

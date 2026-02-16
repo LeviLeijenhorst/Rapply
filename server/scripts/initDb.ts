@@ -53,6 +53,7 @@ async function main() {
     "009_practice_settings.sql",
     "011_e2ee_v2.sql",
     "012_e2ee_custody_mode.sql",
+    "013_notes_title.sql",
   ].map((name) =>
     path.join(sqlDir, name),
   )

@@ -1,0 +1,76 @@
+type Options = {
+  fallback: string
+  forbiddenMessage?: string
+}
+
+function extractMessage(error: unknown): string {
+  if (error instanceof Error) return String(error.message || '').trim()
+  if (typeof error === 'string') return error.trim()
+  return ''
+}
+
+function parseApiError(rawMessage: string): { statusCode: number | null; payload: string } | null {
+  const match = rawMessage.match(/^API error:\s*(\d+)\s*(.*)$/i)
+  if (!match) return null
+
+  const statusCode = Number.parseInt(match[1] || '', 10)
+  return {
+    statusCode: Number.isFinite(statusCode) ? statusCode : null,
+    payload: String(match[2] || '').trim(),
+  }
+}
+
+function extractJsonMessage(payload: string): string | null {
+  const jsonStart = payload.indexOf('{')
+  if (jsonStart < 0) return null
+
+  try {
+    const parsed = JSON.parse(payload.slice(jsonStart))
+    if (typeof parsed?.error === 'string' && parsed.error.trim()) return parsed.error.trim()
+    if (typeof parsed?.error?.message === 'string' && parsed.error.message.trim()) return parsed.error.message.trim()
+    if (typeof parsed?.message === 'string' && parsed.message.trim()) return parsed.message.trim()
+    return null
+  } catch {
+    return null
+  }
+}
+
+function hasRawErrorCode(message: string): boolean {
+  const lowered = message.toLowerCase()
+  if (lowered.includes('api error:')) return true
+  if (lowered.includes('status code')) return true
+  if (lowered.includes('error code')) return true
+  if (/(?:^|\s)code[:=]/i.test(message)) return true
+  if (/\b[A-Z]{3,}_[A-Z0-9_]{2,}\b/.test(message)) return true
+  return false
+}
+
+export function toUserFriendlyErrorMessage(error: unknown, options: Options): string {
+  const { fallback, forbiddenMessage } = options
+  const rawMessage = extractMessage(error)
+  if (!rawMessage) return fallback
+
+  const parsedApiError = parseApiError(rawMessage)
+  if (parsedApiError) {
+    const statusCode = parsedApiError.statusCode
+    if (statusCode === 401 || statusCode === 403) {
+      return forbiddenMessage || 'Je hebt geen toegang om deze actie uit te voeren.'
+    }
+    if (statusCode === 404) {
+      return fallback
+    }
+    if (statusCode === 429) {
+      return 'Er zijn op dit moment te veel verzoeken. Probeer het zo opnieuw.'
+    }
+    if (statusCode !== null && statusCode >= 500) {
+      return 'Er ging iets mis op de server. Probeer het later opnieuw.'
+    }
+
+    const decodedPayload = extractJsonMessage(parsedApiError.payload) || parsedApiError.payload
+    if (!decodedPayload || hasRawErrorCode(decodedPayload)) return fallback
+    return decodedPayload
+  }
+
+  if (hasRawErrorCode(rawMessage)) return fallback
+  return rawMessage
+}

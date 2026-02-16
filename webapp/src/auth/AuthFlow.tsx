@@ -5,6 +5,7 @@ import { AuthCardVerticalSwapTransition } from './components/AuthCardVerticalSwa
 import { AuthEntryScreen } from './screens/AuthEntryScreen'
 import { clearAuthIntent, getAuthIntent, getValidAccessToken, handleAuthCallback, signInWithEntra } from './entraAuth'
 import { navigate, usePathname } from './router/webRouter'
+import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
 
 type Props = {
   onAuthenticated: () => void
@@ -43,7 +44,7 @@ export function AuthFlow({ onAuthenticated }: Props) {
         const intent = getAuthIntent()
         clearAuthIntent()
         const mode = intent === 'signup' ? 'signup' : 'signin'
-        setAuthError(error instanceof Error ? error.message : 'Inloggen mislukt')
+        setAuthError(toUserFriendlyErrorMessage(error, { fallback: 'Inloggen mislukt' }))
         navigate(`/inloggen?mode=${mode}`, { replace: true })
         hasHandledCallback.current = false
         setIsProcessingCallback(false)
@@ -83,7 +84,7 @@ export function AuthFlow({ onAuthenticated }: Props) {
     setIsProcessingCallback(true)
     signInWithEntra().catch((error) => {
       console.error('[AuthFlow] direct Entra sign in failed', error)
-      setAuthError(error instanceof Error ? error.message : 'Inloggen mislukt')
+      setAuthError(toUserFriendlyErrorMessage(error, { fallback: 'Inloggen mislukt' }))
       navigate('/inloggen?mode=signin', { replace: true })
       setIsProcessingCallback(false)
       hasStartedDirectSignIn.current = false

@@ -114,7 +114,7 @@ export function PopoverMenu({ visible, anchorPoint, placement, width, estimatedH
               >
                 {/* Menu item */}
                 <View style={styles.rowLeft}>
-                  <View style={styles.iconBox}>{item.icon}</View>
+                  {item.icon ? <View style={styles.iconBox}>{item.icon}</View> : null}
                   <Text isSemibold style={[styles.rowText, item.isDanger ? styles.rowTextDanger : undefined]}>
                     {item.label}
                   </Text>

@@ -5,6 +5,7 @@ import { colors } from '../../theme/colors'
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { Text } from '../Text'
 import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
+import { toUserFriendlyErrorMessage } from '../../utils/userFriendlyError'
 
 type Props = {
   visible: boolean
@@ -35,7 +36,7 @@ export function FeedbackModal({ visible, onClose, onContinue }: Props) {
       await onContinue?.(trimmedFeedback)
       onClose()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Opslaan mislukt. Probeer het opnieuw.'
+      const message = toUserFriendlyErrorMessage(error, { fallback: 'Opslaan mislukt. Probeer het opnieuw.' })
       setSubmitError(message)
     } finally {
       setIsSubmitting(false)
@@ -55,7 +56,7 @@ export function FeedbackModal({ visible, onClose, onContinue }: Props) {
           }}
           style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}
         >
-          <ModalCloseDarkIcon size={20} />
+          <ModalCloseDarkIcon size={34} />
         </Pressable>
       </View>
 
@@ -131,9 +132,9 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
   },
   iconButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
