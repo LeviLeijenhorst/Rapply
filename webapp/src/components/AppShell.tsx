@@ -37,9 +37,6 @@ import { clearPendingPreviewAudio, clearPendingPreviewAudioIfEligible, listPendi
 import { processSessionAudio } from '../audio/processSessionAudio'
 import { AdminFeedbackScreen } from '../screens/AdminFeedbackScreen'
 import { AdminContactSubmissionsScreen } from '../screens/AdminContactSubmissionsScreen'
-import { ChevronRightIcon } from './icons/ChevronRightIcon'
-import { CircleCloseIcon } from './icons/CircleCloseIcon'
-import { readJsonFromLocalStorage, writeJsonToLocalStorage } from '../local/localStorageJson'
 import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
 import { EndToEndEncryptieScreen } from '../screens/EndToEndEncryptieScreen'
 import { isAdminEmail } from '../constants/admin'
@@ -105,8 +102,6 @@ type Props = {
 }
 
 const PRIVACY_BELEID_URL = 'https://www.coachscribe.nl/privacybeleid'
-const E2EE_SETUP_BANNER_DISMISSED_STORAGE_KEY = 'coachscribe:e2ee-setup-banner-dismissed'
-
 function parseDeleteAccountErrorMessage(error: unknown): string {
   return toUserFriendlyErrorMessage(error, {
     fallback: 'Verwijderen mislukt. Probeer het alsjeblieft later opnieuw.',
@@ -150,10 +145,6 @@ export function AppShell({ onLogout }: Props) {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [isDeleteAccountConfirmModalOpen, setIsDeleteAccountConfirmModalOpen] = useState(false)
   const [deleteAccountErrorMessage, setDeleteAccountErrorMessage] = useState<string | null>(null)
-  const [isE2eeSetupBannerDismissed, setIsE2eeSetupBannerDismissed] = useState<boolean>(() => {
-    const stored = readJsonFromLocalStorage<boolean>(E2EE_SETUP_BANNER_DISMISSED_STORAGE_KEY)
-    return stored.ok ? Boolean(stored.value) : false
-  })
   const isCurrentUserAdmin = isAdminEmail(currentUserEmail)
 
   useEffect(() => {
@@ -526,13 +517,8 @@ export function AppShell({ onLogout }: Props) {
     return []
   }, [data.coachees, data.sessions, navigateTo, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey, sessionOriginRoute])
 
-  const dismissE2eeSetupBanner = useCallback(() => {
-    setIsE2eeSetupBannerDismissed(true)
-    writeJsonToLocalStorage(E2EE_SETUP_BANNER_DISMISSED_STORAGE_KEY, true)
-  }, [])
-
   const hasBreadcrumbs = breadcrumbItems.length >= 2 && !isEndToEndEncryptiePageOpen
-  const isE2eeSetupBannerVisible = !isTooSmall && !isEndToEndEncryptiePageOpen && !e2ee.isEnabled && !isE2eeSetupBannerDismissed
+  const isE2eeSetupBannerVisible = false
   const isSettingsSelected = isEndToEndEncryptiePageOpen
 
   const deleteAccount = useCallback(async () => {
@@ -700,21 +686,6 @@ export function AppShell({ onLogout }: Props) {
         totalMinutes={totalMinutes}
         isUsageLoading={isUsageLoading}
       />
-      {isE2eeSetupBannerVisible ? (
-        <View style={[styles.e2eeSetupBar, isSidebarCompact ? styles.e2eeSetupBarCompact : undefined]}>
-          <View style={styles.e2eeSetupBarContent}>
-            <Pressable onPress={() => setIsEndToEndEncryptiePageOpen(true)} style={({ hovered }) => [styles.e2eeSetupTrigger, hovered ? styles.e2eeSetupTriggerHovered : undefined]}>
-              <Text isSemibold style={styles.e2eeSetupTriggerText}>
-                End-to-end encryptie instellen
-              </Text>
-              <ChevronRightIcon color="#FFFFFF" size={16} />
-            </Pressable>
-            <Pressable onPress={dismissE2eeSetupBanner} style={({ hovered }) => [styles.e2eeSetupCloseButton, hovered ? styles.e2eeSetupCloseButtonHovered : undefined]}>
-              <CircleCloseIcon size={24} color="#FFFFFF" />
-            </Pressable>
-          </View>
-        </View>
-      ) : null}
       {hasBreadcrumbs ? (
         <View
           style={[
@@ -842,7 +813,6 @@ export function AppShell({ onLogout }: Props) {
             visible={isMyAccountModalOpen}
             onClose={() => setIsMyAccountModalOpen(false)}
             onLogout={() => setIsMyAccountModalOpen(false)}
-            onOpenEndToEndEncryptiePage={() => setIsEndToEndEncryptiePageOpen(true)}
             onDeleteAccount={() => {
               if (isDeletingAccount) return
               setDeleteAccountErrorMessage(null)

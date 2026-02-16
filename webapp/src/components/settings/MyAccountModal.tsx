@@ -16,7 +16,6 @@ type Props = {
   onClose: () => void
   onLogout: () => void
   onDeleteAccount: () => void
-  onOpenEndToEndEncryptiePage: () => void
   isDeleteAccountBusy?: boolean
 }
 
@@ -26,7 +25,6 @@ export function MyAccountModal({
   onClose,
   onLogout,
   onDeleteAccount,
-  onOpenEndToEndEncryptiePage,
   isDeleteAccountBusy = false,
 }: Props) {
   const e2ee = useE2ee()
@@ -71,39 +69,6 @@ export function MyAccountModal({
                 : 'End-to-end encryptie staat uit voor deze browser.'
               : 'End-to-end encryptie staat nog uit voor dit account.'}
           </Text>
-          <Pressable
-            onPress={() => {
-              if (isE2eeBusy) return
-              const nextEnabled = !e2ee.isEnabled
-              setIsE2eeBusy(true)
-              setE2eeStatus(null)
-              if (nextEnabled) {
-                onClose()
-                onOpenEndToEndEncryptiePage()
-                setIsE2eeBusy(false)
-                return
-              }
-              void e2ee
-                .setEnabled(false)
-                .then(() => {
-                  setE2eeStatus('End-to-end encryptie is uitgezet voor dit account.')
-                })
-                .catch((error) =>
-                  setE2eeStatus(
-                    toUserFriendlyErrorMessage(error, {
-                      fallback: 'Aanpassen van end-to-end encryptie mislukt',
-                    }),
-                  ),
-                )
-                .finally(() => setIsE2eeBusy(false))
-            }}
-            style={({ hovered }) => [styles.e2eeButton, hovered ? styles.e2eeButtonHovered : undefined, isE2eeBusy ? styles.e2eeButtonDisabled : undefined]}
-            disabled={isE2eeBusy}
-          >
-            <Text isBold style={styles.e2eeButtonText}>
-              {!e2ee.isConfigured ? 'End-to-end encryptie aanzetten' : e2ee.isEnabled ? 'End-to-end encryptie uitzetten' : 'End-to-end encryptie aanzetten'}
-            </Text>
-          </Pressable>
         </View>
 
         {e2ee.isEnabled ? (
