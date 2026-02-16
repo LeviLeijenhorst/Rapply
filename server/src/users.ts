@@ -71,6 +71,54 @@ export async function ensureUserFromEntra(params: { entraUserId: string; email: 
     }
   }
 
+  if (normalizedEmail) {
+    const existingUserByEmail = await queryOne<{
+      id: string
+      entra_user_id: string | null
+      email: string | null
+      display_name: string | null
+    }>(
+      `
+      select id, entra_user_id, email, display_name
+      from public.users
+      where lower(email) = $1
+      limit 1
+      `,
+      [normalizedEmail],
+    )
+
+    if (existingUserByEmail?.id) {
+      const updatedUserByEmail = await queryOne<{
+        id: string
+        entra_user_id: string
+        email: string | null
+        display_name: string | null
+      }>(
+        `
+        update public.users
+        set entra_user_id = $1,
+            email = $2,
+            display_name = coalesce($3, public.users.display_name),
+            updated_at = now()
+        where id = $4
+        returning id, entra_user_id, email, display_name
+        `,
+        [entraUserId, email, displayName, existingUserByEmail.id],
+      )
+
+      if (!updatedUserByEmail?.id) {
+        throw new Error("Failed to load user")
+      }
+
+      return {
+        userId: updatedUserByEmail.id,
+        entraUserId: updatedUserByEmail.entra_user_id,
+        email: updatedUserByEmail.email,
+        displayName: updatedUserByEmail.display_name,
+      }
+    }
+  }
+
   if (!normalizedEmail) {
     throw createSignupNotAllowedError()
   }
