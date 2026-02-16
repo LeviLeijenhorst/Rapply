@@ -1,6 +1,6 @@
 import crypto from "crypto"
 import { execute, queryOne } from "./db"
-import { normalizeEmail } from "./admin"
+import { isAdminEmail, normalizeEmail } from "./admin"
 
 export type AppUser = {
   userId: string
@@ -123,18 +123,20 @@ export async function ensureUserFromEntra(params: { entraUserId: string; email: 
     throw createSignupNotAllowedError()
   }
 
-  const allowlistEntry = await queryOne<{ email: string }>(
-    `
-    select email
-    from public.signup_email_allowlist
-    where lower(email) = $1
-    limit 1
-    `,
-    [normalizedEmail],
-  )
+  if (!isAdminEmail(normalizedEmail)) {
+    const allowlistEntry = await queryOne<{ email: string }>(
+      `
+      select email
+      from public.signup_email_allowlist
+      where lower(email) = $1
+      limit 1
+      `,
+      [normalizedEmail],
+    )
 
-  if (!allowlistEntry?.email) {
-    throw createSignupNotAllowedError()
+    if (!allowlistEntry?.email) {
+      throw createSignupNotAllowedError()
+    }
   }
 
   const userId = crypto.randomUUID()
