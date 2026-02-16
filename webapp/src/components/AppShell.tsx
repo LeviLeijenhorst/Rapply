@@ -36,10 +36,13 @@ import { useE2ee } from '../e2ee/E2eeProvider'
 import { clearPendingPreviewAudio, clearPendingPreviewAudioIfEligible, listPendingPreviewAudioTasks } from '../audio/pendingPreviewStore'
 import { processSessionAudio } from '../audio/processSessionAudio'
 import { AdminFeedbackScreen } from '../screens/AdminFeedbackScreen'
+import { AdminContactSubmissionsScreen } from '../screens/AdminContactSubmissionsScreen'
 import { ChevronRightIcon } from './icons/ChevronRightIcon'
 import { CircleCloseIcon } from './icons/CircleCloseIcon'
 import { readJsonFromLocalStorage, writeJsonToLocalStorage } from '../local/localStorageJson'
 import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
+import { EndToEndEncryptieScreen } from '../screens/EndToEndEncryptieScreen'
+import { isAdminEmail } from '../constants/admin'
 
 type AnchorPoint = { x: number; y: number }
 type OverlayScreenKey = 'archief'
@@ -53,6 +56,7 @@ type RouteState =
   | { kind: 'geschrevenVerslag' }
   | { kind: 'archief' }
   | { kind: 'admin' }
+  | { kind: 'admin-contact' }
 
 function stripPrefix(value: string, prefix: string) {
   return value.startsWith(`${prefix}-`) ? value.slice(prefix.length + 1) : value
@@ -79,6 +83,7 @@ function parseRouteFromPath(pathname: string): RouteState {
   if (parts[0] === 'geschreven-verslag') return { kind: 'geschrevenVerslag' }
   if (parts[0] === 'archief') return { kind: 'archief' }
   if (parts[0] === 'admin') return { kind: 'admin' }
+  if (parts[0] === 'admin-contact') return { kind: 'admin-contact' }
   return { kind: 'coachees' }
 }
 
@@ -91,6 +96,7 @@ function buildPathFromRoute(route: RouteState): string {
   if (route.kind === 'mijn-praktijk') return '/mijn-praktijk'
   if (route.kind === 'geschrevenVerslag') return '/geschreven-verslag'
   if (route.kind === 'admin') return '/admin'
+  if (route.kind === 'admin-contact') return '/admin-contact'
   return '/archief'
 }
 
@@ -110,7 +116,7 @@ function parseDeleteAccountErrorMessage(error: unknown): string {
 
 export function AppShell({ onLogout }: Props) {
   const { width } = useWindowDimensions()
-  const isTooSmall = width < 320
+  const isTooSmall = width < 1100
   const isSidebarCompact = width < 700
   const { data, createCoachee, isAppDataLoaded, updateSession } = useLocalAppData()
   const e2ee = useE2ee()
@@ -127,6 +133,8 @@ export function AppShell({ onLogout }: Props) {
   const [isGeschrevenVerslagOpen, setIsGeschrevenVerslagOpen] = useState(false)
   const [overlayScreenKey, setOverlayScreenKey] = useState<OverlayScreenKey | null>(null)
   const [isAdminScreenOpen, setIsAdminScreenOpen] = useState(false)
+  const [isAdminContactScreenOpen, setIsAdminContactScreenOpen] = useState(false)
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
 
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false)
   const [settingsMenuAnchorPoint, setSettingsMenuAnchorPoint] = useState<AnchorPoint | null>(null)
@@ -137,6 +145,7 @@ export function AppShell({ onLogout }: Props) {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
   const [isCoacheeModalOpen, setIsCoacheeModalOpen] = useState(false)
+  const [isEndToEndEncryptiePageOpen, setIsEndToEndEncryptiePageOpen] = useState(false)
   const [previousRoute, setPreviousRoute] = useState<RouteState | null>(null)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [isDeleteAccountConfirmModalOpen, setIsDeleteAccountConfirmModalOpen] = useState(false)
@@ -145,6 +154,23 @@ export function AppShell({ onLogout }: Props) {
     const stored = readJsonFromLocalStorage<boolean>(E2EE_SETUP_BANNER_DISMISSED_STORAGE_KEY)
     return stored.ok ? Boolean(stored.value) : false
   })
+  const isCurrentUserAdmin = isAdminEmail(currentUserEmail)
+
+  useEffect(() => {
+    let isCancelled = false
+    void callSecureApi<{ email: string | null }>('/auth/me', {})
+      .then((response) => {
+        if (isCancelled) return
+        setCurrentUserEmail(typeof response?.email === 'string' ? response.email : null)
+      })
+      .catch(() => {
+        if (isCancelled) return
+        setCurrentUserEmail(null)
+      })
+    return () => {
+      isCancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!isAppDataLoaded) return
@@ -199,8 +225,10 @@ export function AppShell({ onLogout }: Props) {
   const applyRoute = useCallback(
     (route: RouteState) => {
       if (route.kind === 'archief') {
+        setIsEndToEndEncryptiePageOpen(false)
         setSelectedSidebarItemKey('archief')
         setIsAdminScreenOpen(false)
+        setIsAdminContactScreenOpen(false)
         setOverlayScreenKey('archief')
         setIsGeschrevenVerslagOpen(false)
         setSelectedSessieId(null)
@@ -209,7 +237,9 @@ export function AppShell({ onLogout }: Props) {
         return
       }
       if (route.kind === 'geschrevenVerslag') {
+        setIsEndToEndEncryptiePageOpen(false)
         setIsAdminScreenOpen(false)
+        setIsAdminContactScreenOpen(false)
         setOverlayScreenKey(null)
         setIsGeschrevenVerslagOpen(true)
         setSelectedSidebarItemKey('sessies')
@@ -220,9 +250,49 @@ export function AppShell({ onLogout }: Props) {
       }
 
       if (route.kind === 'admin') {
+        if (!isCurrentUserAdmin) {
+          setIsEndToEndEncryptiePageOpen(false)
+          setIsAdminScreenOpen(false)
+          setIsAdminContactScreenOpen(false)
+          setOverlayScreenKey(null)
+          setIsGeschrevenVerslagOpen(false)
+          setSelectedSidebarItemKey('coachees')
+          setSelectedSessieId(null)
+          setSelectedCoacheeId(null)
+          setSessionOriginRoute(null)
+          return
+        }
+        setIsEndToEndEncryptiePageOpen(false)
         setIsAdminScreenOpen(true)
+        setIsAdminContactScreenOpen(false)
         setOverlayScreenKey(null)
         setIsGeschrevenVerslagOpen(false)
+        setSelectedSidebarItemKey('admin')
+        setSelectedSessieId(null)
+        setSelectedCoacheeId(null)
+        setSessionOriginRoute(null)
+        return
+      }
+
+      if (route.kind === 'admin-contact') {
+        if (!isCurrentUserAdmin) {
+          setIsEndToEndEncryptiePageOpen(false)
+          setIsAdminScreenOpen(false)
+          setIsAdminContactScreenOpen(false)
+          setOverlayScreenKey(null)
+          setIsGeschrevenVerslagOpen(false)
+          setSelectedSidebarItemKey('coachees')
+          setSelectedSessieId(null)
+          setSelectedCoacheeId(null)
+          setSessionOriginRoute(null)
+          return
+        }
+        setIsEndToEndEncryptiePageOpen(false)
+        setIsAdminScreenOpen(false)
+        setIsAdminContactScreenOpen(true)
+        setOverlayScreenKey(null)
+        setIsGeschrevenVerslagOpen(false)
+        setSelectedSidebarItemKey('adminContact')
         setSelectedSessieId(null)
         setSelectedCoacheeId(null)
         setSessionOriginRoute(null)
@@ -230,6 +300,8 @@ export function AppShell({ onLogout }: Props) {
       }
 
       setIsAdminScreenOpen(false)
+      setIsAdminContactScreenOpen(false)
+      setIsEndToEndEncryptiePageOpen(false)
       setOverlayScreenKey(null)
       setIsGeschrevenVerslagOpen(false)
 
@@ -274,7 +346,10 @@ export function AppShell({ onLogout }: Props) {
       setSessionOriginRoute(null)
     },
     [
+      isCurrentUserAdmin,
+      setIsAdminContactScreenOpen,
       setIsAdminScreenOpen,
+      setIsEndToEndEncryptiePageOpen,
       setOverlayScreenKey,
       setIsGeschrevenVerslagOpen,
       setSelectedCoacheeId,
@@ -354,21 +429,18 @@ export function AppShell({ onLogout }: Props) {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [applyRoute])
 
-  const mainContentKey = overlayScreenKey
-    ? overlayScreenKey
-    : isAdminScreenOpen
-      ? 'admin'
-    : isGeschrevenVerslagOpen
-      ? 'geschreven-verslag'
-      : selectedSessieId
-        ? `sessie-${selectedSessieId}`
-        : selectedSidebarItemKey === 'sessies'
-          ? 'sessies'
-          : selectedSidebarItemKey === 'coachees'
-            ? selectedCoacheeId
-              ? `coachee-${selectedCoacheeId}`
-              : 'coachees'
-            : selectedSidebarItemKey
+  const mainContentKey = useMemo(() => {
+    if (overlayScreenKey) return overlayScreenKey
+    if (isAdminScreenOpen) return 'admin'
+    if (isAdminContactScreenOpen) return 'admin-contact'
+    if (isGeschrevenVerslagOpen) return 'geschreven-verslag'
+    if (selectedSessieId) return `sessie-${selectedSessieId}`
+    if (selectedSidebarItemKey === 'sessies') return 'sessies'
+    if (selectedSidebarItemKey === 'coachees') {
+      return selectedCoacheeId ? `coachee-${selectedCoacheeId}` : 'coachees'
+    }
+    return selectedSidebarItemKey
+  }, [isAdminContactScreenOpen, isAdminScreenOpen, isGeschrevenVerslagOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
 
   const [newlyCreatedCoacheeId, setNewlyCreatedCoacheeId] = useState<string | null>(null)
   const [newlyCreatedCoacheeName, setNewlyCreatedCoacheeName] = useState<string | null>(null)
@@ -413,6 +485,7 @@ export function AppShell({ onLogout }: Props) {
   const currentRoute = useMemo<RouteState>(() => {
     if (overlayScreenKey === 'archief') return { kind: 'archief' }
     if (isAdminScreenOpen) return { kind: 'admin' }
+    if (isAdminContactScreenOpen) return { kind: 'admin-contact' }
     if (isGeschrevenVerslagOpen) return { kind: 'geschrevenVerslag' }
     if (selectedSessieId) return { kind: 'sessie', sessieId: selectedSessieId }
     if (selectedSidebarItemKey === 'coachees') {
@@ -420,8 +493,10 @@ export function AppShell({ onLogout }: Props) {
     }
     if (selectedSidebarItemKey === 'templates') return { kind: 'templates' }
     if (selectedSidebarItemKey === 'mijnPraktijk') return { kind: 'mijn-praktijk' }
+    if (selectedSidebarItemKey === 'admin') return { kind: 'admin' }
+    if (selectedSidebarItemKey === 'adminContact') return { kind: 'admin-contact' }
     return { kind: 'sessies' }
-  }, [isAdminScreenOpen, isGeschrevenVerslagOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
+  }, [isAdminContactScreenOpen, isAdminScreenOpen, isGeschrevenVerslagOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
 
   const breadcrumbItems = useMemo(() => {
     if (selectedSessieId) {
@@ -456,8 +531,9 @@ export function AppShell({ onLogout }: Props) {
     writeJsonToLocalStorage(E2EE_SETUP_BANNER_DISMISSED_STORAGE_KEY, true)
   }, [])
 
-  const hasBreadcrumbs = breadcrumbItems.length >= 2
-  const isE2eeSetupBannerVisible = !isTooSmall && !e2ee.isEnabled && !isE2eeSetupBannerDismissed
+  const hasBreadcrumbs = breadcrumbItems.length >= 2 && !isEndToEndEncryptiePageOpen
+  const isE2eeSetupBannerVisible = !isTooSmall && !isEndToEndEncryptiePageOpen && !e2ee.isEnabled && !isE2eeSetupBannerDismissed
+  const isSettingsSelected = isEndToEndEncryptiePageOpen
 
   const deleteAccount = useCallback(async () => {
     if (isDeletingAccount) return
@@ -485,8 +561,14 @@ export function AppShell({ onLogout }: Props) {
     if (!isAppDataLoaded) {
       return <AppLoadingScreen />
     }
+    if (isEndToEndEncryptiePageOpen) {
+      return <EndToEndEncryptieScreen onBack={() => setIsEndToEndEncryptiePageOpen(false)} />
+    }
     if (isAdminScreenOpen) {
       return <AdminFeedbackScreen />
+    }
+    if (isAdminContactScreenOpen) {
+      return <AdminContactSubmissionsScreen />
     }
     if (overlayScreenKey === 'archief') {
       return <ArchiefScreen />
@@ -600,6 +682,16 @@ export function AppShell({ onLogout }: Props) {
     return <Text style={styles.mainContentText}>{selectedSidebarItemKey}</Text>
   }
 
+  if (isTooSmall) {
+    return (
+      <View style={styles.page}>
+        <View style={styles.tooSmallContainer}>
+          <Text style={styles.tooSmallText}>Deze webapp is niet zichtbaar op schermen smaller dan 1100px.</Text>
+        </View>
+      </View>
+    )
+  }
+
   return (
     <View style={styles.page}>
       {/* Top navigation bar */}
@@ -611,7 +703,7 @@ export function AppShell({ onLogout }: Props) {
       {isE2eeSetupBannerVisible ? (
         <View style={[styles.e2eeSetupBar, isSidebarCompact ? styles.e2eeSetupBarCompact : undefined]}>
           <View style={styles.e2eeSetupBarContent}>
-            <Pressable onPress={e2ee.beginSetup} style={({ hovered }) => [styles.e2eeSetupTrigger, hovered ? styles.e2eeSetupTriggerHovered : undefined]}>
+            <Pressable onPress={() => setIsEndToEndEncryptiePageOpen(true)} style={({ hovered }) => [styles.e2eeSetupTrigger, hovered ? styles.e2eeSetupTriggerHovered : undefined]}>
               <Text isSemibold style={styles.e2eeSetupTriggerText}>
                 End-to-end encryptie instellen
               </Text>
@@ -635,23 +727,24 @@ export function AppShell({ onLogout }: Props) {
           <BreadcrumbBar items={breadcrumbItems} />
         </View>
       ) : null}
-      {isTooSmall ? (
-        <View style={styles.tooSmallContainer}>
-          <Text style={styles.tooSmallText}>Deze webapp is niet ontworpen voor apparaten smaller dan 320px.</Text>
-        </View>
-      ) : (
-        <>
-          {/* Page content */}
-          <View style={styles.contentRow}>
+      <>
+        {/* Page content */}
+        <View style={styles.contentRow}>
             {/* Sidebar */}
             <Sidebar
               selectedSidebarItemKey={selectedSidebarItemKey}
+              isSettingsSelected={isSettingsSelected}
+              isAdminUser={isCurrentUserAdmin}
               onSelectSidebarItem={(sidebarItemKey) => {
                 navigateTo(
                   sidebarItemKey === 'coachees'
                     ? { kind: 'coachees' }
                     : sidebarItemKey === 'templates'
                       ? { kind: 'templates' }
+                      : sidebarItemKey === 'admin'
+                        ? { kind: 'admin' }
+                      : sidebarItemKey === 'adminContact'
+                        ? { kind: 'admin-contact' }
                       : sidebarItemKey === 'mijnPraktijk'
                         ? { kind: 'mijn-praktijk' }
                       : sidebarItemKey === 'archief'
@@ -749,6 +842,7 @@ export function AppShell({ onLogout }: Props) {
             visible={isMyAccountModalOpen}
             onClose={() => setIsMyAccountModalOpen(false)}
             onLogout={() => setIsMyAccountModalOpen(false)}
+            onOpenEndToEndEncryptiePage={() => setIsEndToEndEncryptiePageOpen(true)}
             onDeleteAccount={() => {
               if (isDeletingAccount) return
               setDeleteAccountErrorMessage(null)
@@ -807,8 +901,7 @@ export function AppShell({ onLogout }: Props) {
               setIsCoacheeModalOpen(false)
             }}
           />
-        </>
-      )}
+      </>
     </View>
   )
 }

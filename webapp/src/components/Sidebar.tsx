@@ -10,27 +10,39 @@ import { SessiesIcon } from './icons/SessiesIcon'
 import { SettingsIcon } from './icons/SettingsIcon'
 import { TemplatesIcon } from './icons/TemplatesIcon'
 import { ArchiefMenuIcon } from './icons/ArchiefMenuIcon'
+import { ContactIcon } from './icons/ContactIcon'
 import { SidebarItem } from './SidebarItem'
 import { Text } from './Text'
 
-export type SidebarItemKey = 'coachees' | 'sessies' | 'templates' | 'mijnPraktijk' | 'archief'
+export type SidebarItemKey = 'coachees' | 'sessies' | 'templates' | 'mijnPraktijk' | 'archief' | 'admin' | 'adminContact'
 
 type AnchorPoint = { x: number; y: number }
 
 type Props = {
   selectedSidebarItemKey: SidebarItemKey
+  isSettingsSelected: boolean
+  isAdminUser?: boolean
   onSelectSidebarItem: (sidebarItemKey: SidebarItemKey) => void
   onPressCreateSession: () => void
   onOpenFeedback: (anchorPoint: AnchorPoint) => void
   onOpenSettingsMenu: (anchorPoint: AnchorPoint) => void
 }
 
-export function Sidebar({ selectedSidebarItemKey, onSelectSidebarItem, onPressCreateSession, onOpenFeedback, onOpenSettingsMenu }: Props) {
+export function Sidebar({
+  selectedSidebarItemKey,
+  isSettingsSelected,
+  isAdminUser = false,
+  onSelectSidebarItem,
+  onPressCreateSession,
+  onOpenFeedback,
+  onOpenSettingsMenu,
+}: Props) {
   const { width } = useWindowDimensions()
   const isCompact = width < 700
 
   const selectedColor = colors.selected
   const unselectedColor = colors.text
+  const settingsColor = isSettingsSelected ? selectedColor : unselectedColor
   function getMenuAnchorPoint(event: any): AnchorPoint {
     const rectFromCurrentTarget = event?.currentTarget?.getBoundingClientRect?.()
     const rectFromNativeTarget = event?.nativeEvent?.target?.getBoundingClientRect?.()
@@ -110,6 +122,24 @@ export function Sidebar({ selectedSidebarItemKey, onSelectSidebarItem, onPressCr
               isCompact={isCompact}
             />
           ) : null}
+          {isAdminUser ? (
+            <SidebarItem
+              label="Admin"
+              isSelected={selectedSidebarItemKey === 'admin'}
+              onPress={() => onSelectSidebarItem('admin')}
+              icon={<FeedbackIcon color={selectedSidebarItemKey === 'admin' ? selectedColor : unselectedColor} size={24} />}
+              isCompact={isCompact}
+            />
+          ) : null}
+          {isAdminUser ? (
+            <SidebarItem
+              label="Contactberichten"
+              isSelected={selectedSidebarItemKey === 'adminContact'}
+              onPress={() => onSelectSidebarItem('adminContact')}
+              icon={<ContactIcon color={selectedSidebarItemKey === 'adminContact' ? selectedColor : unselectedColor} size={24} />}
+              isCompact={isCompact}
+            />
+          ) : null}
         </View>
       </View>
 
@@ -126,11 +156,11 @@ export function Sidebar({ selectedSidebarItemKey, onSelectSidebarItem, onPressCr
         />
         <SidebarItem
           label="Instellingen"
-          isSelected={false}
+          isSelected={isSettingsSelected}
           onPress={(event) => {
             onOpenSettingsMenu(getMenuAnchorPoint(event))
           }}
-          icon={<SettingsIcon color={unselectedColor} size={24} />}
+          icon={<SettingsIcon color={settingsColor} size={24} />}
           isCompact={isCompact}
         />
       </View>

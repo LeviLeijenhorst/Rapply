@@ -1248,7 +1248,7 @@ export function NewSessionModal({
                   style={({ hovered }) => [styles.consentHelpLinkRow, hovered ? styles.consentHelpLinkRowHovered : undefined]}
                 >
                   <Text isSemibold style={styles.consentHelpLinkText}>
-                    Hoe geef ik toestemming?
+                    Hoe vraag ik toestemming?
                   </Text>
                 </Pressable>
               </View>

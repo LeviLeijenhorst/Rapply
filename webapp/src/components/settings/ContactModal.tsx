@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react'
-import { Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
+import { Image, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
 import { Text } from '../Text'
+import { callSecureApi } from '../../services/secureApi'
 
 type Props = {
   visible: boolean
@@ -15,15 +16,73 @@ export function ContactModal({ visible, onClose }: Props) {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [message, setMessage] = useState('')
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const { width } = useWindowDimensions()
   const isStacked = width < 1100
   const inputWebStyle = useMemo(() => ({ outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any), [])
+  const contactImage = useMemo(() => require('../../../assets/over_ons-beiden.png'), [])
+
+  function clearForm() {
+    setName('')
+    setEmail('')
+    setPhone('')
+    setMessage('')
+  }
+
+  function closeModal() {
+    setStatusMessage(null)
+    clearForm()
+    onClose()
+  }
+
+  function validateForm() {
+    const trimmedName = name.trim()
+    const trimmedEmail = email.trim()
+    const trimmedMessage = message.trim()
+
+    if (!trimmedName || !trimmedEmail || !trimmedMessage) {
+      setStatusMessage('Vul alsjeblieft je naam, e-mailadres en bericht in.')
+      return null
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailPattern.test(trimmedEmail)) {
+      setStatusMessage('Gebruik alsjeblieft een geldig e-mailadres.')
+      return null
+    }
+
+    return {
+      name: trimmedName,
+      email: trimmedEmail,
+      phone: phone.trim(),
+      message: trimmedMessage,
+    }
+  }
+
+  function submitForm() {
+    const validated = validateForm()
+    if (!validated) return
+    setStatusMessage('Bericht wordt verstuurd...')
+    void callSecureApi<{ ok: true }>('/contact/submission', {
+      name: validated.name,
+      email: validated.email,
+      phone: validated.phone || null,
+      message: validated.message,
+    })
+      .then(() => {
+        clearForm()
+        setStatusMessage('Bedankt. Je bericht is opgeslagen en ontvangen.')
+      })
+      .catch(() => {
+        setStatusMessage('Versturen mislukt. Probeer het alsjeblieft opnieuw.')
+      })
+  }
 
   return (
-    <AnimatedOverlayModal visible={visible} onClose={onClose} contentContainerStyle={styles.container}>
+    <AnimatedOverlayModal visible={visible} onClose={closeModal} contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <View />
-        <Pressable onPress={onClose} style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}>
+        <Pressable onPress={closeModal} style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}>
           <ModalCloseDarkIcon size={34} />
         </Pressable>
       </View>
@@ -36,9 +95,7 @@ export function ContactModal({ visible, onClose }: Props) {
           <Text style={styles.description}>
             Heb je een vraag, wil je input geven of ben je benieuwd wat wij voor jou kunnen betekenen? Neem contact met ons op!
           </Text>
-          <View style={styles.imagePlaceholder}>
-            <Text style={styles.imagePlaceholderText}>Coachscribe</Text>
-          </View>
+          <Image source={contactImage} style={styles.image} resizeMode="cover" />
         </View>
 
         <View style={styles.formColumn}>
@@ -85,10 +142,11 @@ export function ContactModal({ visible, onClose }: Props) {
             />
           </View>
           <View style={styles.submitRow}>
-            <Pressable style={({ hovered }) => [styles.submitButton, hovered ? styles.submitButtonHovered : undefined]}>
+            <Pressable onPress={submitForm} style={({ hovered }) => [styles.submitButton, hovered ? styles.submitButtonHovered : undefined]}>
               <Text style={styles.submitButtonText}>Verstuur -&gt;</Text>
             </Pressable>
           </View>
+          {statusMessage ? <Text style={styles.statusText}>{statusMessage}</Text> : null}
         </View>
       </View>
     </AnimatedOverlayModal>
@@ -146,21 +204,12 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: 'rgba(255,255,255,0.9)',
   },
-  imagePlaceholder: {
+  image: {
     width: '100%',
     maxWidth: 420,
     height: 220,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  imagePlaceholderText: {
-    fontSize: 24,
-    lineHeight: 28,
-    color: '#FFFFFF',
+    overflow: 'hidden',
   },
   formColumn: {
     flex: 1,
@@ -215,6 +264,11 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: 16,
     lineHeight: 20,
+    color: '#FFFFFF',
+  },
+  statusText: {
+    fontSize: 14,
+    lineHeight: 18,
     color: '#FFFFFF',
   },
 })

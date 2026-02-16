@@ -273,6 +273,21 @@ export async function handleAuthCallback(): Promise<EntraAuthResult> {
   if (tokenData.refreshToken) {
     setStoredRefreshToken(tokenData.refreshToken)
   }
+
+  const authMeResponse = await fetch(`${config.api.baseUrl}/auth/me`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({}),
+  })
+  if (!authMeResponse.ok) {
+    const errorText = await authMeResponse.text()
+    await clearEntraLocalTokens()
+    throw new Error(`API error: ${authMeResponse.status} ${errorText}`)
+  }
+
   clearAuthIntent()
 
   window.history.replaceState({}, '', '/inloggen')

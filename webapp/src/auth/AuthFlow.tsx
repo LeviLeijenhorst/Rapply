@@ -44,7 +44,10 @@ export function AuthFlow({ onAuthenticated }: Props) {
         const intent = getAuthIntent()
         clearAuthIntent()
         const mode = intent === 'signup' ? 'signup' : 'signin'
-        setAuthError(toUserFriendlyErrorMessage(error, { fallback: 'Inloggen mislukt' }))
+        setAuthError(toUserFriendlyErrorMessage(error, {
+          fallback: 'Inloggen mislukt',
+          forbiddenMessage: 'Dit e-mailadres staat niet op de allowlist. Vraag toegang aan contact@jnlsolutions.nl.',
+        }))
         navigate(`/inloggen?mode=${mode}`, { replace: true })
         hasHandledCallback.current = false
         setIsProcessingCallback(false)
@@ -84,7 +87,10 @@ export function AuthFlow({ onAuthenticated }: Props) {
     setIsProcessingCallback(true)
     signInWithEntra().catch((error) => {
       console.error('[AuthFlow] direct Entra sign in failed', error)
-      setAuthError(toUserFriendlyErrorMessage(error, { fallback: 'Inloggen mislukt' }))
+      setAuthError(toUserFriendlyErrorMessage(error, {
+        fallback: 'Inloggen mislukt',
+        forbiddenMessage: 'Dit e-mailadres staat niet op de allowlist. Vraag toegang aan contact@jnlsolutions.nl.',
+      }))
       navigate('/inloggen?mode=signin', { replace: true })
       setIsProcessingCallback(false)
       hasStartedDirectSignIn.current = false

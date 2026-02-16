@@ -53,7 +53,7 @@ export function toUserFriendlyTranscriptionError(rawMessage: string | null | und
   }
 
   if (isContentFilterMessage(decoded)) {
-    return 'Een deel van deze inhoud kan niet automatisch worden verwerkt door het veiligheidsfilter. Pas de tekst aan en probeer opnieuw.'
+    return 'Een deel van deze audio kan niet automatisch worden verwerkt door het veiligheidsfilter. Pas de opname aan en probeer opnieuw.'
   }
 
   const cleaned = decoded.trim()
