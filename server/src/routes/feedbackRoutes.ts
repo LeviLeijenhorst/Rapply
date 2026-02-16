@@ -11,6 +11,36 @@ type RegisterFeedbackRoutesParams = {
   rateLimitAccount: RequestHandler
 }
 
+let ensureContactSubmissionsTablePromise: Promise<void> | null = null
+
+async function ensureContactSubmissionsTable(): Promise<void> {
+  if (!ensureContactSubmissionsTablePromise) {
+    ensureContactSubmissionsTablePromise = execute(
+      `
+      create table if not exists public.contact_submissions (
+        id uuid primary key,
+        user_id uuid not null references public.users (id) on delete cascade,
+        name text not null,
+        email text not null,
+        phone text,
+        message text not null,
+        created_at timestamptz not null default now(),
+        constraint contact_submissions_name_length check (char_length(name) > 0 and char_length(name) <= 200),
+        constraint contact_submissions_email_length check (char_length(email) > 0 and char_length(email) <= 320),
+        constraint contact_submissions_phone_length check (phone is null or char_length(phone) <= 50),
+        constraint contact_submissions_message_length check (char_length(message) > 0 and char_length(message) <= 5000)
+      );
+      create index if not exists contact_submissions_created_at_idx on public.contact_submissions (created_at desc);
+      `,
+      [],
+    ).catch((error) => {
+      ensureContactSubmissionsTablePromise = null
+      throw error
+    })
+  }
+  await ensureContactSubmissionsTablePromise
+}
+
 async function requireAdminUserEmail(req: Parameters<typeof requireAuthenticatedUser>[0]): Promise<string> {
   const user = await requireAuthenticatedUser(req)
   const normalizedUserEmail = normalizeEmail(user.email)
@@ -83,6 +113,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/contact/submission",
     asyncHandler(async (req, res) => {
       const user = await requireAuthenticatedUser(req)
+      await ensureContactSubmissionsTable()
 
       const name = typeof req.body?.name === "string" ? req.body.name.trim() : ""
       const email = typeof req.body?.email === "string" ? req.body.email.trim() : ""
@@ -96,10 +127,10 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
 
       await execute(
         `
-        insert into public.contact_submissions (id, user_id, name, email, phone, message, account_email)
-        values ($1, $2, $3, $4, $5, $6, $7)
+        insert into public.contact_submissions (id, user_id, name, email, phone, message)
+        values ($1, $2, $3, $4, $5, $6)
         `,
-        [crypto.randomUUID(), user.userId, name, email, phone || null, message, user.email],
+        [crypto.randomUUID(), user.userId, name, email, phone || null, message],
       )
 
       res.status(200).json({ ok: true })
@@ -165,6 +196,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/contact-submissions/list",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
+      await ensureContactSubmissionsTable()
       try {
         await requireAdminUserEmail(req)
       } catch {
@@ -188,16 +220,17 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
       }>(
         `
         select
-          id,
-          user_id,
-          name,
-          email,
-          phone,
-          message,
-          created_at,
-          account_email
-        from public.contact_submissions
-        order by created_at desc
+          c.id,
+          c.user_id,
+          c.name,
+          c.email,
+          c.phone,
+          c.message,
+          c.created_at,
+          u.email as account_email
+        from public.contact_submissions c
+        left join public.users u on u.id = c.user_id
+        order by c.created_at desc
         limit $1
         `,
         [limit],
