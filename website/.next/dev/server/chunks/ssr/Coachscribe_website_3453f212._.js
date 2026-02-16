@@ -376,8 +376,15 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$ov
 ;
 ;
 ;
+const initialFormValues = {
+    name: "",
+    email: "",
+    phone: "",
+    message: ""
+};
 const inputClassName = "h-12 rounded-xl border border-white/60 bg-white/10 px-4 text-base font-normal text-white placeholder:text-white/70 outline-none transition-colors focus:border-white";
 function OverOnsContactSection() {
+    const [formValues, setFormValues] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(initialFormValues);
     const [isToastVisible, setIsToastVisible] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
         if (!isToastVisible) return;
@@ -388,20 +395,21 @@ function OverOnsContactSection() {
     ]);
     const handleSubmit = (event)=>{
         event.preventDefault();
+        setFormValues(initialFormValues);
         setIsToastVisible(false);
         window.requestAnimationFrame(()=>setIsToastVisible(true));
     };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$home$2f$SectionContainer$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
         className: "bg-[#F8F9F9]",
         contentClassName: "pb-[80px] pt-[80px] md:pb-[80px] md:pt-[80px]",
-        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
-            id: "contact",
-            className: "relative w-full overflow-hidden rounded-[24px] bg-cover bg-center bg-no-repeat p-8 text-white md:p-12",
-            style: {
-                backgroundImage: `url(${__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$over_ons$2f$kom_in_contact$2d$background$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$over_ons$2f$kom_in_contact$2d$background$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"].src})`
-            },
-            children: [
-                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+        children: [
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
+                id: "contact",
+                className: "relative w-full overflow-hidden rounded-[24px] bg-cover bg-center bg-no-repeat p-8 text-white md:p-12",
+                style: {
+                    backgroundImage: `url(${__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$over_ons$2f$kom_in_contact$2d$background$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$over_ons$2f$kom_in_contact$2d$background$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"].src})`
+                },
+                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                     className: "grid w-full gap-10 lg:grid-cols-2",
                     children: [
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -412,7 +420,7 @@ function OverOnsContactSection() {
                                     children: "Kom in contact"
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 41,
+                                    lineNumber: 57,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -421,14 +429,14 @@ function OverOnsContactSection() {
                                         "Heb je een vraag, wil je input geven of ben je benieuwd wat wij",
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 46,
+                                            lineNumber: 62,
                                             columnNumber: 15
                                         }, this),
                                         "voor jou kunnen betekenen? Neem contact met ons op!"
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 44,
+                                    lineNumber: 60,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$image$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -437,13 +445,13 @@ function OverOnsContactSection() {
                                     className: "mt-6 h-auto w-full max-w-[420px] rounded-xl object-cover"
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 49,
+                                    lineNumber: 65,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                            lineNumber: 40,
+                            lineNumber: 56,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("form", {
@@ -458,23 +466,29 @@ function OverOnsContactSection() {
                                             children: "Volledige naam*"
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 57,
+                                            lineNumber: 73,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                             type: "text",
                                             name: "name",
+                                            required: true,
+                                            value: formValues.name,
+                                            onChange: (event)=>setFormValues((previousValues)=>({
+                                                        ...previousValues,
+                                                        name: event.target.value
+                                                    })),
                                             placeholder: "Jouw volledige naam",
                                             className: inputClassName
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 58,
+                                            lineNumber: 74,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 56,
+                                    lineNumber: 72,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
@@ -485,23 +499,29 @@ function OverOnsContactSection() {
                                             children: "Email*"
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 66,
+                                            lineNumber: 90,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                             type: "email",
                                             name: "email",
+                                            required: true,
+                                            value: formValues.email,
+                                            onChange: (event)=>setFormValues((previousValues)=>({
+                                                        ...previousValues,
+                                                        email: event.target.value
+                                                    })),
                                             placeholder: "Jouw Email adres",
                                             className: inputClassName
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 67,
+                                            lineNumber: 91,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 65,
+                                    lineNumber: 89,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
@@ -512,23 +532,28 @@ function OverOnsContactSection() {
                                             children: "Nummer (optioneel)"
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 75,
+                                            lineNumber: 107,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                             type: "tel",
                                             name: "phone",
+                                            value: formValues.phone,
+                                            onChange: (event)=>setFormValues((previousValues)=>({
+                                                        ...previousValues,
+                                                        phone: event.target.value
+                                                    })),
                                             placeholder: "Jouw telefoon nummer",
                                             className: inputClassName
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 78,
+                                            lineNumber: 110,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 74,
+                                    lineNumber: 106,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
@@ -539,36 +564,42 @@ function OverOnsContactSection() {
                                             children: "Bericht*"
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 86,
+                                            lineNumber: 125,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("textarea", {
                                             name: "message",
                                             rows: 5,
+                                            required: true,
+                                            value: formValues.message,
+                                            onChange: (event)=>setFormValues((previousValues)=>({
+                                                        ...previousValues,
+                                                        message: event.target.value
+                                                    })),
                                             placeholder: "Laat ons weten wat je denkt...",
                                             className: "rounded-xl border border-white/60 bg-white/10 px-4 py-3 text-base font-normal text-white placeholder:text-white/70 outline-none transition-colors focus:border-white"
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 87,
+                                            lineNumber: 126,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 85,
+                                    lineNumber: 124,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                     className: "pt-1",
                                     children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                         type: "submit",
-                                        className: "inline-flex h-12 items-center gap-2 rounded-full border border-white/60 bg-white/10 px-6 text-base font-normal text-white transition-transform duration-[750ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:scale-[0.97]",
+                                        className: "inline-flex h-12 cursor-pointer items-center gap-2 rounded-full border border-white/60 bg-white/10 px-6 text-base font-normal text-white transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-white/20",
                                         children: [
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                 children: "Verstuur"
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                                lineNumber: 99,
+                                                lineNumber: 146,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -576,50 +607,50 @@ function OverOnsContactSection() {
                                                 children: "->"
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                                lineNumber: 100,
+                                                lineNumber: 147,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                        lineNumber: 95,
+                                        lineNumber: 142,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 94,
+                                    lineNumber: 141,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                            lineNumber: 55,
+                            lineNumber: 71,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                    lineNumber: 39,
-                    columnNumber: 9
-                }, this),
-                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                    className: `pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 rounded-xl border border-white/70 bg-white px-6 py-3 text-center text-base font-semibold text-[#1D0A00] shadow-[0_10px_30px_rgba(0,0,0,0.2)] transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${isToastVisible ? "-translate-y-1/2 opacity-100" : "translate-y-0 opacity-0"}`,
-                    "aria-live": "polite",
-                    children: "Bericht verzonden. Bedankt voor je bericht."
-                }, void 0, false, {
-                    fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                    lineNumber: 105,
+                    lineNumber: 55,
                     columnNumber: 9
                 }, this)
-            ]
-        }, void 0, true, {
-            fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-            lineNumber: 32,
-            columnNumber: 7
-        }, this)
-    }, void 0, false, {
+            }, void 0, false, {
+                fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
+                lineNumber: 48,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: `pointer-events-none fixed left-1/2 z-50 -translate-x-1/2 text-center text-xl font-semibold text-[#BD0265] transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${isToastVisible ? "bottom-[25vh] translate-y-0 opacity-100" : "bottom-[25vh] translate-y-[45vh] opacity-0"}`,
+                "aria-live": "polite",
+                children: "Bericht verzonden! Je hoort snel van ons."
+            }, void 0, false, {
+                fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
+                lineNumber: 153,
+                columnNumber: 7
+            }, this)
+        ]
+    }, void 0, true, {
         fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-        lineNumber: 28,
+        lineNumber: 44,
         columnNumber: 5
     }, this);
 }

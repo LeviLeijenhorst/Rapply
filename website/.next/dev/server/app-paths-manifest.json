@@ -4,5 +4,6 @@
   "/(site)/over-ons/page": "app/(site)/over-ons/page.js",
   "/(site)/page": "app/(site)/page.js",
   "/(site)/product/page": "app/(site)/product/page.js",
-  "/(site)/veiligheid/page": "app/(site)/veiligheid/page.js"
+  "/(site)/veiligheid/page": "app/(site)/veiligheid/page.js",
+  "/(site)/wachtlijst/page": "app/(site)/wachtlijst/page.js"
 }

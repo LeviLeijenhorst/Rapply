@@ -112,14 +112,11 @@ __turbopack_context__.s([
     ()=>VeiligheidEthicsSection
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/Coachscribe/website/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/Coachscribe/website/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$image$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/Coachscribe/website/node_modules/next/image.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$home$2f$SectionContainer$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/Coachscribe/website/components/home/SectionContainer.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$veiligheid$2d$2$2e$jpg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$veiligheid$2d$2$2e$jpg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$client$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__ = __turbopack_context__.i('[project]/Coachscribe/website/veiligheid/veiligheid-2.jpg.mjs { IMAGE => "[project]/Coachscribe/website/veiligheid/veiligheid-2.jpg (static in ecmascript, tag client)" } [app-client] (structured image object with data url, ecmascript)');
 var __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$veiligheid$2d$3$2e$jpg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$veiligheid$2d$3$2e$jpg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$client$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__ = __turbopack_context__.i('[project]/Coachscribe/website/veiligheid/veiligheid-3.jpg.mjs { IMAGE => "[project]/Coachscribe/website/veiligheid/veiligheid-3.jpg (static in ecmascript, tag client)" } [app-client] (structured image object with data url, ecmascript)');
 var __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$veiligheid$2d$4$2e$jpg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$veiligheid$2d$4$2e$jpg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$client$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__ = __turbopack_context__.i('[project]/Coachscribe/website/veiligheid/veiligheid-4.jpg.mjs { IMAGE => "[project]/Coachscribe/website/veiligheid/veiligheid-4.jpg (static in ecmascript, tag client)" } [app-client] (structured image object with data url, ecmascript)');
-;
-var _s = __turbopack_context__.k.signature();
 "use client";
 ;
 ;
@@ -144,40 +141,7 @@ const ethicsItems = [
         image: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$veiligheid$2d$4$2e$jpg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$veiligheid$2d$4$2e$jpg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$client$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"]
     }
 ];
-const ETHICS_CARD_REVEAL_DURATION_MS = 3000;
-const ETHICS_CARD_STAGGER_MS = 220;
 function VeiligheidEthicsSection() {
-    _s();
-    const ethicsCardsRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
-    const [areEthicsCardsVisible, setAreEthicsCardsVisible] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
-    (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
-        "VeiligheidEthicsSection.useEffect": ()=>{
-            const element = ethicsCardsRef.current;
-            if (!element) return;
-            if (("TURBOPACK compile-time value", "object") === "undefined" || !("IntersectionObserver" in window)) {
-                setAreEthicsCardsVisible(true);
-                return;
-            }
-            const observer = new IntersectionObserver({
-                "VeiligheidEthicsSection.useEffect": ([entry])=>{
-                    if (!entry.isIntersecting) return;
-                    if (entry.intersectionRatio < 0.15) return;
-                    setAreEthicsCardsVisible(true);
-                    observer.disconnect();
-                }
-            }["VeiligheidEthicsSection.useEffect"], {
-                threshold: [
-                    0,
-                    0.15,
-                    1
-                ]
-            });
-            observer.observe(element);
-            return ({
-                "VeiligheidEthicsSection.useEffect": ()=>observer.disconnect()
-            })["VeiligheidEthicsSection.useEffect"];
-        }
-    }["VeiligheidEthicsSection.useEffect"], []);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$home$2f$SectionContainer$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
         className: "bg-[#F8F9F9]",
         contentClassName: "pt-20",
@@ -195,14 +159,14 @@ function VeiligheidEthicsSection() {
                                     children: "Ethiek"
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                    lineNumber: 72,
+                                    lineNumber: 42,
                                     columnNumber: 13
                                 }, this),
                                 " als uitgangspunt"
                             ]
                         }, void 0, true, {
                             fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                            lineNumber: 71,
+                            lineNumber: 41,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -210,26 +174,19 @@ function VeiligheidEthicsSection() {
                             children: "Privacy en beveiliging zijn voor ons niet alleen technische vraagstukken, maar ook ethische keuzes. CoachScribe wordt gebruikt in contexten waarin vertrouwen centraal staat en daar zijn wij ons van bewust. CoachScribe is ontworpen in dienst van coach en coachee."
                         }, void 0, false, {
                             fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                            lineNumber: 74,
+                            lineNumber: 44,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                    lineNumber: 70,
+                    lineNumber: 40,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                    ref: ethicsCardsRef,
                     className: "grid w-full gap-6 md:grid-cols-3",
                     children: ethicsItems.map((ethicsItem, index)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("article", {
-                            className: `relative mx-auto flex h-[408px] w-full max-w-[364px] flex-col items-center overflow-hidden rounded-2xl border border-black/10 bg-white p-6 pb-8 pt-8 text-center ${areEthicsCardsVisible ? "translate-y-0" : "translate-y-[40px]"}`,
-                            style: {
-                                transitionProperty: "translate, transform",
-                                transitionDuration: `${ETHICS_CARD_REVEAL_DURATION_MS}ms, ${ETHICS_CARD_REVEAL_DURATION_MS}ms`,
-                                transitionTimingFunction: "cubic-bezier(0.22,1,0.36,1), cubic-bezier(0.22,1,0.36,1)",
-                                transitionDelay: `${index * ETHICS_CARD_STAGGER_MS}ms, ${index * ETHICS_CARD_STAGGER_MS}ms`
-                            },
+                            className: "relative mx-auto flex h-[408px] w-full max-w-[364px] flex-col items-center overflow-hidden rounded-2xl border border-black/10 bg-white p-6 pb-8 pt-8 text-center",
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                     className: "pointer-events-none absolute inset-0 z-0 flex items-center justify-center",
@@ -239,12 +196,12 @@ function VeiligheidEthicsSection() {
                                         className: `h-auto w-full max-w-[140px] object-contain ${index === 1 ? "scale-[1.5]" : "scale-[1.6]"}`
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                        lineNumber: 97,
+                                        lineNumber: 58,
                                         columnNumber: 17
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                    lineNumber: 96,
+                                    lineNumber: 57,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -252,7 +209,7 @@ function VeiligheidEthicsSection() {
                                     children: ethicsItem.title
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                    lineNumber: 105,
+                                    lineNumber: 66,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -260,33 +217,32 @@ function VeiligheidEthicsSection() {
                                     children: ethicsItem.description
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                    lineNumber: 108,
+                                    lineNumber: 69,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, ethicsItem.title, true, {
                             fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                            lineNumber: 83,
+                            lineNumber: 53,
                             columnNumber: 13
                         }, this))
                 }, void 0, false, {
                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                    lineNumber: 81,
+                    lineNumber: 51,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-            lineNumber: 69,
+            lineNumber: 39,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-        lineNumber: 68,
+        lineNumber: 38,
         columnNumber: 5
     }, this);
 }
-_s(VeiligheidEthicsSection, "TT9UKQebu1KQgHUovzLUbGMPwQI=");
 _c = VeiligheidEthicsSection;
 var _c;
 __turbopack_context__.k.register(_c, "VeiligheidEthicsSection");
