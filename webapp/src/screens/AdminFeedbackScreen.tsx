@@ -39,7 +39,7 @@ function formatDateTime(value: string): string {
 function parseApiError(error: unknown): string {
   return toUserFriendlyErrorMessage(error, {
     fallback: 'Feedback ophalen mislukt.',
-    forbiddenMessage: 'Geen toegang. Alleen contact@jnlsolutions.nl mag deze pagina openen.',
+    forbiddenMessage: 'Geen toegang. Alleen ltleijenhorst@gmail.com mag deze pagina openen.',
   })
 }
 
@@ -78,7 +78,7 @@ export function AdminFeedbackScreen() {
       setAllowlistItems([])
       setAllowlistErrorMessage(toUserFriendlyErrorMessage(error, {
         fallback: 'Allowlist ophalen mislukt.',
-        forbiddenMessage: 'Geen toegang. Alleen contact@jnlsolutions.nl mag deze pagina openen.',
+        forbiddenMessage: 'Geen toegang. Alleen ltleijenhorst@gmail.com mag deze pagina openen.',
       }))
     } finally {
       setIsAllowlistLoading(false)
@@ -108,7 +108,7 @@ export function AdminFeedbackScreen() {
     } catch (error) {
       setAllowlistStatusMessage(toUserFriendlyErrorMessage(error, {
         fallback: 'Toevoegen mislukt.',
-        forbiddenMessage: 'Geen toegang. Alleen contact@jnlsolutions.nl mag deze pagina openen.',
+        forbiddenMessage: 'Geen toegang. Alleen ltleijenhorst@gmail.com mag deze pagina openen.',
       }))
     } finally {
       setIsAllowlistBusy(false)
@@ -125,7 +125,7 @@ export function AdminFeedbackScreen() {
     } catch (error) {
       setAllowlistStatusMessage(toUserFriendlyErrorMessage(error, {
         fallback: 'Verwijderen mislukt.',
-        forbiddenMessage: 'Geen toegang. Alleen contact@jnlsolutions.nl mag deze pagina openen.',
+        forbiddenMessage: 'Geen toegang. Alleen ltleijenhorst@gmail.com mag deze pagina openen.',
       }))
     } finally {
       setIsAllowlistBusy(false)

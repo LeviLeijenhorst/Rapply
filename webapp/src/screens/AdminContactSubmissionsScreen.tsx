@@ -30,7 +30,7 @@ function formatDateTime(value: string): string {
 function parseApiError(error: unknown): string {
   return toUserFriendlyErrorMessage(error, {
     fallback: 'Contactberichten ophalen mislukt.',
-    forbiddenMessage: 'Geen toegang. Alleen contact@jnlsolutions.nl mag deze pagina openen.',
+    forbiddenMessage: 'Geen toegang. Alleen ltleijenhorst@gmail.com mag deze pagina openen.',
   })
 }
 
