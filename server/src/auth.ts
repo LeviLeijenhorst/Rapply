@@ -90,6 +90,12 @@ export async function requireAuthenticatedUser(req: Request): Promise<Authentica
       displayName: user.displayName,
     }
   } catch (e: any) {
+    const status = typeof e?.status === "number" ? e.status : null
+    if (status === 401 || status === 403) {
+      const authError: any = new Error(String(e?.message || "Forbidden"))
+      authError.status = status
+      throw authError as Error
+    }
     const message = String(e?.message || e || "")
     const stack = typeof e?.stack === "string" ? e.stack : null
     console.log("[auth] Failed to ensure user in DB", { message, stack })

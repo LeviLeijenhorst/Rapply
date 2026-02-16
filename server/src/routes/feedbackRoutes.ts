@@ -1,6 +1,7 @@
 import crypto from "crypto"
 import type { Express, RequestHandler } from "express"
 import { requireAuthenticatedUser } from "../auth"
+import { isAdminEmail, normalizeEmail } from "../admin"
 import { execute, queryMany } from "../db"
 import { deleteEntraUserById } from "../entraGraph"
 import { asyncHandler, sendError } from "../http"
@@ -8,7 +9,17 @@ import { deleteEncryptedUploadsByPrefix } from "../transcription/storage"
 
 type RegisterFeedbackRoutesParams = {
   rateLimitAccount: RequestHandler
-  adminFeedbackEmailSet: Set<string>
+}
+
+async function requireAdminUserEmail(req: Parameters<typeof requireAuthenticatedUser>[0]): Promise<string> {
+  const user = await requireAuthenticatedUser(req)
+  const normalizedUserEmail = normalizeEmail(user.email)
+  if (!isAdminEmail(normalizedUserEmail)) {
+    const error: any = new Error("Forbidden")
+    error.status = 403
+    throw error as Error
+  }
+  return normalizedUserEmail
 }
 
 // Registers feedback collection, admin listing, and account deletion routes.
@@ -69,12 +80,39 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
   )
 
   app.post(
+    "/contact/submission",
+    asyncHandler(async (req, res) => {
+      const user = await requireAuthenticatedUser(req)
+
+      const name = typeof req.body?.name === "string" ? req.body.name.trim() : ""
+      const email = typeof req.body?.email === "string" ? req.body.email.trim() : ""
+      const phone = typeof req.body?.phone === "string" ? req.body.phone.trim() : ""
+      const message = typeof req.body?.message === "string" ? req.body.message.trim() : ""
+
+      if (!name || !email || !message) {
+        sendError(res, 400, "Missing name, email, or message")
+        return
+      }
+
+      await execute(
+        `
+        insert into public.contact_submissions (id, user_id, name, email, phone, message, account_email)
+        values ($1, $2, $3, $4, $5, $6, $7)
+        `,
+        [crypto.randomUUID(), user.userId, name, email, phone || null, message, user.email],
+      )
+
+      res.status(200).json({ ok: true })
+    }),
+  )
+
+  app.post(
     "/admin/feedback/list",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      const user = await requireAuthenticatedUser(req)
-      const normalizedEmail = String(user.email || "").trim().toLowerCase()
-      if (!params.adminFeedbackEmailSet.has(normalizedEmail)) {
+      try {
+        await requireAdminUserEmail(req)
+      } catch {
         sendError(res, 403, "Forbidden")
         return
       }
@@ -120,6 +158,156 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
           createdAt: row.created_at,
         })),
       })
+    }),
+  )
+
+  app.post(
+    "/admin/contact-submissions/list",
+    params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      try {
+        await requireAdminUserEmail(req)
+      } catch {
+        sendError(res, 403, "Forbidden")
+        return
+      }
+
+      const requestedLimitRaw = Number(req.body?.limit)
+      const requestedLimit = Number.isFinite(requestedLimitRaw) ? Math.trunc(requestedLimitRaw) : 200
+      const limit = Math.min(500, Math.max(1, requestedLimit))
+
+      const rows = await queryMany<{
+        id: string
+        user_id: string
+        name: string
+        email: string
+        phone: string | null
+        message: string
+        created_at: string
+        account_email: string | null
+      }>(
+        `
+        select
+          id,
+          user_id,
+          name,
+          email,
+          phone,
+          message,
+          created_at,
+          account_email
+        from public.contact_submissions
+        order by created_at desc
+        limit $1
+        `,
+        [limit],
+      )
+
+      res.status(200).json({
+        items: rows.map((row) => ({
+          id: row.id,
+          userId: row.user_id,
+          name: row.name,
+          email: row.email,
+          phone: row.phone,
+          message: row.message,
+          createdAt: row.created_at,
+          accountEmail: row.account_email,
+        })),
+      })
+    }),
+  )
+
+  app.post(
+    "/admin/account-allowlist/list",
+    params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      try {
+        await requireAdminUserEmail(req)
+      } catch {
+        sendError(res, 403, "Forbidden")
+        return
+      }
+
+      const rows = await queryMany<{
+        id: string
+        email: string
+        created_at: string
+      }>(
+        `
+        select id, email, created_at
+        from public.signup_email_allowlist
+        order by lower(email) asc
+        `,
+        [],
+      )
+
+      res.status(200).json({
+        items: rows.map((row) => ({
+          id: row.id,
+          email: row.email,
+          createdAt: row.created_at,
+        })),
+      })
+    }),
+  )
+
+  app.post(
+    "/admin/account-allowlist/add",
+    params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      const adminEmail = await requireAdminUserEmail(req).catch(() => null)
+      if (!adminEmail) {
+        sendError(res, 403, "Forbidden")
+        return
+      }
+
+      const candidateEmail = normalizeEmail(typeof req.body?.email === "string" ? req.body.email : "")
+      if (!candidateEmail) {
+        sendError(res, 400, "Missing email")
+        return
+      }
+
+      await execute(
+        `
+        insert into public.signup_email_allowlist (id, email, added_by_email)
+        values ($1, $2, $3)
+        on conflict (email) do update
+          set added_by_email = excluded.added_by_email
+        `,
+        [crypto.randomUUID(), candidateEmail, adminEmail],
+      )
+
+      res.status(200).json({ ok: true })
+    }),
+  )
+
+  app.post(
+    "/admin/account-allowlist/remove",
+    params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      try {
+        await requireAdminUserEmail(req)
+      } catch {
+        sendError(res, 403, "Forbidden")
+        return
+      }
+
+      const candidateEmail = normalizeEmail(typeof req.body?.email === "string" ? req.body.email : "")
+      if (!candidateEmail) {
+        sendError(res, 400, "Missing email")
+        return
+      }
+
+      await execute(
+        `
+        delete from public.signup_email_allowlist
+        where lower(email) = $1
+        `,
+        [candidateEmail],
+      )
+
+      res.status(200).json({ ok: true })
     }),
   )
 

@@ -12,7 +12,6 @@ import { registerTranscriptionRoutes } from "./transcriptionRoutes"
 
 type RegisterRoutesParams = {
   diagnosticLogVersion: string
-  adminFeedbackEmailSet: Set<string>
   rateLimitAi: RequestHandler
   rateLimitBilling: RequestHandler
   rateLimitTranscription: RequestHandler
@@ -58,7 +57,7 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
   registerE2eeRoutes(app, { rateLimitAccount: params.rateLimitAccount })
   registerAppDataRoutes(app)
   registerAiRoutes(app, { rateLimitAi: params.rateLimitAi })
-  registerFeedbackRoutes(app, { rateLimitAccount: params.rateLimitAccount, adminFeedbackEmailSet: params.adminFeedbackEmailSet })
+  registerFeedbackRoutes(app, { rateLimitAccount: params.rateLimitAccount })
   registerBillingRoutes(app, { rateLimitBilling: params.rateLimitBilling })
   registerTranscriptionRoutes(app, { rateLimitTranscription: params.rateLimitTranscription })
 }

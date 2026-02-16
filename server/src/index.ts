@@ -8,7 +8,6 @@ import { createCorsMiddleware, createRateLimitMiddleware, parseCorsAllowedOrigin
 
 const app = express()
 const diagnosticLogVersion = "2026-02-13-route-modules"
-const defaultAdminFeedbackEmail = "contact@jnlsolutions.nl"
 
 // Logs whether database connectivity works, without exposing credentials.
 function logDatabaseConnectionStatus(): void {
@@ -65,13 +64,8 @@ const rateLimitTranscription = createRateLimitMiddleware({
 })
 const rateLimitAccount = createRateLimitMiddleware({ windowMs: rateLimitWindowMs, maxRequests: 10, keyPrefix: "account" })
 
-const adminFeedbackEmailSet = new Set(
-  (env.adminFeedbackEmails.length ? env.adminFeedbackEmails : [defaultAdminFeedbackEmail]).map((email) => email.trim().toLowerCase()).filter(Boolean),
-)
-
 registerRoutes(app, {
   diagnosticLogVersion,
-  adminFeedbackEmailSet,
   rateLimitAi,
   rateLimitBilling,
   rateLimitTranscription,
