@@ -168,6 +168,7 @@ export function NewSessionModal({
   const isUploadDragActiveRef = useRef(false)
   const coacheeTriggerRef = useRef<any>(null)
   const reportTypeTriggerRef = useRef<any>(null)
+  const hasAutoStartedRecordingRef = useRef(false)
   const [coacheeDropdownMaxHeight, setCoacheeDropdownMaxHeight] = useState<number | null>(null)
   const [reportTypeDropdownMaxHeight, setReportTypeDropdownMaxHeight] = useState<number | null>(null)
 
@@ -220,6 +221,7 @@ export function NewSessionModal({
     setIsUploadDragActive(false)
     setCoacheeDropdownMaxHeight(null)
     setReportTypeDropdownMaxHeight(null)
+    hasAutoStartedRecordingRef.current = false
   }, [visible])
 
   useEffect(() => {
@@ -680,9 +682,17 @@ export function NewSessionModal({
   }
 
   useEffect(() => {
+    if (step !== 'recording') {
+      hasAutoStartedRecordingRef.current = false
+    }
+  }, [step])
+
+  useEffect(() => {
     if (!visible) return
     if (step !== 'recording') return
+    if (hasAutoStartedRecordingRef.current) return
     if (recorder.status !== 'idle') return
+    hasAutoStartedRecordingRef.current = true
     recorder.start()
   }, [recorder, step, visible])
 

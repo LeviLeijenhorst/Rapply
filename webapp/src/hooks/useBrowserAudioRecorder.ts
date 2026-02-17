@@ -10,8 +10,17 @@ function formatUnknownError(error: unknown) {
   return 'Unknown error'
 }
 
+function isSafariBrowser() {
+  if (typeof navigator === 'undefined') return false
+  const agent = String(navigator.userAgent || '').toLowerCase()
+  return agent.includes('safari') && !agent.includes('chrome') && !agent.includes('chromium') && !agent.includes('android')
+}
+
 function chooseMimeType() {
   if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') {
+    return ''
+  }
+  if (isSafariBrowser()) {
     return ''
   }
   const canPlayMimeType = (mimeType: string) => {
@@ -173,7 +182,8 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
         totalChunkBytes,
         elapsedSeconds,
       })
-      setStatus('idle')
+      setStatus('error')
+      setErrorMessage('De opname kon niet worden opgeslagen. Probeer opnieuw.')
       return
     }
     setRecordedBlob(blob)
