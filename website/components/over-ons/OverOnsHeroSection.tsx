@@ -20,7 +20,7 @@ export default function OverOnsHeroSection() {
           <div className="mt-6">
             <Button
               label="Contact"
-              destination="#contact"
+              destination="/contact"
               showArrow
               className="font-normal"
             />

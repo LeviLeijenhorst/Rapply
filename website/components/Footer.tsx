@@ -16,7 +16,7 @@ const navigationLinks = [
 
 const connectLinks = [
   {
-    label: "LinkdIn",
+    label: "LinkedIn",
     destination: "https://www.linkedin.com/company/110146544",
     icon: linkedinIcon,
     iconClassName: "scale-[1.9]",

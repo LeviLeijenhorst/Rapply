@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Image from "next/image";
 import SectionContainer from "@/components/home/SectionContainer";
+import BottomToast from "@/components/BottomToast";
 import contactImage from "@/over_ons/over_ons-beiden.png";
 import contactBackground from "@/over_ons/kom_in_contact-background.svg";
 
@@ -23,7 +24,15 @@ const initialFormValues: ContactFormValues = {
 const inputClassName =
   "h-12 rounded-xl border border-white/60 bg-white/10 px-4 text-base font-normal text-white placeholder:text-white/70 outline-none transition-colors focus:border-white";
 
-export default function OverOnsContactSection() {
+type OverOnsContactSectionProps = {
+  useRoundedContainer?: boolean;
+  useLightTheme?: boolean;
+};
+
+export default function OverOnsContactSection({
+  useRoundedContainer = true,
+  useLightTheme = false,
+}: OverOnsContactSectionProps) {
   const [formValues, setFormValues] = useState<ContactFormValues>(initialFormValues);
   const [isToastVisible, setIsToastVisible] = useState(false);
 
@@ -40,6 +49,30 @@ export default function OverOnsContactSection() {
     window.requestAnimationFrame(() => setIsToastVisible(true));
   };
 
+  const titleClassName = useLightTheme
+    ? "font-[var(--font-catamaran)] text-[64px] font-medium leading-[110%] text-[#1D0A00]"
+    : "font-[var(--font-catamaran)] text-[64px] font-medium leading-[110%] text-white";
+
+  const descriptionClassName = useLightTheme
+    ? "mt-4 max-w-lg text-base font-normal leading-relaxed text-black/70"
+    : "mt-4 max-w-lg text-base font-normal leading-relaxed text-white/90";
+
+  const labelClassName = useLightTheme
+    ? "text-sm font-normal text-[#1D0A00]"
+    : "text-sm font-normal text-white";
+
+  const fieldClassName = useLightTheme
+    ? "h-12 rounded-xl border border-[#DDDDDD] bg-white px-4 text-base font-normal text-[#1D0A00] placeholder:text-black/50 outline-none transition-colors focus:border-[#BD0265]"
+    : inputClassName;
+
+  const textAreaClassName = useLightTheme
+    ? "rounded-xl border border-[#DDDDDD] bg-white px-4 py-3 text-base font-normal text-[#1D0A00] placeholder:text-black/50 outline-none transition-colors focus:border-[#BD0265]"
+    : "rounded-xl border border-white/60 bg-white/10 px-4 py-3 text-base font-normal text-white placeholder:text-white/70 outline-none transition-colors focus:border-white";
+
+  const submitButtonClassName = useLightTheme
+    ? "inline-flex h-12 cursor-pointer items-center gap-2 rounded-full border-2 border-[#BD0265] bg-[#BD0265] px-6 text-base font-semibold text-white transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[#A00256] hover:bg-[#A00256]"
+    : "inline-flex h-12 cursor-pointer items-center gap-2 rounded-full border border-white/60 bg-white/10 px-6 text-base font-normal text-white transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-white/20";
+
   return (
     <SectionContainer
       className="bg-[#F8F9F9]"
@@ -47,17 +80,28 @@ export default function OverOnsContactSection() {
     >
       <section
         id="contact"
-        className="relative w-full overflow-hidden rounded-[24px] bg-cover bg-center bg-no-repeat p-8 text-white md:p-12"
-        style={{
-          backgroundImage: `url(${contactBackground.src})`,
-        }}
+        className={`relative w-full overflow-hidden p-8 md:p-12 ${
+          useLightTheme ? "bg-white shadow-[0_8px_20px_rgba(15,23,42,0.08)]" : ""
+        } ${
+          useRoundedContainer ? "rounded-[24px]" : ""
+        }`}
+        style={
+          useLightTheme
+            ? undefined
+            : {
+                backgroundImage: `url(${contactBackground.src})`,
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+                backgroundSize: "cover",
+              }
+        }
       >
         <div className="grid w-full gap-10 lg:grid-cols-2">
           <div className="flex h-full flex-col justify-center lg:pl-6">
-            <h2 className="font-[var(--font-catamaran)] text-[64px] font-medium leading-[110%] text-white">
+            <h2 className={titleClassName}>
               Kom in contact
             </h2>
-            <p className="mt-4 max-w-lg text-base font-normal leading-relaxed text-white/90">
+            <p className={descriptionClassName}>
               Heb je een vraag, wil je input geven of ben je benieuwd wat wij
               <br />
               voor jou kunnen betekenen? Neem contact met ons op!
@@ -70,7 +114,7 @@ export default function OverOnsContactSection() {
           </div>
           <form className="flex w-full flex-col gap-4 lg:pr-6" onSubmit={handleSubmit}>
             <label className="flex w-full flex-col gap-2">
-              <span className="text-sm font-normal text-white">Volledige naam*</span>
+              <span className={labelClassName}>Volledige naam*</span>
               <input
                 type="text"
                 name="name"
@@ -83,11 +127,11 @@ export default function OverOnsContactSection() {
                   }))
                 }
                 placeholder="Jouw volledige naam"
-                className={inputClassName}
+                className={fieldClassName}
               />
             </label>
             <label className="flex w-full flex-col gap-2">
-              <span className="text-sm font-normal text-white">Email*</span>
+              <span className={labelClassName}>Email*</span>
               <input
                 type="email"
                 name="email"
@@ -100,11 +144,11 @@ export default function OverOnsContactSection() {
                   }))
                 }
                 placeholder="Jouw Email adres"
-                className={inputClassName}
+                className={fieldClassName}
               />
             </label>
             <label className="flex w-full flex-col gap-2">
-              <span className="text-sm font-normal text-white">
+              <span className={labelClassName}>
                 Nummer (optioneel)
               </span>
               <input
@@ -118,11 +162,11 @@ export default function OverOnsContactSection() {
                   }))
                 }
                 placeholder="Jouw telefoon nummer"
-                className={inputClassName}
+                className={fieldClassName}
               />
             </label>
             <label className="flex w-full flex-col gap-2">
-              <span className="text-sm font-normal text-white">Bericht*</span>
+              <span className={labelClassName}>Bericht*</span>
               <textarea
                 name="message"
                 rows={5}
@@ -135,13 +179,13 @@ export default function OverOnsContactSection() {
                   }))
                 }
                 placeholder="Laat ons weten wat je denkt..."
-                className="rounded-xl border border-white/60 bg-white/10 px-4 py-3 text-base font-normal text-white placeholder:text-white/70 outline-none transition-colors focus:border-white"
+                className={textAreaClassName}
               />
             </label>
             <div className="pt-1">
               <button
                 type="submit"
-                className="inline-flex h-12 cursor-pointer items-center gap-2 rounded-full border border-white/60 bg-white/10 px-6 text-base font-normal text-white transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-white/20"
+                className={submitButtonClassName}
               >
                 <span>Verstuur</span>
                 <span aria-hidden="true">-&gt;</span>
@@ -150,14 +194,10 @@ export default function OverOnsContactSection() {
           </form>
         </div>
       </section>
-      <div
-        className={`pointer-events-none fixed left-1/2 z-50 -translate-x-1/2 text-center text-xl font-semibold text-[#BD0265] transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          isToastVisible ? "bottom-[25vh] translate-y-0 opacity-100" : "bottom-[25vh] translate-y-[45vh] opacity-0"
-        }`}
-        aria-live="polite"
-      >
-        Bericht verzonden! Je hoort snel van ons.
-      </div>
+      <BottomToast
+        isVisible={isToastVisible}
+        message="Bericht verzonden! Je hoort snel van ons."
+      />
     </SectionContainer>
   );
 }

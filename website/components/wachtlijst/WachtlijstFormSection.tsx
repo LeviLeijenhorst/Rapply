@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import SectionContainer from "@/components/home/SectionContainer";
+import BottomToast from "@/components/BottomToast";
 
 type WachtlijstFormValues = {
   firstName: string;
@@ -164,14 +165,10 @@ export default function WachtlijstFormSection() {
           </div>
         </form>
       </section>
-      <div
-        className={`pointer-events-none fixed left-1/2 z-50 -translate-x-1/2 text-center text-xl font-semibold text-[#BD0265] transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          isToastVisible ? "bottom-[25vh] translate-y-0 opacity-100" : "bottom-[25vh] translate-y-[45vh] opacity-0"
-        }`}
-        aria-live="polite"
-      >
-        Bericht verzonden! Je hoort snel van ons.
-      </div>
+      <BottomToast
+        isVisible={isToastVisible}
+        message="Bericht verzonden! Je hoort snel van ons."
+      />
     </SectionContainer>
   );
 }

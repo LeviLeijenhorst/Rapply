@@ -4,7 +4,7 @@ export type RegisterTranscriptionRoutesParams = {
   rateLimitTranscription: RequestHandler
 }
 
-export type TranscriptionProvider = "mistral" | "azure-speech" | "none"
+export type TranscriptionProvider = "azure-speech" | "none"
 
 export type StartRequest = {
   operationId: string
@@ -12,7 +12,6 @@ export type StartRequest = {
   keyBase64: string
   languageCode: string
   mimeType: string
-  preferProvider: string
   includeSummary: boolean
 }
 

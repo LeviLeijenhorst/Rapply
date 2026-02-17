@@ -10,8 +10,6 @@ type RegisterSystemRoutesParams = {
   transcriptionUploadsContainer: string
   hasEntraOpenIdConfigurationUrl: boolean
   hasEntraAudience: boolean
-  hasMistralApiKey: boolean
-  mistralTranscriptionModel: string
   hasRevenueCatSecretKey: boolean
   runtimeEnvironment: string
   hasCorsAllowlist: boolean
@@ -43,10 +41,6 @@ export function registerSystemRoutes(app: Express, params: RegisterSystemRoutesP
           hasOpenIdConfigurationUrl: params.hasEntraOpenIdConfigurationUrl,
           hasAudience: params.hasEntraAudience,
         },
-        mistral: {
-          hasApiKey: params.hasMistralApiKey,
-          transcriptionModel: params.mistralTranscriptionModel,
-        },
         revenuecat: {
           hasSecretKey: params.hasRevenueCatSecretKey,
         },
@@ -62,8 +56,6 @@ export function registerSystemRoutes(app: Express, params: RegisterSystemRoutesP
 
   app.get("/debug/transcription-provider", (_req, res) => {
     res.status(200).json({
-      mistralKeyPresent: params.hasMistralApiKey,
-      mistralModel: params.mistralTranscriptionModel,
       azureSpeechConfigured: params.azureSpeechConfigured,
     })
   })

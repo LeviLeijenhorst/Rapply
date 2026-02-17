@@ -26,5 +26,5 @@ create table if not exists public.contact_submissions (
 create index if not exists contact_submissions_created_at_idx on public.contact_submissions (created_at desc);
 
 insert into public.signup_email_allowlist (id, email, added_by_email)
-values ('d44fc71f-3afe-4726-a35f-66741b0920ed', 'contact@jnlsolutions.nl', 'contact@jnlsolutions.nl')
+values ('d44fc71f-3afe-4726-a35f-66741b0920ed', 'ltleijenhorst@gmail.com', 'ltleijenhorst@gmail.com')
 on conflict (email) do nothing;

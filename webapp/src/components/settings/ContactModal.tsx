@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Image, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
+import { ActivityIndicator, Image, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
@@ -9,14 +9,16 @@ import { callSecureApi } from '../../services/secureApi'
 type Props = {
   visible: boolean
   onClose: () => void
+  onSubmitted?: () => void
 }
 
-export function ContactModal({ visible, onClose }: Props) {
+export function ContactModal({ visible, onClose, onSubmitted }: Props) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [message, setMessage] = useState('')
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const { width } = useWindowDimensions()
   const isStacked = width < 1100
   const inputWebStyle = useMemo(() => ({ outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any), [])
@@ -30,6 +32,7 @@ export function ContactModal({ visible, onClose }: Props) {
   }
 
   function closeModal() {
+    if (isSubmitting) return
     setStatusMessage(null)
     clearForm()
     onClose()
@@ -60,9 +63,11 @@ export function ContactModal({ visible, onClose }: Props) {
   }
 
   function submitForm() {
+    if (isSubmitting) return
     const validated = validateForm()
     if (!validated) return
-    setStatusMessage('Bericht wordt verstuurd...')
+    setStatusMessage(null)
+    setIsSubmitting(true)
     void callSecureApi<{ ok: true }>('/contact/submission', {
       name: validated.name,
       email: validated.email,
@@ -71,10 +76,14 @@ export function ContactModal({ visible, onClose }: Props) {
     })
       .then(() => {
         clearForm()
-        setStatusMessage('Bedankt. Je bericht is opgeslagen en ontvangen.')
+        onClose()
+        onSubmitted?.()
       })
       .catch(() => {
         setStatusMessage('Versturen mislukt. Probeer het alsjeblieft opnieuw.')
+      })
+      .finally(() => {
+        setIsSubmitting(false)
       })
   }
 
@@ -82,7 +91,11 @@ export function ContactModal({ visible, onClose }: Props) {
     <AnimatedOverlayModal visible={visible} onClose={closeModal} contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <View />
-        <Pressable onPress={closeModal} style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}>
+        <Pressable
+          onPress={closeModal}
+          style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}
+          disabled={isSubmitting}
+        >
           <ModalCloseDarkIcon size={34} />
         </Pressable>
       </View>
@@ -142,8 +155,20 @@ export function ContactModal({ visible, onClose }: Props) {
             />
           </View>
           <View style={styles.submitRow}>
-            <Pressable onPress={submitForm} style={({ hovered }) => [styles.submitButton, hovered ? styles.submitButtonHovered : undefined]}>
-              <Text style={styles.submitButtonText}>Verstuur -&gt;</Text>
+            <Pressable
+              onPress={submitForm}
+              style={({ hovered }) => [
+                styles.submitButton,
+                hovered ? styles.submitButtonHovered : undefined,
+                isSubmitting ? styles.submitButtonDisabled : undefined,
+              ]}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.submitButtonText}>Verstuur -&gt;</Text>
+              )}
             </Pressable>
           </View>
           {statusMessage ? <Text style={styles.statusText}>{statusMessage}</Text> : null}
@@ -260,6 +285,9 @@ const styles = StyleSheet.create({
   },
   submitButtonHovered: {
     backgroundColor: 'rgba(255,255,255,0.22)',
+  },
+  submitButtonDisabled: {
+    opacity: 0.7,
   },
   submitButtonText: {
     fontSize: 16,

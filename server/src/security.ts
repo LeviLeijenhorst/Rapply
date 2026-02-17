@@ -86,6 +86,15 @@ export function createRateLimitMiddleware(params: {
     buckets.set(key, bucket)
 
     if (bucket.count > maxRequests) {
+      console.log("[rate-limit] blocked", {
+        keyPrefix,
+        method: req.method,
+        path: req.path,
+        ip,
+        count: bucket.count,
+        maxRequests,
+        windowMs,
+      })
       res.status(429).json({ error: "Too many requests, please try again later" })
       return
     }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native'
 
 import { colors } from '../../theme/colors'
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
@@ -100,9 +100,13 @@ export function FeedbackModal({ visible, onClose, onContinue }: Props) {
           ]}
           disabled={isContinueDisabled}
         >
-          <Text isBold style={styles.primaryButtonText}>
-            {isSubmitting ? 'Versturen...' : 'Doorgaan'}
-          </Text>
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text isBold style={styles.primaryButtonText}>
+              Doorgaan
+            </Text>
+          )}
         </Pressable>
       </View>
     </AnimatedOverlayModal>

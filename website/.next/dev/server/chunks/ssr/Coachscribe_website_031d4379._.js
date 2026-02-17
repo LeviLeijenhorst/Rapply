@@ -183,7 +183,7 @@ const navigationLinks = [
 ];
 const connectLinks = [
     {
-        label: "LinkdIn",
+        label: "LinkedIn",
         destination: "https://www.linkedin.com/company/110146544",
         icon: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$home$2f$LinkedIn$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$home$2f$LinkedIn$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$rsc$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"],
         iconClassName: "scale-[1.9]"

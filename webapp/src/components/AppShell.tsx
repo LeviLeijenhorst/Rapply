@@ -37,9 +37,11 @@ import { clearPendingPreviewAudio, clearPendingPreviewAudioIfEligible, listPendi
 import { processSessionAudio } from '../audio/processSessionAudio'
 import { AdminFeedbackScreen } from '../screens/AdminFeedbackScreen'
 import { AdminContactSubmissionsScreen } from '../screens/AdminContactSubmissionsScreen'
+import { AdminWachtlijstScreen } from '../screens/AdminWachtlijstScreen'
 import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
 import { EndToEndEncryptieScreen } from '../screens/EndToEndEncryptieScreen'
 import { isAdminEmail } from '../constants/admin'
+import { BottomToast } from './BottomToast'
 
 type AnchorPoint = { x: number; y: number }
 type OverlayScreenKey = 'archief'
@@ -54,6 +56,7 @@ type RouteState =
   | { kind: 'archief' }
   | { kind: 'admin' }
   | { kind: 'admin-contact' }
+  | { kind: 'admin-wachtlijst' }
 
 function stripPrefix(value: string, prefix: string) {
   return value.startsWith(`${prefix}-`) ? value.slice(prefix.length + 1) : value
@@ -81,6 +84,7 @@ function parseRouteFromPath(pathname: string): RouteState {
   if (parts[0] === 'archief') return { kind: 'archief' }
   if (parts[0] === 'admin') return { kind: 'admin' }
   if (parts[0] === 'admin-contact') return { kind: 'admin-contact' }
+  if (parts[0] === 'admin-wachtlijst') return { kind: 'admin-wachtlijst' }
   return { kind: 'coachees' }
 }
 
@@ -94,6 +98,7 @@ function buildPathFromRoute(route: RouteState): string {
   if (route.kind === 'geschrevenVerslag') return '/geschreven-verslag'
   if (route.kind === 'admin') return '/admin'
   if (route.kind === 'admin-contact') return '/admin-contact'
+  if (route.kind === 'admin-wachtlijst') return '/admin-wachtlijst'
   return '/archief'
 }
 
@@ -129,6 +134,7 @@ export function AppShell({ onLogout }: Props) {
   const [overlayScreenKey, setOverlayScreenKey] = useState<OverlayScreenKey | null>(null)
   const [isAdminScreenOpen, setIsAdminScreenOpen] = useState(false)
   const [isAdminContactScreenOpen, setIsAdminContactScreenOpen] = useState(false)
+  const [isAdminWachtlijstScreenOpen, setIsAdminWachtlijstScreenOpen] = useState(false)
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
 
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false)
@@ -145,7 +151,19 @@ export function AppShell({ onLogout }: Props) {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [isDeleteAccountConfirmModalOpen, setIsDeleteAccountConfirmModalOpen] = useState(false)
   const [deleteAccountErrorMessage, setDeleteAccountErrorMessage] = useState<string | null>(null)
+  const [toastMessage, setToastMessage] = useState('')
+  const [isToastVisible, setIsToastVisible] = useState(false)
   const isCurrentUserAdmin = isAdminEmail(currentUserEmail)
+
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message)
+    setIsToastVisible(false)
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => setIsToastVisible(true))
+      return
+    }
+    setIsToastVisible(true)
+  }, [])
 
   useEffect(() => {
     let isCancelled = false
@@ -213,6 +231,12 @@ export function AppShell({ onLogout }: Props) {
     }
   }, [data.sessions, e2ee, isAppDataLoaded, updateSession])
 
+  useEffect(() => {
+    if (!isToastVisible) return
+    const timeout = setTimeout(() => setIsToastVisible(false), 2600)
+    return () => clearTimeout(timeout)
+  }, [isToastVisible])
+
   const applyRoute = useCallback(
     (route: RouteState) => {
       if (route.kind === 'archief') {
@@ -220,6 +244,7 @@ export function AppShell({ onLogout }: Props) {
         setSelectedSidebarItemKey('archief')
         setIsAdminScreenOpen(false)
         setIsAdminContactScreenOpen(false)
+        setIsAdminWachtlijstScreenOpen(false)
         setOverlayScreenKey('archief')
         setIsGeschrevenVerslagOpen(false)
         setSelectedSessieId(null)
@@ -231,6 +256,7 @@ export function AppShell({ onLogout }: Props) {
         setIsEndToEndEncryptiePageOpen(false)
         setIsAdminScreenOpen(false)
         setIsAdminContactScreenOpen(false)
+        setIsAdminWachtlijstScreenOpen(false)
         setOverlayScreenKey(null)
         setIsGeschrevenVerslagOpen(true)
         setSelectedSidebarItemKey('sessies')
@@ -245,6 +271,7 @@ export function AppShell({ onLogout }: Props) {
           setIsEndToEndEncryptiePageOpen(false)
           setIsAdminScreenOpen(false)
           setIsAdminContactScreenOpen(false)
+          setIsAdminWachtlijstScreenOpen(false)
           setOverlayScreenKey(null)
           setIsGeschrevenVerslagOpen(false)
           setSelectedSidebarItemKey('coachees')
@@ -256,6 +283,7 @@ export function AppShell({ onLogout }: Props) {
         setIsEndToEndEncryptiePageOpen(false)
         setIsAdminScreenOpen(true)
         setIsAdminContactScreenOpen(false)
+        setIsAdminWachtlijstScreenOpen(false)
         setOverlayScreenKey(null)
         setIsGeschrevenVerslagOpen(false)
         setSelectedSidebarItemKey('admin')
@@ -270,6 +298,7 @@ export function AppShell({ onLogout }: Props) {
           setIsEndToEndEncryptiePageOpen(false)
           setIsAdminScreenOpen(false)
           setIsAdminContactScreenOpen(false)
+          setIsAdminWachtlijstScreenOpen(false)
           setOverlayScreenKey(null)
           setIsGeschrevenVerslagOpen(false)
           setSelectedSidebarItemKey('coachees')
@@ -281,6 +310,7 @@ export function AppShell({ onLogout }: Props) {
         setIsEndToEndEncryptiePageOpen(false)
         setIsAdminScreenOpen(false)
         setIsAdminContactScreenOpen(true)
+        setIsAdminWachtlijstScreenOpen(false)
         setOverlayScreenKey(null)
         setIsGeschrevenVerslagOpen(false)
         setSelectedSidebarItemKey('adminContact')
@@ -290,8 +320,36 @@ export function AppShell({ onLogout }: Props) {
         return
       }
 
+      if (route.kind === 'admin-wachtlijst') {
+        if (!isCurrentUserAdmin) {
+          setIsEndToEndEncryptiePageOpen(false)
+          setIsAdminScreenOpen(false)
+          setIsAdminContactScreenOpen(false)
+          setIsAdminWachtlijstScreenOpen(false)
+          setOverlayScreenKey(null)
+          setIsGeschrevenVerslagOpen(false)
+          setSelectedSidebarItemKey('coachees')
+          setSelectedSessieId(null)
+          setSelectedCoacheeId(null)
+          setSessionOriginRoute(null)
+          return
+        }
+        setIsEndToEndEncryptiePageOpen(false)
+        setIsAdminScreenOpen(false)
+        setIsAdminContactScreenOpen(false)
+        setIsAdminWachtlijstScreenOpen(true)
+        setOverlayScreenKey(null)
+        setIsGeschrevenVerslagOpen(false)
+        setSelectedSidebarItemKey('adminWachtlijst')
+        setSelectedSessieId(null)
+        setSelectedCoacheeId(null)
+        setSessionOriginRoute(null)
+        return
+      }
+
       setIsAdminScreenOpen(false)
       setIsAdminContactScreenOpen(false)
+      setIsAdminWachtlijstScreenOpen(false)
       setIsEndToEndEncryptiePageOpen(false)
       setOverlayScreenKey(null)
       setIsGeschrevenVerslagOpen(false)
@@ -347,6 +405,7 @@ export function AppShell({ onLogout }: Props) {
       setSelectedSessieId,
       setSelectedSidebarItemKey,
       setSessionOriginRoute,
+      setIsAdminWachtlijstScreenOpen,
     ],
   )
 
@@ -424,6 +483,7 @@ export function AppShell({ onLogout }: Props) {
     if (overlayScreenKey) return overlayScreenKey
     if (isAdminScreenOpen) return 'admin'
     if (isAdminContactScreenOpen) return 'admin-contact'
+    if (isAdminWachtlijstScreenOpen) return 'admin-wachtlijst'
     if (isGeschrevenVerslagOpen) return 'geschreven-verslag'
     if (selectedSessieId) return `sessie-${selectedSessieId}`
     if (selectedSidebarItemKey === 'sessies') return 'sessies'
@@ -431,7 +491,7 @@ export function AppShell({ onLogout }: Props) {
       return selectedCoacheeId ? `coachee-${selectedCoacheeId}` : 'coachees'
     }
     return selectedSidebarItemKey
-  }, [isAdminContactScreenOpen, isAdminScreenOpen, isGeschrevenVerslagOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
+  }, [isAdminContactScreenOpen, isAdminScreenOpen, isAdminWachtlijstScreenOpen, isGeschrevenVerslagOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
 
   const [newlyCreatedCoacheeId, setNewlyCreatedCoacheeId] = useState<string | null>(null)
   const [newlyCreatedCoacheeName, setNewlyCreatedCoacheeName] = useState<string | null>(null)
@@ -477,6 +537,7 @@ export function AppShell({ onLogout }: Props) {
     if (overlayScreenKey === 'archief') return { kind: 'archief' }
     if (isAdminScreenOpen) return { kind: 'admin' }
     if (isAdminContactScreenOpen) return { kind: 'admin-contact' }
+    if (isAdminWachtlijstScreenOpen) return { kind: 'admin-wachtlijst' }
     if (isGeschrevenVerslagOpen) return { kind: 'geschrevenVerslag' }
     if (selectedSessieId) return { kind: 'sessie', sessieId: selectedSessieId }
     if (selectedSidebarItemKey === 'coachees') {
@@ -486,8 +547,9 @@ export function AppShell({ onLogout }: Props) {
     if (selectedSidebarItemKey === 'mijnPraktijk') return { kind: 'mijn-praktijk' }
     if (selectedSidebarItemKey === 'admin') return { kind: 'admin' }
     if (selectedSidebarItemKey === 'adminContact') return { kind: 'admin-contact' }
+    if (selectedSidebarItemKey === 'adminWachtlijst') return { kind: 'admin-wachtlijst' }
     return { kind: 'sessies' }
-  }, [isAdminContactScreenOpen, isAdminScreenOpen, isGeschrevenVerslagOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
+  }, [isAdminContactScreenOpen, isAdminScreenOpen, isAdminWachtlijstScreenOpen, isGeschrevenVerslagOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
 
   const breadcrumbItems = useMemo(() => {
     if (selectedSessieId) {
@@ -541,7 +603,8 @@ export function AppShell({ onLogout }: Props) {
 
   const submitFeedback = useCallback(async (feedback: string) => {
     await callSecureApi<{ ok: true }>('/feedback', { message: feedback })
-  }, [])
+    showToast('Feedback verzonden! Bedankt voor je hulp.')
+  }, [showToast])
 
   function renderMainContent() {
     if (!isAppDataLoaded) {
@@ -555,6 +618,9 @@ export function AppShell({ onLogout }: Props) {
     }
     if (isAdminContactScreenOpen) {
       return <AdminContactSubmissionsScreen />
+    }
+    if (isAdminWachtlijstScreenOpen) {
+      return <AdminWachtlijstScreen />
     }
     if (overlayScreenKey === 'archief') {
       return <ArchiefScreen />
@@ -716,6 +782,8 @@ export function AppShell({ onLogout }: Props) {
                         ? { kind: 'admin' }
                       : sidebarItemKey === 'adminContact'
                         ? { kind: 'admin-contact' }
+                      : sidebarItemKey === 'adminWachtlijst'
+                        ? { kind: 'admin-wachtlijst' }
                       : sidebarItemKey === 'mijnPraktijk'
                         ? { kind: 'mijn-praktijk' }
                       : sidebarItemKey === 'archief'
@@ -847,6 +915,7 @@ export function AppShell({ onLogout }: Props) {
           <ContactModal
             visible={isContactModalOpen}
             onClose={() => setIsContactModalOpen(false)}
+            onSubmitted={() => showToast('Bericht verzonden! Je hoort snel van ons.')}
           />
           <FeedbackModal
             visible={isFeedbackModalOpen}
@@ -871,6 +940,7 @@ export function AppShell({ onLogout }: Props) {
               setIsCoacheeModalOpen(false)
             }}
           />
+          <BottomToast visible={isToastVisible} message={toastMessage} />
       </>
     </View>
   )

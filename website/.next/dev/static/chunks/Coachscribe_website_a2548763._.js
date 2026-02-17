@@ -1181,7 +1181,7 @@ const questions = [
     },
     {
         question: "Is er een app voor CoachScribe?",
-        answer: "Ja. CoachScribe is beschikbaar als mobiele app, zodat je ten alle tijde sessies kunt opnemen, verslagen kunt bekijken en notities kunt maken, waar je ook bent."
+        answer: "Binnenkort. Naar verwachting zal deze halverwege maart op de AppStore en PlayStore uit worden gebracht."
     },
     {
         question: "Kan ik verslagen delen met cliënten?",

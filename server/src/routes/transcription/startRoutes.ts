@@ -23,7 +23,7 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
         return
       }
 
-      const { operationId, uploadToken, keyBase64, languageCode, mimeType, preferProvider, includeSummary } = startRequest
+      const { operationId, uploadToken, keyBase64, languageCode, mimeType, includeSummary } = startRequest
       let uploadPath = ""
       let selectedProvider: TranscriptionProvider = "none"
 
@@ -76,9 +76,6 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
         }
 
         selectedProvider = resolveTranscriptionProvider()
-        if (preferProvider === "mistral") {
-          selectedProvider = "mistral"
-        }
 
         const transcript = await runTranscription({
           provider: selectedProvider,

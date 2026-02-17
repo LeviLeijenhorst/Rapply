@@ -389,6 +389,10 @@
     inset: calc(var(--spacing) * 0);
   }
 
+  .inset-x-0 {
+    inset-inline: calc(var(--spacing) * 0);
+  }
+
   .top-0 {
     top: calc(var(--spacing) * 0);
   }
@@ -399,6 +403,14 @@
 
   .right-6 {
     right: calc(var(--spacing) * 6);
+  }
+
+  .bottom-0 {
+    bottom: calc(var(--spacing) * 0);
+  }
+
+  .bottom-6 {
+    bottom: calc(var(--spacing) * 6);
   }
 
   .bottom-\[25vh\] {
@@ -870,6 +882,16 @@
 
   .translate-y-\[80px\] {
     --tw-translate-y: 80px;
+    translate: var(--tw-translate-x) var(--tw-translate-y);
+  }
+
+  .translate-y-\[calc\(100\%\+4rem\)\] {
+    --tw-translate-y: calc(100% + 4rem);
+    translate: var(--tw-translate-x) var(--tw-translate-y);
+  }
+
+  .translate-y-\[calc\(100\%\+8rem\)\] {
+    --tw-translate-y: calc(100% + 8rem);
     translate: var(--tw-translate-x) var(--tw-translate-y);
   }
 
@@ -1685,6 +1707,10 @@
     padding-bottom: calc(var(--spacing) * 5);
   }
 
+  .pb-6 {
+    padding-bottom: calc(var(--spacing) * 6);
+  }
+
   .pb-8 {
     padding-bottom: calc(var(--spacing) * 8);
   }
@@ -1926,6 +1952,11 @@
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
 
+  .shadow-\[0_8px_20px_rgba\(15\,23\,42\,0\.2\)\] {
+    --tw-shadow: 0 8px 20px var(--tw-shadow-color, #0f172a33);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
   .shadow-\[0_8px_20px_rgba\(15\,23\,42\,0\.06\)\] {
     --tw-shadow: 0 8px 20px var(--tw-shadow-color, #0f172a0f);
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
@@ -2013,6 +2044,11 @@
     transition-duration: .3s;
   }
 
+  .duration-500 {
+    --tw-duration: .5s;
+    transition-duration: .5s;
+  }
+
   .duration-700 {
     --tw-duration: .7s;
     transition-duration: .7s;
@@ -2051,6 +2087,16 @@
   .outline-none {
     --tw-outline-style: none;
     outline-style: none;
+  }
+
+  .placeholder\:text-black\/50::placeholder {
+    color: #00000080;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .placeholder\:text-black\/50::placeholder {
+      color: color-mix(in oklab, var(--color-black) 50%, transparent);
+    }
   }
 
   .placeholder\:text-white\/70::placeholder {

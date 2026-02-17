@@ -3,23 +3,19 @@ import { env } from "../../env"
 import { runAzureSpeechTranscriptionFromEncryptedUpload } from "../../transcription/azureSpeechTranscription"
 import { computeAudioDurationSecondsFromEncryptedUpload } from "../../transcription/duration"
 import { fetchEncryptedUploadStream } from "../../transcription/storage"
-import { runVoxtralTranscriptionFromEncryptedUpload } from "../../transcription/voxtral"
 import type { StartRequest, TranscriptionProvider } from "./types"
 
-const MISTRAL_MAX_AUDIO_BYTES = 200 * 1024 * 1024
 const AZURE_SPEECH_MAX_AUDIO_BYTES = 250 * 1024 * 1024
 
 // Chooses the configured transcription provider based on available secrets.
 export function resolveTranscriptionProvider(): TranscriptionProvider {
   if (env.azureSpeechKey && env.azureSpeechRegion) return "azure-speech"
-  if (env.mistralApiKey) return "mistral"
   return "none"
 }
 
 // Returns the max source-audio size in bytes for the selected provider.
 export function getProviderMaxAudioBytes(provider: TranscriptionProvider): number | null {
   if (provider === "azure-speech") return AZURE_SPEECH_MAX_AUDIO_BYTES
-  if (provider === "mistral") return MISTRAL_MAX_AUDIO_BYTES
   return null
 }
 
@@ -35,7 +31,6 @@ export function readStartRequest(body: any): StartRequest | null {
     keyBase64,
     languageCode: typeof body?.language_code === "string" ? body.language_code.trim() || "nl" : "nl",
     mimeType: typeof body?.mime_type === "string" ? body.mime_type.trim() || "audio/m4a" : "audio/m4a",
-    preferProvider: typeof body?.prefer_provider === "string" ? body.prefer_provider.trim() : "",
     includeSummary: body?.include_summary !== false,
   }
 }
@@ -75,19 +70,6 @@ export async function runTranscription(params: {
   languageCode: string
 }): Promise<string> {
   const transcriptionStream = await fetchEncryptedUploadStream({ blobName: params.uploadPath })
-  if (params.provider === "mistral") {
-    if (!env.mistralApiKey) {
-      throw new Error("Mistral transcription was requested but MISTRAL_API_KEY is missing.")
-    }
-    return await runVoxtralTranscriptionFromEncryptedUpload({
-      encryptedStream: transcriptionStream,
-      keyBase64: params.keyBase64,
-      mimeType: params.mimeType,
-      languageCode: params.languageCode,
-      apiKey: env.mistralApiKey,
-      model: env.mistralTranscriptionModel,
-    })
-  }
   if (params.provider === "azure-speech") {
     return await runAzureSpeechTranscriptionFromEncryptedUpload({
       encryptedStream: transcriptionStream,

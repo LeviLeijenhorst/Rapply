@@ -110,7 +110,7 @@ export default function PricingSection() {
             <div className="mt-3 flex w-full justify-center lg:mt-auto">
               <Button
                 label="Neem contact op"
-                destination="mailto:contact@coachscribe.nl"
+                destination="/contact"
                 variant="secondary"
                 className="font-normal"
               />

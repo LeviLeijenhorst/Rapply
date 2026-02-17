@@ -14,7 +14,7 @@ import { ContactIcon } from './icons/ContactIcon'
 import { SidebarItem } from './SidebarItem'
 import { Text } from './Text'
 
-export type SidebarItemKey = 'coachees' | 'sessies' | 'templates' | 'mijnPraktijk' | 'archief' | 'admin' | 'adminContact'
+export type SidebarItemKey = 'coachees' | 'sessies' | 'templates' | 'mijnPraktijk' | 'archief' | 'admin' | 'adminContact' | 'adminWachtlijst'
 
 type AnchorPoint = { x: number; y: number }
 
@@ -137,6 +137,15 @@ export function Sidebar({
               isSelected={selectedSidebarItemKey === 'adminContact'}
               onPress={() => onSelectSidebarItem('adminContact')}
               icon={<ContactIcon color={selectedSidebarItemKey === 'adminContact' ? selectedColor : unselectedColor} size={24} />}
+              isCompact={isCompact}
+            />
+          ) : null}
+          {isAdminUser ? (
+            <SidebarItem
+              label="Wachtlijst"
+              isSelected={selectedSidebarItemKey === 'adminWachtlijst'}
+              onPress={() => onSelectSidebarItem('adminWachtlijst')}
+              icon={<ContactIcon color={selectedSidebarItemKey === 'adminWachtlijst' ? selectedColor : unselectedColor} size={24} />}
               isCompact={isCompact}
             />
           ) : null}

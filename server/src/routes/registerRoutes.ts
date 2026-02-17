@@ -22,7 +22,6 @@ type RegisterRoutesParams = {
   hasAzureStorageAccountKey: boolean
   hasEntraOpenIdConfigurationUrl: boolean
   hasEntraAudience: boolean
-  hasMistralApiKey: boolean
   hasRevenueCatSecretKey: boolean
   runtimeEnvironment: string
   hasCorsAllowlist: boolean
@@ -43,8 +42,6 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
     transcriptionUploadsContainer: env.azureStorageTranscriptionUploadsContainer,
     hasEntraOpenIdConfigurationUrl: params.hasEntraOpenIdConfigurationUrl,
     hasEntraAudience: params.hasEntraAudience,
-    hasMistralApiKey: params.hasMistralApiKey,
-    mistralTranscriptionModel: env.mistralTranscriptionModel,
     hasRevenueCatSecretKey: params.hasRevenueCatSecretKey,
     runtimeEnvironment: params.runtimeEnvironment,
     hasCorsAllowlist: params.hasCorsAllowlist,

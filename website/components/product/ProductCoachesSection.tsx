@@ -37,7 +37,7 @@ export default function ProductCoachesSection() {
           </div>
           <Button
             label="Contact"
-            destination="mailto:contact@coachscribe.nl"
+            destination="/contact"
             variant="primary"
             showArrow
             className="mt-6 font-normal"

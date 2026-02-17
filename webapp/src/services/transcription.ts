@@ -470,7 +470,6 @@ export async function transcribeAudio(params: {
             language_code: languageCode,
             mime_type: normalized.mimeType,
             include_summary: false,
-            prefer_provider: preflightProvider === 'mistral' ? 'mistral' : undefined,
           },
           { timeoutMs: TRANSCRIPTION_START_TIMEOUT_MS, signal },
         )) as {

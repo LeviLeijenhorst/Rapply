@@ -26,13 +26,11 @@ function logDatabaseConnectionStatus(): void {
 
 // Logs key runtime configuration flags for startup diagnostics.
 function logRuntimeConfiguration(): void {
-  const hasMistralApiKey = !!env.mistralApiKey
   const hasAzureOpenAiEndpoint = !!String(env.azureOpenAiEndpoint || "").trim()
   const hasAzureOpenAiKey = !!String(env.azureOpenAiKey || "").trim()
   const hasAzureOpenAiChatDeployment = !!String(env.azureOpenAiChatDeployment || "").trim()
   const hasAzureOpenAiSummaryDeployment = !!String(env.azureOpenAiSummaryDeployment || "").trim()
   console.log(`[server] listening on http://127.0.0.1:${env.port}`)
-  console.log(`[server] mistral configured: ${hasMistralApiKey ? "yes" : "no"}; model: ${env.mistralTranscriptionModel}`)
   console.log(`[server] azure openai configured: ${hasAzureOpenAiEndpoint && hasAzureOpenAiKey ? "yes" : "no"}`)
   console.log(`[server] azure openai chat deployment: ${hasAzureOpenAiChatDeployment ? "yes" : "no"}`)
   console.log(`[server] azure openai summary deployment: ${hasAzureOpenAiSummaryDeployment ? "yes" : "no"}`)
@@ -62,7 +60,7 @@ const rateLimitTranscription = createRateLimitMiddleware({
   maxRequests: rateLimitMaxRequests,
   keyPrefix: "transcription",
 })
-const rateLimitAccount = createRateLimitMiddleware({ windowMs: rateLimitWindowMs, maxRequests: 10, keyPrefix: "account" })
+const rateLimitAccount = createRateLimitMiddleware({ windowMs: rateLimitWindowMs, maxRequests: 60, keyPrefix: "account" })
 
 registerRoutes(app, {
   diagnosticLogVersion,
@@ -76,7 +74,6 @@ registerRoutes(app, {
   hasAzureStorageAccountKey: !!env.azureStorageAccountKey,
   hasEntraOpenIdConfigurationUrl: !!env.entraOpenIdConfigurationUrl,
   hasEntraAudience: env.entraAudience.length > 0,
-  hasMistralApiKey: !!env.mistralApiKey,
   hasRevenueCatSecretKey: !!env.revenueCatSecretKey,
   runtimeEnvironment: env.runtimeEnvironment,
   hasCorsAllowlist: !!corsAllowedOrigins?.length,

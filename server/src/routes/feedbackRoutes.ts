@@ -1,7 +1,7 @@
 import crypto from "crypto"
 import type { Express, RequestHandler } from "express"
 import { requireAuthenticatedUser } from "../auth"
-import { isAdminEmail, normalizeEmail } from "../admin"
+import { adminAccountEmail, isAdminEmail, normalizeEmail } from "../admin"
 import { execute, queryMany } from "../db"
 import { deleteEntraUserById } from "../entraGraph"
 import { asyncHandler, sendError } from "../http"
@@ -45,6 +45,12 @@ async function requireAdminUserEmail(req: Parameters<typeof requireAuthenticated
   const user = await requireAuthenticatedUser(req)
   const normalizedUserEmail = normalizeEmail(user.email)
   if (!isAdminEmail(normalizedUserEmail)) {
+    console.log("[admin] forbidden", {
+      method: req.method,
+      path: req.path,
+      userEmail: normalizedUserEmail,
+      requiredAdminEmail: adminAccountEmail,
+    })
     const error: any = new Error("Forbidden")
     error.status = 403
     throw error as Error
@@ -246,6 +252,57 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
           message: row.message,
           createdAt: row.created_at,
           accountEmail: row.account_email,
+        })),
+      })
+    }),
+  )
+
+  app.post(
+    "/admin/wachtlijst/list",
+    params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      try {
+        await requireAdminUserEmail(req)
+      } catch {
+        sendError(res, 403, "Forbidden")
+        return
+      }
+
+      const requestedLimitRaw = Number(req.body?.limit)
+      const requestedLimit = Number.isFinite(requestedLimitRaw) ? Math.trunc(requestedLimitRaw) : 200
+      const limit = Math.min(500, Math.max(1, requestedLimit))
+
+      const rows = await queryMany<{
+        id: string
+        user_id: string
+        email: string
+        account_email: string | null
+        message: string
+        created_at: string
+      }>(
+        `
+        select
+          pr.id,
+          pr.user_id,
+          pr.email,
+          pr.account_email,
+          pr.message,
+          pr.created_at
+        from public.praktijk_requests pr
+        order by pr.created_at desc
+        limit $1
+        `,
+        [limit],
+      )
+
+      res.status(200).json({
+        items: rows.map((row) => ({
+          id: row.id,
+          userId: row.user_id,
+          email: row.email,
+          accountEmail: row.account_email,
+          message: row.message,
+          createdAt: row.created_at,
         })),
       })
     }),
