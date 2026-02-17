@@ -50,6 +50,7 @@ export function registerAuthRoutes(app: Express): void {
         name: user.displayName,
         givenName: user.givenName,
         surname: user.surname,
+        accountType: user.accountType,
         entraUserId: user.entraUserId,
       })
     }),

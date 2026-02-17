@@ -40,7 +40,6 @@ import { AdminContactSubmissionsScreen } from '../screens/AdminContactSubmission
 import { AdminWachtlijstScreen } from '../screens/AdminWachtlijstScreen'
 import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
 import { EndToEndEncryptieScreen } from '../screens/EndToEndEncryptieScreen'
-import { isAdminEmail } from '../constants/admin'
 import { BottomToast } from './BottomToast'
 
 type AnchorPoint = { x: number; y: number }
@@ -153,6 +152,7 @@ export function AppShell({ onLogout }: Props) {
   const [isAdminContactScreenOpen, setIsAdminContactScreenOpen] = useState(false)
   const [isAdminWachtlijstScreenOpen, setIsAdminWachtlijstScreenOpen] = useState(false)
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
+  const [currentUserAccountType, setCurrentUserAccountType] = useState<'admin' | 'paid' | 'test' | null>(null)
   const [currentUserGivenName, setCurrentUserGivenName] = useState<string | null>(null)
   const [currentUserSurname, setCurrentUserSurname] = useState<string | null>(null)
   const [currentUserName, setCurrentUserName] = useState<string | null>(null)
@@ -173,7 +173,7 @@ export function AppShell({ onLogout }: Props) {
   const [deleteAccountErrorMessage, setDeleteAccountErrorMessage] = useState<string | null>(null)
   const [toastMessage, setToastMessage] = useState('')
   const [isToastVisible, setIsToastVisible] = useState(false)
-  const isCurrentUserAdmin = isAdminEmail(currentUserEmail)
+  const isCurrentUserAdmin = currentUserAccountType === 'admin'
 
   const showToast = useCallback((message: string) => {
     setToastMessage(message)
@@ -193,11 +193,16 @@ export function AppShell({ onLogout }: Props) {
       displayName?: string | null
       givenName?: string | null
       surname?: string | null
+      accountType?: 'admin' | 'paid' | 'test' | null
     }>('/auth/me', {})
       .then((response) => {
         if (isCancelled) return
         const email = typeof response?.email === 'string' ? response.email : null
         setCurrentUserEmail(email)
+        const accountType = response?.accountType === 'admin' || response?.accountType === 'paid' || response?.accountType === 'test'
+          ? response.accountType
+          : null
+        setCurrentUserAccountType(accountType)
         const givenName = normalizeOptionalName(response?.givenName)
         const surname = normalizeOptionalName(response?.surname)
         setCurrentUserGivenName(givenName)
@@ -214,6 +219,7 @@ export function AppShell({ onLogout }: Props) {
       .catch(() => {
         if (isCancelled) return
         setCurrentUserEmail(null)
+        setCurrentUserAccountType(null)
         setCurrentUserGivenName(null)
         setCurrentUserSurname(null)
         setCurrentUserName(null)

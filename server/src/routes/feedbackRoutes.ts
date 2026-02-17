@@ -2,7 +2,7 @@ import crypto from "crypto"
 import type { Express, RequestHandler } from "express"
 import { requireAuthenticatedUser } from "../auth"
 import { ensureBillingUser, readBillingStatus } from "../billing/store"
-import { adminAccountEmail, isAdminEmail, normalizeEmail } from "../admin"
+import { isAdminEmail, normalizeEmail } from "../admin"
 import { execute, queryMany } from "../db"
 import { deleteEntraUserById } from "../entraGraph"
 import { asyncHandler, sendError } from "../http"
@@ -203,18 +203,20 @@ async function ensureManualPricingSchema(): Promise<void> {
 async function requireAdminUserEmail(req: Parameters<typeof requireAuthenticatedUser>[0]): Promise<string> {
   const user = await requireAuthenticatedUser(req)
   const normalizedUserEmail = normalizeEmail(user.email)
-  if (!isAdminEmail(normalizedUserEmail)) {
+  const hasAdminRole = user.accountType === "admin"
+  const isBootstrapAdmin = isAdminEmail(normalizedUserEmail)
+  if (!hasAdminRole && !isBootstrapAdmin) {
     console.log("[admin] forbidden", {
       method: req.method,
       path: req.path,
       userEmail: normalizedUserEmail,
-      requiredAdminEmail: adminAccountEmail,
+      requiredRole: "account_type=admin",
     })
     const error: any = new Error("Forbidden")
     error.status = 403
     throw error as Error
   }
-  return normalizedUserEmail
+  return normalizedUserEmail || `admin:${user.userId}`
 }
 
 function parseAccountType(value: unknown): AccountType | null {
@@ -699,7 +701,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
         return
       }
 
-      const planIdsRaw = Array.isArray(req.body?.planIds) ? req.body.planIds : []
+      const planIdsRaw: unknown[] = Array.isArray(req.body?.planIds) ? req.body.planIds : []
       const planIds = planIdsRaw.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
       if (!planIds.length) {
         sendError(res, 400, "Missing planIds")
@@ -767,6 +769,53 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
       } catch {
         sendError(res, 403, "Forbidden")
         return
+      }
+
+      const allowlistedEmails = await queryMany<{ email: string }>(
+        `
+        select email
+        from public.signup_email_allowlist
+        `,
+        [],
+      )
+      for (const item of allowlistedEmails) {
+        const candidateEmail = normalizeEmail(item.email)
+        if (!candidateEmail) continue
+        await execute(
+          `
+          insert into public.users (
+            id,
+            email,
+            entra_user_id,
+            display_name,
+            account_type,
+            is_allowlisted,
+            can_see_pricing_page,
+            extra_minutes,
+            pilot_flag,
+            created_at,
+            updated_at
+          )
+          select
+            $1,
+            $2,
+            null,
+            null,
+            'paid',
+            true,
+            true,
+            0,
+            false,
+            now(),
+            now()
+          where not exists (
+            select 1
+            from public.users
+            where lower(email) = $2
+          )
+          `,
+          [crypto.randomUUID(), candidateEmail],
+        )
       }
 
       const rows = await queryMany<{
@@ -1123,6 +1172,41 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
           set added_by_email = excluded.added_by_email
         `,
         [crypto.randomUUID(), candidateEmail, adminEmail],
+      )
+      await execute(
+        `
+        insert into public.users (
+          id,
+          email,
+          entra_user_id,
+          display_name,
+          account_type,
+          is_allowlisted,
+          can_see_pricing_page,
+          extra_minutes,
+          pilot_flag,
+          created_at,
+          updated_at
+        )
+        select
+          $1,
+          $2,
+          null,
+          null,
+          'paid',
+          true,
+          true,
+          0,
+          false,
+          now(),
+          now()
+        where not exists (
+          select 1
+          from public.users
+          where lower(email) = $2
+        )
+        `,
+        [crypto.randomUUID(), candidateEmail],
       )
       await execute(
         `
