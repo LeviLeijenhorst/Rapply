@@ -1,6 +1,3 @@
-"use client";
-
-import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Button from "@/components/Button";
 import SectionContainer from "@/components/home/SectionContainer";
@@ -15,15 +12,6 @@ import productFourImage from "@/home/Product BG 3.jpg";
 
 const FG1_WHITE_TO_BOUNDING_LEFT_PX = 14;
 const FG1_WHITE_TO_BOUNDING_BOTTOM_PX = 14;
-const FG2_WHITE_TO_BOUNDING_LEFT_PX = 14;
-const FG2_WHITE_TO_BOUNDING_BOTTOM_PX = 14;
-const FG_REVEAL_DURATION_MS = 3000;
-const fgRevealTransitionStyle = {
-  transitionProperty: "translate, transform",
-  transitionDuration: `${FG_REVEAL_DURATION_MS}ms, ${FG_REVEAL_DURATION_MS}ms`,
-  transitionTimingFunction:
-    "cubic-bezier(0.22,1,0.36,1), cubic-bezier(0.22,1,0.36,1)",
-};
 
 const featureItems = [
   {
@@ -53,107 +41,6 @@ const featureItems = [
 ];
 
 export default function FeaturesSection() {
-  const firstFeatureContainerRef = useRef<HTMLDivElement | null>(null);
-  const secondFeatureContainerRef = useRef<HTMLDivElement | null>(null);
-  const thirdFeatureContainerRef = useRef<HTMLDivElement | null>(null);
-  const fourthFeatureContainerRef = useRef<HTMLDivElement | null>(null);
-  const [isFirstFeatureFgVisible, setIsFirstFeatureFgVisible] = useState(false);
-  const [isSecondFeatureFgVisible, setIsSecondFeatureFgVisible] = useState(false);
-  const [isThirdFeatureFgVisible, setIsThirdFeatureFgVisible] = useState(false);
-  const [isFourthFeatureFgVisible, setIsFourthFeatureFgVisible] = useState(false);
-
-  useEffect(() => {
-    const element = firstFeatureContainerRef.current;
-    if (!element) return;
-
-    if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
-      setIsFirstFeatureFgVisible(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        if (entry.intersectionRatio < 0.7) return;
-        setIsFirstFeatureFgVisible(true);
-        observer.disconnect();
-      },
-      { threshold: [0, 0.7, 1] }
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const element = secondFeatureContainerRef.current;
-    if (!element) return;
-
-    if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
-      setIsSecondFeatureFgVisible(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        if (entry.intersectionRatio < 0.7) return;
-        setIsSecondFeatureFgVisible(true);
-        observer.disconnect();
-      },
-      { threshold: [0, 0.7, 1] }
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const element = thirdFeatureContainerRef.current;
-    if (!element) return;
-
-    if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
-      setIsThirdFeatureFgVisible(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        if (entry.intersectionRatio < 0.7) return;
-        setIsThirdFeatureFgVisible(true);
-        observer.disconnect();
-      },
-      { threshold: [0, 0.7, 1] }
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const element = fourthFeatureContainerRef.current;
-    if (!element) return;
-
-    if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
-      setIsFourthFeatureFgVisible(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        if (entry.intersectionRatio < 0.7) return;
-        setIsFourthFeatureFgVisible(true);
-        observer.disconnect();
-      },
-      { threshold: [0, 0.7, 1] }
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <SectionContainer className="bg-white" contentClassName="md:pt-[160px] md:pb-20">
       {/* Features content */}
@@ -171,17 +58,6 @@ export default function FeaturesSection() {
             return (
               <div
                 key={featureItem.title}
-                ref={
-                  index === 0
-                    ? firstFeatureContainerRef
-                    : index === 1
-                      ? secondFeatureContainerRef
-                      : index === 2
-                        ? thirdFeatureContainerRef
-                        : index === 3
-                          ? fourthFeatureContainerRef
-                          : undefined
-                }
                 className={`mx-auto flex w-full max-w-[1147px] flex-col gap-6 rounded-3xl bg-[#F8FAFC] px-[80px] py-6 md:h-[480px] md:items-center ${containerGapClass} ${
                   isReversed ? "md:flex-row-reverse" : "md:flex-row"
                 }`}
@@ -189,11 +65,7 @@ export default function FeaturesSection() {
                 {/* Feature text */}
                 <div className="flex w-full flex-col gap-6 md:w-1/2">
                   {/* Feature title */}
-                  <h3
-                    className={`font-[var(--font-catamaran)] text-[40px] font-medium leading-[120%] text-black ${
-                      index === 3 ? "whitespace-nowrap" : ""
-                    }`}
-                  >
+                  <h3 className="font-[var(--font-catamaran)] text-[40px] font-medium leading-[120%] text-black">
                     {featureItem.title}
                   </h3>
                   {/* Feature description */}
@@ -233,12 +105,7 @@ export default function FeaturesSection() {
                       <Image
                         src={productFgOneImage}
                         alt=""
-                        className={`${
-                          isFirstFeatureFgVisible
-                            ? "translate-y-0"
-                            : "translate-y-[80px]"
-                        }`}
-                        style={fgRevealTransitionStyle}
+                        className="translate-y-0"
                       />
                     </div>
                   ) : null}
@@ -253,12 +120,7 @@ export default function FeaturesSection() {
                       <Image
                         src={productFgTwoImage}
                         alt=""
-                        className={`origin-top-right scale-[2.2] ${
-                          isSecondFeatureFgVisible
-                            ? "translate-y-0"
-                            : "translate-y-[80px]"
-                        }`}
-                        style={fgRevealTransitionStyle}
+                        className="origin-top-right scale-[2.2] translate-y-0"
                       />
                     </div>
                   ) : null}
@@ -268,11 +130,8 @@ export default function FeaturesSection() {
                         src={productFgThreeImage}
                         alt=""
                         style={{
-                          ...fgRevealTransitionStyle,
                           opacity: 1,
-                          transform: isThirdFeatureFgVisible
-                            ? "translateY(8%) scale(1.17)"
-                            : "translateY(calc(8% + 80px)) scale(1.053)",
+                          transform: "translateY(8%) scale(1.17)",
                           transformOrigin: "center center",
                         }}
                       />
@@ -283,12 +142,7 @@ export default function FeaturesSection() {
                       <Image
                         src={productFgFourImage}
                         alt=""
-                        className={`scale-[0.7] translate-x-[16%] ${
-                          isFourthFeatureFgVisible
-                            ? "translate-y-0"
-                            : "translate-y-[80px]"
-                        }`}
-                        style={fgRevealTransitionStyle}
+                        className="scale-[0.7] translate-x-[16%] translate-y-0"
                       />
                     </div>
                   ) : null}

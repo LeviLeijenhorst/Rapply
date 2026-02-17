@@ -2,8 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import logo from "@/home/logo.png";
 import linkedinIcon from "@/home/LinkedIn.svg";
-import tiktokIcon from "@/home/TikTok.svg";
-import facebookIcon from "@/home/Facebook.svg";
 import instagramIcon from "@/home/Instagram.svg";
 
 const navigationLinks = [
@@ -11,6 +9,7 @@ const navigationLinks = [
   { label: "Coaches", destination: "/coaches" },
   { label: "Veiligheid", destination: "/veiligheid" },
   { label: "Over Ons", destination: "/over-ons" },
+  { label: "Contact", destination: "/contact" },
   { label: "Wachtlijst", destination: "/wachtlijst" },
 ];
 
@@ -21,15 +20,9 @@ const connectLinks = [
     icon: linkedinIcon,
     iconClassName: "scale-[1.9]",
   },
-  { label: "TikTok", destination: "https://www.tiktok.com", icon: tiktokIcon },
-  {
-    label: "Facebook",
-    destination: "https://www.facebook.com",
-    icon: facebookIcon,
-  },
   {
     label: "Instagram",
-    destination: "https://www.instagram.com",
+    destination: "https://www.instagram.com/coach.scribe/",
     icon: instagramIcon,
     iconClassName: "scale-[1.15]",
   },
@@ -46,7 +39,7 @@ export default function Footer() {
           <div className="col-span-2 flex w-full max-w-[430px] flex-col lg:col-span-1 lg:w-fit lg:max-w-none">
             <div className="flex flex-col gap-6">
               {/* Brand logo */}
-              <div className="-mb-16 flex items-center">
+              <div className="-mb-[108px] flex items-center">
                 <Image
                   src={logo}
                   alt="CoachScribe logo"

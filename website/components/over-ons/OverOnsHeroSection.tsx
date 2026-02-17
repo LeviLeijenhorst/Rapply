@@ -7,7 +7,7 @@ export default function OverOnsHeroSection() {
       <div className="grid w-full items-start gap-10 lg:grid-cols-2">
         <div className="flex w-full flex-col items-start">
           <div className="flex w-full max-w-xl flex-col items-start gap-4">
-            <h1 className="font-[var(--font-catamaran)] text-[64px] font-medium leading-[110%] text-black">
+            <h1 className="font-[var(--font-catamaran)] text-[38px] font-medium leading-[110%] text-black md:text-[50px] xl:text-[64px]">
               <span>Aangenaam </span>
               <span className="text-[#BD0265]">:)</span>
             </h1>
@@ -27,7 +27,7 @@ export default function OverOnsHeroSection() {
           </div>
         </div>
         <div className="flex w-full justify-center lg:-translate-y-[60px] lg:self-center lg:justify-end">
-          <div className="w-full max-w-[600px] overflow-hidden rounded-2xl">
+          <div className="w-full max-w-[340px] overflow-hidden rounded-2xl md:max-w-[470px] xl:max-w-[600px]">
             <div className="aspect-[22/15] w-full">
               <div className="h-full w-full bg-[#BD0265]" />
             </div>

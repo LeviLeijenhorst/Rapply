@@ -1,259 +1,253 @@
-### Verwerkersovereenkomst CoachScribe
+### VERWERKERSOVEREENKOMST COACHSCRIBE
 
-Deze verwerkersovereenkomst hoort bij het gebruik van CoachScribe. In dit document spreken partijen af hoe persoonsgegevens worden verwerkt en beveiligd wanneer CoachScribe wordt gebruikt.
+Deze verwerkersovereenkomst ("Overeenkomst") maakt integraal onderdeel uit van de overeenkomst inzake het gebruik van CoachScribe tussen Partijen.
 
-**Let op**: dit is een template. Vul de invulvelden in en laat dit document zo nodig juridisch controleren voor jouw situatie.
-
----
+Partijen leggen hierin vast op welke wijze persoonsgegevens worden verwerkt en beveiligd overeenkomstig artikel 28 van de Algemene verordening gegevensbescherming (AVG).
 
 ### 1. Partijen
 
 #### 1.1 Verwerkingsverantwoordelijke
 
-Naam organisatie: **[NAAM KLANT]**  
-Adres: **[ADRES KLANT]**  
-Postcode en plaats: **[POSTCODE EN PLAATS KLANT]**  
-Land: **[LAND KLANT]**  
-Contactpersoon: **[NAAM CONTACTPERSOON KLANT]**  
-E-mail: **[E-MAIL KLANT]**  
+Naam organisatie: [NAAM KLANT]  
+Adres: [ADRES KLANT]  
+Postcode en plaats: [POSTCODE EN PLAATS KLANT]  
+Land: [LAND KLANT]  
+Contactpersoon: [NAAM CONTACTPERSOON]  
+E-mail: [E-MAIL]
 
-Hierna: **Verwerkingsverantwoordelijke**.
+Hierna: "Verwerkingsverantwoordelijke".
 
 #### 1.2 Verwerker
 
-Naam: **JNL Solutions**  
+Naam: JNL Solutions  
+Handelend onder de naam: CoachScribe  
 Adres: Stationsplein 26  
-Postcode en plaats: 6512 AB, Nijmegen  
-Land: Nederland  
-E-mail: contact@coachscribe.nl  
-Telefoon: +31 6 221 68 360  
-Website: `https://www.coachscribe.nl`  
+6512 AB Nijmegen  
+Nederland  
+E-mail: contact@coachscribe.nl
 
-Hierna: **Verwerker**.
+Website: https://www.coachscribe.nl
 
-Verwerkingsverantwoordelijke en Verwerker worden hieronder ook samen “partijen” genoemd.
+Hierna: "Verwerker".
 
----
+Verwerkingsverantwoordelijke en Verwerker worden gezamenlijk aangeduid als "Partijen".
 
-### 2. Uitleg van begrippen
+### 2. Definities
 
-- Met “persoonsgegevens” bedoelen partijen alle informatie die gaat over een geïdentificeerde of identificeerbare persoon.
-- Met “verwerken” bedoelen partijen alles wat je met persoonsgegevens kunt doen, zoals opslaan, bekijken, gebruiken, versturen en verwijderen.
-- Met “Algemene verordening gegevensbescherming (AVG)” bedoelen partijen de Europese privacywet.
+Begrippen als "persoonsgegevens", "verwerken", "betrokkene", "verwerkingsverantwoordelijke" en "verwerker" hebben de betekenis zoals daaraan gegeven in de AVG.
 
-Als woorden in deze overeenkomst niet duidelijk zijn, dan geldt de betekenis die de AVG daaraan geeft.
-
----
+Waar in deze Overeenkomst begrippen niet nader zijn gedefinieerd, geldt de betekenis zoals opgenomen in de AVG.
 
 ### 3. Onderwerp en duur
 
 #### 3.1 Onderwerp
 
-Verwerker verwerkt persoonsgegevens voor Verwerkingsverantwoordelijke bij het leveren van CoachScribe, zoals beschreven in **Bijlage 1 (Omschrijving van de verwerking)**.
+Verwerker verwerkt persoonsgegevens ten behoeve van Verwerkingsverantwoordelijke in het kader van het leveren van CoachScribe, zoals nader omschreven in Bijlage 1.
 
 #### 3.2 Duur
 
-Deze verwerkersovereenkomst geldt vanaf **[INGANGSDATUM]** en loopt zolang Verwerker persoonsgegevens verwerkt voor Verwerkingsverantwoordelijke in het kader van CoachScribe.
+Deze Overeenkomst treedt in werking op [INGANGSDATUM] en geldt zolang Verwerker persoonsgegevens verwerkt in het kader van CoachScribe.
 
----
-
-### 4. Instructies en doelbinding
-
-#### 4.1 Verwerking uitsluitend op instructie
+### 4. Aard en doel van de verwerking
 
 Verwerker verwerkt persoonsgegevens uitsluitend:
-- om CoachScribe te leveren zoals afgesproken met Verwerkingsverantwoordelijke; en
-- op basis van schriftelijke of aantoonbare instructies van Verwerkingsverantwoordelijke.
 
-#### 4.2 Wettelijke plichten
+- ten behoeve van het leveren van CoachScribe;
+- overeenkomstig deze Overeenkomst;
+- op basis van gedocumenteerde instructies van Verwerkingsverantwoordelijke.
 
-Als Verwerker volgens een wet persoonsgegevens moet verwerken op een manier die afwijkt van instructies van Verwerkingsverantwoordelijke, dan meldt Verwerker dat vooraf, tenzij de wet dit verbiedt.
-
----
+Indien Verwerker op grond van een wettelijke verplichting persoonsgegevens anders moet verwerken, stelt Verwerker Verwerkingsverantwoordelijke daarvan vooraf in kennis, tenzij dit wettelijk verboden is.
 
 ### 5. Vertrouwelijkheid
 
-Verwerker zorgt ervoor dat personen die onder zijn verantwoordelijkheid werken en toegang hebben tot persoonsgegevens:
-- gebonden zijn aan geheimhouding; en
-- alleen toegang hebben voor zover dat nodig is voor hun werk.
+Verwerker waarborgt dat personen die onder zijn verantwoordelijkheid handelen en toegang hebben tot persoonsgegevens:
 
----
+- gehouden zijn tot geheimhouding;
+- uitsluitend toegang hebben voor zover noodzakelijk voor de uitvoering van hun werkzaamheden.
 
 ### 6. Beveiliging
 
 #### 6.1 Passende maatregelen
 
-Verwerker neemt passende technische en organisatorische maatregelen om persoonsgegevens te beveiligen. De belangrijkste maatregelen staan in **Bijlage 2 (Beveiligingsmaatregelen)**.
+Verwerker treft passende technische en organisatorische maatregelen overeenkomstig artikel 32 AVG, rekening houdend met:
 
-#### 6.2 Geen logging van inhoud
+- de stand van de techniek;
+- de uitvoeringskosten;
+- de aard, omvang, context en doeleinden van de verwerking;
+- de risico's voor betrokkenen.
 
-Verwerker probeert te voorkomen dat gevoelige inhoud zoals transcripties, audio, encryptiesleutels en toegangstokens in logs terechtkomt, behalve als dit strikt nodig is om een concreet incident op te lossen.
+De maatregelen zijn nader beschreven in Bijlage 2.
 
----
+#### 6.2 Logging van inhoud
 
-### 7. Inschakeling van subverwerkers
+Verwerker hanteert als uitgangspunt dat inhoudelijke gegevens (zoals transcripties, audio, encryptiesleutels en toegangstokens) niet in logbestanden worden opgenomen, tenzij dit noodzakelijk is voor het analyseren en oplossen van een concreet beveiligingsincident.
 
-#### 7.1 Toestemming en lijst
+### 7. Subverwerkers
 
-Verwerkingsverantwoordelijke geeft algemene toestemming voor het inschakelen van subverwerkers die nodig zijn voor CoachScribe. De huidige subverwerkers staan in **Bijlage 3 (Subverwerkers)**.
+#### 7.1 Algemene toestemming
+
+Verwerkingsverantwoordelijke verleent algemene schriftelijke toestemming voor het inschakelen van subverwerkers zoals opgenomen in Bijlage 3.
 
 #### 7.2 Wijzigingen
 
-Verwerker mag subverwerkers wijzigen of toevoegen. Verwerker informeert Verwerkingsverantwoordelijke vooraf over materiële wijzigingen via een redelijke kennisgeving, zodat Verwerkingsverantwoordelijke bezwaar kan maken als daar een goede reden voor is.
+Verwerker informeert Verwerkingsverantwoordelijke vooraf over voorgenomen materiële wijzigingen in subverwerkers. Verwerkingsverantwoordelijke kan op redelijke gronden bezwaar maken.
 
-#### 7.3 Afspraken met subverwerkers
+#### 7.3 Contractuele waarborgen
 
-Verwerker sluit met subverwerkers afspraken die minstens hetzelfde beschermingsniveau geven als deze verwerkersovereenkomst.
+Verwerker sluit met subverwerkers een overeenkomst die minimaal hetzelfde niveau van gegevensbescherming waarborgt als deze Overeenkomst.
 
----
+Verwerker blijft jegens Verwerkingsverantwoordelijke volledig verantwoordelijk voor het handelen van subverwerkers.
 
-### 8. Doorgifte buiten de Europese Economische Ruimte
+### 8. Doorgifte buiten de EER
 
-Als persoonsgegevens worden verwerkt buiten de Europese Economische Ruimte, dan zorgt Verwerker voor passende waarborgen, zoals standaardcontractbepalingen, voor zover dit onder de AVG nodig is.
+Voor zover persoonsgegevens buiten de Europese Economische Ruimte worden verwerkt, zorgt Verwerker voor passende waarborgen overeenkomstig hoofdstuk V AVG, zoals het toepassen van standaardcontractbepalingen indien vereist.
 
----
+### 9. Rechten van betrokkenen
 
-### 9. Hulp bij rechten van betrokkenen
+Indien Verwerker een verzoek van een betrokkene ontvangt, verwijst Verwerker de betrokkene naar Verwerkingsverantwoordelijke, tenzij Verwerker wettelijk verplicht is zelf te reageren.
 
-Als Verwerker een verzoek krijgt van een betrokkene (bijvoorbeeld inzage of verwijdering), dan verwijst Verwerker de betrokkene door naar Verwerkingsverantwoordelijke, tenzij Verwerker volgens de wet zelf moet reageren.
+Verwerker verleent, voor zover redelijk en technisch mogelijk, ondersteuning bij:
 
-Verwerker helpt Verwerkingsverantwoordelijke op verzoek, voor zover dat redelijk is, bij het uitvoeren van rechten van betrokkenen. Bijvoorbeeld door het verwijderen van gegevens als Verwerkingsverantwoordelijke daarom vraagt.
+- verwijdering van gegevens;
+- export van gegevens;
+- uitvoering van andere AVG-verplichtingen van Verwerkingsverantwoordelijke.
 
-Als Verwerkingsverantwoordelijke een export van gegevens nodig heeft (bijvoorbeeld voor dataportabiliteit), dan helpt Verwerker op verzoek met een redelijke export uit CoachScribe, voor zover dit technisch mogelijk is.
+### 10. Meldplicht datalekken
 
----
+Verwerker stelt Verwerkingsverantwoordelijke zonder onredelijke vertraging in kennis van een inbreuk in verband met persoonsgegevens.
 
-### 10. Datalekken
+Voor zover beschikbaar verstrekt Verwerker informatie over:
 
-#### 10.1 Melding
+- de aard van de inbreuk;
+- de betrokken categorieen gegevens;
+- de reeds genomen of voorgestelde maatregelen;
+- de vermoedelijke gevolgen.
 
-Als Verwerker een beveiligingsincident ontdekt dat leidt tot verlies of onrechtmatige verwerking van persoonsgegevens (een datalek), dan informeert Verwerker Verwerkingsverantwoordelijke zonder onredelijke vertraging.
+### 11. Verwijdering en teruggave
 
-#### 10.2 Informatie
+Na beëindiging van de dienstverlening:
 
-Voor zover beschikbaar verstrekt Verwerker in de melding:
-- wat er is gebeurd;
-- welke gegevens het betreft;
-- wat Verwerker heeft gedaan of gaat doen om de gevolgen te beperken;
-- wat Verwerkingsverantwoordelijke kan doen.
+- verwerkt Verwerker geen persoonsgegevens meer, tenzij wettelijk verplicht;
+- verwijdert of anonimiseert Verwerker persoonsgegevens binnen een redelijke termijn.
 
----
+Gedurende de dienstverlening kan Verwerkingsverantwoordelijke zelfstandig gegevens verwijderen via de functionaliteiten van CoachScribe.
 
-### 11. Verwijderen of teruggeven van gegevens
+### 12. Audit
 
-#### 11.1 Einde van de dienstverlening
+Verwerkingsverantwoordelijke heeft het recht om naleving van deze Overeenkomst te controleren.
 
-Na het einde van CoachScribe verwerkt Verwerker geen persoonsgegevens meer voor Verwerkingsverantwoordelijke, behalve als dit wettelijk verplicht is.
+Partijen maken vooraf redelijke afspraken over:
 
-#### 11.2 Verwijderen
+- scope;
+- planning;
+- vertrouwelijkheid;
+- kosten.
 
-Verwerker verwijdert of anonimiseert persoonsgegevens op verzoek van Verwerkingsverantwoordelijke en in ieder geval binnen een redelijke termijn na beëindiging van de dienstverlening, tenzij een wettelijke bewaarplicht anders vereist.
-
-CoachScribe bevat functies waarmee Verwerkingsverantwoordelijke gegevens kan verwijderen. Bij het verwijderen van een account worden bijbehorende gegevens in de database verwijderd en bijbehorende uploads in opslag verwijderd, voor zover die nog aanwezig zijn.
-
----
-
-### 12. Audit en controle
-
-Verwerkingsverantwoordelijke mag controleren of Verwerker deze verwerkersovereenkomst naleeft, bijvoorbeeld door documentatie op te vragen of door een audit te laten uitvoeren. Partijen maken hierover vooraf praktische afspraken, zodat de controle de dienstverlening niet onnodig verstoort.
-
----
+Een audit mag de dienstverlening niet onevenredig verstoren.
 
 ### 13. Aansprakelijkheid
 
-Voor aansprakelijkheid geldt wat partijen in de hoofdovereenkomst hebben afgesproken. Als er geen hoofdovereenkomst is, dan geldt het Nederlandse recht.
+De aansprakelijkheid van Partijen wordt beheerst door de hoofd overeenkomst tussen Partijen.
 
----
+Bij gebreke daarvan is de aansprakelijkheid van Verwerker beperkt tot directe schade en tot maximaal het bedrag dat Verwerkingsverantwoordelijke in de twaalf maanden voorafgaand aan het schadeveroorzakende feit aan Verwerker heeft betaald, tenzij sprake is van opzet of bewuste roekeloosheid.
 
-### 14. Toepasselijk recht en forum
+### 14. Toepasselijk recht
 
-Op deze verwerkersovereenkomst is Nederlands recht van toepassing. Geschillen worden voorgelegd aan de bevoegde rechter in Nederland.
-
----
+Op deze Overeenkomst is Nederlands recht van toepassing.  
+Geschillen worden voorgelegd aan de bevoegde rechter in Nederland.
 
 ### 15. Ondertekening
 
-Aldus overeengekomen en ondertekend:
+Plaats: [PLAATS]  
+Datum: [DATUM]
 
-Plaats: **[PLAATS]**  
-Datum: **[DATUM]**  
+Voor Verwerkingsverantwoordelijke  
+Naam:  
+Functie:  
+Handtekening:
 
-**Voor Verwerkingsverantwoordelijke**  
-Naam: **[NAAM]**  
-Functie: **[FUNCTIE]**  
-Handtekening: ______________________  
+Voor Verwerker (JNL Solutions)  
+Naam:  
+Functie:  
+Handtekening:
 
-**Voor Verwerker (JNL Studios)**  
-Naam: **[NAAM]**  
-Functie: **[FUNCTIE]**  
-Handtekening: ______________________  
-
----
-
-### Bijlage 1: Omschrijving van de verwerking
+### BIJLAGE 1 - Omschrijving van de verwerking
 
 #### A. Doeleinden
 
-Verwerker verwerkt persoonsgegevens om CoachScribe te leveren, waaronder:
-- account en authenticatie via Microsoft Entra;
-- het opslaan en beheren van gegevens die Verwerkingsverantwoordelijke in CoachScribe invoert;
-- het (optioneel) transcriberen van audio en het genereren van samenvattingen en chatreacties op basis van door Verwerkingsverantwoordelijke aangeleverde inhoud;
-- beveiliging, stabiliteit en foutopsporing (zoals rate limiting).
+Verwerker verwerkt persoonsgegevens voor:
+
+- accountbeheer en authenticatie (Microsoft Entra);
+- opslag en beheer van door Verwerkingsverantwoordelijke ingevoerde gegevens;
+- optionele transcriptie van audio;
+- genereren van samenvattingen en chatreacties;
+- beveiliging, stabiliteit en foutopsporing;
+- abonnementsbeheer.
 
 #### B. Soorten persoonsgegevens
 
-Afhankelijk van gebruik kunnen dit onder andere zijn:
-- accountgegevens (Entra gebruikers-id, e-mail, weergavenaam);
+Afhankelijk van het gebruik kunnen onder meer worden verwerkt:
+
+- accountgegevens (gebruikers-id, e-mailadres, weergavenaam);
 - coachee-gegevens (bijvoorbeeld naam);
-- sessiegegevens (titel, type sessie, tijdstempels, bestandsnaam van upload);
-- transcripties, samenvattingen, notities, geschreven rapporten;
+- sessiegegevens (titels, tijdstempels, metadata);
+- transcripties, samenvattingen, notities en rapporten;
 - chatberichten;
-- technische gegevens zoals IP-adres en technische logs.
+- technische gegevens (IP-adres, loggegevens);
+- abonnements- en aankoopinformatie.
 
-#### C. Categorieën betrokkenen
+#### C. Categorieen betrokkenen
 
-Dit kunnen onder andere zijn:
-- Verwerkingsverantwoordelijke zelf (gebruiker van CoachScribe);
-- personen over wie gegevens worden vastgelegd (bijvoorbeeld cliënten of gesprekspartners);
-- contactpersonen die berichten sturen aan support.
+- Gebruikers van CoachScribe;
+- Personen over wie gegevens worden vastgelegd;
+- Contactpersonen die contact opnemen met support.
 
 #### D. Bijzondere persoonsgegevens
 
-De inhoud kan bijzondere persoonsgegevens bevatten, afhankelijk van wat Verwerkingsverantwoordelijke opneemt of invoert (bijvoorbeeld gezondheidsinformatie). Verwerkingsverantwoordelijke bepaalt de inhoud en het doel.
+Afhankelijk van de inhoud van opgenomen of ingevoerde gegevens kan de verwerking bijzondere categorieen van persoonsgegevens omvatten, waaronder gezondheidsgegevens.
 
-#### E. Frequentie en aard
+Verwerkingsverantwoordelijke bepaalt welke gegevens worden ingevoerd en is verantwoordelijk voor de rechtmatigheid van die verwerking.
 
-De verwerking vindt doorlopend plaats zolang CoachScribe wordt gebruikt. Audio voor transcriptie wordt als versleutelde upload tijdelijk verwerkt en na verwerking verwijderd.
+#### E. Aard van de verwerking
 
----
+De verwerking vindt doorlopend plaats zolang CoachScribe wordt gebruikt.
 
-### Bijlage 2: Beveiligingsmaatregelen
+Audio voor transcriptie wordt versleuteld verzonden, tijdelijk verwerkt en na verwerking verwijderd, tenzij opslag door Verwerkingsverantwoordelijke wordt voortgezet binnen CoachScribe.
 
-Verwerker neemt maatregelen die passen bij het risico en de gevoeligheid van de gegevens. In elk geval:
-- versleutelde verbindingen (HTTPS) waar van toepassing;
-- toegangsbeperking en minimale toegangsrechten voor systemen en database;
-- private opslag voor uploads en het gebruik van tijdelijke uploadrechten;
-- versleutelde audio-uploads vanuit de client voor transcriptie;
+### BIJLAGE 2 - Beveiligingsmaatregelen
+
+Verwerker treft onder meer de volgende maatregelen:
+
+- versleutelde verbindingen (HTTPS/TLS);
+- verwerking binnen Europese cloudregio's;
+- versleutelde opslag van gegevens;
+- aanvullende versleutelingslaag waarbij encryptiesleutels buiten de opslagomgeving worden beheerd;
+- toegangsbeperking op basis van minimale rechten;
+- private opslag voor uploads;
+- tijdelijke uploadrechten voor audio;
 - verwijdering van tijdelijke uploads na verwerking;
-- maatregelen tegen misbruik, zoals rate limiting op basis van IP-adres;
-- beleid om gevoelige inhoud (transcripties, audio, sleutels, tokens) niet te loggen.
+- maatregelen tegen misbruik (zoals rate limiting);
+- beleid om inhoudelijke gegevens niet in logs op te nemen.
 
----
+### BIJLAGE 3 - Subverwerkers
 
-### Bijlage 3: Subverwerkers
+Deze lijst kan wijzigen. Verwerker informeert Verwerkingsverantwoordelijke over materiële wijzigingen.
 
-Deze lijst kan wijzigen. Verwerker houdt deze bij en informeert Verwerkingsverantwoordelijke over materiële wijzigingen.
+#### A. Authenticatie en infrastructuur
 
-#### A. Auth en infrastructuur
-- **Microsoft** (Microsoft Entra voor authenticatie; Azure diensten voor hosting, opslag en database, afhankelijk van inrichting).
+Microsoft (Microsoft Entra voor authenticatie; Azure voor hosting, opslag en database).
 
-#### B. Audio-opslag voor transcriptie (tijdelijk)
-- **Cloudopslagdienst** voor versleutelde audio-uploads (in de huidige inrichting: Azure Blob Storage).
+#### B. Tijdelijke audio-opslag
+
+Azure Blob Storage (versleutelde uploads).
 
 #### C. Transcriptie, samenvatting en chat (optioneel)
-- **AI-dienstverlener** voor transcriptie (in de huidige inrichting afhankelijk van configuratie: Mistral Voxtral en/of Azure Speech).
-- **AI-dienstverlener** voor samenvatting en chat (in de huidige inrichting afhankelijk van configuratie: Mistral en/of Azure OpenAI).
 
-#### D. Abonnementen en aankoopstatus
-- **RevenueCat** (abonnementstatus en aankoopinformatie).
+AI-dienstverleners afhankelijk van configuratie, waaronder:
 
+- Azure Speech
+- Azure OpenAI
+
+#### D. Abonnementen
+
+RevenueCat (beheer van abonnementsstatus en aankoopinformatie).

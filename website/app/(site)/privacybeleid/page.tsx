@@ -7,7 +7,7 @@ export default async function PrivacybeleidPage() {
   return (
     <LegalDocumentPage
       title="Privacybeleid"
-      subtitle="Hoe CoachScribe omgaat met persoonsgegevens, beveiliging en jouw rechten."
+      subtitle="Heldere informatie over gegevensstromen, rollen, beveiliging en jouw rechten."
       markdown={markdown}
     />
   );

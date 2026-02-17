@@ -14,7 +14,7 @@ export default function ProductPage() {
         <ProductOverviewSection />
         <ProductImpactSection />
         <ProductCoachesSection />
-        <SecuritySection />
+        <SecuritySection disableAnimations />
         <AvailabilitySection />
         {/* <PricingSection /> */}
         <ProductFrequentlyAskedQuestionsSection />

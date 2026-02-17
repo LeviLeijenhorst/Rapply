@@ -5,7 +5,7 @@ export default function ContactPage() {
     <div className="w-full">
       <div className="flex w-full flex-col">
         <OverOnsContactSection
-          useRoundedContainer={false}
+          useRoundedContainer
           useLightTheme
         />
       </div>

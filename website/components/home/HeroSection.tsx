@@ -9,7 +9,7 @@ export default function HeroSection() {
         {/* Hero text */}
         <div className="flex w-full flex-col items-center gap-6 text-center lg:translate-y-[56px]">
           {/* Hero title */}
-          <h1 className="font-[var(--font-catamaran)] text-[64px] font-medium leading-[120%] text-black">
+          <h1 className="font-[var(--font-catamaran)] text-[38px] font-medium leading-[120%] text-black md:text-[50px] xl:text-[64px]">
             Betere coaching begint bij
             <span className="block text-[#BD0265]">volledige aandacht</span>
           </h1>

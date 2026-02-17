@@ -21,6 +21,11 @@ export default function NavigationBar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
+  const useSoftBackground =
+    pathname === "/contact" ||
+    pathname.startsWith("/contact/") ||
+    pathname === "/wachtlijst" ||
+    pathname.startsWith("/wachtlijst/");
   const isActiveDestination = (destination: string) =>
     pathname === destination || pathname.startsWith(`${destination}/`);
 
@@ -35,26 +40,24 @@ export default function NavigationBar() {
   }, []);
 
   return (
-    <header className="fixed left-0 top-0 z-50 w-full font-inter">
+    <header
+      className={`fixed left-0 top-0 z-50 w-full font-inter ${
+        useSoftBackground ? "bg-[#F8F9F9]" : "bg-white"
+      }`}
+    >
       {/* Navigation bar container */}
       <div
         className={`relative mx-auto w-full max-w-full px-0 pb-0 pt-0 transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          isScrolled ? "md:px-0 md:pb-0 md:pt-0" : "md:px-20 md:pb-8 md:pt-8"
+          isScrolled ? "xl:px-0 xl:pb-0 xl:pt-0" : "xl:px-20 xl:pb-8 xl:pt-8"
         }`}
         style={{ transitionDuration: `${NAV_EXPAND_ANIMATION_MS}ms` }}
       >
-        {/* Navigation bar top accent */}
-        <div
-          className={`absolute left-6 right-6 top-0 hidden h-[72px] bg-transparent transition-opacity duration-300 md:block md:left-10 md:right-10 ${
-            isScrolled ? "opacity-0" : "opacity-100"
-          }`}
-        />
         {/* Navigation bar surface */}
         <div
-          className={`relative flex h-20 w-full items-center justify-between gap-6 rounded-[0px] bg-white/70 px-4 shadow-[0_8px_24px_rgba(0,0,0,0.14)] backdrop-blur-xl md:px-10 ${
+          className={`relative flex h-20 w-full items-center justify-between gap-6 rounded-[0px] bg-white px-4 shadow-[0_8px_24px_rgba(0,0,0,0.14)] xl:px-10 ${
             isScrolled
-              ? "md:rounded-[0px] md:bg-white/70 md:px-10 md:shadow-[0_8px_24px_rgba(0,0,0,0.14)]"
-              : "md:rounded-[40px] md:bg-white/75 md:px-8 md:shadow-[0_4px_16px_rgba(0,0,0,0.18)]"
+              ? "xl:rounded-[0px] xl:bg-white xl:px-10 xl:shadow-[0_8px_24px_rgba(0,0,0,0.14)]"
+              : "xl:rounded-[40px] xl:bg-white xl:px-8 xl:shadow-[0_4px_16px_rgba(0,0,0,0.18)]"
           }`}
           style={{
             transitionProperty:
@@ -76,7 +79,7 @@ export default function NavigationBar() {
             />
           </Link>
           {/* Navigation links */}
-          <nav className="hidden items-center gap-10 text-[16px] font-medium text-black md:absolute md:left-1/2 md:flex md:-translate-x-1/2">
+          <nav className="hidden items-center gap-10 text-[16px] font-medium text-black xl:absolute xl:left-1/2 xl:flex xl:-translate-x-1/2">
             {navigationLinks.map((navigationLink) => (
               <Link
                 key={navigationLink.label}
@@ -92,7 +95,13 @@ export default function NavigationBar() {
             ))}
           </nav>
           {/* Navigation actions */}
-          <div className="hidden items-center lg:flex">
+          <div className="hidden items-center gap-3 xl:flex">
+            <Button
+              label="Contact"
+              destination="/contact"
+              variant="secondary"
+              className="font-normal"
+            />
             <Button
               label="Wachtlijst"
               destination="/wachtlijst"
@@ -105,7 +114,7 @@ export default function NavigationBar() {
             type="button"
             aria-label="Open menu"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-black/10 bg-white md:hidden"
+            className="flex h-12 w-12 items-center justify-center rounded-full border border-black/10 bg-white xl:hidden"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -139,7 +148,7 @@ export default function NavigationBar() {
       </div>
       {/* Mobile menu overlay */}
       <div
-        className={`fixed inset-0 z-50 flex justify-end bg-black/40 transition-opacity duration-300 md:hidden ${
+        className={`fixed inset-0 z-50 flex justify-end bg-black/40 transition-opacity duration-300 xl:hidden ${
           isMobileMenuOpen
             ? "pointer-events-auto opacity-100"
             : "pointer-events-none opacity-0"
@@ -218,13 +227,23 @@ export default function NavigationBar() {
             ))}
           </nav>
           {/* Mobile menu actions */}
-          <div className="flex flex-col">
-            <Button
-              label="Wachtlijst"
-              destination="/wachtlijst"
-              variant="primary"
-              className="font-normal"
-            />
+          <div className="flex flex-col gap-3">
+            <div onClick={() => setIsMobileMenuOpen(false)}>
+              <Button
+                label="Contact"
+                destination="/contact"
+                variant="secondary"
+                className="font-normal"
+              />
+            </div>
+            <div onClick={() => setIsMobileMenuOpen(false)}>
+              <Button
+                label="Wachtlijst"
+                destination="/wachtlijst"
+                variant="primary"
+                className="font-normal"
+              />
+            </div>
           </div>
         </div>
       </div>

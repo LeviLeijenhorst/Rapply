@@ -8,7 +8,7 @@ export default function CoachesWorkflowSection() {
       <SectionContainer contentClassName="pt-[60px] pb-[60px]">
         <div className="grid w-full items-start gap-10 lg:grid-cols-2">
           <div className="flex w-full flex-col items-start gap-4 lg:self-center">
-            <h1 className="font-[var(--font-catamaran)] text-[64px] font-medium leading-[110%] text-black">
+            <h1 className="font-[var(--font-catamaran)] text-[38px] font-medium leading-[110%] text-black md:text-[50px] xl:text-[64px]">
               Jouw <span className="text-[#BD0265]">werkwijze</span>
             </h1>
             <div className="max-w-xl space-y-5 text-[16px] font-medium text-black/70">
@@ -33,7 +33,7 @@ export default function CoachesWorkflowSection() {
             <Image
               src={workflowImage}
               alt="CoachScribe templates op laptop"
-              className="h-auto w-full max-w-[640px] object-contain"
+              className="h-auto w-full max-w-[360px] object-contain md:max-w-[500px] xl:max-w-[640px]"
               priority
             />
           </div>

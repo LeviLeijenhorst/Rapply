@@ -7,22 +7,28 @@ export default function VeiligheidHeroSection() {
   return (
     <SectionContainer className="bg-white">
       <div className="grid w-full items-center gap-10 lg:grid-cols-2">
-        <div className="flex w-full flex-col items-start lg:-translate-y-[60px]">
+        <div className="flex w-full flex-col items-start">
           <div className="flex w-full flex-col items-start gap-4">
-            <h1 className="font-[var(--font-catamaran)] text-[64px] font-medium leading-[110%] text-black">
-              <span className="block text-[#BD0265]">Veiligheid</span>
-              <span className="block">zoals het hoort</span>
+            <h1 className="font-[var(--font-catamaran)] text-[38px] font-medium leading-[110%] text-black md:text-[50px] xl:text-[64px]">
+              <span className="block text-[#BD0265]">Gebouwd voor</span>
+              <span className="block">vertrouwelijke gesprekken</span>
             </h1>
             <p className="max-w-xl text-[16px] font-medium text-black/70">
-              Coaches werken met gevoelige informatie en die verantwoordelijkheid
-              nemen we serieus. Jij blijft altijd eigenaar van jouw data.
+              CoachScribe is ontworpen voor gesprekken met gevoelige informatie.
+              Met verwerking binnen de Europese Unie en aanvullende
+              versleuteling bij opslag.
             </p>
           </div>
-          <div className="mt-6">
+          <div className="mt-6 flex flex-wrap items-center gap-3">
             <Button
-              label="Wachtlijst"
-              destination="/wachtlijst"
-              showArrow
+              label="Privacybeleid bekijken"
+              destination="/privacybeleid"
+              className="font-normal"
+            />
+            <Button
+              label="Verwerkersovereenkomst aanvragen"
+              destination="/contact"
+              variant="secondary"
               className="font-normal"
             />
           </div>
@@ -31,7 +37,7 @@ export default function VeiligheidHeroSection() {
           <Image
             src={heroImage}
             alt="Coach aan bureau met documenten"
-            className="h-auto w-full max-w-[520px] object-contain scale-[0.9]"
+            className="h-auto w-full max-w-[340px] object-contain scale-[0.9] md:max-w-[440px] xl:max-w-[520px]"
             priority
           />
         </div>

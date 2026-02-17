@@ -257,7 +257,7 @@ export default function ProductImpactSection() {
       contentClassName="md:pt-[60px] md:pb-[60px]"
     >
       <div className="flex w-full flex-col items-center">
-        <h2 className="text-center font-[var(--font-catamaran)] text-[64px] font-medium leading-[110%] text-black">
+        <h2 className="text-center font-[var(--font-catamaran)] text-[36px] font-medium leading-[110%] text-black md:text-[50px] xl:text-[64px]">
           De <span className="text-[#BD0265]">impact</span> van CoachScribe
         </h2>
         <div className="mt-10 grid w-full gap-6 md:grid-cols-2 xl:grid-cols-3">

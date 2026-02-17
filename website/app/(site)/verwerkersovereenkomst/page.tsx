@@ -6,8 +6,8 @@ export default async function VerwerkersovereenkomstPage() {
 
   return (
     <LegalDocumentPage
-      title="Verwerkersovereenkomst (voorbeeld)"
-      subtitle="Template voor afspraken over gegevensverwerking tussen verwerkingsverantwoordelijke en verwerker."
+      title="Verwerkersovereenkomst"
+      subtitle="Afspraken over gegevensverwerking tussen verwerkingsverantwoordelijke en verwerker."
       markdown={markdown}
     />
   );

@@ -14,21 +14,21 @@ type SecurityItem = {
 
 const securityItems: SecurityItem[] = [
   {
-    title: "AVG Proof",
+    title: "Verwerking binnen Europa",
     description:
-      "CoachScribe is AVG-proof ingericht. Opslag en verwerking van gegevens vinden uitsluitend plaats binnen de EU, volgens de geldende privacywetgeving.",
+      "CoachScribe verwerkt en bewaart sessiegegevens binnen de Europese Unie. Zo sluiten opslag en verwerking aan op de AVG.",
     icon: securitySafeIcon,
   },
   {
-    title: "Versleuteld opgeslagen",
+    title: "Versleuteld van upload tot opslag",
     description:
-      "Alle gegevens zijn beveiligd met sterke encryptie, zowel tijdens verzending (in transit) als wanneer ze zijn opgeslagen (at rest).",
+      "Audio voor transcriptie wordt versleuteld verzonden. Transcripties, samenvattingen en notities blijven versleuteld opgeslagen.",
     icon: lockIcon,
   },
   {
     title: "Jouw data blijft van jou",
     description:
-      "Jouw data wordt nooit gebruikt om AI-modellen te trainen of te verbeteren. Daarnaast kan je op elk moment je data verwijderen, het is jouw data.",
+      "Jouw data wordt niet gebruikt om publieke AI-modellen te trainen. Jij bepaalt wat je bewaart en kunt je gegevens verwijderen wanneer jij wilt.",
     icon: shieldTickIcon,
   },
   {

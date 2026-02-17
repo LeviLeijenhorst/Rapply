@@ -50,8 +50,8 @@ export default function OverOnsContactSection({
   };
 
   const titleClassName = useLightTheme
-    ? "font-[var(--font-catamaran)] text-[64px] font-medium leading-[110%] text-[#1D0A00]"
-    : "font-[var(--font-catamaran)] text-[64px] font-medium leading-[110%] text-white";
+    ? "font-[var(--font-catamaran)] text-[36px] font-medium leading-[110%] text-[#1D0A00] md:text-[50px] xl:text-[64px]"
+    : "font-[var(--font-catamaran)] text-[36px] font-medium leading-[110%] text-white md:text-[50px] xl:text-[64px]";
 
   const descriptionClassName = useLightTheme
     ? "mt-4 max-w-lg text-base font-normal leading-relaxed text-black/70"
@@ -109,7 +109,7 @@ export default function OverOnsContactSection({
             <Image
               src={contactImage}
               alt="CoachScribe team"
-              className="mt-6 h-auto w-full max-w-[420px] rounded-xl object-cover"
+              className="mt-6 h-auto w-full max-w-[320px] rounded-xl object-cover md:max-w-[380px] xl:max-w-[420px]"
             />
           </div>
           <form className="flex w-full flex-col gap-4 lg:pr-6" onSubmit={handleSubmit}>

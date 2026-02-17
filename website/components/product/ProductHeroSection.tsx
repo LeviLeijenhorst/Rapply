@@ -9,7 +9,7 @@ export default function ProductHeroSection() {
       <div className="grid w-full items-center gap-10 lg:grid-cols-2">
         <div className="flex w-full flex-col items-start lg:translate-y-[46px]">
           <div className="flex w-full flex-col items-start gap-4">
-            <h1 className="font-[var(--font-catamaran)] text-[64px] font-medium leading-[110%] text-black">
+            <h1 className="font-[var(--font-catamaran)] text-[38px] font-medium leading-[110%] text-black md:text-[50px] xl:text-[64px]">
               <span className="block text-[#BD0265]">Ervaar rust</span>
               <span className="block">met onze features</span>
             </h1>
@@ -35,7 +35,7 @@ export default function ProductHeroSection() {
           <Image
             src={heroImage}
             alt="Coach en client in gesprek"
-            className="h-auto w-full max-w-[680px] object-contain"
+            className="h-auto w-full max-w-[380px] object-contain md:max-w-[520px] xl:max-w-[680px]"
             priority
           />
         </div>

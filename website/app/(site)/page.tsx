@@ -14,7 +14,7 @@ export default function HomePage() {
         {/* Features */}
         <FeaturesSection />
         {/* Security */}
-        <SecuritySection />
+        <SecuritySection disableAnimations />
         {/* Availability */}
         <AvailabilitySection />
         {/* Pricing */}

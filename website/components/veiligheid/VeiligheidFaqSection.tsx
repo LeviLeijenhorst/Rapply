@@ -5,39 +5,54 @@ import SectionContainer from "@/components/home/SectionContainer";
 
 const questions = [
   {
-    question: "Is CoachScribe AVG-proof?",
+    question: "Blijven gegevens binnen Europa?",
     answer:
-      "Ja. Alle gegevens worden versleuteld opgeslagen op beveiligde servers in Europa. Dit zorgt ervoor dat informatie beschermd is tegen ongeautoriseerde toegang.",
+      "Ja. Alle aan sessies en coachees gerelateerde gegevens worden opgeslagen en verwerkt binnen de Europese Unie.",
   },
   {
-    question: "Worden mijn gegevens veilig opgeslagen?",
+    question: "Worden onze gegevens gebruikt om AI-modellen te trainen?",
     answer:
-      "Ja. Alle gegevens worden versleuteld opgeslagen op beveiligde servers in Europa. Dit zorgt ervoor dat informatie beschermd is tegen ongeautoriseerde toegang.",
+      "Nee. Gegevens binnen CoachScribe worden niet gebruikt om publieke AI-modellen te trainen of commercieel te exploiteren.",
   },
   {
-    question: "Hoe wordt mijn data beschermd tijdens verzending?",
+    question: "Wie is verantwoordelijk onder de AVG?",
     answer:
-      "Tijdens verzending wordt jouw data beschermd met sterke encryptie. Dit betekent dat informatie beveiligd is terwijl deze van jouw apparaat naar de servers wordt gestuurd.",
+      "De gebruiker is verwerkingsverantwoordelijke.\nCoachScribe treedt op als verwerker en verwerkt gegevens uitsluitend op basis van instructies.",
   },
   {
-    question: "Kan iemand anders mijn gegevens inzien?",
+    question: "Hoe zijn gegevens technisch beveiligd?",
     answer:
-      "Nee. Alleen jij hebt toegang tot jouw gegevens. Zelfs CoachScribe kan de inhoud van je sessies of notities niet inzien.",
+      "Gegevens worden versleuteld opgeslagen binnen Europese cloudinfrastructuur.\nDaarnaast passen wij een aanvullende versleutelingslaag toe, waarbij encryptiesleutels onafhankelijk van de opslagomgeving worden beheerd.",
   },
   {
-    question: "Hoe lang worden mijn gegevens bewaard?",
+    question: "Zijn opgeslagen gegevens leesbaar binnen de cloudomgeving?",
     answer:
-      "Gegevens worden alleen bewaard zolang dat functioneel nodig is voor het gebruik van het platform. Na verloop van tijd worden ze verwijderd volgens de geldende privacyrichtlijnen.",
+      "Opgeslagen gegevens zijn versleuteld.\nDoor de aanvullende versleuteling zijn gegevens binnen de opslagomgeving niet leesbaar zonder de bijbehorende encryptiesleutel.",
   },
   {
-    question: "Wat gebeurt er bij een datalek?",
+    question: "Wordt audio tijdelijk opgeslagen?",
     answer:
-      "In het uiterst onwaarschijnlijke geval van een datalek blijft de inhoud van jouw gegevens alsnog versleuteld en onleesbaar. Extra beveiligingsmaatregelen zorgen ervoor dat er geen ongeautoriseerde toegang mogelijk is.",
+      "Audio wordt versleuteld verzonden voor transcriptie.\nTijdelijke uploads worden na verwerking verwijderd, tenzij de gebruiker ervoor kiest de gegevens binnen CoachScribe te bewaren.",
   },
   {
-    question: "Wordt AI-verwerking volledig binnen de EU uitgevoerd?",
+    question: "Kan ik gegevens verwijderen als een cliënt dat vraagt?",
     answer:
-      "Ja. Alle AI-verwerking, zoals transcripties en verslag generatie, vindt volledig plaats op Europese servers. Zo blijft verwerking van gegevens binnen de EU en onder de AVG.",
+      "Ja. Via de applicatie kunnen sessies en bijbehorende gegevens worden verwijderd.\nNa beëindiging van de dienstverlening worden gegevens binnen een redelijke termijn verwijderd of geanonimiseerd, tenzij een wettelijke bewaarplicht anders vereist.",
+  },
+  {
+    question: "Welke subverwerkers gebruiken jullie?",
+    answer:
+      "CoachScribe maakt gebruik van cloud-, authenticatie- en AI-dienstverleners die nodig zijn voor hosting en functionaliteit.\nDe actuele lijst van subverwerkers is opgenomen in de verwerkersovereenkomst.",
+  },
+  {
+    question: "Hebben jullie een ISO 27001-certificering?",
+    answer:
+      "Op dit moment niet.\nWij bereiden onze processen en documentatie voor op een ISO 27001-certificeringstraject.",
+  },
+  {
+    question: "Wat als onze organisatie aanvullende beveiligingseisen heeft?",
+    answer:
+      "Neem contact met ons op.\nWe bespreken graag aanvullende documentatie of technische vragen over de inrichting van CoachScribe.",
   },
 ];
 
@@ -47,7 +62,7 @@ export default function VeiligheidFaqSection() {
   return (
     <SectionContainer className="bg-[#F8F9F9]" contentClassName="md:pt-10 md:pb-20">
       <div id="faq" className="flex w-full flex-col gap-8">
-        <h2 className="text-4xl font-semibold text-[#1D0A00] md:text-6xl">
+        <h2 className="text-3xl font-semibold text-[#1D0A00] md:text-5xl xl:text-6xl">
           Veel gestelde vragen
         </h2>
         <div className="w-full border-y border-black/40">
@@ -106,13 +121,9 @@ export default function VeiligheidFaqSection() {
                 </button>
                 <div
                   id={`faq-answer-${index}`}
-                  className="grid overflow-hidden transition-[grid-template-rows,opacity] duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
-                  style={{
-                    gridTemplateRows: isExpanded ? "1fr" : "0fr",
-                    opacity: isExpanded ? 1 : 0,
-                  }}
+                  className={isExpanded ? "block" : "hidden"}
                 >
-                  <p className="overflow-hidden pb-5 text-base font-normal leading-relaxed text-[#1D0A00]">
+                  <p className="pb-5 text-base font-normal leading-relaxed text-[#1D0A00] whitespace-pre-line">
                     {questionItem.answer}
                   </p>
                 </div>

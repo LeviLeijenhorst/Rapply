@@ -43,7 +43,7 @@ export default function CoachesFrequentlyAskedQuestionsSection() {
   return (
     <SectionContainer className="bg-[#F8F9F9]" contentClassName="md:pt-20 md:pb-20">
       <div id="faq" className="flex w-full flex-col gap-8">
-        <h2 className="text-4xl font-semibold text-[#1D0A00] md:text-6xl">
+        <h2 className="text-3xl font-semibold text-[#1D0A00] md:text-5xl xl:text-6xl">
           Veel gestelde vragen
         </h2>
         <div className="w-full border-y border-black/40">
@@ -102,13 +102,9 @@ export default function CoachesFrequentlyAskedQuestionsSection() {
                 </button>
                 <div
                   id={`faq-answer-${index}`}
-                  className="grid overflow-hidden transition-[grid-template-rows,opacity] duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
-                  style={{
-                    gridTemplateRows: isExpanded ? "1fr" : "0fr",
-                    opacity: isExpanded ? 1 : 0,
-                  }}
+                  className={isExpanded ? "block" : "hidden"}
                 >
-                  <p className="overflow-hidden pb-5 text-base font-normal leading-relaxed text-[#1D0A00]">
+                  <p className="pb-5 text-base font-normal leading-relaxed text-[#1D0A00]">
                     {questionItem.answer}
                   </p>
                 </div>
