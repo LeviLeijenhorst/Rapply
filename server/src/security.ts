@@ -7,6 +7,63 @@ function normalizeOrigin(value: string): string {
   return trimmed.replace(/\/+$/g, "")
 }
 
+function normalizeHostname(value: string): string {
+  const normalized = String(value || "").trim().toLowerCase()
+  return normalized.startsWith("www.") ? normalized.slice(4) : normalized
+}
+
+function tryParseUrl(value: string): URL | null {
+  try {
+    return new URL(value)
+  } catch {
+    return null
+  }
+}
+
+function isOriginAllowed(allowedOrigins: string[], origin: string): boolean {
+  const normalizedOrigin = normalizeOrigin(origin)
+  const parsedOrigin = tryParseUrl(normalizedOrigin)
+  const originHostname = normalizeHostname(parsedOrigin?.hostname || "")
+
+  for (const allowedOrigin of allowedOrigins) {
+    const normalizedAllowedOrigin = normalizeOrigin(allowedOrigin)
+    if (!normalizedAllowedOrigin) {
+      continue
+    }
+
+    if (normalizedAllowedOrigin === normalizedOrigin) {
+      return true
+    }
+
+    const parsedAllowedOrigin = tryParseUrl(normalizedAllowedOrigin)
+    if (parsedOrigin && parsedAllowedOrigin) {
+      if (
+        normalizeHostname(parsedAllowedOrigin.hostname) === originHostname &&
+        parsedAllowedOrigin.protocol === parsedOrigin.protocol
+      ) {
+        return true
+      }
+      continue
+    }
+
+    if (!parsedOrigin) {
+      continue
+    }
+
+    const normalizedAllowedHost = normalizeHostname(
+      normalizedAllowedOrigin
+        .replace(/^https?:\/\//i, "")
+        .replace(/\/.*$/, ""),
+    )
+
+    if (normalizedAllowedHost && normalizedAllowedHost === originHostname) {
+      return true
+    }
+  }
+
+  return false
+}
+
 // Parses a comma-separated env allowlist into normalized origin values.
 function parseCommaSeparatedList(value: string | null): string[] {
   const raw = typeof value === "string" ? value : ""
@@ -43,7 +100,7 @@ export function createCorsMiddleware(params: {
         callback(null, true)
         return
       }
-      callback(null, allowedOrigins.includes(normalized))
+      callback(null, isOriginAllowed(allowedOrigins, normalized))
     },
   }
 

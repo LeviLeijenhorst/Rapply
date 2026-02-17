@@ -40,12 +40,12 @@ app.set("trust proxy", true)
 logDatabaseConnectionStatus()
 
 const corsAllowedOrigins = parseCorsAllowedOriginsFromEnv(env.corsAllowedOrigins)
-app.use(
-  createCorsMiddleware({
-    runtimeEnvironment: env.runtimeEnvironment,
-    allowedOrigins: corsAllowedOrigins,
-  }),
-)
+const corsMiddleware = createCorsMiddleware({
+  runtimeEnvironment: env.runtimeEnvironment,
+  allowedOrigins: corsAllowedOrigins,
+})
+app.use(corsMiddleware)
+app.options("*", corsMiddleware)
 
 // Keep raw upload routes before JSON body parsing middleware.
 registerAudioRoutes(app)
