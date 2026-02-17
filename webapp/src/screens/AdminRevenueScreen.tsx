@@ -34,6 +34,12 @@ type AdminUser = {
 
 type PlanListResponse = { items: Plan[] }
 type UserListResponse = { items: AdminUser[] }
+type AllowlistItem = {
+  id: string
+  email: string
+  createdAt: string
+}
+type AllowlistResponse = { items: AllowlistItem[] }
 
 type UserFormState = {
   planId: string | null
@@ -49,6 +55,12 @@ type UserFormState = {
 function formatMoney(value: number | null): string {
   if (value == null) return '-'
   return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(value)
+}
+
+function formatDateTime(value: string): string {
+  const parsed = new Date(value)
+  if (!Number.isFinite(parsed.getTime())) return value
+  return parsed.toLocaleString('nl-NL')
 }
 
 function buildUserLabel(user: AdminUser): string {
@@ -67,6 +79,7 @@ function parseError(error: unknown): string {
 export function AdminRevenueScreen() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [users, setUsers] = useState<AdminUser[]>([])
+  const [allowlistItems, setAllowlistItems] = useState<AllowlistItem[]>([])
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [selectedUserForm, setSelectedUserForm] = useState<UserFormState | null>(null)
   const [newPlanName, setNewPlanName] = useState('')
@@ -75,7 +88,12 @@ export function AdminRevenueScreen() {
   const [newPlanMinutes, setNewPlanMinutes] = useState('')
   const [isBusy, setIsBusy] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isAllowlistLoading, setIsAllowlistLoading] = useState(false)
+  const [isAllowlistBusy, setIsAllowlistBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [allowlistErrorMessage, setAllowlistErrorMessage] = useState<string | null>(null)
+  const [allowlistStatusMessage, setAllowlistStatusMessage] = useState<string | null>(null)
+  const [allowlistEmailInput, setAllowlistEmailInput] = useState('')
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
@@ -105,9 +123,82 @@ export function AdminRevenueScreen() {
     }
   }, [])
 
+  const loadAllowlist = useCallback(async () => {
+    try {
+      setIsAllowlistLoading(true)
+      setAllowlistErrorMessage(null)
+      const response = await callSecureApi<AllowlistResponse>('/admin/account-allowlist/list', {})
+      setAllowlistItems(Array.isArray(response.items) ? response.items : [])
+    } catch (error) {
+      setAllowlistItems([])
+      setAllowlistErrorMessage(
+        toUserFriendlyErrorMessage(error, {
+          fallback: 'Allowlist ophalen mislukt.',
+          forbiddenMessage: 'Geen toegang. Alleen contact@jnlsolutions.nl mag deze pagina openen.',
+        }),
+      )
+    } finally {
+      setIsAllowlistLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     void loadData()
-  }, [loadData])
+    void loadAllowlist()
+  }, [loadAllowlist, loadData])
+
+  const addAllowlistEmail = useCallback(async () => {
+    const trimmedEmail = allowlistEmailInput.trim().toLowerCase()
+    if (!trimmedEmail) {
+      setAllowlistStatusMessage('Vul eerst een e-mailadres in.')
+      return
+    }
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailPattern.test(trimmedEmail)) {
+      setAllowlistStatusMessage('Gebruik een geldig e-mailadres.')
+      return
+    }
+
+    try {
+      setIsAllowlistBusy(true)
+      setAllowlistStatusMessage(null)
+      await callSecureApi<{ ok: true }>('/admin/account-allowlist/add', { email: trimmedEmail })
+      setAllowlistEmailInput('')
+      setAllowlistStatusMessage('E-mailadres toegevoegd aan de allowlist.')
+      await loadAllowlist()
+    } catch (error) {
+      setAllowlistStatusMessage(
+        toUserFriendlyErrorMessage(error, {
+          fallback: 'Toevoegen mislukt.',
+          forbiddenMessage: 'Geen toegang. Alleen contact@jnlsolutions.nl mag deze pagina openen.',
+        }),
+      )
+    } finally {
+      setIsAllowlistBusy(false)
+    }
+  }, [allowlistEmailInput, loadAllowlist])
+
+  const removeAllowlistEmail = useCallback(
+    async (email: string) => {
+      try {
+        setIsAllowlistBusy(true)
+        setAllowlistStatusMessage(null)
+        await callSecureApi<{ ok: true }>('/admin/account-allowlist/remove', { email })
+        setAllowlistStatusMessage('E-mailadres verwijderd uit de allowlist.')
+        await loadAllowlist()
+      } catch (error) {
+        setAllowlistStatusMessage(
+          toUserFriendlyErrorMessage(error, {
+            fallback: 'Verwijderen mislukt.',
+            forbiddenMessage: 'Geen toegang. Alleen contact@jnlsolutions.nl mag deze pagina openen.',
+          }),
+        )
+      } finally {
+        setIsAllowlistBusy(false)
+      }
+    },
+    [loadAllowlist],
+  )
 
   const selectedUser = useMemo(
     () => users.find((user) => user.userId === selectedUserId) || null,
@@ -262,6 +353,69 @@ export function AdminRevenueScreen() {
       {statusMessage ? <Text style={styles.statusText}>{statusMessage}</Text> : null}
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.card}>
+          <View style={styles.allowlistHeaderRow}>
+            <View>
+              <Text isSemibold style={styles.cardTitle}>Account allowlist</Text>
+              <Text style={styles.cardSubtitle}>Alleen e-mails in deze lijst kunnen inloggen in de webapp.</Text>
+            </View>
+            <Pressable
+              onPress={() => void loadAllowlist()}
+              style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]}
+              disabled={isAllowlistLoading || isAllowlistBusy}
+            >
+              <Text isBold style={styles.secondaryButtonText}>Verversen</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.allowlistAddRow}>
+            <TextInput
+              value={allowlistEmailInput}
+              onChangeText={setAllowlistEmailInput}
+              placeholder="naam@voorbeeld.nl"
+              placeholderTextColor={colors.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={styles.input}
+              editable={!isAllowlistBusy}
+            />
+            <Pressable
+              onPress={() => void addAllowlistEmail()}
+              style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined, isAllowlistBusy ? styles.buttonDisabled : undefined]}
+              disabled={isAllowlistBusy}
+            >
+              <Text isBold style={styles.primaryButtonText}>Toevoegen</Text>
+            </Pressable>
+          </View>
+
+          {allowlistErrorMessage ? <Text style={styles.errorText}>{allowlistErrorMessage}</Text> : null}
+          {allowlistStatusMessage ? <Text style={styles.statusText}>{allowlistStatusMessage}</Text> : null}
+
+          {isAllowlistLoading ? (
+            <Text style={styles.cardSubtitle}>Allowlist laden...</Text>
+          ) : allowlistItems.length === 0 ? (
+            <Text style={styles.cardSubtitle}>Nog geen e-mailadressen in de allowlist.</Text>
+          ) : (
+            <View style={styles.allowlistList}>
+              {allowlistItems.map((item) => (
+                <View key={item.id} style={styles.allowlistItemRow}>
+                  <View style={styles.allowlistItemTextWrap}>
+                    <Text style={styles.allowlistItemEmail}>{item.email}</Text>
+                    <Text style={styles.allowlistItemMeta}>Toegevoegd op {formatDateTime(item.createdAt)}</Text>
+                  </View>
+                  <Pressable
+                    onPress={() => void removeAllowlistEmail(item.email)}
+                    style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined, isAllowlistBusy ? styles.buttonDisabled : undefined]}
+                    disabled={isAllowlistBusy}
+                  >
+                    <Text isBold style={styles.secondaryButtonText}>Verwijderen</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
         <View style={styles.card}>
           <Text isSemibold style={styles.cardTitle}>Plannen</Text>
           <View style={styles.newPlanRow}>
@@ -431,9 +585,51 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 17,
   },
+  buttonDisabled: {
+    opacity: 0.55,
+  },
   scrollContent: {
     gap: 12,
     paddingBottom: 20,
+  },
+  allowlistHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  allowlistAddRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  allowlistList: {
+    gap: 8,
+  },
+  allowlistItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: colors.pageBackground,
+  },
+  allowlistItemTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  allowlistItemEmail: {
+    color: colors.textStrong,
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  allowlistItemMeta: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
   },
   card: {
     borderRadius: 12,
