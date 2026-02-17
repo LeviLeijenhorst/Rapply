@@ -13,6 +13,7 @@ type RegisterFeedbackRoutesParams = {
 
 let ensureContactSubmissionsTablePromise: Promise<void> | null = null
 let ensurePraktijkRequestsCompatibilityPromise: Promise<void> | null = null
+let ensureContactSubmissionsCompatibilityPromise: Promise<void> | null = null
 
 async function ensureContactSubmissionsTable(): Promise<void> {
   if (!ensureContactSubmissionsTablePromise) {
@@ -56,6 +57,39 @@ async function ensurePraktijkRequestsCompatibility(): Promise<void> {
     })
   }
   await ensurePraktijkRequestsCompatibilityPromise
+}
+
+async function ensureContactSubmissionsCompatibility(): Promise<void> {
+  if (!ensureContactSubmissionsCompatibilityPromise) {
+    ensureContactSubmissionsCompatibilityPromise = execute(
+      `
+      alter table public.contact_submissions
+      alter column user_id drop not null;
+
+      alter table public.contact_submissions
+      add column if not exists account_email text;
+
+      do $$
+      begin
+        if not exists (
+          select 1
+          from pg_constraint
+          where conname = 'contact_submissions_account_email_length'
+        ) then
+          alter table public.contact_submissions
+          add constraint contact_submissions_account_email_length
+          check (account_email is null or char_length(account_email) <= 320);
+        end if;
+      end
+      $$;
+      `,
+      [],
+    ).catch((error) => {
+      ensureContactSubmissionsCompatibilityPromise = null
+      throw error
+    })
+  }
+  await ensureContactSubmissionsCompatibilityPromise
 }
 
 async function requireAdminUserEmail(req: Parameters<typeof requireAuthenticatedUser>[0]): Promise<string> {
@@ -137,6 +171,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     asyncHandler(async (req, res) => {
       const user = await requireAuthenticatedUser(req)
       await ensureContactSubmissionsTable()
+      await ensureContactSubmissionsCompatibility()
 
       const name = typeof req.body?.name === "string" ? req.body.name.trim() : ""
       const email = typeof req.body?.email === "string" ? req.body.email.trim() : ""
@@ -150,10 +185,39 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
 
       await execute(
         `
-        insert into public.contact_submissions (id, user_id, name, email, phone, message)
-        values ($1, $2, $3, $4, $5, $6)
+        insert into public.contact_submissions (id, user_id, name, email, phone, message, account_email)
+        values ($1, $2, $3, $4, $5, $6, $7)
         `,
-        [crypto.randomUUID(), user.userId, name, email, phone || null, message],
+        [crypto.randomUUID(), user.userId, name, email, phone || null, message, user.email],
+      )
+
+      res.status(200).json({ ok: true })
+    }),
+  )
+
+  app.post(
+    "/contact/request",
+    params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      await ensureContactSubmissionsTable()
+      await ensureContactSubmissionsCompatibility()
+
+      const name = typeof req.body?.name === "string" ? req.body.name.trim() : ""
+      const email = typeof req.body?.email === "string" ? req.body.email.trim() : ""
+      const phone = typeof req.body?.phone === "string" ? req.body.phone.trim() : ""
+      const message = typeof req.body?.message === "string" ? req.body.message.trim() : ""
+
+      if (!name || !email || !message) {
+        sendError(res, 400, "Missing name, email, or message")
+        return
+      }
+
+      await execute(
+        `
+        insert into public.contact_submissions (id, user_id, name, email, phone, message, account_email)
+        values ($1, $2, $3, $4, $5, $6, $7)
+        `,
+        [crypto.randomUUID(), null, name, email, phone || null, message, null],
       )
 
       res.status(200).json({ ok: true })

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import Image from "next/image";
 import SectionContainer from "@/components/home/SectionContainer";
 import BottomToast from "@/components/BottomToast";
+import { getApiUrl } from "@/lib/api";
 import contactImage from "@/over_ons/over_ons-beiden.png";
 import contactBackground from "@/over_ons/kom_in_contact-background.svg";
 
@@ -34,6 +35,8 @@ export default function OverOnsContactSection({
   useLightTheme = false,
 }: OverOnsContactSectionProps) {
   const [formValues, setFormValues] = useState<ContactFormValues>(initialFormValues);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toastMessage, setToastMessage] = useState("Bericht verzonden! Je hoort snel van ons.");
   const [isToastVisible, setIsToastVisible] = useState(false);
 
   useEffect(() => {
@@ -42,11 +45,43 @@ export default function OverOnsContactSection({
     return () => window.clearTimeout(timeout);
   }, [isToastVisible]);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setFormValues(initialFormValues);
-    setIsToastVisible(false);
-    window.requestAnimationFrame(() => setIsToastVisible(true));
+    if (isSubmitting) return;
+
+    const name = formValues.name.trim();
+    const email = formValues.email.trim();
+    const phone = formValues.phone.trim();
+    const message = formValues.message.trim();
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch(getApiUrl("/contact/request"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          message,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Contactaanvraag verzenden mislukt.");
+      }
+
+      setFormValues(initialFormValues);
+      setToastMessage("Bericht verzonden! Je hoort snel van ons.");
+      setIsToastVisible(false);
+      window.requestAnimationFrame(() => setIsToastVisible(true));
+    } catch {
+      setToastMessage("Verzenden mislukt. Probeer het opnieuw.");
+      setIsToastVisible(false);
+      window.requestAnimationFrame(() => setIsToastVisible(true));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const titleClassName = useLightTheme
@@ -185,9 +220,10 @@ export default function OverOnsContactSection({
             <div className="pt-1">
               <button
                 type="submit"
+                disabled={isSubmitting}
                 className={submitButtonClassName}
               >
-                <span>Verstuur</span>
+                <span>{isSubmitting ? "Versturen..." : "Verstuur"}</span>
                 <span aria-hidden="true">-&gt;</span>
               </button>
             </div>
@@ -196,7 +232,7 @@ export default function OverOnsContactSection({
       </section>
       <BottomToast
         isVisible={isToastVisible}
-        message="Bericht verzonden! Je hoort snel van ons."
+        message={toastMessage}
       />
     </SectionContainer>
   );
