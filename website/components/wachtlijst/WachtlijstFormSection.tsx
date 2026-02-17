@@ -72,8 +72,14 @@ export default function WachtlijstFormSection() {
       setToastMessage("Bericht verzonden! Je hoort snel van ons.");
       setIsToastVisible(false);
       window.requestAnimationFrame(() => setIsToastVisible(true));
-    } catch {
-      setToastMessage("Verzenden mislukt. Probeer het opnieuw.");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "";
+      if (errorMessage.includes("NEXT_PUBLIC_COACHSCRIBE_API_BASE_URL")) {
+        setToastMessage("Configuratie ontbreekt. Start de website opnieuw.");
+      } else {
+        setToastMessage("Verzenden mislukt. Probeer het opnieuw.");
+      }
+      console.error("[wachtlijst] submit failed", error);
       setIsToastVisible(false);
       window.requestAnimationFrame(() => setIsToastVisible(true));
     } finally {
