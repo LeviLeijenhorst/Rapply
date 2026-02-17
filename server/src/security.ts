@@ -95,6 +95,10 @@ export function createCorsMiddleware(params: {
         callback(null, true)
         return
       }
+      if (runtimeEnvironment !== "production") {
+        callback(null, true)
+        return
+      }
       const normalized = normalizeOrigin(origin)
       if (!allowedOrigins || allowedOrigins.length === 0) {
         callback(null, true)

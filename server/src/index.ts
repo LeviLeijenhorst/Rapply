@@ -45,7 +45,13 @@ const corsMiddleware = createCorsMiddleware({
   allowedOrigins: corsAllowedOrigins,
 })
 app.use(corsMiddleware)
-app.options("*", corsMiddleware)
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    res.sendStatus(204)
+    return
+  }
+  next()
+})
 
 // Keep raw upload routes before JSON body parsing middleware.
 registerAudioRoutes(app)
