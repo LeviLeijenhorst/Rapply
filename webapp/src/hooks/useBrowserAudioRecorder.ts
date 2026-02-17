@@ -10,6 +10,14 @@ function formatUnknownError(error: unknown) {
   return 'Unknown error'
 }
 
+function readTotalChunkBytes(chunks: Blob[]): number {
+  let totalBytes = 0
+  for (const chunk of chunks) {
+    totalBytes += Number(chunk?.size || 0)
+  }
+  return totalBytes
+}
+
 function chooseMimeType() {
   if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') {
     return ''
@@ -150,6 +158,16 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
   }
 
   function buildRecordedBlob() {
+    const totalChunkBytes = readTotalChunkBytes(recordedChunksRef.current)
+    if (totalChunkBytes <= 0) {
+      setRecordedBlob(null)
+      setRecordedMimeType(null)
+      setRecordedChunks([])
+      setRecordedChunkDurationsSeconds([])
+      setStatus('error')
+      setErrorMessage('Er is geen audio opgenomen. Neem opnieuw op en wacht minimaal 1 seconde voor je stopt.')
+      return
+    }
     const firstChunkMimeType = recordedChunksRef.current.find((chunk) => typeof chunk.type === 'string' && chunk.type.trim().length > 0)?.type || ''
     const mimeType = lastMimeTypeRef.current || firstChunkMimeType || chosenMimeType || 'audio/mp4'
     const blob = new Blob(recordedChunksRef.current, { type: mimeType })
@@ -255,7 +273,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
         // Allow any trailing dataavailable callback to flush before composing the final blob.
         window.setTimeout(() => {
           buildRecordedBlob()
-        }, 0)
+        }, recordingChunkDurationMilliseconds)
       }
 
       // Avoid timeslice chunk fragmentation because some containers (notably mp4)

@@ -345,6 +345,9 @@ export async function transcribeAudio(params: {
   return withTimeout(
     (async () => {
       const { audioBlob, mimeType, languageCode = 'nl', signal, progress } = params
+      if (!audioBlob || audioBlob.size <= 0) {
+        throw new Error('Er is geen audio opgenomen. Neem opnieuw op en probeer het opnieuw.')
+      }
 
       try {
         let preflight: {
@@ -392,6 +395,9 @@ export async function transcribeAudio(params: {
           throw new Error(`Audio bestand is te groot voor transcriptie (max ${maxMb} MB).`)
         }
         const normalized = await normalizeAudioForTranscription({ audioBlob, mimeType, requiresWav })
+        if (!normalized.audioBlob || normalized.audioBlob.size <= 0) {
+          throw new Error('Er is geen audio opgenomen. Neem opnieuw op en probeer het opnieuw.')
+        }
         console.log('[transcription] starting', {
           mimeType: normalized.mimeType,
           audioSize: normalized.audioBlob.size,
