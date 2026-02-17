@@ -6,6 +6,7 @@ import { DeelCoachScribeIcon } from '../icons/DeelCoachScribeIcon'
 import { ContactIcon } from '../icons/ContactIcon'
 import { PrivacyIcon } from '../icons/PrivacyIcon'
 import { ArchiefMenuIcon } from '../icons/ArchiefMenuIcon'
+import { MijnAbonnementIcon } from '../icons/MijnAbonnementIcon'
 import { colors } from '../../theme/colors'
 
 type AnchorPoint = { x: number; y: number }
@@ -15,10 +16,12 @@ type Props = {
   anchorPoint: AnchorPoint | null
   onClose: () => void
   onOpenAccount: () => void
+  onOpenSubscription: () => void
   onOpenArchive: () => void
   onOpenContact: () => void
   onOpenShare: () => void
   onOpenPrivacy: () => void
+  showSubscriptionItem?: boolean
 }
 
 export function SettingsMenu({
@@ -26,10 +29,12 @@ export function SettingsMenu({
   anchorPoint,
   onClose,
   onOpenAccount,
+  onOpenSubscription,
   onOpenArchive,
   onOpenContact,
   onOpenShare,
   onOpenPrivacy,
+  showSubscriptionItem = false,
 }: Props) {
   const menuIconColor = colors.textSecondary
 
@@ -40,6 +45,16 @@ export function SettingsMenu({
       icon: <MijnAccountIcon color={menuIconColor} />,
       onPress: onOpenAccount,
     },
+    ...(showSubscriptionItem
+      ? [
+          {
+            key: 'subscription',
+            label: 'Mijn abonnement',
+            icon: <MijnAbonnementIcon color={menuIconColor} />,
+            onPress: onOpenSubscription,
+          },
+        ]
+      : []),
     // {
     //   key: 'theme',
     //   label: 'Donkere modus',
@@ -76,6 +91,6 @@ export function SettingsMenu({
     },
   ]
 
-  return <PopoverMenu visible={visible} anchorPoint={anchorPoint} placement="above" width={320} estimatedHeight={360} items={items} onClose={onClose} />
+  return <PopoverMenu visible={visible} anchorPoint={anchorPoint} placement="above" width={320} estimatedHeight={420} items={items} onClose={onClose} />
 }
 

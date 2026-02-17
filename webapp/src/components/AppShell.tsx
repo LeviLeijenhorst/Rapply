@@ -163,6 +163,7 @@ export function AppShell({ onLogout }: Props) {
 
   const [isMyAccountModalOpen, setIsMyAccountModalOpen] = useState(false)
   const [isMySubscriptionModalOpen, setIsMySubscriptionModalOpen] = useState(false)
+  const [hasSubscriptionPlan, setHasSubscriptionPlan] = useState(false)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
   const [isCoacheeModalOpen, setIsCoacheeModalOpen] = useState(false)
@@ -223,6 +224,22 @@ export function AppShell({ onLogout }: Props) {
         setCurrentUserGivenName(null)
         setCurrentUserSurname(null)
         setCurrentUserName(null)
+      })
+    return () => {
+      isCancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let isCancelled = false
+    void callSecureApi<{ planId?: string | null }>('/pricing/me-visibility', {})
+      .then((response) => {
+        if (isCancelled) return
+        setHasSubscriptionPlan(Boolean(response?.planId))
+      })
+      .catch(() => {
+        if (isCancelled) return
+        setHasSubscriptionPlan(false)
       })
     return () => {
       isCancelled = true
@@ -806,6 +823,11 @@ export function AppShell({ onLogout }: Props) {
         totalMinutes={totalMinutes}
         isUsageLoading={isUsageLoading}
         accountName={currentUserNavbarName}
+        isUsageClickable={hasSubscriptionPlan}
+        onPressUsage={() => {
+          if (!hasSubscriptionPlan) return
+          setIsMySubscriptionModalOpen(true)
+        }}
       />
       {hasBreadcrumbs ? (
         <View
@@ -881,6 +903,12 @@ export function AppShell({ onLogout }: Props) {
               setSettingsMenuAnchorPoint(null)
               setIsMyAccountModalOpen(true)
             }}
+            onOpenSubscription={() => {
+              if (!hasSubscriptionPlan) return
+              setIsSettingsMenuOpen(false)
+              setSettingsMenuAnchorPoint(null)
+              setIsMySubscriptionModalOpen(true)
+            }}
             onOpenArchive={() => {
               setIsSettingsMenuOpen(false)
               setSettingsMenuAnchorPoint(null)
@@ -905,6 +933,7 @@ export function AppShell({ onLogout }: Props) {
               }
               void Linking.openURL(PRIVACY_BELEID_URL)
             }}
+            showSubscriptionItem={hasSubscriptionPlan}
           />
 
           <NewSessionModal

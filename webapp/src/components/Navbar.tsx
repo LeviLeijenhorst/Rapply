@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleSheet, useWindowDimensions, View } from 'react-native'
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 
 import { radius, spacing } from '../foundation/theme/tokens'
 import { colors } from '../theme/colors'
@@ -12,9 +12,11 @@ type Props = {
   totalMinutes: number
   isUsageLoading?: boolean
   accountName?: string | null
+  isUsageClickable?: boolean
+  onPressUsage?: () => void
 }
 
-export function Navbar({ usedMinutes, totalMinutes, isUsageLoading = false, accountName = null }: Props) {
+export function Navbar({ usedMinutes, totalMinutes, isUsageLoading = false, accountName = null, isUsageClickable = false, onPressUsage }: Props) {
   const { width } = useWindowDimensions()
   const hideUsage = width < 600
   const showAccount = Boolean(accountName)
@@ -42,10 +44,16 @@ export function Navbar({ usedMinutes, totalMinutes, isUsageLoading = false, acco
           ) : null}
           {/* Usage indicator */}
           {!hideUsage ? (
-            <View style={styles.usageContainer}>
-              {/* Usage indicator */}
+            <Pressable
+              onPress={() => {
+                if (!isUsageClickable) return
+                onPressUsage?.()
+              }}
+              disabled={!isUsageClickable}
+              style={({ hovered }) => [styles.usageContainer, isUsageClickable && hovered ? styles.usageContainerHovered : undefined]}
+            >
               <UsageIndicator usedMinutes={usedMinutes} totalMinutes={totalMinutes} isLoading={isUsageLoading} />
-            </View>
+            </Pressable>
           ) : null}
         </View>
       </View>
@@ -84,6 +92,9 @@ const styles = StyleSheet.create({
   },
   usageContainer: {
     borderRadius: radius.md,
+  },
+  usageContainerHovered: {
+    opacity: 0.9,
   },
   accountBadge: {
     maxWidth: 320,
