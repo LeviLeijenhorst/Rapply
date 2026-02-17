@@ -1,0 +1,3 @@
+module.exports=[40833,a=>{a.v({className:"catamaran_b8c4493b-module__Mi7ZcG__className",variable:"catamaran_b8c4493b-module__Mi7ZcG__variable"})},93671,a=>{"use strict";var b=a.i(83980),c=a.i(40833);let d={className:c.default.className,style:{fontFamily:"'Catamaran', 'Catamaran Fallback'",fontStyle:"normal"}};function e({children:a}){return(0,b.jsx)("html",{lang:"en",children:(0,b.jsx)("body",{className:`${d.variable} antialiased`,children:a})})}null!=c.default.variable&&(d.variable=c.default.variable),a.s(["default",()=>e,"metadata",0,{title:"CoachScribe",description:"CoachScribe website"}],93671)}];
+
+//# sourceMappingURL=%5Broot-of-the-server%5D__92a84eb1._.js.map

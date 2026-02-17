@@ -44,6 +44,17 @@ function hasTechnicalErrorCode(message: string): boolean {
   return false
 }
 
+function isNoSpeechDetectedMessage(message: string): boolean {
+  const lowered = String(message || '').toLowerCase()
+  return (
+    lowered.includes('no speech') ||
+    lowered.includes('no_speech') ||
+    lowered.includes('nospeech') ||
+    lowered.includes('speech not detected') ||
+    lowered.includes('no voice activity')
+  )
+}
+
 export function toUserFriendlyTranscriptionError(rawMessage: string | null | undefined, fallback: string): string {
   const decoded = decodePossibleJsonError(String(rawMessage || ''))
   const lowered = decoded.toLowerCase()
@@ -51,9 +62,15 @@ export function toUserFriendlyTranscriptionError(rawMessage: string | null | und
   if (lowered.includes('too large')) {
     return 'Audio bestand is te groot voor transcriptie.'
   }
+  if (lowered.includes('audiolengthlimitexceeded') || lowered.includes('maximal audio length exceeded')) {
+    return 'Deze opname is te lang voor transcriptie. Gebruik een opname korter dan 120 minuten.'
+  }
 
   if (isContentFilterMessage(decoded)) {
     return 'Een deel van deze audio kan niet automatisch worden verwerkt door het veiligheidsfilter. Pas de opname aan en probeer opnieuw.'
+  }
+  if (isNoSpeechDetectedMessage(decoded)) {
+    return 'Er is geen spraak gedetecteerd in deze opname.'
   }
 
   const cleaned = decoded.trim()

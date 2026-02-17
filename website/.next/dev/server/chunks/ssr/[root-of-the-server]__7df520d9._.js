@@ -222,7 +222,7 @@ function LegalDocumentPage({ title, subtitle, markdown }) {
                         className: "flex flex-col gap-3",
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
-                                className: "text-4xl font-semibold text-[#1D0A00] md:text-5xl",
+                                className: "text-3xl font-semibold text-[#1D0A00] md:text-4xl xl:text-5xl",
                                 children: title
                             }, void 0, false, {
                                 fileName: "[project]/Coachscribe/website/components/legal/LegalDocumentPage.tsx",
@@ -405,7 +405,21 @@ JNL Solutions, gevestigd aan Stationsplein 26, 6512 AB, Nijmegen, is verantwoord
 - Telefoon: +31 6 221 68 360
 - E-mail: contact@coachscribe.nl
 
-## Persoonsgegevens die wij verwerken
+## Rollen en verantwoordelijkheid
+
+- Jij als coach bent verwerkingsverantwoordelijke voor de inhoud die je in CoachScribe verwerkt.
+- CoachScribe (JNL Solutions) is verwerker en verwerkt gegevens alleen in jouw opdracht om de dienst te leveren.
+- Jij blijft verantwoordelijk voor het rechtmatig vastleggen van gesprekken en het hebben van een geldige rechtsgrond.
+
+## Hoe data door CoachScribe stroomt
+
+- Opname gebeurt lokaal op jouw apparaat.
+- Voor transcriptie wordt audio versleuteld verstuurd via een tijdelijk uploadmechanisme.
+- Tijdelijke audio-uploads voor transcriptie worden na verwerking verwijderd.
+- Transcripties, samenvattingen, notities en sessie-inhoud worden versleuteld opgeslagen.
+- Jij bepaalt welke inhoud je toevoegt en wanneer je gegevens verwijdert.
+
+## Welke persoonsgegevens wij verwerken
 
 ### Account- en authenticatiegegevens
 
@@ -416,41 +430,29 @@ Wij gebruiken Microsoft Entra voor authenticatie. Daarbij verwerken wij:
 - Je achternaam
 - Je e-mailadres
 
-### Gegevens die je in de app opslaat (inhoud)
+### Inhoud die je zelf toevoegt
 
 Wij verwerken gegevens die je zelf toevoegt of laat genereren, zoals:
 
-- De namen die je aan je coachees geeft
-- De titels die je aan de sessies geeft
+- Namen van coachees
+- Sessietitels
 - Transcripties
 - Verslagen
 - Notities
-- Chatberichten die je verstuurt binnen de "Snelle vragen"-feature
+- Chatberichten binnen de snelle-vragenfunctionaliteit
 
-In deze inhoud kunnen persoonsgegevens voorkomen en, afhankelijk van wat je bespreekt, ook bijzondere persoonsgegevens zoals gegevens over de gezondheid van je coachee.
-
-Jij bepaalt zelf welke informatie je opneemt en invoert.
-
-### Audio-opnames en uploads
-
-Voor transcriptie wordt audio verwerkt:
-
-- De uploadlink is kort geldig
-- De audio-upload voor transcriptie wordt direct na verwerking verwijderd
-- Na transcriptie wordt de inhoud teruggestuurd naar jouw apparaat. Vervolgens wordt de transcriptie versleuteld opgeslagen in onze database.
-
-Wanneer audio-opnames, transcripties, verslagen of notities in onze database zijn opgeslagen, worden deze end-to-end versleuteld bewaard. Dit betekent dat de inhoud voor ons niet leesbaar is.
+In deze inhoud kunnen persoonsgegevens voorkomen en, afhankelijk van wat je bespreekt, ook bijzondere persoonsgegevens zoals gezondheidsgegevens.
 
 ### Technische en beveiligingsgegevens
 
-Wij verwerken technische gegevens die nodig zijn voor beveiliging en werking van de dienst, zoals:
+Wij verwerken technische gegevens die nodig zijn voor beveiliging en werking, zoals:
 
-- Je IP-adres (onder andere voor beveiliging en rate limiting)
+- IP-adres (onder andere voor beveiliging en rate limiting)
 - Technische loggegevens (zoals foutmeldingen en diagnostiek)
 
 Wij gebruiken geen tracking-, marketing- of analytics-tools.
 
-### Communicatie
+### Communicatiegegevens
 
 Als je contact met ons opneemt verwerken wij de gegevens die je verstrekt, zoals:
 
@@ -458,32 +460,23 @@ Als je contact met ons opneemt verwerken wij de gegevens die je verstrekt, zoals
 - Je naam (indien opgegeven)
 - De inhoud van je bericht
 
-## Gespreksinhoud en bijzondere persoonsgegevens
+## Gevoelige gegevens en toestemming
 
-CoachScribe kan worden gebruikt in situaties waarin gevoelige onderwerpen worden besproken. Daardoor kan de inhoud bijzondere persoonsgegevens bevatten, zoals gegevens over de gezondheid van je coachee.
+CoachScribe kan worden gebruikt in situaties waarin gevoelige onderwerpen worden besproken. Daardoor kan de inhoud bijzondere persoonsgegevens bevatten, zoals gegevens over de gezondheid van een coachee.
 
 Voordat je audio opneemt of uploadt, moet je bevestigen dat je expliciete toestemming hebt van je coachee.
 
-Onder expliciete toestemming wordt verstaan: een vrij gegeven, specifieke, geïnformeerde en ondubbelzinnige wilsuiting waarbij de betrokkene door middel van een duidelijke actieve handeling instemt met de verwerking van zijn of haar persoonsgegevens, conform de Algemene Verordening Gegevensbescherming (AVG).
+Onder expliciete toestemming verstaan wij een vrij gegeven, specifieke, geinformeerde en ondubbelzinnige wilsuiting conform de AVG.
 
-Op onze pagina https://www.coachscribe.nl/toestemming-vragen leggen wij uit hoe je op een correcte manier toestemming kunt vragen.
-
-Je blijft zelf verantwoordelijk voor het rechtmatig opnemen van gesprekken en het beschikken over een geldige rechtsgrond voor de verwerking.
-
-Wij verwerken de gespreksinhoud uitsluitend om de door jou gevraagde dienst te leveren.
-
-## Leeftijdsgrens
-
-CoachScribe is niet bedoeld voor personen jonger dan 16 jaar. Wij verzamelen niet bewust persoonsgegevens van personen jonger dan 16 jaar.
+Op https://www.coachscribe.nl/toestemming-vragen leggen wij uit hoe je toestemming kunt vragen.
 
 ## Doeleinden van de verwerking
 
 Wij verwerken persoonsgegevens om:
 
-- Een account te kunnen gebruiken en beheren
-- Authenticatie mogelijk te maken
-- Betalingen en abonnementen te kunnen afhandelen
-- De dienst te leveren (transcriptie, verslagen, notities en chatfunctionaliteit)
+- Accounts te beheren en authenticatie mogelijk te maken
+- Transcriptie, samenvatting, notities en chatfunctionaliteit te leveren
+- Betalingen en abonnementen af te handelen
 - Beveiliging, stabiliteit en foutopsporing uit te voeren
 - Te voldoen aan wettelijke verplichtingen
 
@@ -492,45 +485,63 @@ Wij verwerken persoonsgegevens om:
 Wij verwerken persoonsgegevens op basis van:
 
 - Uitvoering van de overeenkomst
-- Gerechtvaardigd belang (bijvoorbeeld beveiliging en misbruikpreventie)
+- Gerechtvaardigd belang (zoals beveiliging en misbruikpreventie)
 - Wettelijke verplichting
 
 Wanneer er bijzondere persoonsgegevens in de inhoud voorkomen, hangt de rechtmatigheid mede af van jouw eigen verantwoordelijkheid en rechtsgrond.
 
-## Geautomatiseerde besluitvorming
+## AI-verwerking en modelgebruik
 
-CoachScribe gebruikt geen geautomatiseerde besluitvorming of profilering die rechtsgevolgen heeft of je significant treft.
+- AI-verwerking gebeurt binnen enterprise-omgevingen die wij voor CoachScribe hebben ingericht.
+- Gegevens uit CoachScribe worden niet door ons verkocht.
+- Gegevens uit CoachScribe worden niet door ons gebruikt om publieke AI-modellen te trainen.
+- Verwerking van inhoud gebeurt uitsluitend voor de door jou gevraagde functionaliteit.
+
+## Verwerking binnen de EU en doorgifte
+
+- Patiënt- en sessie-inhoud (zoals audio, transcripties, samenvattingen en notities) wordt verwerkt en opgeslagen binnen door ons gebruikte Azure-regio's in de EU.
+- Onze huidige primaire regio's zijn West Europe, Belgium Central en Sweden Central.
+- Voor bepaalde account-, authenticatie- of abonnementsfunctionaliteit gebruiken wij externe partijen. Daardoor kan beperkte metadata buiten de EU worden verwerkt, afhankelijk van die partij.
+- Waar nodig treffen wij passende contractuele en organisatorische waarborgen.
+
+## Delen met derden en subverwerkers
+
+Wij delen persoonsgegevens alleen met partijen die nodig zijn om CoachScribe te laten functioneren.
+
+Belangrijke categorieën:
+
+- Cloud hosting en opslag (EU)
+- AI-verwerking binnen onze enterprise-inrichting
+- Authenticatie (Microsoft Entra)
+- Abonnementsbeheer en aankoopstatus (RevenueCat)
+
+Een actuele lijst van subverwerkers is op aanvraag beschikbaar.
 
 ## Bewaartermijnen
 
-Wij bewaren gegevens niet langer dan nodig.
-
 - Accountgegevens: zolang je account actief is
-- Inhoud (transcripties, verslagen, notities en audio-opnames): totdat je deze verwijdert of je account verwijdert
-- Audio-uploads voor transcriptie: direct verwijderd na verwerking
+- Inhoud (transcripties, verslagen, notities en sessiegegevens): totdat je deze verwijdert of je account verwijdert
+- Tijdelijke audio-uploads voor transcriptie: verwijderd na verwerking
 - Supportberichten: zolang nodig voor afhandeling
 
-Bij verwijdering van je account worden de bijbehorende gegevens verwijderd, tenzij een wettelijke verplichting anders vereist.
+Bij verwijdering van je account worden bijbehorende gegevens verwijderd, tenzij een wettelijke verplichting anders vereist.
 
-## Delen van persoonsgegevens met derden
+## Beveiliging
 
-Wij delen persoonsgegevens alleen met partijen die noodzakelijk zijn om CoachScribe te laten functioneren.
+Wij nemen passende technische en organisatorische maatregelen om persoonsgegevens te beveiligen tegen verlies, misbruik en onbevoegde toegang.
 
-Alle onderstaande diensten worden geleverd via Microsoft Azure binnen de Europese Unie:
+Belangrijke maatregelen zijn onder meer:
 
-- Infrastructuur en hosting (database en opslag)
-- Opslag van audio, transcripties, verslagen en notities in een database binnen Azure (Europa)
-- AI-diensten voor transcriptie en chatfunctionaliteit
+- End-to-end-versleuteling voor opgeslagen inhoud
+- Beveiligde verbindingen (HTTPS)
+- Toegangsbeperking tot systemen
+- Rate limiting en misbruikdetectie
 
-Voor authenticatie gebruiken wij Microsoft Entra.
+Bij vermoedens van een beveiligingsincident kun je contact opnemen via contact@coachscribe.nl.
 
-Voor betalingen en abonnementen gebruiken wij RevenueCat.
+## Geautomatiseerde besluitvorming
 
-Met relevante partijen sluiten wij waar nodig verwerkersovereenkomsten.
-
-## Verwerking binnen de EU
-
-De data van de gebruiker verlaat de Europese Unie nooit.
+CoachScribe gebruikt geen geautomatiseerde besluitvorming of profilering die rechtsgevolgen heeft of je significant treft.
 
 ## Cookies
 
@@ -546,25 +557,13 @@ Je hebt onder de AVG het recht om:
 - De verwerking te laten beperken
 - Bezwaar te maken tegen bepaalde verwerkingen
 
-Je kunt een verzoek sturen naar contact@coachscribe.nl. Wij reageren binnen één maand.
+Je kunt een verzoek sturen naar contact@coachscribe.nl. Wij reageren binnen een maand.
 
 Je hebt ook het recht om een klacht in te dienen bij de Autoriteit Persoonsgegevens via www.autoriteitpersoonsgegevens.nl.
 
-## Beveiliging
+## Leeftijdsgrens
 
-Wij nemen passende technische en organisatorische maatregelen om persoonsgegevens te beveiligen tegen verlies, misbruik en onbevoegde toegang.
-
-Wij maken voor alle services gebruik van Microsoft Azure binnen de Europese Unie.
-
-Wanneer gegevens in onze database zijn opgeslagen, worden deze end-to-end versleuteld bewaard. Dit betekent dat de inhoud voor ons niet leesbaar is.
-
-Andere beveiligingsmaatregelen zijn onder meer:
-
-- Beveiligde verbindingen (HTTPS)
-- Toegangsbeperking tot systemen
-- Rate limiting en misbruikdetectie
-
-Bij vermoedens van een beveiligingsincident kun je contact opnemen via contact@coachscribe.nl.
+CoachScribe is niet bedoeld voor personen jonger dan 16 jaar. Wij verzamelen niet bewust persoonsgegevens van personen jonger dan 16 jaar.
 
 ## Wijzigingen
 
@@ -603,7 +602,7 @@ async function PrivacybeleidPage() {
     const markdown = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$lib$2f$legalDocuments$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["getLegalDocumentContent"])("privacybeleid");
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$legal$2f$LegalDocumentPage$2e$tsx__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"], {
         title: "Privacybeleid",
-        subtitle: "Hoe CoachScribe omgaat met persoonsgegevens, beveiliging en jouw rechten.",
+        subtitle: "Heldere informatie over gegevensstromen, rollen, beveiliging en jouw rechten.",
         markdown: markdown
     }, void 0, false, {
         fileName: "[project]/Coachscribe/website/app/(site)/privacybeleid/page.tsx",

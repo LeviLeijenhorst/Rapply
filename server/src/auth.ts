@@ -9,6 +9,8 @@ export type AuthenticatedUser = {
   entraUserId: string
   email: string | null
   displayName: string | null
+  givenName: string | null
+  surname: string | null
 }
 
 export const authImplementationVersion = 7
@@ -88,6 +90,8 @@ export async function requireAuthenticatedUser(req: Request): Promise<Authentica
       entraUserId: user.entraUserId,
       email: user.email,
       displayName: user.displayName,
+      givenName: entra.givenName,
+      surname: entra.surname,
     }
   } catch (e: any) {
     const status = typeof e?.status === "number" ? e.status : null

@@ -14,7 +14,7 @@ import { parseRichTextMarkdown, RichTextInlineSegment, richTextSharedFormatting 
 
 type Props = {
   templateLabel: string
-  onPressTemplate: () => void
+  onPressTemplate?: () => void
   isCompact?: boolean
   summary: string | null
   hasTranscript: boolean
@@ -61,9 +61,10 @@ export function ReportPanel({
   const hasError = transcriptionStatus === 'error'
   const shouldShowLoading = (isTranscribing || isGenerating) && !hasError
   const loadingLabel = !hasTranscript || isTranscribing ? 'Transcript wordt gegenereerd' : 'Verslag wordt gegenereerd'
+  const showTemplateButton = Boolean(onPressTemplate)
 
   const reportCopyText = summary || ''
-  const showEditSummaryButton = !shouldShowLoading && !hasError && !!onEditSummary
+  const showEditSummaryButton = !shouldShowLoading && !!onEditSummary
 
   const summaryLines = parseRichTextMarkdown(summary || '')
 
@@ -71,22 +72,25 @@ export function ReportPanel({
     <View style={styles.container}>
       {/* Report panel */}
       <View style={styles.toolbarRow}>
-        {/* Template button */}
-        <Pressable
-          onPress={onPressTemplate}
-          style={({ hovered }) => [
-            styles.templateButton,
-            isCompact ? styles.templateButtonCompact : undefined,
-            hovered ? styles.templateButtonHovered : undefined,
-          ]}
-        >
-          <StandaardVerslagIcon color={colors.textStrong} size={18} />
-          {!isCompact ? (
-            <Text isSemibold style={styles.templateButtonText}>
-              {templateLabel}
-            </Text>
-          ) : null}
-        </Pressable>
+        {showTemplateButton ? (
+          <Pressable
+            onPress={onPressTemplate}
+            style={({ hovered }) => [
+              styles.templateButton,
+              isCompact ? styles.templateButtonCompact : undefined,
+              hovered ? styles.templateButtonHovered : undefined,
+            ]}
+          >
+            <StandaardVerslagIcon color={colors.textStrong} size={18} />
+            {!isCompact ? (
+              <Text isSemibold style={styles.templateButtonText}>
+                {templateLabel}
+              </Text>
+            ) : null}
+          </Pressable>
+        ) : (
+          <View />
+        )}
         {showEditSummaryButton ? (
           <Pressable onPress={onEditSummary} style={({ hovered }) => [styles.editButton, hovered ? styles.editButtonHovered : undefined]}>
             {({ hovered }) => <EditSmallIcon color={hovered ? colors.selected : colors.textSecondary} size={17} />}
@@ -117,17 +121,29 @@ export function ReportPanel({
             <Text style={styles.errorText}>
               {toUserFriendlyTranscriptionError(transcriptionError, 'Er is een fout opgetreden bij het genereren van het verslag.')}
             </Text>
-            {onRetryTranscription ? (
-              <Pressable
-                onPress={onRetryTranscription}
-                style={({ hovered }) => [styles.retryButton, hovered ? styles.retryButtonHovered : undefined]}
-              >
-                {/* Retry report */}
-                <Text isBold style={styles.retryButtonText}>
-                  Opnieuw proberen
-                </Text>
-              </Pressable>
-            ) : null}
+            <View style={styles.errorActions}>
+              {onRetryTranscription ? (
+                <Pressable
+                  onPress={onRetryTranscription}
+                  style={({ hovered }) => [styles.retryButton, hovered ? styles.retryButtonHovered : undefined]}
+                >
+                  {/* Retry report */}
+                  <Text isBold style={styles.retryButtonText}>
+                    Opnieuw proberen
+                  </Text>
+                </Pressable>
+              ) : null}
+              {onEditSummary ? (
+                <Pressable
+                  onPress={onEditSummary}
+                  style={({ hovered }) => [styles.retryButton, hovered ? styles.retryButtonHovered : undefined]}
+                >
+                  <Text isBold style={styles.retryButtonText}>
+                    Verslag schrijven
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         ) : hasSummary ? (
           <View style={styles.summaryContent}>
@@ -409,6 +425,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: colors.selected,
+  },
+  errorActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   retryButton: {
     height: 36,

@@ -206,7 +206,14 @@ export default function WachtlijstFormSection() {
               disabled={isSubmitting}
               className="inline-flex h-12 cursor-pointer items-center gap-2 rounded-full border-2 border-[#BD0265] bg-[#BD0265] px-6 text-base font-semibold text-white transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[#A00256] hover:bg-[#A00256]"
             >
-              <span>{isSubmitting ? "Versturen..." : "Verstuur"}</span>
+              {isSubmitting ? (
+                <span
+                  aria-label="Versturen"
+                  className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white"
+                />
+              ) : (
+                <span>Verstuur</span>
+              )}
             </button>
           </div>
         </form>

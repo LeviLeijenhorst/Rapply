@@ -1,0 +1,71 @@
+{
+    "apiVersion": "2025-06-01",
+    "id": "/subscriptions/2a01c7e4-a7a4-45c7-aea4-365c8d7346d6/resourceGroups/cloud-shell-storage-westeurope/providers/Microsoft.Storage/storageAccounts/jnlsolutionscoachscribe",
+    "name": "jnlsolutionscoachscribe",
+    "type": "microsoft.storage/storageaccounts",
+    "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+    },
+    "kind": "StorageV2",
+    "location": "belgiumcentral",
+    "tags": {},
+    "properties": {
+        "allowCrossTenantDelegationSas": false,
+        "dualStackEndpointPreference": {
+            "defaultDualStackEndpoints": false,
+            "publishIpv4Endpoint": false,
+            "publishIpv6Endpoint": false
+        },
+        "dnsEndpointType": "Standard",
+        "defaultToOAuthAuthentication": false,
+        "publicNetworkAccess": "Enabled",
+        "keyCreationTime": {
+            "key1": "2026-01-30T12:33:47.0724856Z",
+            "key2": "2026-01-30T12:33:47.0724856Z"
+        },
+        "allowCrossTenantReplication": false,
+        "privateEndpointConnections": [],
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false,
+        "allowSharedKeyAccess": true,
+        "largeFileSharesState": "Enabled",
+        "networkAcls": {
+            "ipv6Rules": [],
+            "bypass": "AzureServices",
+            "virtualNetworkRules": [],
+            "ipRules": [],
+            "defaultAction": "Allow"
+        },
+        "supportsHttpsTrafficOnly": true,
+        "encryption": {
+            "requireInfrastructureEncryption": false,
+            "services": {
+                "file": {
+                    "keyType": "Account",
+                    "enabled": true,
+                    "lastEnabledTime": "2026-01-30T12:33:47.0881111Z"
+                },
+                "blob": {
+                    "keyType": "Account",
+                    "enabled": true,
+                    "lastEnabledTime": "2026-01-30T12:33:47.0881111Z"
+                }
+            },
+            "keySource": "Microsoft.Storage"
+        },
+        "accessTier": "Hot",
+        "provisioningState": "Succeeded",
+        "creationTime": "2026-01-30T12:33:47.0256115Z",
+        "primaryEndpoints": {
+            "dfs": "https://jnlsolutionscoachscribe.dfs.core.windows.net/",
+            "web": "https://jnlsolutionscoachscribe.z50.web.core.windows.net/",
+            "blob": "https://jnlsolutionscoachscribe.blob.core.windows.net/",
+            "queue": "https://jnlsolutionscoachscribe.queue.core.windows.net/",
+            "table": "https://jnlsolutionscoachscribe.table.core.windows.net/",
+            "file": "https://jnlsolutionscoachscribe.file.core.windows.net/"
+        },
+        "primaryLocation": "belgiumcentral",
+        "statusOfPrimary": "available"
+    }
+}

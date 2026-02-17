@@ -223,8 +223,17 @@ export default function OverOnsContactSection({
                 disabled={isSubmitting}
                 className={submitButtonClassName}
               >
-                <span>{isSubmitting ? "Versturen..." : "Verstuur"}</span>
-                <span aria-hidden="true">-&gt;</span>
+                {isSubmitting ? (
+                  <span
+                    aria-label="Versturen"
+                    className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white"
+                  />
+                ) : (
+                  <>
+                    <span>Verstuur</span>
+                    <span aria-hidden="true">-&gt;</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

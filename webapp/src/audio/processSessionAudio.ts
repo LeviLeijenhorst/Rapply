@@ -12,6 +12,7 @@ import {
 import { normalizeTranscriptionError } from '../utils/transcriptionError'
 import {
   clearPendingPreviewAudioIfEligible,
+  clearPendingPreviewAudio,
   markPendingPreviewTranscriptionSucceeded,
   markPendingPreviewAudioUploaded,
   setPendingPreviewProcessingState,
@@ -55,6 +56,7 @@ export async function processSessionAudio(params: {
   const runId = startTranscriptionRun(sessionId)
 
   let ensuredAudioBlobId = initialAudioBlobId
+  let hasTranscriptResult = false
   try {
     if (shouldSaveAudio && !ensuredAudioBlobId) {
       await setPendingPreviewProcessingState({ sessionId, processingState: 'encrypting', errorMessage: null })
@@ -119,6 +121,7 @@ export async function processSessionAudio(params: {
       transcriptionStatus: 'generating',
       transcriptionError: null,
     })
+    hasTranscriptResult = true
     const generatedSummary = await generateSummary({
       transcript,
       template: summaryTemplate,
@@ -144,8 +147,24 @@ export async function processSessionAudio(params: {
       return
     }
 
+    if (hasTranscriptResult) {
+      updateSession(sessionId, {
+        transcriptionStatus: 'done',
+        transcriptionError: errorMessage,
+      })
+      if (!shouldSaveAudio) {
+        await clearPendingPreviewAudio(sessionId)
+      }
+      finishTranscriptionRun(sessionId, runId)
+      return
+    }
+
     if (shouldSaveAudio && !ensuredAudioBlobId) {
       await setPendingPreviewProcessingState({ sessionId, processingState: 'failed', errorMessage })
+    }
+    if (!shouldSaveAudio) {
+      await setPendingPreviewProcessingState({ sessionId, processingState: 'failed', errorMessage })
+      await clearPendingPreviewAudio(sessionId)
     }
 
     updateSession(sessionId, {

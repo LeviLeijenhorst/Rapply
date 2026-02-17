@@ -1,0 +1,332 @@
+{
+    "apiVersion": "2025-09-01",
+    "id": "/subscriptions/2a01c7e4-a7a4-45c7-aea4-365c8d7346d6/resourceGroups/jnlsolutions-coachscribe/providers/Microsoft.CognitiveServices/accounts/coachscribe-speech",
+    "name": "coachscribe-speech",
+    "type": "microsoft.cognitiveservices/accounts",
+    "sku": {
+        "name": "S0"
+    },
+    "kind": "SpeechServices",
+    "location": "westeurope",
+    "tags": {},
+    "identity": {
+        "type": "None"
+    },
+    "properties": {
+        "endpoint": "https://westeurope.api.cognitive.microsoft.com/",
+        "internalId": "6a2daee114d94305822567fa8a24fcc8",
+        "dateCreated": "2026-02-06T01:51:29.634564Z",
+        "callRateLimit": {
+            "rules": [
+                {
+                    "key": "token",
+                    "renewalPeriod": 1,
+                    "count": 50,
+                    "matchPatterns": [
+                        {
+                            "path": "sts/v1.0/*",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.synthesize",
+                    "renewalPeriod": 1,
+                    "count": 200,
+                    "matchPatterns": [
+                        {
+                            "path": "speech/synthesize",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.customvoicesynthesize",
+                    "renewalPeriod": 1,
+                    "count": 200,
+                    "matchPatterns": [
+                        {
+                            "path": "speech/customvoicesynthesize",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.neuralvoicesynthesize",
+                    "renewalPeriod": 1,
+                    "count": 200,
+                    "matchPatterns": [
+                        {
+                            "path": "speech/neuralvoicesynthesize",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.aoaivoicesynthesize",
+                    "renewalPeriod": 60,
+                    "count": 10,
+                    "matchPatterns": [
+                        {
+                            "path": "speech/aoaivoicesynthesize",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.aoaihdvoicesynthesize",
+                    "renewalPeriod": 60,
+                    "count": 3,
+                    "matchPatterns": [
+                        {
+                            "path": "speech/aoaihdvoicesynthesize",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.customneuralvoicesynthesize",
+                    "renewalPeriod": 1,
+                    "count": 200,
+                    "matchPatterns": [
+                        {
+                            "path": "speech/customneuralvoicesynthesize",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.personalvoicesynthesize",
+                    "renewalPeriod": 1,
+                    "count": 200,
+                    "matchPatterns": [
+                        {
+                            "path": "speech/personalvoicesynthesize",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.liveavatarconnect",
+                    "renewalPeriod": 60,
+                    "count": 1,
+                    "matchPatterns": [
+                        {
+                            "path": "speech/liveavatarconnect",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.livecustomavatarconnect",
+                    "renewalPeriod": 60,
+                    "count": 200,
+                    "matchPatterns": [
+                        {
+                            "path": "speech/livecustomavatarconnect",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.batchavatarcreate",
+                    "renewalPeriod": 60,
+                    "count": 2,
+                    "matchPatterns": [
+                        {
+                            "path": "avatar/batchsyntheses/*",
+                            "method": "PUT"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.conversationtranscription",
+                    "renewalPeriod": 1,
+                    "count": 100,
+                    "matchPatterns": [
+                        {
+                            "path": "speech/singlechannelaudioconversationtranscription",
+                            "method": "*"
+                        },
+                        {
+                            "path": "speech/multichannelaudioconversationtranscribe",
+                            "method": "*"
+                        },
+                        {
+                            "path": "speech/videoconversationtranscribe",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.speechtotext",
+                    "renewalPeriod": 10,
+                    "count": 100,
+                    "matchPatterns": [
+                        {
+                            "path": "speechtotext/*",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.batchtexttospeechcreate",
+                    "renewalPeriod": 10,
+                    "count": 100,
+                    "matchPatterns": [
+                        {
+                            "path": "texttospeech/batchsyntheses/*",
+                            "method": "PUT"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.texttospeech",
+                    "renewalPeriod": 10,
+                    "count": 100,
+                    "matchPatterns": [
+                        {
+                            "path": "texttospeech/*",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.customvoice",
+                    "renewalPeriod": 10,
+                    "count": 100,
+                    "matchPatterns": [
+                        {
+                            "path": "customvoice/*",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.speakerrecognitionv2",
+                    "renewalPeriod": 1,
+                    "count": 20,
+                    "matchPatterns": [
+                        {
+                            "path": "speaker/*",
+                            "method": "*"
+                        },
+                        {
+                            "path": "speaker-recognition/*",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.speakerrecognitionv1",
+                    "renewalPeriod": 1,
+                    "count": 5,
+                    "matchPatterns": [
+                        {
+                            "path": "spid/*",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "container.billing",
+                    "renewalPeriod": 10,
+                    "count": 500,
+                    "matchPatterns": [
+                        {
+                            "path": "billing/*",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "voicelive.realtime",
+                    "renewalPeriod": 60,
+                    "count": 100,
+                    "matchPatterns": [
+                        {
+                            "path": "voice-live/realtime",
+                            "method": "*"
+                        },
+                        {
+                            "path": "voice-agent/realtime",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "default",
+                    "renewalPeriod": 10,
+                    "count": 10000,
+                    "matchPatterns": [
+                        {
+                            "path": "*",
+                            "method": "*"
+                        }
+                    ]
+                }
+            ]
+        },
+        "isMigrated": false,
+        "networkAcls": {
+            "defaultAction": "Allow",
+            "virtualNetworkRules": [],
+            "ipRules": []
+        },
+        "allowProjectManagement": false,
+        "privateEndpointConnections": [],
+        "publicNetworkAccess": "Enabled",
+        "capabilities": [
+            {
+                "name": "CommitmentPlan"
+            },
+            {
+                "name": "VirtualNetworks"
+            },
+            {
+                "name": "CustomerManagedKey"
+            },
+            {
+                "name": "CustomerManagedStorage"
+            },
+            {
+                "name": "Container",
+                "value": "SpeechServices.CustomSpeechToText,SpeechServices.NeuralTextToSpeechOnPrem,SpeechServices.DPP,SpeechServices.SpeechToText,SpeechServices.ctsdiarizer,SpeechServices.diarization"
+            }
+        ],
+        "endpoints": {
+            "Speech Services Speech to Text": "https://westeurope.api.cognitive.microsoft.com/",
+            "Speech Services Speech to Text v3.2": "https://westeurope.api.cognitive.microsoft.com/",
+            "Speech Services Speech to Text 2024-05-15-preview": "https://westeurope.api.cognitive.microsoft.com/",
+            "Speech Services Speech to Text 2024-11-15": "https://westeurope.api.cognitive.microsoft.com/",
+            "Speech Services Speech to Text 2025-10-15": "https://westeurope.api.cognitive.microsoft.com/",
+            "Speech Services Speech to Text v3.2_internal.1": "https://westeurope.api.cognitive.microsoft.com/",
+            "Speech Services Custom Voice": "https://westeurope.api.cognitive.microsoft.com/",
+            "Speech Services Custom Voice Trial": "https://westeurope.api.cognitive.microsoft.com/",
+            "Video Translation": "https://westeurope.api.cognitive.microsoft.com/",
+            "Speech Services Audio Content Creation": "https://westeurope.api.cognitive.microsoft.com/",
+            "Speech Services TTS Player": "https://westeurope.api.cognitive.microsoft.com/",
+            "Speech Services Podcast": "https://westeurope.api.cognitive.microsoft.com/",
+            "Speech Services Custom Avatar": "https://westeurope.api.cognitive.microsoft.com/",
+            "Speech Services Batch Avatar": "https://westeurope.api.cognitive.microsoft.com/",
+            "Speech Services Batch Text to Speech": "https://westeurope.api.cognitive.microsoft.com/",
+            "Speech Services Speech to Text (Standard)": "https://westeurope.stt.speech.microsoft.com",
+            "Speech Services Text to Speech (Neural)": "https://westeurope.tts.speech.microsoft.com",
+            "Speech Services Speaker Verification": "https://westeurope.api.cognitive.microsoft.com/",
+            "Speech Services Speaker Identification": "https://westeurope.api.cognitive.microsoft.com/",
+            "Voice Agent Realtime API": "https://westeurope.api.cognitive.microsoft.com/",
+            "Voice Live Realtime API": "https://westeurope.api.cognitive.microsoft.com/",
+            "Token": "https://westeurope.api.cognitive.microsoft.com/"
+        },
+        "provisioningState": "Succeeded"
+    },
+    "systemData": {
+        "createdBy": "contact@jnlsolutions.nl",
+        "createdByType": "User",
+        "createdAt": "2026-02-06T01:51:29.4357021Z",
+        "lastModifiedBy": "contact@jnlsolutions.nl",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "2026-02-06T01:51:29.4357021Z"
+    },
+    "etag": "\"de001a69-0000-0d00-0000-698549220000\""
+}

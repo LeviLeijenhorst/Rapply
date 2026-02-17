@@ -361,6 +361,7 @@ export async function transcribeAudio(params: {
           transcriptionProvider?: string
           requiresWav?: boolean
           maxAudioBytes?: number
+          maxAudioDurationSeconds?: number
         } | null = null
         for (let attempt = 0; attempt <= TRANSCRIPTION_PREFLIGHT_MAX_RETRIES; attempt += 1) {
           try {
@@ -375,6 +376,7 @@ export async function transcribeAudio(params: {
               transcriptionProvider?: string
               requiresWav?: boolean
               maxAudioBytes?: number
+              maxAudioDurationSeconds?: number
             }
             break
           } catch (error) {

@@ -35,7 +35,7 @@ create table if not exists public.feedback (
 
 create table if not exists public.praktijk_requests (
   id uuid primary key,
-  user_id uuid not null references public.users (id) on delete cascade,
+  user_id uuid references public.users (id) on delete cascade,
   email text not null,
   account_email text,
   message text not null,
@@ -64,13 +64,29 @@ create table if not exists public.subscription_cancel_feedback (
 create table if not exists public.billing_users (
   user_id uuid primary key references public.users (id) on delete cascade,
   purchased_seconds integer not null default 0,
+  admin_granted_seconds integer not null default 0,
   non_expiring_used_seconds integer not null default 0,
   cycle_used_seconds_by_key jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint billing_users_non_negative_purchased check (purchased_seconds >= 0),
+  constraint billing_users_non_negative_admin_granted check (admin_granted_seconds >= 0),
   constraint billing_users_non_negative_used check (non_expiring_used_seconds >= 0)
 );
+
+create table if not exists public.admin_billing_grants (
+  id uuid primary key,
+  admin_email text not null,
+  target_user_id uuid not null references public.users (id) on delete cascade,
+  target_account_email text,
+  granted_seconds integer not null,
+  created_at timestamptz not null default now(),
+  constraint admin_billing_grants_admin_email_length check (char_length(admin_email) > 0 and char_length(admin_email) <= 320),
+  constraint admin_billing_grants_target_account_email_length check (target_account_email is null or char_length(target_account_email) <= 320),
+  constraint admin_billing_grants_granted_seconds_positive check (granted_seconds > 0)
+);
+
+create index if not exists admin_billing_grants_target_user_id_idx on public.admin_billing_grants (target_user_id, created_at desc);
 
 create table if not exists public.transcription_operations (
   operation_id text primary key,

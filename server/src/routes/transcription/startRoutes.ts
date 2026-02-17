@@ -7,7 +7,15 @@ import { generateSummary } from "../../summary/summary"
 import { deleteEncryptedUpload, getEncryptedUploadSize } from "../../transcription/storage"
 import { chargeSecondsIdempotent, consumeUploadToken, refundSecondsIdempotent } from "../../transcription/store"
 import { applyEmailBillingOverrides, getNonExpiringTotalSecondsOverrideForEmail } from "../billingOverrides"
-import { markOperationCompleted, markOperationFailed, readDurationSeconds, readStartRequest, resolveTranscriptionProvider, runTranscription } from "./helpers"
+import {
+  getProviderMaxAudioDurationSeconds,
+  markOperationCompleted,
+  markOperationFailed,
+  readDurationSeconds,
+  readStartRequest,
+  resolveTranscriptionProvider,
+  runTranscription,
+} from "./helpers"
 import type { RegisterTranscriptionRoutesParams, TranscriptionProvider } from "./types"
 
 // Registers transcription execution endpoint.
@@ -42,6 +50,16 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
           mimeType,
           encryptedSizeBytes: uploadBytes,
         })
+        selectedProvider = resolveTranscriptionProvider()
+        const maxAudioDurationSeconds = getProviderMaxAudioDurationSeconds(selectedProvider)
+        if (typeof maxAudioDurationSeconds === "number" && durationSeconds > maxAudioDurationSeconds) {
+          sendError(
+            res,
+            422,
+            `Audio duration exceeds maximum allowed length (max ${Math.floor(maxAudioDurationSeconds / 60)} minutes).`,
+          )
+          return
+        }
         const secondsToCharge = Math.max(1, Math.ceil(durationSeconds))
 
         const subscriber = await fetchRevenueCatSubscriber(user.userId)
@@ -74,8 +92,6 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
           sendError(res, 402, `Not enough seconds remaining. Needed ${secondsToCharge}s, remaining ${status.remainingSeconds}s.`)
           return
         }
-
-        selectedProvider = resolveTranscriptionProvider()
 
         const transcript = await runTranscription({
           provider: selectedProvider,

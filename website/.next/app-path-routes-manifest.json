@@ -1,0 +1,17 @@
+{
+  "/(site)/coaches/page": "/coaches",
+  "/(site)/contact/page": "/contact",
+  "/(site)/gebruikersovereenkomst/page": "/gebruikersovereenkomst",
+  "/(site)/over-ons/page": "/over-ons",
+  "/(site)/page": "/",
+  "/(site)/privacybeleid/page": "/privacybeleid",
+  "/(site)/product/page": "/product",
+  "/(site)/toestemming-vragen/page": "/toestemming-vragen",
+  "/(site)/veiligheid/page": "/veiligheid",
+  "/(site)/verwerkersovereenkomst/page": "/verwerkersovereenkomst",
+  "/(site)/wachtlijst/page": "/wachtlijst",
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico",
+  "/icon.svg/route": "/icon.svg"
+}

@@ -219,6 +219,7 @@ function clip(input: string, max: number) {
 }
 
 export async function askAssistant(params: {
+  scope: "conversation" | "coachee"
   coacheeName: string
   currentConversationId?: string | null
   userQuestion: string
@@ -228,6 +229,7 @@ export async function askAssistant(params: {
   coacheeConversationTranscriptsTruncated?: boolean
 }): Promise<string> {
   const {
+    scope,
     coacheeName,
     currentConversationId,
     userQuestion,
@@ -239,12 +241,12 @@ export async function askAssistant(params: {
   const summariesList = previousSummaries
     .map((s) => `- ${s.conversationId}: ${clip(s.summary, 2000)}`)
     .join("\n")
-  const availableIds = previousSummaries.map((s) => s.conversationId)
 
   const transcriptEntries = Array.isArray(coacheeConversationTranscripts) ? coacheeConversationTranscripts : []
   const hasAnyTranscriptEntries = transcriptEntries.length > 0
   const hasCurrentTranscript = !!normalizeText(currentConversationId) && !!normalizeText(currentTranscript)
   const hasAnySummaries = previousSummaries.length > 0
+  const isConversationScope = scope === "conversation"
 
   const transcriptContextList = hasAnyTranscriptEntries
     ? transcriptEntries
@@ -257,7 +259,11 @@ export async function askAssistant(params: {
 
   const systemA = `
 Je bent een Nederlandstalige AI-assistent voor coaches. Beantwoord vragen over gesprekken met ${coacheeName}.
-Gebruik de beschikbare transcripties en samenvattingen als context. Wees beknopt, feitelijk en behulpzaam.`
+Gebruik alleen informatie uit de aangeleverde context en de vraag van de gebruiker.
+Verzin geen feiten of actiepunten.
+Noem alleen actiepunten die expliciet in de context of vraag staan.
+Als er geen expliciete actiepunten zijn, zeg dat duidelijk.
+Wees beknopt, feitelijk en behulpzaam.`
 
   const contextPrev = hasAnySummaries
     ? `Samenvattingen van gesprekken:\n${summariesList}`
@@ -271,10 +277,15 @@ Gebruik de beschikbare transcripties en samenvattingen als context. Wees beknopt
     ? `Huidige transcriptie (${String(currentConversationId)}):\n${clip(normalizeText(currentTranscript), 20000)}`
     : ""
 
+  const scopeInstruction = isConversationScope
+    ? "Scope: alleen de huidige sessie. Gebruik geen context uit andere sessies."
+    : "Scope: alle beschikbare gesprekken van deze coachee."
+
   const messages: any[] = [
     { role: "system", content: systemA },
-    { role: "system", content: contextAllTranscripts },
-    { role: "system", content: contextPrev },
+    { role: "system", content: scopeInstruction },
+    ...(!isConversationScope ? [{ role: "system", content: contextAllTranscripts }] : []),
+    ...(!isConversationScope ? [{ role: "system", content: contextPrev }] : []),
     ...(hasCurrentTranscript ? [{ role: "system", content: contextNow }] : []),
     { role: "user", content: userQuestion },
   ]

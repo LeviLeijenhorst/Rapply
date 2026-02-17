@@ -176,7 +176,7 @@ function VeiligheidHeroSection() {
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                             className: "block text-[#BD0265]",
-                                            children: "Veiligheid"
+                                            children: "Gebouwd voor"
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidHeroSection.tsx",
                                             lineNumber: 13,
@@ -184,7 +184,7 @@ function VeiligheidHeroSection() {
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                             className: "block",
-                                            children: "zoals het hoort"
+                                            children: "vertrouwelijke gesprekken"
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidHeroSection.tsx",
                                             lineNumber: 14,
@@ -198,7 +198,7 @@ function VeiligheidHeroSection() {
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                     className: "max-w-xl text-[16px] font-medium text-black/70",
-                                    children: "Coaches werken met gevoelige informatie en die verantwoordelijkheid nemen we serieus. Jij blijft altijd eigenaar van jouw data."
+                                    children: "CoachScribe is ontworpen voor gesprekken met gevoelige informatie. Met verwerking binnen Europese Azure-regio's en aanvullende versleuteling bij opslag."
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidHeroSection.tsx",
                                     lineNumber: 16,
@@ -211,20 +211,31 @@ function VeiligheidHeroSection() {
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "mt-6",
-                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$Button$2e$tsx__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"], {
-                                label: "Wachtlijst",
-                                destination: "/wachtlijst",
-                                showArrow: true,
-                                className: "font-normal"
-                            }, void 0, false, {
-                                fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidHeroSection.tsx",
-                                lineNumber: 22,
-                                columnNumber: 13
-                            }, this)
-                        }, void 0, false, {
+                            className: "mt-6 flex flex-wrap items-center gap-3",
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$Button$2e$tsx__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"], {
+                                    label: "Privacybeleid bekijken",
+                                    destination: "/privacybeleid",
+                                    className: "font-normal"
+                                }, void 0, false, {
+                                    fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidHeroSection.tsx",
+                                    lineNumber: 23,
+                                    columnNumber: 13
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$Button$2e$tsx__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"], {
+                                    label: "Verwerkersovereenkomst aanvragen",
+                                    destination: "/contact",
+                                    variant: "secondary",
+                                    className: "font-normal"
+                                }, void 0, false, {
+                                    fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidHeroSection.tsx",
+                                    lineNumber: 28,
+                                    columnNumber: 13
+                                }, this)
+                            ]
+                        }, void 0, true, {
                             fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidHeroSection.tsx",
-                            lineNumber: 21,
+                            lineNumber: 22,
                             columnNumber: 11
                         }, this)
                     ]
@@ -242,12 +253,12 @@ function VeiligheidHeroSection() {
                         priority: true
                     }, void 0, false, {
                         fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidHeroSection.tsx",
-                        lineNumber: 31,
+                        lineNumber: 37,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidHeroSection.tsx",
-                    lineNumber: 30,
+                    lineNumber: 36,
                     columnNumber: 9
                 }, this)
             ]

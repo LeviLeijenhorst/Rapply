@@ -8,6 +8,8 @@ type EntraClaims = {
   email?: string
   preferred_username?: string
   name?: string
+  given_name?: string
+  family_name?: string
   aud?: string | string[]
   iss?: string
   exp?: number
@@ -59,6 +61,8 @@ export type VerifiedEntraIdentity = {
   entraUserId: string
   email: string | null
   displayName: string | null
+  givenName: string | null
+  surname: string | null
 }
 
 // Intent: verifyEntraAccessToken
@@ -90,7 +94,9 @@ export async function verifyEntraAccessToken(accessToken: string): Promise<Verif
         : null
 
   const displayName = typeof payload?.name === "string" && payload.name.trim() ? payload.name.trim() : null
+  const givenName = typeof payload?.given_name === "string" && payload.given_name.trim() ? payload.given_name.trim() : null
+  const surname = typeof payload?.family_name === "string" && payload.family_name.trim() ? payload.family_name.trim() : null
 
-  return { entraUserId, email, displayName }
+  return { entraUserId, email, displayName, givenName, surname }
 }
 

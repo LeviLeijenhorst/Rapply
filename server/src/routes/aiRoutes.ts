@@ -19,8 +19,10 @@ export function registerAiRoutes(app: Express, params: RegisterAiRoutesParams): 
 
       const messages = req.body?.messages
       const temperature = req.body?.temperature
+      const scope = req.body?.scope
+      const sessionId = req.body?.sessionId
 
-      const text = await completeChatWithAzureOpenAi({ messages, temperature })
+      const text = await completeChatWithAzureOpenAi({ messages, temperature, scope, sessionId })
       res.status(200).json({ text })
     }),
   )

@@ -1,0 +1,54 @@
+{
+    "apiVersion": "2024-11-01",
+    "id": "/subscriptions/2a01c7e4-a7a4-45c7-aea4-365c8d7346d6/resourceGroups/jnlsolutions-coachscribe/providers/Microsoft.Web/staticSites/coachscribe-website",
+    "name": "coachscribe-website",
+    "type": "microsoft.web/staticsites",
+    "sku": {
+        "name": "Standard",
+        "tier": "Standard"
+    },
+    "location": "westeurope",
+    "properties": {
+        "defaultHostname": "mango-ground-015e83003.6.azurestaticapps.net",
+        "repositoryUrl": "https://github.com/LeviLeijenhorst/CoachScribe",
+        "branch": "main",
+        "customDomains": [
+            "www.coachscribe.nl",
+            "coachscribe.nl"
+        ],
+        "stableInboundIP": "20.8.132.166",
+        "privateEndpointConnections": [],
+        "stagingEnvironmentPolicy": "Enabled",
+        "allowConfigFileUpdates": true,
+        "contentDistributionEndpoint": "https://content-am2.infrastructure.6.azurestaticapps.net",
+        "keyVaultReferenceIdentity": "SystemAssigned",
+        "userProvidedFunctionApps": null,
+        "linkedBackends": [],
+        "provider": "GitHub",
+        "enterpriseGradeCdnStatus": "Disabled",
+        "publicNetworkAccess": null,
+        "databaseConnections": [],
+        "trafficSplitting": {
+            "environmentDistribution": {
+                "default": 100
+            }
+        },
+        "targetResourceGroupResourceId": null,
+        "trialExpirationTimeUtc": null,
+        "prettyNameStatus": null,
+        "prettyName": null,
+        "prettyNameHostname": null,
+        "backendRegion": {
+            "regionName": null,
+            "status": null
+        },
+        "stagingEnvironmentRegion": null,
+        "deploymentAuthPolicy": "DeploymentToken",
+        "federatedIdentityTenantId": null,
+        "federatedIdentityClientId": null,
+        "federatedIdentitySubscriptionId": null,
+        "deploymentStorageAccountResourceId": null,
+        "deploymentStorageAccountReferenceIdentity": null,
+        "networkConfigurations": null
+    }
+}

@@ -6,6 +6,7 @@ import { fetchEncryptedUploadStream } from "../../transcription/storage"
 import type { StartRequest, TranscriptionProvider } from "./types"
 
 const AZURE_SPEECH_MAX_AUDIO_BYTES = 250 * 1024 * 1024
+const AZURE_SPEECH_MAX_AUDIO_DURATION_SECONDS = 120 * 60
 
 // Chooses the configured transcription provider based on available secrets.
 export function resolveTranscriptionProvider(): TranscriptionProvider {
@@ -16,6 +17,12 @@ export function resolveTranscriptionProvider(): TranscriptionProvider {
 // Returns the max source-audio size in bytes for the selected provider.
 export function getProviderMaxAudioBytes(provider: TranscriptionProvider): number | null {
   if (provider === "azure-speech") return AZURE_SPEECH_MAX_AUDIO_BYTES
+  return null
+}
+
+// Returns the max source-audio duration in seconds for the selected provider.
+export function getProviderMaxAudioDurationSeconds(provider: TranscriptionProvider): number | null {
+  if (provider === "azure-speech") return AZURE_SPEECH_MAX_AUDIO_DURATION_SECONDS
   return null
 }
 

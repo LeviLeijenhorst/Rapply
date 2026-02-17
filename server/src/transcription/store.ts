@@ -1,7 +1,9 @@
 import { freeSeconds, getIncludedSecondsForPlanKey, type PlanKey } from "../billing/constants"
 import { buildCycleKey, clampNonNegative } from "../billing/cycleMath"
+import { ensureBillingUsersCompatibility } from "../billing/store"
 import crypto from "crypto"
 import { execute, queryOne } from "../db"
+import { transcriptionUploadExpirationSeconds } from "./uploadExpiration"
 
 // Creates a short-lived token that authorizes exactly one upload for an operation.
 export async function createUploadToken(params: { userId: string; operationId: string; uploadPath: string }): Promise<{ uploadToken: string; expiresAtMs: number }> {
@@ -9,7 +11,7 @@ export async function createUploadToken(params: { userId: string; operationId: s
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const token = cryptoRandomToken()
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+    const expiresAt = new Date(Date.now() + transcriptionUploadExpirationSeconds * 1000).toISOString()
 
     try {
       await execute(
@@ -101,10 +103,11 @@ export async function chargeSecondsIdempotent(params: {
 
   const includedSeconds = getIncludedSecondsForPlanKey(planKey)
   const cycleKey = buildCycleKey(cycleStartMs, cycleEndMs)
+  await ensureBillingUsersCompatibility()
 
   const billingRow = await queryOne<any>(
     `
-    select purchased_seconds, non_expiring_used_seconds, cycle_used_seconds_by_key
+    select purchased_seconds, admin_granted_seconds, non_expiring_used_seconds, cycle_used_seconds_by_key
     from public.billing_users
     where user_id = $1
     `,
@@ -112,12 +115,13 @@ export async function chargeSecondsIdempotent(params: {
   )
 
   const purchasedSeconds = clampNonNegative(billingRow?.purchased_seconds ?? 0)
+  const adminGrantedSeconds = clampNonNegative(billingRow?.admin_granted_seconds ?? 0)
   const nonExpiringUsedSeconds = clampNonNegative(billingRow?.non_expiring_used_seconds ?? 0)
   const cycleUsedSecondsByKey = (billingRow?.cycle_used_seconds_by_key ?? {}) as Record<string, number>
   const currentCycleUsedSeconds = cycleKey ? clampNonNegative(cycleUsedSecondsByKey[cycleKey] ?? 0) : 0
 
   const cycleRemainingSeconds = cycleKey ? Math.max(0, includedSeconds - currentCycleUsedSeconds) : 0
-  let nonExpiringTotalSeconds = freeSeconds + purchasedSeconds
+  let nonExpiringTotalSeconds = freeSeconds + purchasedSeconds + adminGrantedSeconds
   if (typeof nonExpiringTotalSecondsOverride === "number" && Number.isFinite(nonExpiringTotalSecondsOverride) && nonExpiringTotalSecondsOverride > 0) {
     nonExpiringTotalSeconds = Math.floor(nonExpiringTotalSecondsOverride)
   }
@@ -199,6 +203,7 @@ export async function refundSecondsIdempotent(params: { userId: string; operatio
   const chargedNonExpiringSeconds = clampNonNegative(op.charged_non_expiring_seconds ?? 0)
   const cycleKey = typeof op.cycle_key === "string" ? op.cycle_key : null
 
+  await ensureBillingUsersCompatibility()
   const billingRow = await queryOne<any>(
     `
     select non_expiring_used_seconds, cycle_used_seconds_by_key

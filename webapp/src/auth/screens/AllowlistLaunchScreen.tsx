@@ -4,12 +4,12 @@ import { Pressable, StyleSheet, View } from 'react-native'
 import { colors } from '../../theme/colors'
 import { Text } from '../../components/Text'
 
-const CONTACT_EMAIL = 'contact@jnlsolutions.nl'
+const WAITLIST_URL = 'https://www.coachscribe.nl/wachtlijst'
 
 export function AllowlistLaunchScreen() {
-  function openContactEmail() {
+  function openWaitlistPage() {
     if (typeof window === 'undefined') return
-    window.location.href = `mailto:${CONTACT_EMAIL}`
+    window.location.href = WAITLIST_URL
   }
 
   return (
@@ -28,12 +28,12 @@ export function AllowlistLaunchScreen() {
       <Text style={styles.description}>
         We voegen nieuwe gebruikers stap voor stap toe. Stuur ons een mailtje en we sturen je zo snel mogelijk een reactie.
       </Text>
-      <Pressable onPress={openContactEmail} style={({ hovered }) => [styles.button, hovered ? styles.buttonHovered : undefined]}>
+      <Pressable onPress={openWaitlistPage} style={({ hovered }) => [styles.button, hovered ? styles.buttonHovered : undefined]}>
         <Text isBold style={styles.buttonText}>
           Laat mij weten wanneer ik kan starten
         </Text>
       </Pressable>
-      <Text style={styles.helperText}>Mail naar {CONTACT_EMAIL}</Text>
+      <Text style={styles.helperText}>Ga naar de wachtlijst</Text>
     </View>
   )
 }

@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/(site)/layout,_N_T_/(site)/over-ons/layout,_N_T_/(site)/over-ons/page,_N_T_/over-ons"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/!KHNpdGUp/over-ons/__PAGE__",
+    "/!KHNpdGUp/over-ons",
+    "/!KHNpdGUp",
+    "/_index",
+    "/_head"
+  ]
+}

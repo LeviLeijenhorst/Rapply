@@ -60,6 +60,7 @@ export function EditSessieModal({
   const templateMenuAreaRef = useRef<View | null>(null)
   const [coacheeMenuMaxHeight, setCoacheeMenuMaxHeight] = useState(0)
   const [templateMenuMaxHeight, setTemplateMenuMaxHeight] = useState(0)
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
   const { height: windowHeight } = useWindowDimensions()
 
   const selectedTemplateLabel = useMemo(() => {
@@ -70,7 +71,22 @@ export function EditSessieModal({
   const closeModal = () => {
     setIsCoacheeMenuOpen(false)
     setIsTemplateMenuOpen(false)
+    setShowCloseConfirm(false)
     onClose()
+  }
+
+  const hasUnsavedChanges =
+    sessionTitle.trim() !== initialSessionTitle.trim() ||
+    coacheeName !== initialCoacheeName ||
+    templateKey !== initialTemplateKey ||
+    selectedTemplateLabel !== initialTemplateLabel
+
+  const requestClose = () => {
+    if (!hasUnsavedChanges) {
+      closeModal()
+      return
+    }
+    setShowCloseConfirm(true)
   }
 
   useEffect(() => {
@@ -81,6 +97,7 @@ export function EditSessieModal({
     setTemplateLabel(initialTemplateLabel)
     setIsCoacheeMenuOpen(false)
     setIsTemplateMenuOpen(false)
+    setShowCloseConfirm(false)
   }, [visible, initialSessionTitle, initialCoacheeName, initialTemplateKey, initialTemplateLabel])
 
   useEffect(() => {
@@ -144,6 +161,7 @@ export function EditSessieModal({
   const templateMenuPanelStyle = [styles.menuPanel, { maxHeight: templateMenuMaxHeight }]
 
   return (
+    <>
     <AnimatedOverlayModal
       visible={visible}
       onClose={() => {
@@ -152,7 +170,7 @@ export function EditSessieModal({
           setIsTemplateMenuOpen(false)
           return
         }
-        closeModal()
+        requestClose()
       }}
       contentContainerStyle={styles.container}
     >
@@ -177,7 +195,7 @@ export function EditSessieModal({
           </Pressable>
 
           <Pressable
-            onPress={closeModal}
+            onPress={requestClose}
             style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}
           >
             {/* Close */}
@@ -331,7 +349,7 @@ export function EditSessieModal({
             </Text>
           </Pressable>
           <Pressable
-            onPress={closeModal}
+            onPress={requestClose}
             style={({ hovered }) => [styles.footerSecondaryButton, hovered ? styles.footerSecondaryButtonHovered : undefined]}
           >
             {/* Cancel */}
@@ -352,6 +370,32 @@ export function EditSessieModal({
           </Pressable>
         </View>
     </AnimatedOverlayModal>
+    <AnimatedOverlayModal visible={showCloseConfirm} onClose={() => setShowCloseConfirm(false)} contentContainerStyle={styles.closeWarningContainer}>
+      <View style={styles.closeWarningBody}>
+        <Text isBold style={styles.closeWarningTitle}>
+          Niet-opgeslagen wijzigingen
+        </Text>
+        <Text style={styles.closeWarningText}>
+          Je hebt wijzigingen gemaakt. Weet je zeker dat je wilt sluiten zonder op te slaan?
+        </Text>
+      </View>
+      <View style={styles.closeWarningFooter}>
+        <Pressable onPress={() => setShowCloseConfirm(false)} style={({ hovered }) => [styles.closeWarningSecondaryButton, hovered ? styles.closeWarningSecondaryButtonHovered : undefined]}>
+          <Text isBold style={styles.closeWarningSecondaryButtonText}>
+            Terug
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={closeModal}
+          style={({ hovered }) => [styles.closeWarningPrimaryButton, hovered ? styles.closeWarningPrimaryButtonHovered : undefined]}
+        >
+          <Text isBold style={styles.closeWarningPrimaryButtonText}>
+            Sluiten
+          </Text>
+        </Pressable>
+      </View>
+    </AnimatedOverlayModal>
+    </>
   )
 }
 
@@ -587,6 +631,66 @@ const styles = StyleSheet.create({
     backgroundColor: '#A50058',
   },
   footerPrimaryButtonText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#FFFFFF',
+  },
+  closeWarningContainer: {
+    width: 560,
+    maxWidth: '90vw',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    ...( { boxShadow: '0 20px 60px rgba(0,0,0,0.3)' } as any ),
+    overflow: 'hidden',
+  },
+  closeWarningBody: {
+    padding: 24,
+    gap: 12,
+  },
+  closeWarningTitle: {
+    fontSize: 18,
+    lineHeight: 22,
+    color: colors.textStrong,
+  },
+  closeWarningText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.text,
+  },
+  closeWarningFooter: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  closeWarningSecondaryButton: {
+    height: 48,
+    minWidth: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  closeWarningSecondaryButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  closeWarningSecondaryButtonText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+  },
+  closeWarningPrimaryButton: {
+    height: 48,
+    minWidth: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    backgroundColor: colors.selected,
+  },
+  closeWarningPrimaryButtonHovered: {
+    backgroundColor: '#A50058',
+  },
+  closeWarningPrimaryButtonText: {
     fontSize: 14,
     lineHeight: 18,
     color: '#FFFFFF',

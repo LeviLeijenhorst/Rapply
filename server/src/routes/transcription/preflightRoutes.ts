@@ -6,8 +6,9 @@ import { asyncHandler } from "../../http"
 import { randomBase64Url } from "../../transcription/random"
 import { createEncryptedUploadUrl } from "../../transcription/storage"
 import { createUploadToken } from "../../transcription/store"
+import { transcriptionUploadExpirationSeconds } from "../../transcription/uploadExpiration"
 import { applyEmailBillingOverrides } from "../billingOverrides"
-import { getProviderMaxAudioBytes, resolveTranscriptionProvider } from "./helpers"
+import { getProviderMaxAudioBytes, getProviderMaxAudioDurationSeconds, resolveTranscriptionProvider } from "./helpers"
 import type { RegisterTranscriptionRoutesParams } from "./types"
 
 // Registers transcription preflight endpoint.
@@ -31,6 +32,7 @@ export function registerTranscriptionPreflightRoutes(app: Express, params: Regis
       const transcriptionProvider = resolveTranscriptionProvider()
       const requiresWav = false
       const maxAudioBytes = getProviderMaxAudioBytes(transcriptionProvider)
+      const maxAudioDurationSeconds = getProviderMaxAudioDurationSeconds(transcriptionProvider)
 
       if (status.remainingSeconds <= 0) {
         res.status(200).json({
@@ -40,6 +42,7 @@ export function registerTranscriptionPreflightRoutes(app: Express, params: Regis
           transcriptionProvider,
           requiresWav,
           maxAudioBytes,
+          maxAudioDurationSeconds,
         })
         return
       }
@@ -47,7 +50,10 @@ export function registerTranscriptionPreflightRoutes(app: Express, params: Regis
       const operationId = randomBase64Url(16)
       const uploadPath = `${user.userId}/${operationId}/${Date.now()}.csa1`
       const token = await createUploadToken({ userId: user.userId, operationId, uploadPath })
-      const upload = await createEncryptedUploadUrl({ blobName: uploadPath, expiresInSeconds: 10 * 60 })
+      const upload = await createEncryptedUploadUrl({
+        blobName: uploadPath,
+        expiresInSeconds: transcriptionUploadExpirationSeconds,
+      })
 
       res.status(200).json({
         allowed: true,
@@ -62,6 +68,7 @@ export function registerTranscriptionPreflightRoutes(app: Express, params: Regis
         transcriptionProvider,
         requiresWav,
         maxAudioBytes,
+        maxAudioDurationSeconds,
       })
     }),
   )

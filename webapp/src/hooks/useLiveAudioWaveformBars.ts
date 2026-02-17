@@ -46,7 +46,7 @@ export function useLiveAudioWaveformBars({ mediaStream, barCount, isActive }: Va
     const binCount = analyser.frequencyBinCount
     const frequencyData = new Uint8Array(binCount)
 
-    const minimumHeight = 6
+    const minimumHeight = 8
     const maximumHeight = 220
     const targetFrameMs = 33
     const smoothing = 0.45
@@ -59,6 +59,17 @@ export function useLiveAudioWaveformBars({ mediaStream, barCount, isActive }: Va
       lastUpdateMsRef.current = now
 
       analyser.getByteFrequencyData(frequencyData)
+      let totalEnergy = 0
+      for (let i = 0; i < binCount; i++) {
+        totalEnergy += frequencyData[i] ?? 0
+      }
+      const averageEnergy = totalEnergy / Math.max(1, binCount)
+      if (averageEnergy < 2) {
+        const silentBars = Array.from({ length: stableBarCount }, () => minimumHeight)
+        previousBarsRef.current = silentBars
+        setBars(silentBars)
+        return
+      }
 
       const nextBars: number[] = []
       const previousBars = previousBarsRef.current

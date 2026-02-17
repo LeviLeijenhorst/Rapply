@@ -7,6 +7,7 @@ export type BillingStatus = {
   cycleKey: string | null
   freeSeconds: number
   purchasedSeconds: number
+  adminGrantedSeconds: number
   includedSeconds: number
   cycleUsedSeconds: number
   cycleRemainingSeconds: number
@@ -16,8 +17,41 @@ export type BillingStatus = {
   remainingSeconds: number
 }
 
+let ensureBillingUsersCompatibilityPromise: Promise<void> | null = null
+
+export async function ensureBillingUsersCompatibility(): Promise<void> {
+  if (!ensureBillingUsersCompatibilityPromise) {
+    ensureBillingUsersCompatibilityPromise = execute(
+      `
+      alter table public.billing_users
+      add column if not exists admin_granted_seconds integer not null default 0;
+
+      do $$
+      begin
+        if not exists (
+          select 1
+          from pg_constraint
+          where conname = 'billing_users_non_negative_admin_granted'
+        ) then
+          alter table public.billing_users
+          add constraint billing_users_non_negative_admin_granted
+          check (admin_granted_seconds >= 0);
+        end if;
+      end
+      $$;
+      `,
+      [],
+    ).catch((error) => {
+      ensureBillingUsersCompatibilityPromise = null
+      throw error
+    })
+  }
+  await ensureBillingUsersCompatibilityPromise
+}
+
 // Intent: ensureBillingUser
 export async function ensureBillingUser(userId: string): Promise<void> {
+  await ensureBillingUsersCompatibility()
   await execute(
     `
     insert into public.billing_users (user_id)
@@ -32,16 +66,19 @@ export async function ensureBillingUser(userId: string): Promise<void> {
 export async function readBillingStatus(params: { userId: string; planKey: PlanKey | null; cycleStartMs: number | null; cycleEndMs: number | null }): Promise<BillingStatus> {
   const { userId, planKey, cycleStartMs, cycleEndMs } = params
 
+  await ensureBillingUsersCompatibility()
+
   const includedSeconds = getIncludedSecondsForPlanKey(planKey)
   const cycleKey = buildCycleKey(cycleStartMs, cycleEndMs)
 
   const row = await queryOne<{
     purchased_seconds: number
+    admin_granted_seconds: number
     non_expiring_used_seconds: number
     cycle_used_seconds_by_key: any
   }>(
     `
-    select purchased_seconds, non_expiring_used_seconds, cycle_used_seconds_by_key
+    select purchased_seconds, admin_granted_seconds, non_expiring_used_seconds, cycle_used_seconds_by_key
     from public.billing_users
     where user_id = $1
     `,
@@ -49,11 +86,12 @@ export async function readBillingStatus(params: { userId: string; planKey: PlanK
   )
 
   const purchasedSeconds = clampNonNegative(row?.purchased_seconds ?? 0)
+  const adminGrantedSeconds = clampNonNegative(row?.admin_granted_seconds ?? 0)
   const nonExpiringUsedSeconds = clampNonNegative(row?.non_expiring_used_seconds ?? 0)
   const cycleUsedSecondsByKey = (row?.cycle_used_seconds_by_key ?? {}) as Record<string, number>
   const cycleUsedSeconds = cycleKey ? clampNonNegative(cycleUsedSecondsByKey[cycleKey] ?? 0) : 0
 
-  const nonExpiringTotalSeconds = freeSeconds + purchasedSeconds
+  const nonExpiringTotalSeconds = freeSeconds + purchasedSeconds + adminGrantedSeconds
   const nonExpiringRemainingSeconds = Math.max(0, nonExpiringTotalSeconds - nonExpiringUsedSeconds)
 
   const cycleRemainingSeconds = Math.max(0, includedSeconds - cycleUsedSeconds)
@@ -64,6 +102,7 @@ export async function readBillingStatus(params: { userId: string; planKey: PlanK
     cycleKey,
     freeSeconds,
     purchasedSeconds,
+    adminGrantedSeconds,
     includedSeconds,
     cycleUsedSeconds,
     cycleRemainingSeconds,

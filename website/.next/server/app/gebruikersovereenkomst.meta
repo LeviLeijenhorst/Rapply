@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/(site)/layout,_N_T_/(site)/gebruikersovereenkomst/layout,_N_T_/(site)/gebruikersovereenkomst/page,_N_T_/gebruikersovereenkomst"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/!KHNpdGUp/gebruikersovereenkomst/__PAGE__",
+    "/!KHNpdGUp/gebruikersovereenkomst",
+    "/!KHNpdGUp",
+    "/_index",
+    "/_head"
+  ]
+}

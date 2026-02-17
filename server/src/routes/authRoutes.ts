@@ -43,7 +43,15 @@ export function registerAuthRoutes(app: Express): void {
     "/auth/me",
     asyncHandler(async (req, res) => {
       const user = await requireAuthenticatedUser(req)
-      res.status(200).json({ userId: user.userId, email: user.email, displayName: user.displayName, entraUserId: user.entraUserId })
+      res.status(200).json({
+        userId: user.userId,
+        email: user.email,
+        displayName: user.displayName,
+        name: user.displayName,
+        givenName: user.givenName,
+        surname: user.surname,
+        entraUserId: user.entraUserId,
+      })
     }),
   )
 

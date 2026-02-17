@@ -659,14 +659,38 @@ const securityItems = [
         icon: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$home$2f$security$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$home$2f$security$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"]
     }
 ];
+const veiligheidDataFlowItems = [
+    {
+        title: "1. Opname",
+        description: "Gesprekken worden lokaal opgenomen en versleuteld voordat zij verder worden verwerkt. Onversleutelde audio wordt niet permanent opgeslagen op het apparaat.",
+        icon: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$home$2f$security$2d$safe$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$home$2f$security$2d$safe$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"]
+    },
+    {
+        title: "2. Versleutelde overdracht",
+        description: "Audio wordt versleuteld verzonden naar onze verwerkingsomgeving.",
+        icon: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$shield$2d$tick$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$shield$2d$tick$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"]
+    },
+    {
+        title: "3. Verwerking binnen Europese Azure-regio's",
+        description: "Transcriptie en AI-functionaliteiten draaien binnen Azure-datacenters in Europa.",
+        icon: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$shield$2d$search$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$shield$2d$search$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"]
+    },
+    {
+        title: "4. Versleutelde opslag",
+        description: "Gegevens worden versleuteld opgeslagen. Naast de standaardversleuteling binnen Azure passen wij aanvullende versleuteling toe.",
+        icon: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$home$2f$lock$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$home$2f$lock$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"]
+    },
+    {
+        title: "5. Verwijdering",
+        description: "Gebruikers kunnen sessies en gegevens verwijderen.",
+        icon: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$coaches$2f$vuesax$2f$bold$2f$key$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$coaches$2f$vuesax$2f$bold$2f$key$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"]
+    }
+];
 const SECURITY_CARD_REVEAL_DURATION_MS = 420;
 function SecuritySection({ duplicateCards = false, showActionButton = true }) {
     const securityCardsRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
     const [areSecurityCardsVisible, setAreSecurityCardsVisible] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    const renderedSecurityItems = duplicateCards ? [
-        ...securityItems,
-        ...securityItems
-    ] : securityItems;
+    const renderedSecurityItems = duplicateCards ? veiligheidDataFlowItems : securityItems;
     const securityGridGapClass = duplicateCards ? "gap-[30px]" : "gap-6";
     const securityButtonTopSpacingClass = duplicateCards ? "mt-[30px]" : "mt-2";
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
@@ -691,43 +715,55 @@ function SecuritySection({ duplicateCards = false, showActionButton = true }) {
                     children: [
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h2", {
                             className: "font-[var(--font-catamaran)] text-[40px] font-medium leading-[120%] text-black",
-                            children: [
-                                "Ontworpen met ",
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                    className: "text-[#BD0265]",
-                                    children: "veiligheid op #1"
-                                }, void 0, false, {
-                                    fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
-                                    lineNumber: 87,
-                                    columnNumber: 27
-                                }, this)
-                            ]
-                        }, void 0, true, {
+                            children: duplicateCards ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Fragment"], {
+                                children: [
+                                    "Hoe CoachScribe",
+                                    " ",
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        className: "text-[#BD0265]",
+                                        children: "met gegevens omgaat"
+                                    }, void 0, false, {
+                                        fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
+                                        lineNumber: 123,
+                                        columnNumber: 17
+                                    }, this)
+                                ]
+                            }, void 0, true) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Fragment"], {
+                                children: [
+                                    "Ontworpen met ",
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        className: "text-[#BD0265]",
+                                        children: "veiligheid op #1"
+                                    }, void 0, false, {
+                                        fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
+                                        lineNumber: 127,
+                                        columnNumber: 31
+                                    }, this)
+                                ]
+                            }, void 0, true)
+                        }, void 0, false, {
                             fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
-                            lineNumber: 86,
+                            lineNumber: 119,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                             className: "text-base font-normal text-black/70 md:text-lg",
-                            children: "Beschermde opslag, duidelijke regels en volledige controle over jouw data."
+                            children: duplicateCards ? "Structuur in vijf stappen." : "Beschermde opslag, duidelijke regels en volledige controle over jouw data."
                         }, void 0, false, {
                             fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
-                            lineNumber: 89,
+                            lineNumber: 131,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
-                    lineNumber: 85,
+                    lineNumber: 118,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                     ref: securityCardsRef,
                     className: `grid w-full md:grid-cols-3 ${securityGridGapClass}`,
                     children: renderedSecurityItems.map((securityItem, index)=>{
-                        const title = duplicateCards && index === securityItems.length ? "tweestapsverificatie" : duplicateCards && index === securityItems.length + 1 ? "Europese bescherming" : securityItem.title;
-                        const description = duplicateCards && index === securityItems.length ? "Inloggen verloopt via tweestapsverificatie. Naast je wachtwoord bevestig je elke login met een unieke e-mailcode zodat je account goed beveiligd is." : duplicateCards && index === securityItems.length + 1 ? "Alle gegevens blijven binnen Europa en vallen uitsluitend onder Europese privacywetgeving, zonder invloed van de Amerikaanse Cloud Act." : securityItem.description;
-                        const iconSource = duplicateCards && index === 2 ? __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$shield$2d$tick$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$shield$2d$tick$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"] : duplicateCards && index === securityItems.length ? __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$coaches$2f$vuesax$2f$bold$2f$key$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$coaches$2f$vuesax$2f$bold$2f$key$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"] : duplicateCards && index === securityItems.length + 1 ? __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$home$2f$security$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$home$2f$security$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"] : duplicateCards && index === securityItems.length + 2 ? __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$shield$2d$search$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$veiligheid$2f$shield$2d$search$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"] : securityItem.icon;
                         return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             className: `flex w-full flex-col gap-0 rounded-2xl bg-white p-6 pb-8 shadow-[0_8px_20px_rgba(15,23,42,0.08)] ${areSecurityCardsVisible ? "translate-y-0" : "translate-y-[20px]"}`,
                             style: {
@@ -740,47 +776,47 @@ function SecuritySection({ duplicateCards = false, showActionButton = true }) {
                                     className: "mt-2 ml-2 flex items-start gap-3 self-start",
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$image$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
-                                            src: iconSource,
+                                            src: securityItem.icon,
                                             alt: "",
                                             width: 24,
                                             height: 24
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
-                                            lineNumber: 137,
+                                            lineNumber: 157,
                                             columnNumber: 19
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
                                             className: "font-[var(--font-catamaran)] text-[20px] font-bold text-[#BD0265]",
-                                            children: title
+                                            children: securityItem.title
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
-                                            lineNumber: 139,
+                                            lineNumber: 159,
                                             columnNumber: 19
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
-                                    lineNumber: 136,
+                                    lineNumber: 156,
                                     columnNumber: 17
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                     className: "mt-3 ml-2 text-[16px] font-normal text-black/70",
-                                    children: description
+                                    children: securityItem.description
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
-                                    lineNumber: 144,
+                                    lineNumber: 164,
                                     columnNumber: 17
                                 }, this)
                             ]
                         }, `${securityItem.title}-${index}`, true, {
                             fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
-                            lineNumber: 124,
+                            lineNumber: 144,
                             columnNumber: 15
                         }, this);
                     })
                 }, void 0, false, {
                     fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
-                    lineNumber: 95,
+                    lineNumber: 138,
                     columnNumber: 9
                 }, this),
                 showActionButton ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -797,23 +833,23 @@ function SecuritySection({ duplicateCards = false, showActionButton = true }) {
                         className: "font-normal"
                     }, void 0, false, {
                         fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
-                        lineNumber: 163,
+                        lineNumber: 183,
                         columnNumber: 13
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
-                    lineNumber: 153,
+                    lineNumber: 173,
                     columnNumber: 11
                 }, this) : null
             ]
         }, void 0, true, {
             fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
-            lineNumber: 83,
+            lineNumber: 116,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/Coachscribe/website/components/home/SecuritySection.tsx",
-        lineNumber: 78,
+        lineNumber: 111,
         columnNumber: 5
     }, this);
 }

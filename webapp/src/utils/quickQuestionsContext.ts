@@ -8,11 +8,15 @@ function formatDateLabel(unixMs: number) {
   return new Date(unixMs).toLocaleDateString('nl-NL', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-export function buildConversationTranscriptSystemMessages(params: { transcript: string | null }): LocalChatMessage[] {
+export function buildConversationTranscriptSystemMessages(params: { transcript: string | null; sessionId?: string }): LocalChatMessage[] {
   const transcript = normalizeText(params.transcript)
+  const sessionId = normalizeText(params.sessionId)
+  const scopeHeader = sessionId
+    ? `[COACHSCRIBE_SESSION_SCOPE]\nSession-ID: ${sessionId}\nGebruik uitsluitend context uit deze sessie.`
+    : 'Gebruik uitsluitend context uit deze sessie.'
   const text = transcript
-    ? `Hier is het transcript van het gesprek:\n\n${transcript}\n\nGebruik dit transcript om de vragen te beantwoorden.`
-    : 'Er is nog geen transcript beschikbaar voor dit gesprek. Beantwoord vragen zo goed mogelijk op basis van wat de gebruiker typt.'
+    ? `${scopeHeader}\n\nHier is het transcript van het gesprek:\n\n${transcript}\n\nGebruik dit transcript om de vragen te beantwoorden.`
+    : `${scopeHeader}\n\nEr is nog geen transcript beschikbaar voor dit gesprek. Beantwoord vragen zo goed mogelijk op basis van wat de gebruiker typt.`
 
   return [{ role: 'system', text }]
 }

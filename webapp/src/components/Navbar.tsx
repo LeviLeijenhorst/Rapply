@@ -4,17 +4,20 @@ import { StyleSheet, useWindowDimensions, View } from 'react-native'
 import { radius, spacing } from '../foundation/theme/tokens'
 import { colors } from '../theme/colors'
 import { CoachscribeLogo } from './CoachscribeLogo'
+import { Text } from './Text'
 import { UsageIndicator } from './UsageIndicator'
 
 type Props = {
   usedMinutes: number
   totalMinutes: number
   isUsageLoading?: boolean
+  accountName?: string | null
 }
 
-export function Navbar({ usedMinutes, totalMinutes, isUsageLoading = false }: Props) {
+export function Navbar({ usedMinutes, totalMinutes, isUsageLoading = false, accountName = null }: Props) {
   const { width } = useWindowDimensions()
   const hideUsage = width < 600
+  const showAccount = Boolean(accountName)
 
   return (
     <View style={styles.container}>
@@ -28,6 +31,15 @@ export function Navbar({ usedMinutes, totalMinutes, isUsageLoading = false }: Pr
       <View style={styles.rightArea}>
         {/* Right actions */}
         <View style={styles.rightActions}>
+          {showAccount ? (
+            <View style={styles.accountBadge}>
+              {accountName ? (
+                <Text isSemibold style={styles.accountName} numberOfLines={1}>
+                  {accountName}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
           {/* Usage indicator */}
           {!hideUsage ? (
             <View style={styles.usageContainer}>
@@ -72,6 +84,22 @@ const styles = StyleSheet.create({
   },
   usageContainer: {
     borderRadius: radius.md,
+  },
+  accountBadge: {
+    maxWidth: 320,
+    height: 40,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    backgroundColor: colors.pageBackground,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
+  accountName: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
   },
 })
 

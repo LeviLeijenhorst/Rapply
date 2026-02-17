@@ -114,6 +114,23 @@ function parseDeleteAccountErrorMessage(error: unknown): string {
   })
 }
 
+function normalizeOptionalName(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const normalized = trimmed.toLowerCase()
+  if (normalized === 'unknown' || normalized === 'onbekend' || normalized === 'n/a' || normalized === 'na') return null
+  return trimmed
+}
+
+function buildFallbackNameFromEmail(email: string | null): string | null {
+  if (!email) return null
+  const atIndex = email.indexOf('@')
+  const localPart = atIndex > 0 ? email.slice(0, atIndex) : email
+  const cleaned = localPart.replace(/[._-]+/g, ' ').trim()
+  return cleaned.length > 0 ? cleaned : null
+}
+
 export function AppShell({ onLogout }: Props) {
   const { width } = useWindowDimensions()
   const isTooSmall = width < 1100
@@ -136,6 +153,9 @@ export function AppShell({ onLogout }: Props) {
   const [isAdminContactScreenOpen, setIsAdminContactScreenOpen] = useState(false)
   const [isAdminWachtlijstScreenOpen, setIsAdminWachtlijstScreenOpen] = useState(false)
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
+  const [currentUserGivenName, setCurrentUserGivenName] = useState<string | null>(null)
+  const [currentUserSurname, setCurrentUserSurname] = useState<string | null>(null)
+  const [currentUserName, setCurrentUserName] = useState<string | null>(null)
 
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false)
   const [settingsMenuAnchorPoint, setSettingsMenuAnchorPoint] = useState<AnchorPoint | null>(null)
@@ -167,19 +187,47 @@ export function AppShell({ onLogout }: Props) {
 
   useEffect(() => {
     let isCancelled = false
-    void callSecureApi<{ email: string | null }>('/auth/me', {})
+    void callSecureApi<{
+      email: string | null
+      name?: string | null
+      displayName?: string | null
+      givenName?: string | null
+      surname?: string | null
+    }>('/auth/me', {})
       .then((response) => {
         if (isCancelled) return
-        setCurrentUserEmail(typeof response?.email === 'string' ? response.email : null)
+        const email = typeof response?.email === 'string' ? response.email : null
+        setCurrentUserEmail(email)
+        const givenName = normalizeOptionalName(response?.givenName)
+        const surname = normalizeOptionalName(response?.surname)
+        setCurrentUserGivenName(givenName)
+        setCurrentUserSurname(surname)
+        const fullNameFromEntra = [givenName, surname].filter(Boolean).join(' ').trim()
+        const preferredName =
+          fullNameFromEntra.length > 0
+            ? fullNameFromEntra
+            : normalizeOptionalName(response?.name) ??
+              normalizeOptionalName(response?.displayName) ??
+              buildFallbackNameFromEmail(email)
+        setCurrentUserName(preferredName)
       })
       .catch(() => {
         if (isCancelled) return
         setCurrentUserEmail(null)
+        setCurrentUserGivenName(null)
+        setCurrentUserSurname(null)
+        setCurrentUserName(null)
       })
     return () => {
       isCancelled = true
     }
   }, [])
+
+  const currentUserNavbarName = useMemo(() => {
+    const fullName = [currentUserGivenName, currentUserSurname].filter(Boolean).join(' ').trim()
+    if (fullName.length > 0) return fullName
+    return currentUserName
+  }, [currentUserGivenName, currentUserName, currentUserSurname])
 
   useEffect(() => {
     if (!isAppDataLoaded) return
@@ -751,6 +799,7 @@ export function AppShell({ onLogout }: Props) {
         usedMinutes={usedMinutes}
         totalMinutes={totalMinutes}
         isUsageLoading={isUsageLoading}
+        accountName={currentUserNavbarName}
       />
       {hasBreadcrumbs ? (
         <View
@@ -879,6 +928,8 @@ export function AppShell({ onLogout }: Props) {
 
           <MyAccountModal
             visible={isMyAccountModalOpen}
+            accountName={currentUserName}
+            accountEmail={currentUserEmail}
             onClose={() => setIsMyAccountModalOpen(false)}
             onLogout={() => setIsMyAccountModalOpen(false)}
             onDeleteAccount={() => {

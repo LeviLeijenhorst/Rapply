@@ -7,7 +7,7 @@ export default function VeiligheidEthicsSection() {
         <div className="flex w-full flex-col gap-10">
           <div className="flex w-full flex-col items-start gap-[16px] text-left">
             <h2 className="font-[var(--font-catamaran)] text-[40px] font-medium leading-[120%] text-black">
-              Aanvullende <span className="text-[#BD0265]">versleuteling bij opslag</span>
+              Aanvullende <span className="text-[#BD0265]">versleuteling tijdens opslag</span>
             </h2>
             <div className="w-full text-left">
               <div className="flex flex-col gap-4 text-base font-normal leading-relaxed text-[#1D0A00]">

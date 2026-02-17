@@ -8,6 +8,7 @@ import { logger } from "@/utils/logger"
 import { requireUserId } from "./auth"
 
 const ExpoSegmentedAudioNative = requireNativeModule<any>("ExpoSegmentedAudio") as any
+const CSA1_ENCRYPTION_OVERHEAD_BYTES = 64
 
 function toFileSystemPath(uri: string) {
   return uri.startsWith("file://") ? uri.slice(7) : uri
@@ -28,6 +29,22 @@ async function createTemporaryEncryptedAudioFilePath(recordingId: string) {
   return file.uri
 }
 
+function formatMegabytes(bytes: number) {
+  return (bytes / (1024 * 1024)).toFixed(1)
+}
+
+function readValidMaxAudioBytes(value: unknown): number | null {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed <= 0) return null
+  return Math.floor(parsed)
+}
+
+function toAudioTooLargeError(params: { maxAudioBytes: number; actualAudioBytes: number }) {
+  const maxMegabytes = formatMegabytes(params.maxAudioBytes)
+  const actualMegabytes = formatMegabytes(params.actualAudioBytes)
+  return new Error(`Audiobestand is te groot voor transcriptie (${actualMegabytes} MB). Maximaal toegestaan is ${maxMegabytes} MB.`)
+}
+
 async function uploadEncryptedFileToUploadUrl(params: { uploadUrl: string; uploadHeaders: Record<string, string>; fileUri: string }) {
   const fileUri = params.fileUri
   const uploadUrl = String(params.uploadUrl || "").trim()
@@ -37,6 +54,7 @@ async function uploadEncryptedFileToUploadUrl(params: { uploadUrl: string; uploa
   }
 
   let result: any
+  const startedAtUnixMilliseconds = Date.now()
   try {
     result = await FileSystemLegacy.uploadAsync(uploadUrl, fileUri, {
       httpMethod: "PUT",
@@ -51,6 +69,11 @@ async function uploadEncryptedFileToUploadUrl(params: { uploadUrl: string; uploa
     const body = String(result.body || "").slice(0, 400)
     throw new Error(`Storage upload failed (${result.status}): ${body || "Unknown error"}`)
   }
+
+  logger.debug("[transcription] storage upload done", {
+    status: result.status,
+    durationMilliseconds: Date.now() - startedAtUnixMilliseconds,
+  })
 }
 
 export async function transcribeViaEncryptedUpload(params: {
@@ -74,6 +97,7 @@ export async function transcribeViaEncryptedUpload(params: {
   const uploadPath = String(preflight?.uploadPath || "").trim()
   const uploadUrl = String(preflight?.uploadUrl || "").trim()
   const uploadHeaders = (preflight?.uploadHeaders || {}) as Record<string, string>
+  const maxAudioBytes = readValidMaxAudioBytes(preflight?.maxAudioBytes)
   if (!operationId || !uploadToken || !uploadPath) {
     throw new Error("Transcription preflight failed")
   }
@@ -83,10 +107,32 @@ export async function transcribeViaEncryptedUpload(params: {
 
   const keyBase64 = await createRandomKeyBase64()
   const encryptedUri = await createTemporaryEncryptedAudioFilePath(recordingId)
+  const sourceFile = new File(sourceUri)
+  const sourceAudioBytes = sourceFile.exists ? sourceFile.size : null
+
+  if (maxAudioBytes !== null && typeof sourceAudioBytes === "number" && sourceAudioBytes > maxAudioBytes) {
+    throw toAudioTooLargeError({ maxAudioBytes, actualAudioBytes: sourceAudioBytes })
+  }
 
   try {
     const ok = await ExpoSegmentedAudioNative.encryptFile(toFileSystemPath(sourceUri), toFileSystemPath(encryptedUri), keyBase64)
     if (!ok) throw new Error("Failed to encrypt audio for upload")
+    const encryptedFile = new File(encryptedUri)
+    const encryptedBytes = encryptedFile.exists ? encryptedFile.size : null
+
+    if (
+      maxAudioBytes !== null &&
+      typeof encryptedBytes === "number" &&
+      encryptedBytes > maxAudioBytes + CSA1_ENCRYPTION_OVERHEAD_BYTES
+    ) {
+      throw toAudioTooLargeError({ maxAudioBytes, actualAudioBytes: encryptedBytes })
+    }
+
+    logger.debug("[transcription] encrypted file ready", {
+      encryptedBytes,
+      mimeType,
+      maxAudioBytes,
+    })
 
     logger.debug("[transcription] storage upload start")
     await uploadEncryptedFileToUploadUrl({
@@ -110,8 +156,16 @@ export async function transcribeViaEncryptedUpload(params: {
     if (!summary.trim()) throw new Error("No summary returned")
     return { transcript, summary }
   } catch (error: any) {
-    logger.error("[transcription] transcribeViaEncryptedUpload failed", { message: String(error?.message || error || "") })
-    throw error
+    const message = String(error?.message || error || "")
+    logger.error("[transcription] transcribeViaEncryptedUpload failed", { message })
+    const normalizedMessage = message.toLowerCase()
+    if (normalizedMessage.includes("audiolengthlimitexceeded") || normalizedMessage.includes("maximal audio length exceeded")) {
+      throw new Error("Deze opname is te lang voor transcriptie. Gebruik een opname korter dan 120 minuten.")
+    }
+    if (normalizedMessage.includes("blobnotfound") || normalizedMessage.includes("object cannot be found")) {
+      throw new Error("Upload naar de server is niet meer beschikbaar. Probeer opnieuw met een stabiele verbinding.")
+    }
+    throw new Error(message || "Transcriptie mislukt")
   } finally {
     try {
       const f = new File(encryptedUri)

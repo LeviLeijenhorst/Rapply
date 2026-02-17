@@ -1,6 +1,7 @@
 import crypto from "crypto"
 import type { Express, RequestHandler } from "express"
 import { requireAuthenticatedUser } from "../auth"
+import { ensureBillingUser, readBillingStatus } from "../billing/store"
 import { adminAccountEmail, isAdminEmail, normalizeEmail } from "../admin"
 import { execute, queryMany } from "../db"
 import { deleteEntraUserById } from "../entraGraph"
@@ -14,6 +15,7 @@ type RegisterFeedbackRoutesParams = {
 let ensureContactSubmissionsTablePromise: Promise<void> | null = null
 let ensurePraktijkRequestsCompatibilityPromise: Promise<void> | null = null
 let ensureContactSubmissionsCompatibilityPromise: Promise<void> | null = null
+let ensureAdminBillingGrantsTablePromise: Promise<void> | null = null
 
 async function ensureContactSubmissionsTable(): Promise<void> {
   if (!ensureContactSubmissionsTablePromise) {
@@ -90,6 +92,32 @@ async function ensureContactSubmissionsCompatibility(): Promise<void> {
     })
   }
   await ensureContactSubmissionsCompatibilityPromise
+}
+
+async function ensureAdminBillingGrantsTable(): Promise<void> {
+  if (!ensureAdminBillingGrantsTablePromise) {
+    ensureAdminBillingGrantsTablePromise = execute(
+      `
+      create table if not exists public.admin_billing_grants (
+        id uuid primary key,
+        admin_email text not null,
+        target_user_id uuid not null references public.users (id) on delete cascade,
+        target_account_email text,
+        granted_seconds integer not null,
+        created_at timestamptz not null default now(),
+        constraint admin_billing_grants_admin_email_length check (char_length(admin_email) > 0 and char_length(admin_email) <= 320),
+        constraint admin_billing_grants_target_account_email_length check (target_account_email is null or char_length(target_account_email) <= 320),
+        constraint admin_billing_grants_granted_seconds_positive check (granted_seconds > 0)
+      );
+      create index if not exists admin_billing_grants_target_user_id_idx on public.admin_billing_grants (target_user_id, created_at desc);
+      `,
+      [],
+    ).catch((error) => {
+      ensureAdminBillingGrantsTablePromise = null
+      throw error
+    })
+  }
+  await ensureAdminBillingGrantsTablePromise
 }
 
 async function requireAdminUserEmail(req: Parameters<typeof requireAuthenticatedUser>[0]): Promise<string> {
@@ -517,6 +545,105 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
       )
 
       res.status(200).json({ ok: true })
+    }),
+  )
+
+  app.post(
+    "/admin/billing/grant-minutes",
+    params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      await ensureAdminBillingGrantsTable()
+      const adminEmail = await requireAdminUserEmail(req).catch(() => null)
+      if (!adminEmail) {
+        sendError(res, 403, "Forbidden")
+        return
+      }
+
+      const userIdOrEmail = String(req.body?.userIdOrEmail || "").trim()
+      if (!userIdOrEmail) {
+        sendError(res, 400, "Missing userIdOrEmail")
+        return
+      }
+
+      const minutesRaw = Number(req.body?.minutes)
+      if (!Number.isFinite(minutesRaw) || minutesRaw <= 0) {
+        sendError(res, 400, "Invalid minutes")
+        return
+      }
+
+      const grantedSeconds = Math.round(minutesRaw * 60)
+      if (grantedSeconds <= 0 || grantedSeconds > 31_536_000) {
+        sendError(res, 400, "Invalid minutes")
+        return
+      }
+
+      const normalizedLookup = normalizeEmail(userIdOrEmail)
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userIdOrEmail)
+
+      const targetUser = isUuid
+        ? await queryMany<{ id: string; email: string | null }>(
+            `
+            select id, email
+            from public.users
+            where id = $1
+            limit 1
+            `,
+            [userIdOrEmail],
+          )
+        : await queryMany<{ id: string; email: string | null }>(
+            `
+            select id, email
+            from public.users
+            where lower(email) = $1
+            limit 1
+            `,
+            [normalizedLookup],
+          )
+
+      const resolvedUser = targetUser[0]
+      if (!resolvedUser?.id) {
+        sendError(res, 404, "User not found")
+        return
+      }
+
+      await ensureBillingUser(resolvedUser.id)
+      await execute(
+        `
+        update public.billing_users
+        set admin_granted_seconds = admin_granted_seconds + $1,
+            updated_at = now()
+        where user_id = $2
+        `,
+        [grantedSeconds, resolvedUser.id],
+      )
+      await execute(
+        `
+        insert into public.admin_billing_grants (
+          id,
+          admin_email,
+          target_user_id,
+          target_account_email,
+          granted_seconds
+        )
+        values ($1, $2, $3, $4, $5)
+        `,
+        [crypto.randomUUID(), adminEmail, resolvedUser.id, resolvedUser.email, grantedSeconds],
+      )
+
+      const billingStatus = await readBillingStatus({
+        userId: resolvedUser.id,
+        planKey: null,
+        cycleStartMs: null,
+        cycleEndMs: null,
+      })
+
+      res.status(200).json({
+        ok: true,
+        targetUserId: resolvedUser.id,
+        targetAccountEmail: resolvedUser.email,
+        grantedMinutes: grantedSeconds / 60,
+        billingStatus,
+      })
     }),
   )
 

@@ -357,6 +357,7 @@ export async function listPendingPreviewAudioTasks(): Promise<PendingPreviewTask
       .filter((record) => !deleteSessionIds.includes(record.sessionId))
       .filter((record) => !record.transcriptionSucceeded)
       .filter((record) => !record.audioBlobId)
+      .filter((record) => record.processingState !== 'failed')
       .filter((record) => record.processingState !== 'uploaded')
       .map((record) => ({
         sessionId: record.sessionId,

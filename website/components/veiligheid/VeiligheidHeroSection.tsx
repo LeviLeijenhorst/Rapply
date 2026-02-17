@@ -16,7 +16,7 @@ export default function VeiligheidHeroSection() {
             <p className="max-w-xl text-[16px] font-medium text-black/70">
               CoachScribe is ontworpen voor gesprekken met gevoelige informatie.
               Met verwerking binnen de Europese Unie en aanvullende
-              versleuteling bij opslag.
+              versleuteling tijdens opslag.
             </p>
           </div>
           <div className="mt-6 flex flex-wrap items-center gap-3">

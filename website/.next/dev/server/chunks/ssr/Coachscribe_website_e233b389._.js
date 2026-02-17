@@ -141,7 +141,7 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
         setIsToastVisible(false);
         window.requestAnimationFrame(()=>setIsToastVisible(true));
     };
-    const titleClassName = useLightTheme ? "font-[var(--font-catamaran)] text-[64px] font-medium leading-[110%] text-[#1D0A00]" : "font-[var(--font-catamaran)] text-[64px] font-medium leading-[110%] text-white";
+    const titleClassName = useLightTheme ? "font-[var(--font-catamaran)] text-[36px] font-medium leading-[110%] text-[#1D0A00] md:text-[50px] xl:text-[64px]" : "font-[var(--font-catamaran)] text-[36px] font-medium leading-[110%] text-white md:text-[50px] xl:text-[64px]";
     const descriptionClassName = useLightTheme ? "mt-4 max-w-lg text-base font-normal leading-relaxed text-black/70" : "mt-4 max-w-lg text-base font-normal leading-relaxed text-white/90";
     const labelClassName = useLightTheme ? "text-sm font-normal text-[#1D0A00]" : "text-sm font-normal text-white";
     const fieldClassName = useLightTheme ? "h-12 rounded-xl border border-[#DDDDDD] bg-white px-4 text-base font-normal text-[#1D0A00] placeholder:text-black/50 outline-none transition-colors focus:border-[#BD0265]" : inputClassName;
@@ -193,7 +193,7 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$image$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
                                     src: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$over_ons$2f$over_ons$2d$beiden$2e$png$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$over_ons$2f$over_ons$2d$beiden$2e$png__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"],
                                     alt: "CoachScribe team",
-                                    className: "mt-6 h-auto w-full max-w-[420px] rounded-xl object-cover"
+                                    className: "mt-6 h-auto w-full max-w-[320px] rounded-xl object-cover md:max-w-[380px] xl:max-w-[420px]"
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
                                     lineNumber: 109,

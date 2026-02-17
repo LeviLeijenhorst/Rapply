@@ -1,0 +1,62 @@
+{
+    "apiVersion": "2024-08-01",
+    "id": "/subscriptions/2a01c7e4-a7a4-45c7-aea4-365c8d7346d6/resourceGroups/jnlsolutions-coachscribe/providers/Microsoft.DBforPostgreSQL/flexibleServers/jnlsolutions-coachscribe-1",
+    "name": "jnlsolutions-coachscribe-1",
+    "type": "microsoft.dbforpostgresql/flexibleservers",
+    "sku": {
+        "name": "Standard_B1ms",
+        "tier": "Burstable"
+    },
+    "location": "belgiumcentral",
+    "tags": {},
+    "properties": {
+        "replica": {
+            "role": "Primary",
+            "capacity": 5
+        },
+        "storage": {
+            "type": "",
+            "iops": 120,
+            "tier": "P4",
+            "storageSizeGB": 32,
+            "autoGrow": "Disabled"
+        },
+        "network": {
+            "publicNetworkAccess": "Enabled"
+        },
+        "privateEndpointConnections": [],
+        "dataEncryption": {
+            "type": "SystemManaged"
+        },
+        "authConfig": {
+            "activeDirectoryAuth": "Disabled",
+            "passwordAuth": "Enabled"
+        },
+        "fullyQualifiedDomainName": "jnlsolutions-coachscribe-1.postgres.database.azure.com",
+        "version": "17",
+        "minorVersion": "7",
+        "administratorLogin": "jnlsolutions_admin",
+        "state": "Ready",
+        "availabilityZone": "1",
+        "backup": {
+            "backupRetentionDays": 7,
+            "geoRedundantBackup": "Disabled",
+            "earliestRestoreDate": "2026-02-09T11:27:18.9133081Z"
+        },
+        "highAvailability": {
+            "mode": "Disabled",
+            "state": "NotEnabled"
+        },
+        "maintenanceWindow": {
+            "customWindow": "Disabled",
+            "dayOfWeek": 0,
+            "startHour": 0,
+            "startMinute": 0
+        },
+        "replicationRole": "Primary",
+        "replicaCapacity": 5
+    },
+    "systemData": {
+        "createdAt": "2026-01-30T11:12:53.18704Z"
+    }
+}

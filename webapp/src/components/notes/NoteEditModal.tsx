@@ -65,6 +65,11 @@ export function NoteEditModal({
   }
 
   const handleRequestClose = () => {
+    const isDirty = title !== initialTitle || body !== initialBody
+    if (!isDirty) {
+      onClose()
+      return
+    }
     setShowCloseConfirm(true)
   }
 

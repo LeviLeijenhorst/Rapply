@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
@@ -8,11 +8,11 @@ import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
 import { TrashIcon } from '../icons/TrashIcon'
 import { MijnAccountIcon } from '../icons/MijnAccountIcon'
 import { LogoutIcon } from '../icons/LogoutIcon'
-import { useE2ee } from '../../e2ee/E2eeProvider'
-import { toUserFriendlyErrorMessage } from '../../utils/userFriendlyError'
 
 type Props = {
   visible: boolean
+  accountName?: string | null
+  accountEmail?: string | null
   onClose: () => void
   onLogout: () => void
   onDeleteAccount: () => void
@@ -22,22 +22,14 @@ type Props = {
 // Renders the account modal with recovery-key, logout, and delete-account actions.
 export function MyAccountModal({
   visible,
+  accountName = null,
+  accountEmail = null,
   onClose,
   onLogout,
   onDeleteAccount,
   isDeleteAccountBusy = false,
 }: Props) {
-  const e2ee = useE2ee()
-  const [e2eeStatus, setE2eeStatus] = useState<string | null>(null)
-  const [rotatedRecoveryKey, setRotatedRecoveryKey] = useState<string | null>(null)
-  const [isE2eeBusy, setIsE2eeBusy] = useState(false)
-
-  useEffect(() => {
-    if (!visible) return
-    setE2eeStatus(null)
-    setRotatedRecoveryKey(null)
-    setIsE2eeBusy(false)
-  }, [visible])
+  const accountIdentity = accountName?.trim() || accountEmail?.trim() || 'Onbekend account'
 
   if (!visible) return null
 
@@ -58,73 +50,15 @@ export function MyAccountModal({
       </View>
 
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.e2eeCard}>
-          <Text isSemibold style={styles.e2eeTitle}>
-            End-to-end encryptie
+        <View style={styles.accountCard}>
+          <Text isSemibold style={styles.accountTitle}>
+            Ingelogd als
           </Text>
-          <Text style={styles.e2eeText}>
-            {e2ee.isConfigured
-              ? e2ee.isEnabled
-                ? 'End-to-end encryptie staat aan voor deze browser.'
-                : 'End-to-end encryptie staat uit voor deze browser.'
-              : 'End-to-end encryptie staat nog uit voor dit account.'}
+          <Text isBold style={styles.accountIdentity}>
+            {accountIdentity}
           </Text>
+          {accountName && accountEmail ? <Text style={styles.accountEmail}>{accountEmail}</Text> : null}
         </View>
-
-        {e2ee.isEnabled ? (
-          <View style={styles.e2eeCard}>
-            <Text isSemibold style={styles.e2eeTitle}>
-              CoachScribe-code
-            </Text>
-            <Text style={styles.e2eeText}>
-              Je CoachScribe-code is nodig om toegang te krijgen tot je data op andere apparaten of een andere browser. Bewaar hem op een veilige plek.
-            </Text>
-          {rotatedRecoveryKey ? (
-            <View style={styles.e2eeCodeBox}>
-              <Text isSemibold style={styles.e2eeCodeText}>
-                {rotatedRecoveryKey}
-              </Text>
-            </View>
-          ) : null}
-          <Pressable
-            onPress={() => {
-              if (isE2eeBusy) return
-              setIsE2eeBusy(true)
-              setE2eeStatus(null)
-              void e2ee
-                .rotateRecoveryKey()
-                .then((key) => {
-                  setRotatedRecoveryKey(key)
-                  const blob = new Blob([`${key}\n`], { type: 'text/plain;charset=utf-8' })
-                  const url = URL.createObjectURL(blob)
-                  const link = document.createElement('a')
-                  link.href = url
-                  link.download = 'coachscribe-CoachScribe-code.txt'
-                  document.body.appendChild(link)
-                  link.click()
-                  link.remove()
-                  URL.revokeObjectURL(url)
-                })
-                .catch((error) =>
-                  setE2eeStatus(
-                    toUserFriendlyErrorMessage(error, {
-                      fallback: 'CoachScribe-code roteren mislukt',
-                    }),
-                  ),
-                )
-                .finally(() => setIsE2eeBusy(false))
-            }}
-            style={({ hovered }) => [styles.e2eeButton, hovered ? styles.e2eeButtonHovered : undefined, isE2eeBusy ? styles.e2eeButtonDisabled : undefined]}
-            disabled={isE2eeBusy}
-          >
-            <Text isBold style={styles.e2eeButtonText}>
-              Nieuwe CoachScribe-code maken
-            </Text>
-          </Pressable>
-          </View>
-        ) : null}
-
-        {e2eeStatus ? <Text style={styles.e2eeStatusText}>{e2eeStatus}</Text> : null}
 
         <View style={styles.topActionsRow}>
           <Pressable onPress={onLogout} style={({ hovered }) => [styles.secondaryWideButton, hovered ? styles.secondaryWideButtonHovered : undefined]}>
@@ -138,7 +72,7 @@ export function MyAccountModal({
 
           <Pressable
             onPress={onDeleteAccount}
-            style={({ hovered }) => [styles.dangerWideButton, hovered ? styles.dangerWideButtonHovered : undefined, isDeleteAccountBusy ? styles.e2eeButtonDisabled : undefined]}
+            style={({ hovered }) => [styles.dangerWideButton, hovered ? styles.dangerWideButtonHovered : undefined, isDeleteAccountBusy ? styles.actionButtonDisabled : undefined]}
             disabled={isDeleteAccountBusy}
           >
             <View style={styles.dangerWideButtonContent}>
@@ -219,64 +153,32 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 16,
   },
-  e2eeCard: {
+  accountCard: {
     width: '100%',
     borderRadius: 12,
     backgroundColor: colors.pageBackground,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
-    gap: 12,
+    gap: 6,
   },
-  e2eeTitle: {
-    fontSize: 14,
-    lineHeight: 18,
+  accountTitle: {
+    fontSize: 13,
+    lineHeight: 17,
+    color: colors.textSecondary,
+  },
+  accountIdentity: {
+    fontSize: 18,
+    lineHeight: 24,
     color: colors.textStrong,
   },
-  e2eeText: {
-    fontSize: 13,
+  accountEmail: {
+    fontSize: 14,
     lineHeight: 18,
     color: colors.text,
   },
-  e2eeCodeBox: {
-    width: '100%',
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-  },
-  e2eeCodeText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textStrong,
-  },
-  e2eeButton: {
-    width: '100%',
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  e2eeButtonHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  e2eeButtonDisabled: {
+  actionButtonDisabled: {
     opacity: 0.6,
-  },
-  e2eeButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-  },
-  e2eeStatusText: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.selected,
   },
   topActionsRow: {
     width: '100%',

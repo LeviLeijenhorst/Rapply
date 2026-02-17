@@ -11,6 +11,10 @@ import { PlaySmallIcon } from '../icons/PlaySmallIcon'
 import { PauseIcon } from '../icons/PauseIcon'
 import { AudioEncryptedIcon } from '../icons/AudioEncryptedIcon'
 import { AudioDecryptedIcon } from '../icons/AudioDecryptedIcon'
+import { MoreOptionsIcon } from '../icons/MoreOptionsIcon'
+import { PracticeExportIcon } from '../icons/PracticeExportIcon'
+import { TrashIcon } from '../icons/TrashIcon'
+import { AnimatedDropdownPanel } from '../AnimatedDropdownPanel'
 
 type Props = {
   audioBlobId: string | null
@@ -18,6 +22,12 @@ type Props = {
   audioUrlOverride?: string | null
   isEncrypting?: boolean
   onCurrentSecondsChange?: (seconds: number) => void
+  onDownloadAudio?: () => void
+  onDeleteAudio?: () => void
+  isDownloadAudioBusy?: boolean
+  isDownloadAudioDisabled?: boolean
+  isDeleteAudioBusy?: boolean
+  isDeleteAudioDisabled?: boolean
 }
 
 export type AudioPlayerHandle = {
@@ -25,7 +35,19 @@ export type AudioPlayerHandle = {
 }
 
 export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(function AudioPlayerCard(
-  { audioBlobId, audioDurationSeconds, audioUrlOverride = null, isEncrypting = false, onCurrentSecondsChange },
+  {
+    audioBlobId,
+    audioDurationSeconds,
+    audioUrlOverride = null,
+    isEncrypting = false,
+    onCurrentSecondsChange,
+    onDownloadAudio,
+    onDeleteAudio,
+    isDownloadAudioBusy = false,
+    isDownloadAudioDisabled = false,
+    isDeleteAudioBusy = false,
+    isDeleteAudioDisabled = false,
+  },
   ref,
 ) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -37,15 +59,17 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
   const [isPlaying, setIsPlaying] = useState(false)
   const [isBuffering, setIsBuffering] = useState(false)
   const [isLoadingAudio, setIsLoadingAudio] = useState(false)
-  const [isAudioReady, setIsAudioReady] = useState(false)
   const [hasAudioError, setHasAudioError] = useState(false)
   const [isDraggingSeek, setIsDraggingSeek] = useState(false)
   const [dragPreviewSeconds, setDragPreviewSeconds] = useState<number | null>(null)
   const [waveformWidth, setWaveformWidth] = useState(0)
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false)
   const pendingSeekSecondsRef = useRef<number | null>(null)
   const pendingResumeAfterSeekRef = useRef(false)
   const seekResumePlaybackRef = useRef<boolean | null>(null)
   const previousAudioUrlOverrideRef = useRef<string | null>(null)
+  const menuTriggerRef = useRef<any>(null)
+  const menuPanelRef = useRef<any>(null)
 
   function formatTimeLabel(seconds: number) {
     if (!Number.isFinite(seconds) || seconds <= 0) return '00:00'
@@ -118,7 +142,6 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
       setHasAudioError(false)
       setIsLoadingAudio(false)
       if (isNewOverrideSource) {
-        setIsAudioReady(false)
         setCurrentSeconds(0)
         onCurrentSecondsChange?.(0)
       }
@@ -129,7 +152,6 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
 
     async function load() {
       setIsBuffering(false)
-      setIsAudioReady(false)
       setHasAudioError(false)
       if (!audioBlobId) {
         setAudioUrl((previous) => {
@@ -202,7 +224,6 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
     const onLoadedMetadata = () => {
       const duration = Number.isFinite(audio.duration) ? audio.duration : 0
       setDurationSeconds(duration)
-      setIsAudioReady(true)
       setIsLoadingAudio(false)
       if (pendingSeekSecondsRef.current !== null) {
         audio.currentTime = pendingSeekSecondsRef.current
@@ -225,13 +246,11 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
     }
     const onCanPlay = () => {
       setIsBuffering(false)
-      setIsAudioReady(true)
       setIsLoadingAudio(false)
       void resumePlaybackIfNeeded()
     }
     const onCanPlayThrough = () => {
       setIsBuffering(false)
-      setIsAudioReady(true)
       setIsLoadingAudio(false)
     }
     const onStalled = () => setIsBuffering(false)
@@ -239,7 +258,6 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
     const onError = () => {
       setIsBuffering(false)
       setIsPlaying(false)
-      setIsAudioReady(false)
       setHasAudioError(true)
       setIsLoadingAudio(false)
       pendingResumeAfterSeekRef.current = false
@@ -279,6 +297,24 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
     setDurationSeconds(Math.max(0, audioDurationSeconds))
   }, [audioDurationSeconds])
 
+  useEffect(() => {
+    if (!isActionsMenuOpen) return
+    if (typeof document === 'undefined') return
+
+    const handleMouseDown = (event: MouseEvent) => {
+      const target = event.target as Node | null
+      const menuTrigger = menuTriggerRef.current
+      const menuPanel = menuPanelRef.current
+      const isInsideTrigger = Boolean(menuTrigger?.contains?.(target))
+      const isInsidePanel = Boolean(menuPanel?.contains?.(target))
+      if (isInsideTrigger || isInsidePanel) return
+      setIsActionsMenuOpen(false)
+    }
+
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [isActionsMenuOpen])
+
   const waveformBarWidth = 2
   const waveformBarGap = 2
   const waveformHorizontalPadding = 2
@@ -300,15 +336,74 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
   const timeLabel = `${formatTimeLabel(currentSeconds)}/${formatTimeLabel(durationSeconds)}`
   const effectiveAudioUrl = audioUrlOverride ?? audioUrl
   const hasPlayableAudio = Boolean(effectiveAudioUrl)
-  const showPlaySpinner = isLoadingAudio || isBuffering || (!audioUrlOverride && !hasAudioError && hasPlayableAudio && !isAudioReady)
+  const showPlaySpinner = isLoadingAudio || isBuffering
   const showEncryptingStatus = isEncrypting
   const showDecryptingStatus = !isEncrypting && isLoadingAudio && !audioUrlOverride
   const showStatus = showEncryptingStatus || showDecryptingStatus
+  const hasActionMenu = Boolean(onDownloadAudio || onDeleteAudio)
+  const isAnyAudioActionBusy = isDownloadAudioBusy || isDeleteAudioBusy
+  const isDownloadActionDisabled = isAnyAudioActionBusy || isDownloadAudioDisabled
+  const isDeleteActionDisabled = isAnyAudioActionBusy || isDeleteAudioDisabled
 
   return (
     <View style={styles.card}>
       <audio ref={audioRef} src={effectiveAudioUrl ?? undefined} preload="auto" />
-      <View style={styles.controls}>
+      {hasActionMenu ? (
+        <View style={styles.actionsMenuAnchor}>
+          <Pressable
+            ref={menuTriggerRef}
+            onPress={() => setIsActionsMenuOpen((value) => !value)}
+            style={({ hovered }) => [styles.actionsMenuTrigger, hovered ? styles.actionsMenuTriggerHovered : undefined]}
+          >
+            <MoreOptionsIcon color={colors.textSecondary} size={20} />
+          </Pressable>
+          <AnimatedDropdownPanel visible={isActionsMenuOpen} style={styles.actionsMenuPanel}>
+            <View ref={menuPanelRef}>
+              {onDownloadAudio ? (
+                <Pressable
+                  onPress={() => {
+                    if (isDownloadActionDisabled) return
+                    setIsActionsMenuOpen(false)
+                    onDownloadAudio()
+                  }}
+                  disabled={isDownloadActionDisabled}
+                  style={({ hovered }) => [
+                    styles.actionsMenuItem,
+                    hovered ? styles.actionsMenuItemHovered : undefined,
+                    isDownloadActionDisabled ? styles.actionsMenuItemDisabled : undefined,
+                  ]}
+                >
+                  <View style={styles.actionsMenuItemContent}>
+                    <PracticeExportIcon size={16} color={isDownloadActionDisabled ? colors.textSecondary : colors.textStrong} />
+                    <Text style={styles.actionsMenuItemText}>{isDownloadAudioBusy ? 'Audio downloaden...' : 'Audio downloaden'}</Text>
+                  </View>
+                </Pressable>
+              ) : null}
+              {onDeleteAudio ? (
+                <Pressable
+                  onPress={() => {
+                    if (isDeleteActionDisabled) return
+                    setIsActionsMenuOpen(false)
+                    onDeleteAudio()
+                  }}
+                  disabled={isDeleteActionDisabled}
+                  style={({ hovered }) => [
+                    styles.actionsMenuItem,
+                    hovered ? styles.actionsMenuItemHovered : undefined,
+                    isDeleteActionDisabled ? styles.actionsMenuItemDisabled : undefined,
+                  ]}
+                >
+                  <View style={styles.actionsMenuItemContent}>
+                    <TrashIcon size={16} color={isDeleteActionDisabled ? colors.textSecondary : colors.selected} />
+                    <Text style={styles.actionsMenuDangerText}>{isDeleteAudioBusy ? 'Audio verwijderen...' : 'Audio verwijderen'}</Text>
+                  </View>
+                </Pressable>
+              ) : null}
+            </View>
+          </AnimatedDropdownPanel>
+        </View>
+      ) : null}
+      <View style={[styles.controls, hasActionMenu ? styles.controlsWithMenu : undefined]}>
         <View
           style={styles.waveformWrap}
           onLayout={(event) => {
@@ -446,12 +541,70 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
+    position: 'relative',
   },
   controls: {
     width: '100%',
     display: 'flex',
     flexDirection: 'column',
-    gap: 14,
+    gap: 10,
+  },
+  controlsWithMenu: {
+    marginTop: 8,
+  },
+  actionsMenuAnchor: {
+    position: 'absolute',
+    right: 10,
+    top: 8,
+    zIndex: 20,
+    alignItems: 'flex-end',
+  },
+  actionsMenuTrigger: {
+    minWidth: 32,
+    height: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  actionsMenuTriggerHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  actionsMenuPanel: {
+    ...( { position: 'absolute', top: 30, right: 0, zIndex: 30, boxShadow: '0 20px 50px rgba(0,0,0,0.14)' } as any ),
+    marginTop: 6,
+    minWidth: 184,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  actionsMenuItem: {
+    minHeight: 38,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  actionsMenuItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionsMenuItemHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  actionsMenuItemDisabled: {
+    opacity: 0.55,
+  },
+  actionsMenuItemText: {
+    color: colors.textStrong,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  actionsMenuDangerText: {
+    color: colors.selected,
+    fontSize: 13,
+    lineHeight: 18,
   },
   waveformWrap: {
     width: '100%',
@@ -538,8 +691,8 @@ const styles = StyleSheet.create({
   },
   timeLabel: {
     color: colors.textSecondary,
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 14,
+    lineHeight: 18,
     minWidth: 80,
     letterSpacing: 0.2,
   },
@@ -554,8 +707,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    minHeight: 16,
-    marginTop: -2,
+    minHeight: 14,
+    marginTop: -4,
   },
   statusText: {
     fontSize: 10,
@@ -563,4 +716,3 @@ const styles = StyleSheet.create({
     color: '#171717',
   },
 })
-

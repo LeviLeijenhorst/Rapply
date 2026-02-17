@@ -30,6 +30,7 @@ import { AudioPlayerCard } from '../sessionDetail/AudioPlayerCard'
 import { setPendingPreviewAudio } from '../../audio/pendingPreviewStore'
 import { processSessionAudio } from '../../audio/processSessionAudio'
 import { AnimatedMainContent } from '../AnimatedMainContent'
+import { fetchBillingStatus, type BillingStatus } from '../../services/billing'
 
 type Step = 'select' | 'consent' | 'upload' | 'recording' | 'recorded'
 type OptionKey = 'gesprek' | 'verslag' | 'upload' | 'schrijven'
@@ -45,10 +46,17 @@ type Props = {
   onNewlyCreatedCoacheeHandled: () => void
 }
 
+const maxRecordingSeconds = 1 * 60 * 60 + 59 * 60 + 59
+const recordingWarningLeadSeconds = 5 * 60
+const recordingWarningStartSeconds = maxRecordingSeconds - recordingWarningLeadSeconds
+const maxTranscriptionDurationSeconds = 120 * 60
+
 function formatTimeLabel(totalSeconds: number) {
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  const normalizedSeconds = Math.max(0, Math.floor(totalSeconds))
+  const hours = Math.floor(normalizedSeconds / 3600)
+  const minutes = Math.floor((normalizedSeconds % 3600) / 60)
+  const seconds = normalizedSeconds % 60
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
 function buildDefaultSessionTitle(existingTitles: string[]) {
@@ -135,6 +143,34 @@ async function readAudioDurationSeconds(blob: Blob): Promise<number | null> {
   }
 }
 
+function readRemainingTranscriptionSeconds(status: BillingStatus | null): number {
+  if (!status) return 0
+  const includedRemainingSeconds = Math.max(0, Math.floor(status.includedSeconds - status.cycleUsedSeconds))
+  const nonExpiringRemainingSeconds = Math.max(0, Math.floor(status.nonExpiringTotalSeconds - status.nonExpiringUsedSeconds))
+  return includedRemainingSeconds + nonExpiringRemainingSeconds
+}
+
+function normalizeFileExtensionFromMimeType(mimeType: string): string {
+  const normalized = String(mimeType || '').toLowerCase()
+  if (normalized.includes('wav')) return 'wav'
+  if (normalized.includes('ogg') || normalized.includes('opus')) return 'ogg'
+  if (normalized.includes('webm')) return 'webm'
+  if (normalized.includes('mpeg') || normalized.includes('mp3')) return 'mp3'
+  if (normalized.includes('mp4') || normalized.includes('m4a') || normalized.includes('aac')) return 'm4a'
+  return 'mp3'
+}
+
+function formatDurationLabel(totalSeconds: number) {
+  const normalizedSeconds = Math.max(0, Math.floor(totalSeconds))
+  const hours = Math.floor(normalizedSeconds / 3600)
+  const minutes = Math.floor((normalizedSeconds % 3600) / 60)
+  const seconds = normalizedSeconds % 60
+  const hoursLabel = String(hours).padStart(2, '0')
+  const minutesLabel = String(minutes).padStart(2, '0')
+  const secondsLabel = String(seconds).padStart(2, '0')
+  return `${hoursLabel}:${minutesLabel}:${secondsLabel}`
+}
+
 export function NewSessionModal({
   visible,
   onClose,
@@ -159,9 +195,12 @@ export function NewSessionModal({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [sessionTitle, setSessionTitle] = useState(() => buildDefaultSessionTitle(data.sessions.map((session) => session.title)))
   const [selectedAudioFile, setSelectedAudioFile] = useState<File | null>(null)
+  const [selectedUploadFileDurationSeconds, setSelectedUploadFileDurationSeconds] = useState<number | null>(null)
+  const [uploadFileDurationWarning, setUploadFileDurationWarning] = useState<string | null>(null)
   const [isUploadDragActive, setIsUploadDragActive] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isMinimizedCloseWarningVisible, setIsMinimizedCloseWarningVisible] = useState(false)
+  const [isRecordedCloseWarningVisible, setIsRecordedCloseWarningVisible] = useState(false)
   const [hasRecordingConsent, setHasRecordingConsent] = useState(false)
   const sessionTitleInputRef = useRef<TextInput | null>(null)
   const uploadDropAreaRef = useRef<View | null>(null)
@@ -169,13 +208,20 @@ export function NewSessionModal({
   const coacheeTriggerRef = useRef<any>(null)
   const reportTypeTriggerRef = useRef<any>(null)
   const hasAutoStartedRecordingRef = useRef(false)
+  const hasAutoSubmittedRecordingRef = useRef(false)
   const [coacheeDropdownMaxHeight, setCoacheeDropdownMaxHeight] = useState<number | null>(null)
   const [reportTypeDropdownMaxHeight, setReportTypeDropdownMaxHeight] = useState<number | null>(null)
 
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null)
   const [audioDurationSeconds, setAudioDurationSeconds] = useState<number | null>(null)
-  const [shouldSaveAudio, setShouldSaveAudio] = useState(false)
+  const [shouldSaveAudio, setShouldSaveAudio] = useState(true)
   const [audioForTranscription, setAudioForTranscription] = useState<{ blob: Blob; mimeType: string } | null>(null)
+  const [isInsufficientMinutesWarningVisible, setIsInsufficientMinutesWarningVisible] = useState(false)
+  const [insufficientMinutesContext, setInsufficientMinutesContext] = useState<{
+    remainingSeconds: number
+    requiredSeconds: number
+    kind: 'recording' | 'upload'
+  } | null>(null)
   const { height: windowHeight, width: windowWidth } = useWindowDimensions()
   const templates = data.templates ?? []
   const defaultTemplateId = useMemo(() => {
@@ -211,18 +257,71 @@ export function NewSessionModal({
     setSelectedTemplateId(defaultTemplateId)
     setSessionTitle(buildDefaultSessionTitle(data.sessions.map((session) => session.title)))
     setSelectedAudioFile(null)
+    setSelectedUploadFileDurationSeconds(null)
+    setUploadFileDurationWarning(null)
     setAudioPreviewUrl(null)
     setAudioDurationSeconds(null)
-    setShouldSaveAudio(false)
+    setShouldSaveAudio(true)
     setAudioForTranscription(null)
+    setIsInsufficientMinutesWarningVisible(false)
+    setInsufficientMinutesContext(null)
     setIsMinimized(false)
     setIsMinimizedCloseWarningVisible(false)
+    setIsRecordedCloseWarningVisible(false)
     setHasRecordingConsent(false)
     setIsUploadDragActive(false)
     setCoacheeDropdownMaxHeight(null)
     setReportTypeDropdownMaxHeight(null)
     hasAutoStartedRecordingRef.current = false
+    hasAutoSubmittedRecordingRef.current = false
   }, [visible])
+
+  function buildAudioDownloadFileName(kind: 'recording' | 'upload', mimeType: string) {
+    const extension = normalizeFileExtensionFromMimeType(mimeType)
+    const safeTitle = String(sessionTitle || '')
+      .trim()
+      .replace(/[^a-z0-9_-]+/gi, '_')
+      .replace(/^_+|_+$/g, '')
+    const baseName = safeTitle || (kind === 'recording' ? 'opname' : 'upload')
+    return `${baseName}.${extension}`
+  }
+
+  function buildUploadDurationWarning(durationSeconds: number) {
+    return `Dit bestand duurt ${formatDurationLabel(durationSeconds)}. De maximale duur voor transcriptie is ${formatDurationLabel(maxTranscriptionDurationSeconds)}.`
+  }
+
+  async function validateSelectedUploadFileDuration(file: File): Promise<{ durationSeconds: number | null; warning: string | null }> {
+    const durationSeconds = await readAudioDurationSeconds(file)
+    if (!Number.isFinite(durationSeconds) || durationSeconds === null) {
+      return { durationSeconds: null, warning: null }
+    }
+    if (durationSeconds > maxTranscriptionDurationSeconds) {
+      return { durationSeconds, warning: buildUploadDurationWarning(durationSeconds) }
+    }
+    return { durationSeconds, warning: null }
+  }
+
+  async function selectUploadFile(file: File | null) {
+    if (!file) return
+    if (!isAudioFile(file)) return
+    setSelectedAudioFile(file)
+    const validation = await validateSelectedUploadFileDuration(file)
+    setSelectedUploadFileDurationSeconds(validation.durationSeconds)
+    setUploadFileDurationWarning(validation.warning)
+  }
+
+  function downloadCurrentAudio(kind: 'recording' | 'upload') {
+    if (typeof window === 'undefined') return
+    if (!audioForTranscription) return
+    const objectUrl = URL.createObjectURL(audioForTranscription.blob)
+    const anchor = document.createElement('a')
+    anchor.href = objectUrl
+    anchor.download = buildAudioDownloadFileName(kind, audioForTranscription.mimeType)
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+  }
 
   useEffect(() => {
     if (!audioPreviewUrl) return
@@ -374,6 +473,15 @@ export function NewSessionModal({
     isActive: step === 'recording' && (recorder.status === 'recording' || recorder.status === 'paused'),
   })
   const isRecordingPaused = recorder.status === 'paused'
+  const isRecordingInProgress = recorder.status === 'recording' || recorder.status === 'paused'
+  const displayedRecordingElapsedSeconds = isRecordingInProgress || recorder.status === 'ready' ? recorder.elapsedSeconds + 1 : recorder.elapsedSeconds
+  const displayedRecordingMaxSeconds = maxRecordingSeconds + 1
+  const shouldShowRecordingLimitWarning =
+    step === 'recording' &&
+    isRecordingInProgress &&
+    recorder.elapsedSeconds >= recordingWarningStartSeconds &&
+    recorder.elapsedSeconds < maxRecordingSeconds
+  const recordingLimitRemainingSeconds = Math.max(0, displayedRecordingMaxSeconds - displayedRecordingElapsedSeconds)
   const shouldShowMinimized = step === 'recording' && isMinimized && !isRestoringFromMinimized
 
 
@@ -396,7 +504,9 @@ export function NewSessionModal({
           ? 'Bestand uploaden'
           : step === 'recording'
             ? 'Opnemen'
-            : 'Verslag opgenomen'
+            : selectedOption === 'gesprek'
+              ? 'Gesprek opgenomen'
+              : 'Verslag opgenomen'
   const showFooter = step !== 'recording'
   const isUploadStep = step === 'upload'
   const isConsentStep = step === 'consent'
@@ -514,8 +624,7 @@ export function NewSessionModal({
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
-      if (!isAudioFile(file)) return
-      setSelectedAudioFile(file)
+      void selectUploadFile(file)
     }
     input.click()
   }
@@ -533,9 +642,7 @@ export function NewSessionModal({
   }
 
   function handleDroppedFile(file: File | null) {
-    if (!file) return
-    if (!isAudioFile(file)) return
-    setSelectedAudioFile(file)
+    void selectUploadFile(file)
   }
 
   useEffect(() => {
@@ -608,9 +715,15 @@ export function NewSessionModal({
 
   async function saveSelectedFileToAudioStore() {
     if (!selectedAudioFile) return
-    const mimeType = getAudioMimeTypeFromFile(selectedAudioFile)
-    const detectedDurationSeconds = await readAudioDurationSeconds(selectedAudioFile)
+    const detectedDurationSeconds =
+      selectedUploadFileDurationSeconds !== null ? selectedUploadFileDurationSeconds : await readAudioDurationSeconds(selectedAudioFile)
+    if (Number.isFinite(detectedDurationSeconds) && detectedDurationSeconds !== null && detectedDurationSeconds > maxTranscriptionDurationSeconds) {
+      setUploadFileDurationWarning(buildUploadDurationWarning(detectedDurationSeconds))
+      return
+    }
     setAudioDurationSeconds(detectedDurationSeconds)
+    setUploadFileDurationWarning(null)
+    const mimeType = getAudioMimeTypeFromFile(selectedAudioFile)
     setAudioForTranscription({ blob: selectedAudioFile, mimeType })
     setAudioPreviewUrl(URL.createObjectURL(selectedAudioFile))
     setStep('recorded')
@@ -623,7 +736,21 @@ export function NewSessionModal({
     setShouldSaveAudio(false)
     setAudioForTranscription(null)
     setIsMinimizedCloseWarningVisible(false)
+    setIsRecordedCloseWarningVisible(false)
     onClose()
+  }
+
+  function shouldConfirmRecordedClose() {
+    if (step !== 'recorded') return false
+    return Boolean(audioForTranscription || selectedAudioFile || audioPreviewUrl)
+  }
+
+  function requestClose() {
+    if (shouldConfirmRecordedClose()) {
+      setIsRecordedCloseWarningVisible(true)
+      return
+    }
+    handleClose()
   }
 
   function handleBackdropPress() {
@@ -631,39 +758,61 @@ export function NewSessionModal({
       startMinimizeModal()
       return
     }
-    handleClose()
+    requestClose()
   }
 
-  async function createAndOpenSession(values: { kind: 'recording' | 'upload' }) {
-    if (!audioForTranscription) return
+  async function readRemainingSecondsBeforeStart(): Promise<number | null> {
+    try {
+      const response = await fetchBillingStatus()
+      return readRemainingTranscriptionSeconds(response?.billingStatus ?? null)
+    } catch (error) {
+      console.error('[NewSessionModal] Failed to read billing status', error)
+      return null
+    }
+  }
+
+  async function createAndOpenSessionInternal(
+    values: { kind: 'recording' | 'upload' },
+    options?: {
+      overrideShouldSaveAudio?: boolean
+      audioForTranscription?: { blob: Blob; mimeType: string }
+      recordingDurationSeconds?: number | null
+    },
+  ): Promise<boolean> {
+    const resolvedAudioForTranscription = options?.audioForTranscription ?? audioForTranscription
+    if (!resolvedAudioForTranscription) return false
+    const effectiveShouldSaveAudio = options?.overrideShouldSaveAudio ?? shouldSaveAudio
+    const nextAudioDurationSeconds =
+      values.kind === 'recording'
+        ? Math.max(0, options?.recordingDurationSeconds ?? recorder.elapsedSeconds)
+        : (Number.isFinite(audioDurationSeconds) ? audioDurationSeconds : null)
 
     const createdSessionId = createSession({
       coacheeId: selectedCoachee?.id ?? null,
       title: sessionTitle,
       kind: values.kind,
       audioBlobId: null,
-      audioDurationSeconds:
-        values.kind === 'recording' ? Math.max(0, recorder.elapsedSeconds) : (Number.isFinite(audioDurationSeconds) ? audioDurationSeconds : null),
+      audioDurationSeconds: nextAudioDurationSeconds,
       uploadFileName: values.kind === 'upload' ? selectedAudioFile?.name ?? null : null,
       transcriptionStatus: 'transcribing',
       transcriptionError: null,
     })
 
-    if (!createdSessionId) return
+    if (!createdSessionId) return false
 
     try {
       await setPendingPreviewAudio({
         sessionId: createdSessionId,
-        blob: audioForTranscription.blob,
-        mimeType: audioForTranscription.mimeType,
-        shouldSaveAudio,
+        blob: resolvedAudioForTranscription.blob,
+        mimeType: resolvedAudioForTranscription.mimeType,
+        shouldSaveAudio: effectiveShouldSaveAudio,
         summaryTemplate,
       })
     } catch (error) {
       console.error('[NewSessionModal] Failed to persist raw audio preview', error)
     }
 
-    const nextAudioForTranscription = audioForTranscription
+    const nextAudioForTranscription = resolvedAudioForTranscription
     onOpenSession(createdSessionId)
     handleClose()
 
@@ -671,7 +820,7 @@ export function NewSessionModal({
       sessionId: createdSessionId,
       audioBlob: nextAudioForTranscription.blob,
       mimeType: nextAudioForTranscription.mimeType,
-      shouldSaveAudio,
+      shouldSaveAudio: effectiveShouldSaveAudio,
       summaryTemplate,
       initialAudioBlobId: null,
       e2ee,
@@ -679,11 +828,38 @@ export function NewSessionModal({
     }).catch((error) => {
       console.error('[NewSessionModal] Session audio processing failed', { sessionId: createdSessionId, error })
     })
+    return true
+  }
+
+  async function createAndOpenSession(
+    values: { kind: 'recording' | 'upload' },
+    options?: {
+      overrideShouldSaveAudio?: boolean
+      audioForTranscription?: { blob: Blob; mimeType: string }
+      recordingDurationSeconds?: number | null
+    },
+  ): Promise<boolean> {
+    const resolvedAudioForTranscription = options?.audioForTranscription ?? audioForTranscription
+    if (!resolvedAudioForTranscription) return false
+    const requiredSeconds = Math.max(
+      1,
+      Math.ceil(values.kind === 'recording' ? (options?.recordingDurationSeconds ?? recorder.elapsedSeconds) : audioDurationSeconds || 0),
+    )
+    if (!shouldSaveAudio) {
+      const remainingSeconds = await readRemainingSecondsBeforeStart()
+      if (remainingSeconds !== null && remainingSeconds < requiredSeconds) {
+        setInsufficientMinutesContext({ kind: values.kind, remainingSeconds, requiredSeconds })
+        setIsInsufficientMinutesWarningVisible(true)
+        return false
+      }
+    }
+    return createAndOpenSessionInternal(values, { ...options, audioForTranscription: resolvedAudioForTranscription })
   }
 
   useEffect(() => {
     if (step !== 'recording') {
       hasAutoStartedRecordingRef.current = false
+      hasAutoSubmittedRecordingRef.current = false
     }
   }, [step])
 
@@ -696,9 +872,18 @@ export function NewSessionModal({
     recorder.start()
   }, [recorder, step, visible])
 
+  useEffect(() => {
+    if (!visible) return
+    if (step !== 'recording') return
+    if (recorder.status !== 'recording' && recorder.status !== 'paused') return
+    if (recorder.elapsedSeconds < maxRecordingSeconds) return
+    recorder.stop()
+  }, [recorder, recorder.elapsedSeconds, recorder.status, step, visible])
+
   function retryRecordingAfterError() {
     recorder.reset()
     hasAutoStartedRecordingRef.current = true
+    hasAutoSubmittedRecordingRef.current = false
     recorder.start()
   }
 
@@ -716,11 +901,13 @@ export function NewSessionModal({
 
     const blob = recorder.recordedBlob as Blob
     const mimeType = recorder.recordedMimeType as string
+    const recordingDurationSeconds = Math.max(0, recorder.elapsedSeconds)
     setAudioForTranscription({ blob, mimeType })
-    setAudioDurationSeconds(Math.max(0, recorder.elapsedSeconds))
+    setAudioDurationSeconds(recordingDurationSeconds)
     setAudioPreviewUrl(URL.createObjectURL(blob))
+    hasAutoSubmittedRecordingRef.current = false
     setStep('recorded')
-  }, [recorder.elapsedSeconds, recorder.recordedBlob, recorder.recordedMimeType, recorder.status, step])
+  }, [recorder.elapsedSeconds, recorder.recordedBlob, recorder.recordedMimeType, recorder.status, selectedOption, step])
 
   if (!isRendered) return null
 
@@ -734,13 +921,16 @@ export function NewSessionModal({
               {/* Recording time */}
               <View style={styles.minimizedTimeContainer}>
                 <Text isSemibold style={styles.minimizedTimeText}>
-                  {formatTimeLabel(recorder.elapsedSeconds)}
+                  {formatTimeLabel(displayedRecordingElapsedSeconds)}
                 </Text>
               </View>
               {/* Recording waveform */}
               <View style={styles.minimizedWaveform}>
                 {bars.map((index) => {
                   const rawHeight = liveWaveHeights[index] ?? 6
+                  if (rawHeight <= 8) {
+                    return <View key={index} style={[styles.minimizedWaveBar, styles.minimizedWaveBarSilent]} />
+                  }
                   const normalizedHeight = Math.min(1, Math.max(0, (rawHeight - 6) / 194))
                   const height = 4 + normalizedHeight * 12
                   return <View key={index} style={[styles.minimizedWaveBar, { height }]} />
@@ -924,7 +1114,7 @@ export function NewSessionModal({
             ) : null}
 
             <Pressable
-              onPress={handleClose}
+              onPress={requestClose}
               style={({ hovered, pressed }) => [
                 styles.iconButton,
                 webTransitionSmooth,
@@ -942,6 +1132,17 @@ export function NewSessionModal({
             </Pressable>
           </View>
         </View>
+
+        {step === 'recording' && shouldShowRecordingLimitWarning ? (
+          <View pointerEvents="none" style={styles.recordingWarningOverlay}>
+            <View style={styles.recordingWarningBanner}>
+              <Text isSemibold style={styles.recordingWarningTitle}>
+                Opname stopt over {formatTimeLabel(recordingLimitRemainingSeconds)}
+              </Text>
+              <Text style={styles.recordingWarningText}>Maximum opnametijd is {formatTimeLabel(displayedRecordingMaxSeconds)}.</Text>
+            </View>
+          </View>
+        ) : null}
 
         {/* Modal body */}
         <View style={styles.body}>
@@ -997,6 +1198,9 @@ export function NewSessionModal({
                           {selectedAudioFile.name}
                         </Text>
                       ) : null}
+                      {uploadFileDurationWarning ? (
+                        <Text style={styles.uploadDurationWarningText}>{uploadFileDurationWarning}</Text>
+                      ) : null}
                     </View>
                   </Pressable>
                 </View>
@@ -1020,14 +1224,15 @@ export function NewSessionModal({
                 }}
               >
                 {bars.map((index) => {
-                  const height = liveWaveHeights[index] ?? 16
-                  return <View key={index} style={[styles.waveBar, { height }]} />
+                  const rawHeight = liveWaveHeights[index] ?? 8
+                  const height = rawHeight <= 8 ? 8 : rawHeight
+                  return <View key={index} style={[styles.waveBar, { height, borderRadius: height <= 8 ? 4 : 8 }]} />
                 })}
               </View>
 
               {/* Recording timer */}
               <Text isSemibold style={styles.timerText}>
-                {formatTimeLabel(recorder.elapsedSeconds)}
+                {formatTimeLabel(displayedRecordingElapsedSeconds)}
               </Text>
 
               {/* Recording controls */}
@@ -1341,7 +1546,7 @@ export function NewSessionModal({
               ]}
             >
               <Pressable
-                onPress={handleClose}
+                onPress={requestClose}
                 style={({ hovered, pressed }) => [
                   styles.footerButtonBase,
                   styles.footerButtonSecondary,
@@ -1392,6 +1597,10 @@ export function NewSessionModal({
                     onStartWrittenReport()
                     return
                   }
+                  if (selectedOption === 'verslag') {
+                    setStep('recording')
+                    return
+                  }
                   setHasRecordingConsent(false)
                   setStep('consent')
                 }}
@@ -1401,7 +1610,7 @@ export function NewSessionModal({
                   styles.footerButtonRight,
                   isCompactUploadFooter ? styles.footerButtonStackedSplit : undefined,
                   isCompactFooter ? styles.footerButtonCompact : undefined,
-                  step === 'upload' && !selectedAudioFile ? styles.primaryButtonDisabled : undefined,
+                  step === 'upload' && (!selectedAudioFile || !!uploadFileDurationWarning) ? styles.primaryButtonDisabled : undefined,
                   !selectedOption && step === 'select' ? styles.primaryButtonDisabled : undefined,
                   step === 'consent' && !hasRecordingConsent ? styles.primaryButtonDisabled : undefined,
                   hovered &&
@@ -1410,14 +1619,14 @@ export function NewSessionModal({
                       : step === 'consent'
                         ? hasRecordingConsent
                         : step === 'upload'
-                          ? !!selectedAudioFile
+                          ? !!selectedAudioFile && !uploadFileDurationWarning
                           : step === 'recorded'
                             ? !!audioForTranscription
                             : false)
                     ? styles.footerButtonPrimaryHovered
                     : undefined,
                   pressed &&
-                  !(step === 'upload' && !selectedAudioFile) &&
+                  !(step === 'upload' && (!selectedAudioFile || !!uploadFileDurationWarning)) &&
                   !(!selectedOption && step === 'select') &&
                   !(step === 'consent' && !hasRecordingConsent)
                     ? styles.footerButtonPrimaryPressed
@@ -1433,6 +1642,104 @@ export function NewSessionModal({
           </View>
         ) : null}
       </Animated.View>
+      <AnimatedOverlayModal
+        visible={isRecordedCloseWarningVisible}
+        onClose={() => setIsRecordedCloseWarningVisible(false)}
+        contentContainerStyle={styles.closeWarningContainer}
+      >
+        <View style={styles.closeWarningContent}>
+          <Text isBold style={styles.closeWarningTitle}>
+            Weet je zeker dat je wil annuleren?
+          </Text>
+          <Text style={styles.closeWarningText}>
+            Als je annuleert, gaat je huidige opname of invoer verloren.
+          </Text>
+          <View style={styles.closeWarningActions}>
+            <Pressable
+              onPress={() => setIsRecordedCloseWarningVisible(false)}
+              style={({ hovered }) => [
+                styles.closeWarningButton,
+                styles.closeWarningButtonSecondary,
+                hovered ? styles.closeWarningButtonSecondaryHovered : undefined,
+              ]}
+            >
+              <Text isBold style={styles.closeWarningButtonSecondaryText}>
+                Terug
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setIsRecordedCloseWarningVisible(false)
+                handleClose()
+              }}
+              style={({ hovered }) => [
+                styles.closeWarningButton,
+                styles.closeWarningButtonPrimary,
+                hovered ? styles.closeWarningButtonPrimaryHovered : undefined,
+              ]}
+            >
+              <Text isBold style={styles.closeWarningButtonPrimaryText}>
+                Annuleren
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </AnimatedOverlayModal>
+      <AnimatedOverlayModal
+        visible={isInsufficientMinutesWarningVisible}
+        onClose={() => {
+          setIsInsufficientMinutesWarningVisible(false)
+          setInsufficientMinutesContext(null)
+        }}
+        contentContainerStyle={styles.insufficientMinutesModalContainer}
+      >
+        <View style={styles.insufficientMinutesModalContent}>
+          <Text isBold style={styles.insufficientMinutesModalTitle}>
+            Onvoldoende minuten voor transcriptie
+          </Text>
+          <Text style={styles.insufficientMinutesModalText}>
+            Deze opname is {insufficientMinutesContext ? `${insufficientMinutesContext.requiredSeconds}s` : ''} en je hebt nog{' '}
+            {insufficientMinutesContext ? `${insufficientMinutesContext.remainingSeconds}s` : '0s'} over. Download je audio nu, of sla audio op
+            voordat je doorgaat.
+          </Text>
+          <View style={styles.insufficientMinutesActions}>
+            <Pressable
+              onPress={() => {
+                if (!insufficientMinutesContext) return
+                downloadCurrentAudio(insufficientMinutesContext.kind)
+              }}
+              style={({ hovered }) => [
+                styles.insufficientMinutesActionButton,
+                styles.insufficientMinutesActionButtonSecondary,
+                hovered ? styles.insufficientMinutesActionButtonSecondaryHovered : undefined,
+              ]}
+            >
+              <Text isBold style={styles.insufficientMinutesActionButtonSecondaryText}>
+                Audio downloaden
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                const context = insufficientMinutesContext
+                if (!context) return
+                setShouldSaveAudio(true)
+                setIsInsufficientMinutesWarningVisible(false)
+                setInsufficientMinutesContext(null)
+                void createAndOpenSessionInternal({ kind: context.kind }, { overrideShouldSaveAudio: true })
+              }}
+              style={({ hovered }) => [
+                styles.insufficientMinutesActionButton,
+                styles.insufficientMinutesActionButtonPrimary,
+                hovered ? styles.insufficientMinutesActionButtonPrimaryHovered : undefined,
+              ]}
+            >
+              <Text isBold style={styles.insufficientMinutesActionButtonPrimaryText}>
+                Audio opslaan en doorgaan
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </AnimatedOverlayModal>
     </View>
   )
 }
@@ -1542,6 +1849,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#F2BBD9',
   },
+  minimizedWaveBarSilent: {
+    height: 2,
+    borderRadius: 1,
+  },
   minimizedControls: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1593,6 +1904,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  recordingWarningOverlay: {
+    ...( { position: 'absolute', top: 24, left: 0, right: 0, zIndex: 3 } as any ),
+    alignItems: 'center',
+  },
+  recordingWarningBanner: {
+    padding: 0,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    gap: 2,
+  },
+  recordingWarningTitle: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+    textAlign: 'center',
+  },
+  recordingWarningText: {
+    fontSize: 13,
+    lineHeight: 17,
+    color: colors.text,
+    textAlign: 'center',
   },
   headerMetaText: {
     fontSize: 14,
@@ -1865,6 +2198,60 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: '#FFFFFF',
   },
+  insufficientMinutesModalContainer: {
+    width: 560,
+  },
+  insufficientMinutesModalContent: {
+    padding: 24,
+    gap: 16,
+  },
+  insufficientMinutesModalTitle: {
+    fontSize: 18,
+    lineHeight: 22,
+    color: colors.textStrong,
+  },
+  insufficientMinutesModalText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.text,
+  },
+  insufficientMinutesActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  insufficientMinutesActionButton: {
+    height: 40,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  insufficientMinutesActionButtonSecondary: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  insufficientMinutesActionButtonSecondaryHovered: {
+    backgroundColor: 'rgba(0,0,0,0.06)',
+  },
+  insufficientMinutesActionButtonSecondaryText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+  },
+  insufficientMinutesActionButtonPrimary: {
+    backgroundColor: colors.selected,
+  },
+  insufficientMinutesActionButtonPrimaryHovered: {
+    backgroundColor: '#A50058',
+  },
+  insufficientMinutesActionButtonPrimaryText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#FFFFFF',
+  },
   softCircle: {
     width: 72,
     height: 72,
@@ -2088,6 +2475,13 @@ const styles = StyleSheet.create({
     maxWidth: 520,
     textAlign: 'center',
   },
+  uploadDurationWarningText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.selected,
+    maxWidth: 700,
+    textAlign: 'center',
+  },
   footerButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2237,4 +2631,3 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
-

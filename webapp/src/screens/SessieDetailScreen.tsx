@@ -47,7 +47,7 @@ import {
 } from '../local/quickQuestionsChatStore'
 import { isUnassignedCoacheeName, unassignedCoacheeLabel } from '../utils/coachee'
 import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
-import { buildCoacheeTranscriptsSystemMessages, buildConversationTranscriptSystemMessages } from '../utils/quickQuestionsContext'
+import { buildConversationTranscriptSystemMessages } from '../utils/quickQuestionsContext'
 import {
   clearPendingPreviewAudio,
   clearPendingPreviewAudioIfEligible,
@@ -122,6 +122,8 @@ export function SessieDetailScreen({
   const [pdfEditorDraft, setPdfEditorDraft] = useState('')
   const [pdfEditorTitle, setPdfEditorTitle] = useState<string | undefined>(undefined)
   const [isCancelTranscriptionModalVisible, setIsCancelTranscriptionModalVisible] = useState(false)
+  const [isDownloadingAudio, setIsDownloadingAudio] = useState(false)
+  const [isDeletingAudio, setIsDeletingAudio] = useState(false)
 
   const coacheeButtonRef = useRef<any>(null)
   const templates = data.templates ?? []
@@ -388,11 +390,10 @@ export function SessieDetailScreen({
     const systemMessage: LocalChatMessage = {
       role: 'system',
       text:
-      'Deze chatbot bevindt zich onder het kopje "Snelle vragen" binnen CoachScribe. Coaches gebruiken deze chat om korte, gerichte vragen te stellen over het lopende coachtraject op basis van het transcript. De chatbot begrijpt dat het gaat om een coachgesprek en antwoordt vanuit de context van het traject. Je antwoorden zijn altijd duidelijk en beknopt. Geef geen lange uitleg, herhaal de vraag niet en voeg geen meta-uitleg toe. Gebruik geen emoji’s. Gebruik nooit labels zoals "speaker_3" en gebruik geen andere termen voor sprekers dan "coach" of "coachee". Wanneer je verwijst naar een specifiek moment in het transcript, gebruik dan de notatie [[timestamp=MM:SS|zichtbare tekst]]. MM:SS is het tijdstip in het transcript en de tekst na de | is de klikbare tekst zoals die in de zin wordt weergegeven. Verwerk deze verwijzing vloeiend in de zin en gebruik dit actief wanneer dat helpt om het antwoord concreet en controleerbaar te maken. Als het antwoord geschikt is om als PDF te downloaden, zet dan alleen de gewenste inhoud tussen deze twee regels. Gebruik exact deze regels op een eigen regel: ' +
+      'Deze chatbot bevindt zich onder het kopje "Snelle vragen" binnen CoachScribe. Coaches gebruiken deze chat om korte, gerichte vragen te stellen over deze sessie op basis van het transcript. Gebruik alleen informatie uit deze sessie en uit de vraag van de gebruiker. Je antwoorden zijn altijd duidelijk en beknopt. Geef geen lange uitleg, herhaal de vraag niet en voeg geen meta-uitleg toe. Gebruik geen emoji\'s. Gebruik nooit labels zoals "speaker_3" en gebruik geen andere termen voor sprekers dan "coach" of "coachee". Maak nooit nieuwe actiepunten. Noem alleen actiepunten die expliciet in het transcript of in de vraag van de gebruiker staan. Als er geen expliciete actiepunten zijn, zeg dat duidelijk en voeg niets nieuws toe. Wanneer je verwijst naar een specifiek moment in het transcript, gebruik dan de notatie [[timestamp=MM:SS|zichtbare tekst]]. MM:SS is het tijdstip in het transcript en de tekst na de | is de klikbare tekst zoals die in de zin wordt weergegeven. Verwerk deze verwijzing vloeiend in de zin en gebruik dit actief wanneer dat helpt om het antwoord concreet en controleerbaar te maken. Als het antwoord geschikt is om als PDF te downloaden, zet dan alleen de gewenste inhoud tussen deze twee regels. Gebruik exact deze regels op een eigen regel: ' +
       `${pdfStartToken} en ${pdfEndToken}. ` +
-      'Plaats geen andere tekst tussen die regels dan de inhoud die in de PDF hoort. Zet alle overige uitleg buiten die blokken.',    
+      'Plaats geen andere tekst tussen die regels dan de inhoud die in de PDF hoort. Zet alle overige uitleg buiten die blokken.',
     }
-
     const nextUserMessage: ChatStateMessage = {
       id: createChatMessageId(),
       role: 'user',
@@ -405,23 +406,13 @@ export function SessieDetailScreen({
     setIsChatSending(true)
 
     try {
-      const coacheeId = session?.coacheeId ?? null
-      const coacheeTranscriptSessions = coacheeId
-        ? data.sessions
-            .filter((item) => item.coacheeId === coacheeId && item.kind !== 'notes')
-            .map((item) => ({ title: item.title, createdAtUnixMs: item.createdAtUnixMs, transcript: item.transcript ?? null }))
-        : []
-      const transcriptSystemMessages = coacheeId
-        ? buildCoacheeTranscriptsSystemMessages({
-            coacheeName: editableCoacheeName,
-            sessions: coacheeTranscriptSessions,
-            maxTotalCharacters: 500000,
-            maxTranscriptCharactersPerSession: 200000,
-            maxSessions: 9999,
-          })
-        : buildConversationTranscriptSystemMessages({ transcript: session?.transcript ?? null })
-
+      const transcriptSystemMessages = buildConversationTranscriptSystemMessages({
+        transcript: session?.transcript ?? null,
+        sessionId,
+      })
       const responseText = await completeChat({
+        scope: 'session',
+        sessionId,
         messages: [
           ...transcriptSystemMessages,
           systemMessage,
@@ -586,6 +577,67 @@ export function SessieDetailScreen({
       }
     }
     throw new Error('Geen audio beschikbaar om een transcript te maken.')
+  }
+
+  function normalizeAudioExtensionFromMimeType(mimeType: string): string {
+    const normalized = String(mimeType || '').toLowerCase()
+    if (normalized.includes('wav')) return 'wav'
+    if (normalized.includes('ogg') || normalized.includes('opus')) return 'ogg'
+    if (normalized.includes('webm')) return 'webm'
+    if (normalized.includes('mpeg') || normalized.includes('mp3')) return 'mp3'
+    if (normalized.includes('mp4') || normalized.includes('m4a') || normalized.includes('aac')) return 'm4a'
+    return 'mp3'
+  }
+
+  function buildSavedAudioDownloadFileName(mimeType: string): string {
+    const extension = normalizeAudioExtensionFromMimeType(mimeType)
+    const safeTitle = String(editableSessionTitle || '')
+      .trim()
+      .replace(/[^a-z0-9_-]+/gi, '_')
+      .replace(/^_+|_+$/g, '')
+    return `${safeTitle || 'sessie-audio'}.${extension}`
+  }
+
+  async function handleDownloadSavedAudio() {
+    const audioId = String(session?.audioBlobId || '').trim()
+    if (!audioId) return
+    if (isDownloadingAudio) return
+    setIsDownloadingAudio(true)
+    try {
+      const decryptedAudio = await loadDecryptedSessionAudio(audioId)
+      if (typeof window === 'undefined') return
+      const objectUrl = URL.createObjectURL(decryptedAudio.audioBlob)
+      const anchor = document.createElement('a')
+      anchor.href = objectUrl
+      anchor.download = buildSavedAudioDownloadFileName(decryptedAudio.mimeType)
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+    } catch (error) {
+      console.error('[SessieDetailScreen] Failed to download saved audio', { sessionId, error })
+    } finally {
+      setIsDownloadingAudio(false)
+    }
+  }
+
+  async function handleDeleteSavedAudio() {
+    const audioId = String(session?.audioBlobId || '').trim()
+    if (!audioId) return
+    if (isDeletingAudio) return
+    if (effectiveTranscriptionStatus === 'transcribing' || effectiveTranscriptionStatus === 'generating') return
+    setIsDeletingAudio(true)
+    try {
+      updateSession(sessionId, {
+        audioBlobId: null,
+        audioDurationSeconds: null,
+      })
+      await clearPendingPreviewAudio(sessionId)
+    } catch (error) {
+      console.error('[SessieDetailScreen] Failed to remove saved audio', { sessionId, error })
+    } finally {
+      setIsDeletingAudio(false)
+    }
   }
 
   async function retryTranscription() {
@@ -830,19 +882,31 @@ export function SessieDetailScreen({
           <ScrollView style={styles.mobileScroll} contentContainerStyle={styles.mobileScrollContent} showsVerticalScrollIndicator={false}>
             <>
               {hasSavedAudio || pendingPreviewAudioUrl ? (
-                <AudioPlayerCard
-                  ref={audioPlayerRef}
-                  audioBlobId={session?.audioBlobId ?? null}
-                  audioDurationSeconds={session?.audioDurationSeconds ?? null}
-                  audioUrlOverride={pendingPreviewAudioUrl}
-                  onCurrentSecondsChange={setCurrentAudioSeconds}
-                />
+                <View style={styles.audioCardSection}>
+                  <AudioPlayerCard
+                    ref={audioPlayerRef}
+                    audioBlobId={session?.audioBlobId ?? null}
+                    audioDurationSeconds={session?.audioDurationSeconds ?? null}
+                    audioUrlOverride={pendingPreviewAudioUrl}
+                    onCurrentSecondsChange={setCurrentAudioSeconds}
+                    onDownloadAudio={() => {
+                      void handleDownloadSavedAudio()
+                    }}
+                    onDeleteAudio={() => {
+                      void handleDeleteSavedAudio()
+                    }}
+                    isDownloadAudioBusy={isDownloadingAudio}
+                    isDownloadAudioDisabled={!hasSavedAudio}
+                    isDeleteAudioBusy={isDeletingAudio}
+                    isDeleteAudioDisabled={!hasSavedAudio || effectiveTranscriptionStatus === 'transcribing' || effectiveTranscriptionStatus === 'generating'}
+                  />
+                </View>
               ) : null}
               {/* Report */}
                 <View style={styles.reportCard}>
                   <ReportPanel
                     templateLabel={selectedTemplateLabel}
-                    onPressTemplate={() => setIsTemplatePickerModalVisible(true)}
+                    onPressTemplate={hasTranscript ? () => setIsTemplatePickerModalVisible(true) : undefined}
                     isCompact
                     summary={session?.summary ?? null}
                     hasTranscript={hasTranscript}
@@ -1128,19 +1192,31 @@ export function SessieDetailScreen({
             ) : (
               <ScrollView style={styles.leftScroll} contentContainerStyle={styles.leftScrollContent} showsVerticalScrollIndicator={false}>
                 {hasSavedAudio || pendingPreviewAudioUrl ? (
-                  <AudioPlayerCard
-                    ref={audioPlayerRef}
-                    audioBlobId={session?.audioBlobId ?? null}
-                    audioDurationSeconds={session?.audioDurationSeconds ?? null}
-                    audioUrlOverride={pendingPreviewAudioUrl}
-                    onCurrentSecondsChange={setCurrentAudioSeconds}
-                  />
+                  <View style={styles.audioCardSection}>
+                    <AudioPlayerCard
+                      ref={audioPlayerRef}
+                      audioBlobId={session?.audioBlobId ?? null}
+                      audioDurationSeconds={session?.audioDurationSeconds ?? null}
+                      audioUrlOverride={pendingPreviewAudioUrl}
+                      onCurrentSecondsChange={setCurrentAudioSeconds}
+                      onDownloadAudio={() => {
+                        void handleDownloadSavedAudio()
+                      }}
+                      onDeleteAudio={() => {
+                        void handleDeleteSavedAudio()
+                      }}
+                      isDownloadAudioBusy={isDownloadingAudio}
+                      isDownloadAudioDisabled={!hasSavedAudio}
+                      isDeleteAudioBusy={isDeletingAudio}
+                      isDeleteAudioDisabled={!hasSavedAudio || effectiveTranscriptionStatus === 'transcribing' || effectiveTranscriptionStatus === 'generating'}
+                    />
+                  </View>
                 ) : null}
                 {/* Report card */}
                 <View style={styles.reportCard}>
                   <ReportPanel
                     templateLabel={selectedTemplateLabel}
-                    onPressTemplate={() => setIsTemplatePickerModalVisible(true)}
+                    onPressTemplate={hasTranscript ? () => setIsTemplatePickerModalVisible(true) : undefined}
                     isCompact={isCompactLayout}
                     summary={session?.summary ?? null}
                     hasTranscript={hasTranscript}
@@ -1687,6 +1763,55 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingBottom: 16,
   },
+  audioCardSection: {
+    width: '100%',
+    gap: 8,
+  },
+  audioActionsRow: {
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  audioActionButton: {
+    height: 34,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  audioActionButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  audioActionButtonDisabled: {
+    opacity: 0.55,
+  },
+  audioActionButtonText: {
+    fontSize: 13,
+    lineHeight: 16,
+    color: colors.textStrong,
+  },
+  audioDangerButton: {
+    height: 34,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF4EE',
+    borderWidth: 1,
+    borderColor: '#E8C2AE',
+  },
+  audioDangerButtonHovered: {
+    backgroundColor: '#FFE7DB',
+  },
+  audioDangerButtonText: {
+    fontSize: 13,
+    lineHeight: 16,
+    color: '#B85C2A',
+  },
   mobileScroll: {
     flex: 1,
   },
@@ -1843,3 +1968,4 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 })
+

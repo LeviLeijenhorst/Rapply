@@ -30,6 +30,16 @@ type AllowlistResponse = {
   items: AllowlistItem[]
 }
 
+type GrantMinutesResponse = {
+  ok: true
+  targetUserId: string
+  targetAccountEmail: string | null
+  grantedMinutes: number
+  billingStatus: {
+    nonExpiringRemainingSeconds: number
+  } | null
+}
+
 function formatDateTime(value: string): string {
   const parsed = new Date(value)
   if (!Number.isFinite(parsed.getTime())) return value
@@ -53,6 +63,10 @@ export function AdminFeedbackScreen() {
   const [allowlistErrorMessage, setAllowlistErrorMessage] = useState<string | null>(null)
   const [allowlistStatusMessage, setAllowlistStatusMessage] = useState<string | null>(null)
   const [allowlistEmailInput, setAllowlistEmailInput] = useState('')
+  const [grantUserInput, setGrantUserInput] = useState('')
+  const [grantMinutesInput, setGrantMinutesInput] = useState('')
+  const [isGrantBusy, setIsGrantBusy] = useState(false)
+  const [grantStatusMessage, setGrantStatusMessage] = useState<string | null>(null)
 
   const loadFeedback = useCallback(async () => {
     try {
@@ -131,6 +145,40 @@ export function AdminFeedbackScreen() {
       setIsAllowlistBusy(false)
     }
   }, [loadAllowlist])
+
+  const grantMinutes = useCallback(async () => {
+    const userIdOrEmail = grantUserInput.trim()
+    const minutesRaw = Number(grantMinutesInput)
+
+    if (!userIdOrEmail) {
+      setGrantStatusMessage('Vul een user ID of account e-mailadres in.')
+      return
+    }
+    if (!Number.isFinite(minutesRaw) || minutesRaw <= 0) {
+      setGrantStatusMessage('Vul een geldig aantal minuten in.')
+      return
+    }
+
+    try {
+      setIsGrantBusy(true)
+      setGrantStatusMessage(null)
+      const response = await callSecureApi<GrantMinutesResponse>('/admin/billing/grant-minutes', {
+        userIdOrEmail,
+        minutes: minutesRaw,
+      })
+      const remainingMinutes = Math.floor(Number(response.billingStatus?.nonExpiringRemainingSeconds || 0) / 60)
+      const targetLabel = response.targetAccountEmail || response.targetUserId
+      setGrantMinutesInput('')
+      setGrantStatusMessage(`Toegevoegd: ${response.grantedMinutes} minuten aan ${targetLabel}. Nieuw resterend tegoed: ${remainingMinutes} min.`)
+    } catch (error) {
+      setGrantStatusMessage(toUserFriendlyErrorMessage(error, {
+        fallback: 'Minuten toekennen mislukt.',
+        forbiddenMessage: 'Geen toegang. Alleen contact@jnlsolutions.nl mag deze pagina openen.',
+      }))
+    } finally {
+      setIsGrantBusy(false)
+    }
+  }, [grantMinutesInput, grantUserInput])
 
   useEffect(() => {
     void loadFeedback()
@@ -218,6 +266,40 @@ export function AdminFeedbackScreen() {
             ))}
           </View>
         )}
+      </View>
+
+      <View style={styles.grantCard}>
+        <Text isSemibold style={styles.grantTitle}>Minuten toekennen</Text>
+        <Text style={styles.grantSubtitle}>Voeg extra transcriptieminuten toe op accountniveau.</Text>
+        <View style={styles.grantRow}>
+          <TextInput
+            value={grantUserInput}
+            onChangeText={setGrantUserInput}
+            placeholder="User ID of naam@voorbeeld.nl"
+            placeholderTextColor={colors.textSecondary}
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={styles.grantUserInput}
+            editable={!isGrantBusy}
+          />
+          <TextInput
+            value={grantMinutesInput}
+            onChangeText={setGrantMinutesInput}
+            placeholder="Minuten"
+            placeholderTextColor={colors.textSecondary}
+            keyboardType="numeric"
+            style={styles.grantMinutesInput}
+            editable={!isGrantBusy}
+          />
+          <Pressable
+            onPress={() => void grantMinutes()}
+            style={({ hovered }) => [styles.grantButton, hovered ? styles.grantButtonHovered : undefined, isGrantBusy ? styles.allowlistButtonDisabled : undefined]}
+            disabled={isGrantBusy}
+          >
+            <Text isBold style={styles.grantButtonText}>Toekennen</Text>
+          </Pressable>
+        </View>
+        {grantStatusMessage ? <Text style={styles.grantStatusText}>{grantStatusMessage}</Text> : null}
       </View>
 
       {isLoading ? (
@@ -448,6 +530,75 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     color: colors.selected,
+  },
+  grantCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    gap: 10,
+  },
+  grantTitle: {
+    fontSize: 16,
+    lineHeight: 20,
+    color: colors.textStrong,
+  },
+  grantSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+  },
+  grantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  grantUserInput: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.pageBackground,
+    padding: 12,
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+  },
+  grantMinutesInput: {
+    width: 120,
+    minHeight: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.pageBackground,
+    padding: 12,
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+  },
+  grantButton: {
+    minWidth: 120,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: colors.selected,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  grantButtonHovered: {
+    opacity: 0.9,
+  },
+  grantButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    lineHeight: 16,
+  },
+  grantStatusText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
   },
   loadingWrap: {
     flex: 1,

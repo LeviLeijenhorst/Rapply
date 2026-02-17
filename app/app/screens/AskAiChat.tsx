@@ -200,21 +200,24 @@ export function AskAiChat(props: {
     try {
       const resolvedConversationId = scope === "conversation" ? String(conversationId || "").trim() : ""
 
-      const { entries: coacheeTranscriptEntries, isTruncated: coacheeTranscriptEntriesAreTruncated } = await loadConversationTranscriptsForCoachee({
-        coacheeName: resolvedCoacheeName,
-        excludeConversationId: resolvedConversationId && resolvedCurrentTranscript ? resolvedConversationId : undefined,
-      })
+      const shouldUseCoacheeContext = scope === "coachee"
+      const { entries: coacheeTranscriptEntries, isTruncated: coacheeTranscriptEntriesAreTruncated } = shouldUseCoacheeContext
+        ? await loadConversationTranscriptsForCoachee({
+            coacheeName: resolvedCoacheeName,
+            excludeConversationId: resolvedConversationId && resolvedCurrentTranscript ? resolvedConversationId : undefined,
+          })
+        : { entries: [], isTruncated: false }
 
       const latestConversationEntry = coacheeTranscriptEntries[0] ?? null
       const latestConversationId = latestConversationEntry?.conversationId ?? null
       const latestConversationTranscript = latestConversationEntry?.transcript ?? ""
 
-      const previousSummaries =
-        scope === "conversation" && resolvedConversationId
-          ? await loadSummariesForCoachee(resolvedCoacheeName, String(conversationId))
-          : await loadSummariesForCoachee(resolvedCoacheeName, latestConversationId || undefined)
+      const previousSummaries = shouldUseCoacheeContext
+        ? await loadSummariesForCoachee(resolvedCoacheeName, latestConversationId || undefined)
+        : []
 
       const final = await askAssistant({
+        scope,
         coacheeName: resolvedCoacheeName,
         currentConversationId: scope === "conversation" ? resolvedConversationId : latestConversationId,
         currentTranscript: scope === "conversation" ? String(currentTranscript || "") : latestConversationTranscript,
@@ -577,4 +580,3 @@ const styles = StyleSheet.create({
   warningContinue: { fontFamily: typography.fontFamily, fontSize: typography.textSize, height: 44, lineHeight: 44, textAlignVertical: "center", includeFontPadding: false, color: "#FF0001", fontWeight: "700" },
   warningCancel: { fontFamily: typography.fontFamily, fontSize: typography.textSize, height: 44, lineHeight: 44, textAlignVertical: "center", includeFontPadding: false, color: colors.textSecondary },
 })
-
