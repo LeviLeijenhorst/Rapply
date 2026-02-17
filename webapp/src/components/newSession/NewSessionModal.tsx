@@ -696,6 +696,12 @@ export function NewSessionModal({
     recorder.start()
   }, [recorder, step, visible])
 
+  function retryRecordingAfterError() {
+    recorder.reset()
+    hasAutoStartedRecordingRef.current = true
+    recorder.start()
+  }
+
   useEffect(() => {
     if (!visible) return
     if (step !== 'recording') {
@@ -772,6 +778,10 @@ export function NewSessionModal({
               <Pressable
                 onPress={(event) => {
                   event.stopPropagation?.()
+                  if (recorder.status === 'error') {
+                    retryRecordingAfterError()
+                    return
+                  }
                   recorder.stop()
                 }}
                 style={({ hovered }) => [styles.minimizedStopButton, hovered ? styles.minimizedStopButtonHovered : undefined]}
@@ -1034,7 +1044,13 @@ export function NewSessionModal({
                 </Pressable>
 
                 <Pressable
-                  onPress={() => recorder.stop()}
+                  onPress={() => {
+                    if (recorder.status === 'error') {
+                      retryRecordingAfterError()
+                      return
+                    }
+                    recorder.stop()
+                  }}
                   style={({ hovered }) => [styles.primaryCircle, webTransitionSmooth, hovered ? styles.primaryCircleHovered : undefined]}
                 >
                   {/* Stop */}

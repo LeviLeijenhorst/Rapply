@@ -74,6 +74,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
   const recordingSequenceRef = useRef(0)
   const activeRecordingIdRef = useRef(0)
   const recordingStartedAtMillisecondsRef = useRef<number | null>(null)
+  const requestDataTimerRef = useRef<number | null>(null)
 
   const isSupported = useMemo(() => {
     if (typeof window === 'undefined') return false
@@ -92,6 +93,25 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
       window.clearInterval(timerRef.current)
       timerRef.current = null
     }
+  }
+
+  function stopRequestDataTimer() {
+    if (requestDataTimerRef.current) {
+      window.clearInterval(requestDataTimerRef.current)
+      requestDataTimerRef.current = null
+    }
+  }
+
+  function startRequestDataTimer() {
+    stopRequestDataTimer()
+    requestDataTimerRef.current = window.setInterval(() => {
+      const recorder = mediaRecorderRef.current
+      if (!recorder) return
+      if (recorder.state !== 'recording') return
+      try {
+        recorder.requestData()
+      } catch {}
+    }, 1000)
   }
 
   function startTimer() {
@@ -265,6 +285,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
         setStatus('error')
         setErrorMessage(message)
         stopTimer()
+        stopRequestDataTimer()
         stopTracks()
       }
 
@@ -279,6 +300,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
         lastChunkDurationSecondsRef.current = recordingChunkDurationMilliseconds / 1000
         setActiveMimeType(lastMimeTypeRef.current || chosenMimeType || null)
         startTimer()
+        startRequestDataTimer()
         setStatus('recording')
       }
 
@@ -296,6 +318,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
         stopReasonRef.current = 'none'
         recordingStartedAtMillisecondsRef.current = null
         stopTimer()
+        stopRequestDataTimer()
         stopTracks()
         mediaRecorderRef.current = null
         logCaptureDevices()
@@ -385,6 +408,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
 
   function reset() {
     stopTimer()
+    stopRequestDataTimer()
     stopTracks()
     const recorder = mediaRecorderRef.current
     if (recorder && recorder.state !== 'inactive') {
@@ -412,6 +436,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
   useEffect(() => {
     return () => {
       stopTimer()
+      stopRequestDataTimer()
       stopTracks()
     }
   }, [])
