@@ -12,10 +12,13 @@ type RegisterFeedbackRoutesParams = {
   rateLimitAccount: RequestHandler
 }
 
+type AccountType = "admin" | "paid" | "test"
+
 let ensureContactSubmissionsTablePromise: Promise<void> | null = null
 let ensurePraktijkRequestsCompatibilityPromise: Promise<void> | null = null
 let ensureContactSubmissionsCompatibilityPromise: Promise<void> | null = null
 let ensureAdminBillingGrantsTablePromise: Promise<void> | null = null
+let ensureManualPricingSchemaPromise: Promise<void> | null = null
 
 async function ensureContactSubmissionsTable(): Promise<void> {
   if (!ensureContactSubmissionsTablePromise) {
@@ -120,6 +123,83 @@ async function ensureAdminBillingGrantsTable(): Promise<void> {
   await ensureAdminBillingGrantsTablePromise
 }
 
+async function ensureManualPricingSchema(): Promise<void> {
+  if (!ensureManualPricingSchemaPromise) {
+    ensureManualPricingSchemaPromise = execute(
+      `
+      create table if not exists public.plans (
+        id uuid primary key,
+        name text not null,
+        description text,
+        monthly_price numeric(10, 2) not null,
+        minutes_per_month integer not null,
+        is_active boolean not null default true,
+        display_order integer not null default 0,
+        created_at timestamptz not null default now(),
+        updated_at timestamptz not null default now()
+      );
+
+      create index if not exists plans_active_order_idx on public.plans (is_active, display_order asc, created_at asc);
+
+      alter table public.users
+        add column if not exists plan_id uuid references public.plans (id),
+        add column if not exists custom_monthly_price numeric(10, 2),
+        add column if not exists extra_minutes integer not null default 0,
+        add column if not exists account_type text not null default 'paid',
+        add column if not exists is_allowlisted boolean not null default true,
+        add column if not exists can_see_pricing_page boolean not null default true,
+        add column if not exists admin_notes text,
+        add column if not exists pilot_flag boolean not null default false;
+
+      do $$
+      begin
+        if not exists (
+          select 1
+          from pg_constraint
+          where conname = 'users_extra_minutes_non_negative'
+        ) then
+          alter table public.users
+            add constraint users_extra_minutes_non_negative check (extra_minutes >= 0);
+        end if;
+      end
+      $$;
+
+      do $$
+      begin
+        if not exists (
+          select 1
+          from pg_constraint
+          where conname = 'users_account_type_allowed_values'
+        ) then
+          alter table public.users
+            add constraint users_account_type_allowed_values check (account_type in ('admin', 'paid', 'test'));
+        end if;
+      end
+      $$;
+
+      do $$
+      begin
+        if not exists (
+          select 1
+          from pg_constraint
+          where conname = 'users_custom_monthly_price_non_negative'
+        ) then
+          alter table public.users
+            add constraint users_custom_monthly_price_non_negative check (custom_monthly_price is null or custom_monthly_price >= 0);
+        end if;
+      end
+      $$;
+      `,
+      [],
+    ).catch((error) => {
+      ensureManualPricingSchemaPromise = null
+      throw error
+    })
+  }
+
+  await ensureManualPricingSchemaPromise
+}
+
 async function requireAdminUserEmail(req: Parameters<typeof requireAuthenticatedUser>[0]): Promise<string> {
   const user = await requireAuthenticatedUser(req)
   const normalizedUserEmail = normalizeEmail(user.email)
@@ -135,6 +215,21 @@ async function requireAdminUserEmail(req: Parameters<typeof requireAuthenticated
     throw error as Error
   }
   return normalizedUserEmail
+}
+
+function parseAccountType(value: unknown): AccountType | null {
+  return value === "admin" || value === "paid" || value === "test" ? value : null
+}
+
+function toNumberOrNull(value: unknown): number | null {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return null
+  return parsed
+}
+
+function formatPrice(value: number | null): number | null {
+  if (value == null) return null
+  return Math.round(value * 100) / 100
 }
 
 // Registers feedback collection, admin listing, and account deletion routes.
@@ -456,6 +551,520 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
   )
 
   app.post(
+    "/admin/plans/list",
+    params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      await ensureManualPricingSchema()
+      try {
+        await requireAdminUserEmail(req)
+      } catch {
+        sendError(res, 403, "Forbidden")
+        return
+      }
+
+      const rows = await queryMany<{
+        id: string
+        name: string
+        description: string | null
+        monthly_price: string
+        minutes_per_month: number
+        is_active: boolean
+        display_order: number
+      }>(
+        `
+        select id, name, description, monthly_price, minutes_per_month, is_active, display_order
+        from public.plans
+        order by display_order asc, created_at asc
+        `,
+        [],
+      )
+
+      res.status(200).json({
+        items: rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          description: row.description,
+          monthlyPrice: Number(row.monthly_price),
+          minutesPerMonth: row.minutes_per_month,
+          isActive: row.is_active,
+          displayOrder: row.display_order,
+        })),
+      })
+    }),
+  )
+
+  app.post(
+    "/admin/plans/upsert",
+    params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      await ensureManualPricingSchema()
+      try {
+        await requireAdminUserEmail(req)
+      } catch {
+        sendError(res, 403, "Forbidden")
+        return
+      }
+
+      const planIdRaw = typeof req.body?.id === "string" ? req.body.id.trim() : ""
+      const name = typeof req.body?.name === "string" ? req.body.name.trim() : ""
+      const descriptionRaw = typeof req.body?.description === "string" ? req.body.description.trim() : ""
+      const monthlyPrice = toNumberOrNull(req.body?.monthlyPrice)
+      const minutesPerMonthRaw = Number(req.body?.minutesPerMonth)
+      const displayOrderRaw = Number(req.body?.displayOrder)
+      const isActive = Boolean(req.body?.isActive)
+
+      if (!name) {
+        sendError(res, 400, "Missing name")
+        return
+      }
+      if (monthlyPrice == null || monthlyPrice < 0) {
+        sendError(res, 400, "Invalid monthlyPrice")
+        return
+      }
+      if (!Number.isFinite(minutesPerMonthRaw) || minutesPerMonthRaw < 0) {
+        sendError(res, 400, "Invalid minutesPerMonth")
+        return
+      }
+      const minutesPerMonth = Math.trunc(minutesPerMonthRaw)
+      const description = descriptionRaw || null
+
+      if (planIdRaw) {
+        await execute(
+          `
+          update public.plans
+          set name = $1,
+              description = $2,
+              monthly_price = $3,
+              minutes_per_month = $4,
+              is_active = $5,
+              display_order = $6,
+              updated_at = now()
+          where id = $7
+          `,
+          [
+            name,
+            description,
+            formatPrice(monthlyPrice),
+            minutesPerMonth,
+            isActive,
+            Number.isFinite(displayOrderRaw) ? Math.trunc(displayOrderRaw) : 0,
+            planIdRaw,
+          ],
+        )
+      } else {
+        const displayOrder = Number.isFinite(displayOrderRaw)
+          ? Math.trunc(displayOrderRaw)
+          : (
+              await queryMany<{ next_display_order: number }>(
+                `
+                select coalesce(max(display_order), -1) + 1 as next_display_order
+                from public.plans
+                `,
+                [],
+              )
+            )[0]?.next_display_order ?? 0
+
+        await execute(
+          `
+          insert into public.plans (
+            id,
+            name,
+            description,
+            monthly_price,
+            minutes_per_month,
+            is_active,
+            display_order,
+            created_at,
+            updated_at
+          )
+          values ($1, $2, $3, $4, $5, $6, $7, now(), now())
+          `,
+          [crypto.randomUUID(), name, description, formatPrice(monthlyPrice), minutesPerMonth, isActive, displayOrder],
+        )
+      }
+
+      res.status(200).json({ ok: true })
+    }),
+  )
+
+  app.post(
+    "/admin/plans/reorder",
+    params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      await ensureManualPricingSchema()
+      try {
+        await requireAdminUserEmail(req)
+      } catch {
+        sendError(res, 403, "Forbidden")
+        return
+      }
+
+      const planIdsRaw = Array.isArray(req.body?.planIds) ? req.body.planIds : []
+      const planIds = planIdsRaw.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+      if (!planIds.length) {
+        sendError(res, 400, "Missing planIds")
+        return
+      }
+
+      await execute(
+        `
+        with ordered_ids as (
+          select unnest($1::uuid[]) as id, generate_subscripts($1::uuid[], 1) - 1 as display_order
+        )
+        update public.plans p
+        set display_order = ordered_ids.display_order,
+            updated_at = now()
+        from ordered_ids
+        where p.id = ordered_ids.id
+        `,
+        [planIds],
+      )
+
+      res.status(200).json({ ok: true })
+    }),
+  )
+
+  app.post(
+    "/admin/plans/set-active",
+    params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      await ensureManualPricingSchema()
+      try {
+        await requireAdminUserEmail(req)
+      } catch {
+        sendError(res, 403, "Forbidden")
+        return
+      }
+
+      const planId = typeof req.body?.planId === "string" ? req.body.planId.trim() : ""
+      const isActive = Boolean(req.body?.isActive)
+      if (!planId) {
+        sendError(res, 400, "Missing planId")
+        return
+      }
+
+      await execute(
+        `
+        update public.plans
+        set is_active = $1,
+            updated_at = now()
+        where id = $2
+        `,
+        [isActive, planId],
+      )
+
+      res.status(200).json({ ok: true })
+    }),
+  )
+
+  app.post(
+    "/admin/users/list",
+    params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      await ensureManualPricingSchema()
+      try {
+        await requireAdminUserEmail(req)
+      } catch {
+        sendError(res, 403, "Forbidden")
+        return
+      }
+
+      const rows = await queryMany<{
+        id: string
+        email: string | null
+        display_name: string | null
+        plan_id: string | null
+        custom_monthly_price: string | null
+        extra_minutes: number
+        account_type: AccountType
+        is_allowlisted: boolean
+        can_see_pricing_page: boolean
+        admin_notes: string | null
+        pilot_flag: boolean
+        plan_name: string | null
+        plan_minutes_per_month: number | null
+      }>(
+        `
+        select
+          u.id,
+          u.email,
+          u.display_name,
+          u.plan_id,
+          u.custom_monthly_price,
+          coalesce(u.extra_minutes, 0) as extra_minutes,
+          u.account_type,
+          coalesce(u.is_allowlisted, true) as is_allowlisted,
+          coalesce(u.can_see_pricing_page, true) as can_see_pricing_page,
+          u.admin_notes,
+          coalesce(u.pilot_flag, false) as pilot_flag,
+          p.name as plan_name,
+          p.minutes_per_month as plan_minutes_per_month
+        from public.users u
+        left join public.plans p on p.id = u.plan_id
+        order by lower(coalesce(u.email, '')), u.created_at desc
+        `,
+        [],
+      )
+
+      res.status(200).json({
+        items: rows.map((row) => {
+          const includedMinutes = Number(row.plan_minutes_per_month || 0)
+          const extraMinutes = Number(row.extra_minutes || 0)
+          return {
+            userId: row.id,
+            email: row.email,
+            displayName: row.display_name,
+            planId: row.plan_id,
+            customMonthlyPrice: row.custom_monthly_price == null ? null : Number(row.custom_monthly_price),
+            extraMinutes,
+            accountType: row.account_type,
+            isAllowlisted: row.is_allowlisted,
+            canSeePricingPage: row.can_see_pricing_page,
+            adminNotes: row.admin_notes,
+            pilotFlag: row.pilot_flag,
+            planName: row.plan_name,
+            availableMinutesPerMonth: includedMinutes + extraMinutes,
+          }
+        }),
+      })
+    }),
+  )
+
+  app.post(
+    "/admin/users/update-pricing-controls",
+    params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      await ensureManualPricingSchema()
+      const adminEmail = await requireAdminUserEmail(req).catch(() => null)
+      if (!adminEmail) {
+        sendError(res, 403, "Forbidden")
+        return
+      }
+
+      const userId = typeof req.body?.userId === "string" ? req.body.userId.trim() : ""
+      const planIdRaw = typeof req.body?.planId === "string" ? req.body.planId.trim() : ""
+      const customMonthlyPriceRaw = req.body?.customMonthlyPrice
+      const extraMinutesRaw = Number(req.body?.extraMinutes)
+      const accountType = parseAccountType(req.body?.accountType)
+      const isAllowlisted = Boolean(req.body?.isAllowlisted)
+      const canSeePricingPage = Boolean(req.body?.canSeePricingPage)
+      const pilotFlag = Boolean(req.body?.pilotFlag)
+      const adminNotesRaw = typeof req.body?.adminNotes === "string" ? req.body.adminNotes.trim() : ""
+
+      if (!userId) {
+        sendError(res, 400, "Missing userId")
+        return
+      }
+      if (!accountType) {
+        sendError(res, 400, "Invalid accountType")
+        return
+      }
+      if (!Number.isFinite(extraMinutesRaw) || extraMinutesRaw < 0) {
+        sendError(res, 400, "Invalid extraMinutes")
+        return
+      }
+      const extraMinutes = Math.trunc(extraMinutesRaw)
+      const customMonthlyPrice = customMonthlyPriceRaw == null || customMonthlyPriceRaw === ""
+        ? null
+        : toNumberOrNull(customMonthlyPriceRaw)
+      if (customMonthlyPrice != null && customMonthlyPrice < 0) {
+        sendError(res, 400, "Invalid customMonthlyPrice")
+        return
+      }
+
+      const targetUser = (
+        await queryMany<{ id: string; email: string | null }>(
+          `
+          select id, email
+          from public.users
+          where id = $1
+          limit 1
+          `,
+          [userId],
+        )
+      )[0]
+
+      if (!targetUser?.id) {
+        sendError(res, 404, "User not found")
+        return
+      }
+
+      const planId = planIdRaw || null
+      if (planId) {
+        const foundPlan = await queryMany<{ id: string }>(
+          `
+          select id
+          from public.plans
+          where id = $1
+          limit 1
+          `,
+          [planId],
+        )
+        if (!foundPlan[0]?.id) {
+          sendError(res, 400, "Invalid planId")
+          return
+        }
+      }
+
+      await execute(
+        `
+        update public.users
+        set plan_id = $1,
+            custom_monthly_price = $2,
+            extra_minutes = $3,
+            account_type = $4,
+            is_allowlisted = $5,
+            can_see_pricing_page = $6,
+            admin_notes = $7,
+            pilot_flag = $8,
+            updated_at = now()
+        where id = $9
+        `,
+        [planId, formatPrice(customMonthlyPrice), extraMinutes, accountType, isAllowlisted, canSeePricingPage, adminNotesRaw || null, pilotFlag, userId],
+      )
+
+      const targetEmail = normalizeEmail(targetUser.email)
+      if (targetEmail) {
+        if (isAllowlisted) {
+          await execute(
+            `
+            insert into public.signup_email_allowlist (id, email, added_by_email)
+            values ($1, $2, $3)
+            on conflict (email) do update
+              set added_by_email = excluded.added_by_email
+            `,
+            [crypto.randomUUID(), targetEmail, adminEmail],
+          )
+        } else {
+          await execute(
+            `
+            delete from public.signup_email_allowlist
+            where lower(email) = $1
+            `,
+            [targetEmail],
+          )
+        }
+      }
+
+      res.status(200).json({ ok: true })
+    }),
+  )
+
+  app.post(
+    "/pricing/plans/public",
+    params.rateLimitAccount,
+    asyncHandler(async (_req, res) => {
+      await ensureManualPricingSchema()
+      const rows = await queryMany<{
+        id: string
+        name: string
+        description: string | null
+        monthly_price: string
+        minutes_per_month: number
+        display_order: number
+      }>(
+        `
+        select id, name, description, monthly_price, minutes_per_month, display_order
+        from public.plans
+        where is_active = true
+        order by display_order asc, created_at asc
+        `,
+        [],
+      )
+
+      res.status(200).json({
+        items: rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          description: row.description,
+          monthlyPrice: Number(row.monthly_price),
+          minutesPerMonth: row.minutes_per_month,
+          displayOrder: row.display_order,
+        })),
+      })
+    }),
+  )
+
+  app.post(
+    "/pricing/me-visibility",
+    params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      await ensureManualPricingSchema()
+      const hasAuthorizationHeader = String(req.headers.authorization || "").trim().length > 0
+      if (!hasAuthorizationHeader) {
+        res.status(200).json({
+          isAuthenticated: false,
+          canSeePricingPage: true,
+          accountType: null,
+          planId: null,
+          customMonthlyPrice: null,
+          extraMinutes: 0,
+          availableMinutesPerMonth: 0,
+        })
+        return
+      }
+
+      const user = await requireAuthenticatedUser(req).catch(() => null)
+      if (!user) {
+        sendError(res, 401, "Unauthorized")
+        return
+      }
+
+      const row = (
+        await queryMany<{
+          plan_id: string | null
+          custom_monthly_price: string | null
+          extra_minutes: number
+          account_type: AccountType
+          can_see_pricing_page: boolean
+          plan_minutes_per_month: number | null
+        }>(
+          `
+          select
+            u.plan_id,
+            u.custom_monthly_price,
+            coalesce(u.extra_minutes, 0) as extra_minutes,
+            u.account_type,
+            coalesce(u.can_see_pricing_page, true) as can_see_pricing_page,
+            p.minutes_per_month as plan_minutes_per_month
+          from public.users u
+          left join public.plans p on p.id = u.plan_id
+          where u.id = $1
+          limit 1
+          `,
+          [user.userId],
+        )
+      )[0]
+
+      if (!row) {
+        res.status(200).json({
+          isAuthenticated: true,
+          canSeePricingPage: true,
+          accountType: null,
+          planId: null,
+          customMonthlyPrice: null,
+          extraMinutes: 0,
+          availableMinutesPerMonth: 0,
+        })
+        return
+      }
+
+      const availableMinutes = Number(row.plan_minutes_per_month || 0) + Number(row.extra_minutes || 0)
+      const canSeePricingPage = row.account_type !== "test" && row.can_see_pricing_page
+
+      res.status(200).json({
+        isAuthenticated: true,
+        canSeePricingPage,
+        accountType: row.account_type,
+        planId: row.plan_id,
+        customMonthlyPrice: row.custom_monthly_price == null ? null : Number(row.custom_monthly_price),
+        extraMinutes: row.extra_minutes,
+        availableMinutesPerMonth: availableMinutes,
+      })
+    }),
+  )
+
+  app.post(
     "/admin/account-allowlist/list",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
@@ -493,6 +1102,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/account-allowlist/add",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
+      await ensureManualPricingSchema()
       const adminEmail = await requireAdminUserEmail(req).catch(() => null)
       if (!adminEmail) {
         sendError(res, 403, "Forbidden")
@@ -514,6 +1124,15 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
         `,
         [crypto.randomUUID(), candidateEmail, adminEmail],
       )
+      await execute(
+        `
+        update public.users
+        set is_allowlisted = true,
+            updated_at = now()
+        where lower(email) = $1
+        `,
+        [candidateEmail],
+      )
 
       res.status(200).json({ ok: true })
     }),
@@ -523,6 +1142,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/account-allowlist/remove",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
+      await ensureManualPricingSchema()
       try {
         await requireAdminUserEmail(req)
       } catch {
@@ -539,6 +1159,15 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
       await execute(
         `
         delete from public.signup_email_allowlist
+        where lower(email) = $1
+        `,
+        [candidateEmail],
+      )
+      await execute(
+        `
+        update public.users
+        set is_allowlisted = false,
+            updated_at = now()
         where lower(email) = $1
         `,
         [candidateEmail],

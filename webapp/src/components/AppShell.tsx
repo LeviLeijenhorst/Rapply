@@ -35,7 +35,7 @@ import { callSecureApi } from '../services/secureApi'
 import { useE2ee } from '../e2ee/E2eeProvider'
 import { clearPendingPreviewAudio, clearPendingPreviewAudioIfEligible, listPendingPreviewAudioTasks } from '../audio/pendingPreviewStore'
 import { processSessionAudio } from '../audio/processSessionAudio'
-import { AdminFeedbackScreen } from '../screens/AdminFeedbackScreen'
+import { AdminRevenueScreen } from '../screens/AdminRevenueScreen'
 import { AdminContactSubmissionsScreen } from '../screens/AdminContactSubmissionsScreen'
 import { AdminWachtlijstScreen } from '../screens/AdminWachtlijstScreen'
 import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
@@ -662,7 +662,7 @@ export function AppShell({ onLogout }: Props) {
       return <EndToEndEncryptieScreen onBack={() => setIsEndToEndEncryptiePageOpen(false)} />
     }
     if (isAdminScreenOpen) {
-      return <AdminFeedbackScreen />
+      return <AdminRevenueScreen />
     }
     if (isAdminContactScreenOpen) {
       return <AdminContactSubmissionsScreen />
