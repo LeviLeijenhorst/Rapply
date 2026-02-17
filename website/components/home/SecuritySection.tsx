@@ -147,7 +147,7 @@ export default function SecuritySection({
                 "cubic-bezier(0.22,1,0.36,1), cubic-bezier(0.22,1,0.36,1)",
             }}
           >
-            <div className="relative pl-10 md:pl-12">
+            <div className="relative pl-10 max-[500px]:pl-0 md:pl-12">
               <div className="flex w-full flex-col">
                 {veiligheidDataFlowItems.map((securityItem, index) => (
                   <div
@@ -155,7 +155,7 @@ export default function SecuritySection({
                     className="relative h-[196px] w-full md:h-[140px]"
                   >
                     <div
-                      className={`absolute ${
+                      className={`absolute max-[500px]:hidden ${
                         index === 2 ? "left-[-12px]" : "left-[-8px]"
                       } ${
                         index === 2 ? "top-[-2px] h-8 w-8" : "top-[2px] h-6 w-6"
@@ -362,7 +362,7 @@ export default function SecuritySection({
                         </svg>
                       )}
                     </div>
-                    <div className="relative flex w-full flex-col gap-2 pl-[106px]">
+                    <div className="relative flex w-full flex-col gap-2 pl-[106px] max-[500px]:pl-0">
                       <h3 className="font-[var(--font-catamaran)] text-[24px] font-bold text-[#BD0265]">
                         {securityItem.title}
                       </h3>
@@ -372,7 +372,7 @@ export default function SecuritySection({
                     </div>
                     {index < veiligheidDataFlowItems.length - 1 ? (
                       <div
-                        className="absolute left-[4px] top-[30px] h-[166px] w-px bg-[#BD0265] md:h-[110px]"
+                        className="absolute left-[4px] top-[36px] h-[150px] w-px bg-[#BD0265] max-[500px]:hidden md:h-[94px]"
                         aria-hidden="true"
                       />
                     ) : null}

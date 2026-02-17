@@ -12,6 +12,7 @@ type RegisterFeedbackRoutesParams = {
 }
 
 let ensureContactSubmissionsTablePromise: Promise<void> | null = null
+let ensurePraktijkRequestsCompatibilityPromise: Promise<void> | null = null
 
 async function ensureContactSubmissionsTable(): Promise<void> {
   if (!ensureContactSubmissionsTablePromise) {
@@ -39,6 +40,22 @@ async function ensureContactSubmissionsTable(): Promise<void> {
     })
   }
   await ensureContactSubmissionsTablePromise
+}
+
+async function ensurePraktijkRequestsCompatibility(): Promise<void> {
+  if (!ensurePraktijkRequestsCompatibilityPromise) {
+    ensurePraktijkRequestsCompatibilityPromise = execute(
+      `
+      alter table public.praktijk_requests
+      alter column user_id drop not null;
+      `,
+      [],
+    ).catch((error) => {
+      ensurePraktijkRequestsCompatibilityPromise = null
+      throw error
+    })
+  }
+  await ensurePraktijkRequestsCompatibilityPromise
 }
 
 async function requireAdminUserEmail(req: Parameters<typeof requireAuthenticatedUser>[0]): Promise<string> {
@@ -137,6 +154,44 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
         values ($1, $2, $3, $4, $5, $6)
         `,
         [crypto.randomUUID(), user.userId, name, email, phone || null, message],
+      )
+
+      res.status(200).json({ ok: true })
+    }),
+  )
+
+  app.post(
+    "/wachtlijst/request",
+    params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      await ensurePraktijkRequestsCompatibility()
+
+      const firstName = typeof req.body?.firstName === "string" ? req.body.firstName.trim() : ""
+      const lastName = typeof req.body?.lastName === "string" ? req.body.lastName.trim() : ""
+      const email = typeof req.body?.email === "string" ? req.body.email.trim() : ""
+      const phone = typeof req.body?.phone === "string" ? req.body.phone.trim() : ""
+      const coachType = typeof req.body?.coachType === "string" ? req.body.coachType.trim() : ""
+      const userMessage = typeof req.body?.message === "string" ? req.body.message.trim() : ""
+
+      if (!firstName || !lastName || !email) {
+        sendError(res, 400, "Missing firstName, lastName, or email")
+        return
+      }
+
+      const messageParts = [
+        `Naam: ${firstName} ${lastName}`,
+        phone ? `Telefoon: ${phone}` : "",
+        coachType ? `Type coach: ${coachType}` : "",
+        userMessage ? `Bericht: ${userMessage}` : "",
+      ].filter(Boolean)
+      const message = messageParts.join("\n")
+
+      await execute(
+        `
+        insert into public.praktijk_requests (id, user_id, email, account_email, message)
+        values ($1, $2, $3, $4, $5)
+        `,
+        [crypto.randomUUID(), null, email, null, message],
       )
 
       res.status(200).json({ ok: true })
