@@ -386,7 +386,7 @@ export default function SecuritySection({
             ref={securityCardsRef}
             className={`grid w-full md:grid-cols-3 ${securityGridGapClass}`}
           >
-            {renderedSecurityItems.map((securityItem, index) => {
+            {securityItems.map((securityItem, index) => {
               return (
                 <div
                   key={`${securityItem.title}-${index}`}

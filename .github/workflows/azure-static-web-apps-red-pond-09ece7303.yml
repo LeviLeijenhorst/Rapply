@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "webapp/**"
+      - ".github/workflows/azure-static-web-apps-red-pond-09ece7303.yml"
   pull_request:
     types:
       - opened
@@ -12,6 +15,9 @@ on:
       - closed
     branches:
       - main
+    paths:
+      - "webapp/**"
+      - ".github/workflows/azure-static-web-apps-red-pond-09ece7303.yml"
 
 jobs:
   build_and_deploy_job:
