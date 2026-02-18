@@ -19,6 +19,13 @@ let ensurePraktijkRequestsCompatibilityPromise: Promise<void> | null = null
 let ensureContactSubmissionsCompatibilityPromise: Promise<void> | null = null
 let ensureAdminBillingGrantsTablePromise: Promise<void> | null = null
 let ensureManualPricingSchemaPromise: Promise<void> | null = null
+let ensureManagedPlansPromise: Promise<void> | null = null
+
+const managedPlanDefaults: Array<{ name: string; monthlyPrice: number; minutesPerMonth: number; description: string | null }> = [
+  { name: "Plan 1", monthlyPrice: 0, minutesPerMonth: 1200, description: null },
+  { name: "Plan 2", monthlyPrice: 0, minutesPerMonth: 3000, description: null },
+  { name: "Plan 3", monthlyPrice: 0, minutesPerMonth: 6000, description: null },
+]
 
 async function ensureContactSubmissionsTable(): Promise<void> {
   if (!ensureContactSubmissionsTablePromise) {
@@ -198,6 +205,85 @@ async function ensureManualPricingSchema(): Promise<void> {
   }
 
   await ensureManualPricingSchemaPromise
+}
+
+async function ensureManagedPlans(): Promise<void> {
+  await ensureManualPricingSchema()
+  if (!ensureManagedPlansPromise) {
+    ensureManagedPlansPromise = (async () => {
+      const existing = await queryMany<{ id: string }>(
+        `
+        select id
+        from public.plans
+        order by display_order asc, created_at asc
+        `,
+        [],
+      )
+
+      if (existing.length < managedPlanDefaults.length) {
+        for (let index = existing.length; index < managedPlanDefaults.length; index += 1) {
+          const defaults = managedPlanDefaults[index]
+          await execute(
+            `
+            insert into public.plans (
+              id,
+              name,
+              description,
+              monthly_price,
+              minutes_per_month,
+              is_active,
+              display_order,
+              created_at,
+              updated_at
+            )
+            values ($1, $2, $3, $4, $5, true, $6, now(), now())
+            `,
+            [crypto.randomUUID(), defaults.name, defaults.description, defaults.monthlyPrice, defaults.minutesPerMonth, index],
+          )
+        }
+      }
+
+      const rows = await queryMany<{ id: string }>(
+        `
+        select id
+        from public.plans
+        order by display_order asc, created_at asc
+        `,
+        [],
+      )
+      const managedIds = rows.slice(0, 3).map((row) => row.id)
+      const extraIds = rows.slice(3).map((row) => row.id)
+
+      for (let index = 0; index < managedIds.length; index += 1) {
+        await execute(
+          `
+          update public.plans
+          set display_order = $1,
+              is_active = true,
+              updated_at = now()
+          where id = $2
+          `,
+          [index, managedIds[index]],
+        )
+      }
+
+      if (extraIds.length > 0) {
+        await execute(
+          `
+          update public.plans
+          set is_active = false,
+              updated_at = now()
+          where id = any($1::uuid[])
+          `,
+          [extraIds],
+        )
+      }
+    })().catch((error) => {
+      ensureManagedPlansPromise = null
+      throw error
+    })
+  }
+  await ensureManagedPlansPromise
 }
 
 async function requireAdminUserEmail(req: Parameters<typeof requireAuthenticatedUser>[0]): Promise<string> {
@@ -556,7 +642,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/plans/list",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManualPricingSchema()
+      await ensureManagedPlans()
       try {
         await requireAdminUserEmail(req)
       } catch {
@@ -577,6 +663,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
         select id, name, description, monthly_price, minutes_per_month, is_active, display_order
         from public.plans
         order by display_order asc, created_at asc
+        limit 3
         `,
         [],
       )
@@ -599,7 +686,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/plans/upsert",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManualPricingSchema()
+      await ensureManagedPlans()
       try {
         await requireAdminUserEmail(req)
       } catch {
@@ -612,8 +699,6 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
       const descriptionRaw = typeof req.body?.description === "string" ? req.body.description.trim() : ""
       const monthlyPrice = toNumberOrNull(req.body?.monthlyPrice)
       const minutesPerMonthRaw = Number(req.body?.minutesPerMonth)
-      const displayOrderRaw = Number(req.body?.displayOrder)
-      const isActive = Boolean(req.body?.isActive)
 
       if (!name) {
         sendError(res, 400, "Missing name")
@@ -631,6 +716,20 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
       const description = descriptionRaw || null
 
       if (planIdRaw) {
+        const managedPlanIds = await queryMany<{ id: string }>(
+          `
+          select id
+          from public.plans
+          order by display_order asc, created_at asc
+          limit 3
+          `,
+          [],
+        )
+        if (!managedPlanIds.some((row) => row.id === planIdRaw)) {
+          sendError(res, 400, "Only the 3 managed plans can be updated")
+          return
+        }
+
         await execute(
           `
           update public.plans
@@ -638,51 +737,21 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
               description = $2,
               monthly_price = $3,
               minutes_per_month = $4,
-              is_active = $5,
-              display_order = $6,
+              is_active = true,
               updated_at = now()
-          where id = $7
+          where id = $5
           `,
           [
             name,
             description,
             formatPrice(monthlyPrice),
             minutesPerMonth,
-            isActive,
-            Number.isFinite(displayOrderRaw) ? Math.trunc(displayOrderRaw) : 0,
             planIdRaw,
           ],
         )
       } else {
-        const displayOrder = Number.isFinite(displayOrderRaw)
-          ? Math.trunc(displayOrderRaw)
-          : (
-              await queryMany<{ next_display_order: number }>(
-                `
-                select coalesce(max(display_order), -1) + 1 as next_display_order
-                from public.plans
-                `,
-                [],
-              )
-            )[0]?.next_display_order ?? 0
-
-        await execute(
-          `
-          insert into public.plans (
-            id,
-            name,
-            description,
-            monthly_price,
-            minutes_per_month,
-            is_active,
-            display_order,
-            created_at,
-            updated_at
-          )
-          values ($1, $2, $3, $4, $5, $6, $7, now(), now())
-          `,
-          [crypto.randomUUID(), name, description, formatPrice(monthlyPrice), minutesPerMonth, isActive, displayOrder],
-        )
+        sendError(res, 400, "Creating additional plans is disabled. Exactly 3 managed plans are supported.")
+        return
       }
 
       res.status(200).json({ ok: true })
@@ -693,36 +762,14 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/plans/reorder",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManualPricingSchema()
+      await ensureManagedPlans()
       try {
         await requireAdminUserEmail(req)
       } catch {
         sendError(res, 403, "Forbidden")
         return
       }
-
-      const planIdsRaw: unknown[] = Array.isArray(req.body?.planIds) ? req.body.planIds : []
-      const planIds = planIdsRaw.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
-      if (!planIds.length) {
-        sendError(res, 400, "Missing planIds")
-        return
-      }
-
-      await execute(
-        `
-        with ordered_ids as (
-          select unnest($1::uuid[]) as id, generate_subscripts($1::uuid[], 1) - 1 as display_order
-        )
-        update public.plans p
-        set display_order = ordered_ids.display_order,
-            updated_at = now()
-        from ordered_ids
-        where p.id = ordered_ids.id
-        `,
-        [planIds],
-      )
-
-      res.status(200).json({ ok: true })
+      sendError(res, 400, "Plan reorder is disabled. Use the 3 managed plans.")
     }),
   )
 
@@ -730,32 +777,14 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/plans/set-active",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManualPricingSchema()
+      await ensureManagedPlans()
       try {
         await requireAdminUserEmail(req)
       } catch {
         sendError(res, 403, "Forbidden")
         return
       }
-
-      const planId = typeof req.body?.planId === "string" ? req.body.planId.trim() : ""
-      const isActive = Boolean(req.body?.isActive)
-      if (!planId) {
-        sendError(res, 400, "Missing planId")
-        return
-      }
-
-      await execute(
-        `
-        update public.plans
-        set is_active = $1,
-            updated_at = now()
-        where id = $2
-        `,
-        [isActive, planId],
-      )
-
-      res.status(200).json({ ok: true })
+      sendError(res, 400, "Plan activation is disabled. The 3 managed plans are always active.")
     }),
   )
 
@@ -763,7 +792,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/users/list",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManualPricingSchema()
+      await ensureManagedPlans()
       try {
         await requireAdminUserEmail(req)
       } catch {
@@ -883,7 +912,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/users/update-pricing-controls",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManualPricingSchema()
+      await ensureManagedPlans()
       const adminEmail = await requireAdminUserEmail(req).catch(() => null)
       if (!adminEmail) {
         sendError(res, 403, "Forbidden")
@@ -938,14 +967,16 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
         return
       }
 
-      const planId = planIdRaw || null
+      // Custom pricing and predefined plan selection are mutually exclusive.
+      const planId = customMonthlyPrice != null ? null : (planIdRaw || null)
       if (planId) {
         const foundPlan = await queryMany<{ id: string }>(
           `
           select id
           from public.plans
           where id = $1
-          limit 1
+          order by display_order asc, created_at asc
+          limit 3
           `,
           [planId],
         )
@@ -1003,7 +1034,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/pricing/plans/public",
     params.rateLimitAccount,
     asyncHandler(async (_req, res) => {
-      await ensureManualPricingSchema()
+      await ensureManagedPlans()
       const rows = await queryMany<{
         id: string
         name: string
@@ -1015,8 +1046,8 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
         `
         select id, name, description, monthly_price, minutes_per_month, display_order
         from public.plans
-        where is_active = true
         order by display_order asc, created_at asc
+        limit 3
         `,
         [],
       )
@@ -1038,7 +1069,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/pricing/me-visibility",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManualPricingSchema()
+      await ensureManagedPlans()
       const hasAuthorizationHeader = String(req.headers.authorization || "").trim().length > 0
       if (!hasAuthorizationHeader) {
         res.status(200).json({

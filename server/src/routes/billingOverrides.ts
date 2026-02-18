@@ -1,34 +1,13 @@
 import type { BillingStatus } from "../billing/store"
-import { applyFixedTranscriptionToBillingStatus, getFixedTranscriptionTotalSeconds, isFixedTranscriptionEmail } from "../billing/fixedTranscription"
-import { applyTestTranscriptionToBillingStatus, getTestTranscriptionTotalSeconds, isTestTranscriptionEmail } from "../billing/testTranscription"
-import { applyUnlimitedTranscriptionToBillingStatus, isUnlimitedTranscriptionEmail, unlimitedTranscriptionRemainingSeconds } from "../billing/unlimitedTranscription"
 
-// Applies per-email billing overrides for test, fixed, or unlimited plans.
+// Billing is controlled from admin pricing controls; env-based email overrides are disabled.
 export function applyEmailBillingOverrides(status: BillingStatus, email: string | null): BillingStatus {
-  if (isUnlimitedTranscriptionEmail(email)) {
-    return applyUnlimitedTranscriptionToBillingStatus(status)
-  }
-  if (isFixedTranscriptionEmail(email)) {
-    return applyFixedTranscriptionToBillingStatus(status)
-  }
-  if (isTestTranscriptionEmail(email)) {
-    return applyTestTranscriptionToBillingStatus(status)
-  }
+  void email
   return status
 }
 
-// Resolves non-expiring total-second override for allowlisted emails.
+// Admin-granted seconds are stored in DB; no env-based override is applied.
 export function getNonExpiringTotalSecondsOverrideForEmail(email: string | null): number | undefined {
-  if (isUnlimitedTranscriptionEmail(email)) {
-    return unlimitedTranscriptionRemainingSeconds
-  }
-  if (isFixedTranscriptionEmail(email)) {
-    const totalSeconds = getFixedTranscriptionTotalSeconds()
-    return totalSeconds > 0 ? totalSeconds : undefined
-  }
-  if (isTestTranscriptionEmail(email)) {
-    const totalSeconds = getTestTranscriptionTotalSeconds()
-    return totalSeconds > 0 ? totalSeconds : undefined
-  }
+  void email
   return undefined
 }

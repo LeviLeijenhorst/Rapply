@@ -63,6 +63,10 @@ function formatDateTime(value: string): string {
   return parsed.toLocaleString('nl-NL')
 }
 
+function minutesToReports(minutes: number): number {
+  return Math.max(0, Math.floor(minutes / 60))
+}
+
 function buildUserLabel(user: AdminUser): string {
   const name = (user.displayName || '').trim()
   if (name) return `${name} (${user.email || user.userId})`
@@ -82,10 +86,6 @@ export function AdminRevenueScreen() {
   const [allowlistItems, setAllowlistItems] = useState<AllowlistItem[]>([])
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [selectedUserForm, setSelectedUserForm] = useState<UserFormState | null>(null)
-  const [newPlanName, setNewPlanName] = useState('')
-  const [newPlanDescription, setNewPlanDescription] = useState('')
-  const [newPlanPrice, setNewPlanPrice] = useState('')
-  const [newPlanMinutes, setNewPlanMinutes] = useState('')
   const [isBusy, setIsBusy] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isAllowlistLoading, setIsAllowlistLoading] = useState(false)
@@ -223,32 +223,10 @@ export function AdminRevenueScreen() {
   }, [selectedUser])
 
   const savePlan = useCallback(async (plan: Plan) => {
-    try {
-      setIsBusy(true)
-      setStatusMessage(null)
-      await callSecureApi<{ ok: true }>('/admin/plans/upsert', {
-        id: plan.id,
-        name: plan.name,
-        description: plan.description || '',
-        monthlyPrice: plan.monthlyPrice,
-        minutesPerMonth: plan.minutesPerMonth,
-        isActive: plan.isActive,
-        displayOrder: plan.displayOrder,
-      })
-      setStatusMessage(`Plan opgeslagen: ${plan.name}`)
-      await loadData()
-    } catch (error) {
-      setStatusMessage(parseError(error))
-    } finally {
-      setIsBusy(false)
-    }
-  }, [loadData])
-
-  const createPlan = useCallback(async () => {
-    const name = newPlanName.trim()
-    const price = Number(newPlanPrice)
-    const minutes = Number(newPlanMinutes)
-    if (!name || !Number.isFinite(price) || price < 0 || !Number.isFinite(minutes) || minutes < 0) {
+    const monthlyPrice = Number(plan.monthlyPrice)
+    const minutesPerMonth = Number(plan.minutesPerMonth)
+    const name = plan.name.trim()
+    if (!name || !Number.isFinite(monthlyPrice) || monthlyPrice < 0 || !Number.isFinite(minutesPerMonth) || minutesPerMonth < 0) {
       setStatusMessage('Vul een geldige plannaam, prijs en minuten in.')
       return
     }
@@ -257,49 +235,22 @@ export function AdminRevenueScreen() {
       setIsBusy(true)
       setStatusMessage(null)
       await callSecureApi<{ ok: true }>('/admin/plans/upsert', {
+        id: plan.id,
         name,
-        description: newPlanDescription.trim(),
-        monthlyPrice: price,
-        minutesPerMonth: Math.trunc(minutes),
-        isActive: true,
+        description: plan.description || '',
+        monthlyPrice,
+        minutesPerMonth: Math.trunc(minutesPerMonth),
+        isActive: plan.isActive,
+        displayOrder: plan.displayOrder,
       })
-      setNewPlanName('')
-      setNewPlanDescription('')
-      setNewPlanPrice('')
-      setNewPlanMinutes('')
-      setStatusMessage('Nieuw plan toegevoegd.')
+      setStatusMessage(`Plan opgeslagen: ${name}`)
       await loadData()
     } catch (error) {
       setStatusMessage(parseError(error))
     } finally {
       setIsBusy(false)
     }
-  }, [loadData, newPlanDescription, newPlanMinutes, newPlanName, newPlanPrice])
-
-  const movePlan = useCallback(async (planId: string, direction: -1 | 1) => {
-    const currentIndex = plans.findIndex((plan) => plan.id === planId)
-    const nextIndex = currentIndex + direction
-    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= plans.length) return
-
-    const nextOrder = [...plans]
-    const temp = nextOrder[currentIndex]
-    nextOrder[currentIndex] = nextOrder[nextIndex]
-    nextOrder[nextIndex] = temp
-
-    try {
-      setIsBusy(true)
-      setStatusMessage(null)
-      await callSecureApi<{ ok: true }>('/admin/plans/reorder', {
-        planIds: nextOrder.map((plan) => plan.id),
-      })
-      setStatusMessage('Planvolgorde bijgewerkt.')
-      await loadData()
-    } catch (error) {
-      setStatusMessage(parseError(error))
-    } finally {
-      setIsBusy(false)
-    }
-  }, [loadData, plans])
+  }, [loadData])
 
   const saveSelectedUser = useCallback(async () => {
     if (!selectedUser || !selectedUserForm) return
@@ -418,34 +369,18 @@ export function AdminRevenueScreen() {
 
         <View style={styles.card}>
           <Text isSemibold style={styles.cardTitle}>Plannen</Text>
-          <View style={styles.newPlanRow}>
-            <TextInput value={newPlanName} onChangeText={setNewPlanName} placeholder="Plannaam" placeholderTextColor={colors.textSecondary} style={styles.input} editable={!isBusy} />
-            <TextInput value={newPlanPrice} onChangeText={setNewPlanPrice} placeholder="Prijs p/m" placeholderTextColor={colors.textSecondary} keyboardType="numeric" style={styles.inputSmall} editable={!isBusy} />
-            <TextInput value={newPlanMinutes} onChangeText={setNewPlanMinutes} placeholder="Minuten" placeholderTextColor={colors.textSecondary} keyboardType="numeric" style={styles.inputSmall} editable={!isBusy} />
-            <Pressable onPress={() => void createPlan()} style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined]} disabled={isBusy}>
-              <Text isBold style={styles.primaryButtonText}>Plan toevoegen</Text>
-            </Pressable>
-          </View>
-          <TextInput value={newPlanDescription} onChangeText={setNewPlanDescription} placeholder="Omschrijving (optioneel)" placeholderTextColor={colors.textSecondary} style={styles.input} editable={!isBusy} />
+          <Text style={styles.cardSubtitle}>Er zijn altijd precies 3 beheerde plannen. Je kunt alleen deze drie aanpassen.</Text>
 
-          {plans.map((plan, index) => (
+          {plans.map((plan) => (
             <View key={plan.id} style={styles.planRow}>
               <View style={styles.planInputRow}>
                 <TextInput value={plan.name} onChangeText={(value) => updatePlanValue(plan.id, { name: value })} placeholder="Naam" placeholderTextColor={colors.textSecondary} style={styles.input} editable={!isBusy} />
                 <TextInput value={String(plan.monthlyPrice)} onChangeText={(value) => updatePlanValue(plan.id, { monthlyPrice: Number(value) || 0 })} placeholder="Prijs" placeholderTextColor={colors.textSecondary} keyboardType="numeric" style={styles.inputSmall} editable={!isBusy} />
                 <TextInput value={String(plan.minutesPerMonth)} onChangeText={(value) => updatePlanValue(plan.id, { minutesPerMonth: Number(value) || 0 })} placeholder="Minuten" placeholderTextColor={colors.textSecondary} keyboardType="numeric" style={styles.inputSmall} editable={!isBusy} />
               </View>
+              <Text style={styles.cardSubtitle}>Wordt getoond als ongeveer {minutesToReports(plan.minutesPerMonth)} gespreksverslagen.</Text>
               <TextInput value={plan.description || ''} onChangeText={(value) => updatePlanValue(plan.id, { description: value })} placeholder="Omschrijving" placeholderTextColor={colors.textSecondary} style={styles.input} editable={!isBusy} />
               <View style={styles.planActionsRow}>
-                <Pressable onPress={() => updatePlanValue(plan.id, { isActive: !plan.isActive })} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]} disabled={isBusy}>
-                  <Text isBold style={styles.secondaryButtonText}>{plan.isActive ? 'Actief' : 'Inactief'}</Text>
-                </Pressable>
-                <Pressable onPress={() => void movePlan(plan.id, -1)} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]} disabled={isBusy || index === 0}>
-                  <Text isBold style={styles.secondaryButtonText}>Omhoog</Text>
-                </Pressable>
-                <Pressable onPress={() => void movePlan(plan.id, 1)} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]} disabled={isBusy || index === plans.length - 1}>
-                  <Text isBold style={styles.secondaryButtonText}>Omlaag</Text>
-                </Pressable>
                 <Pressable onPress={() => void savePlan(plan)} style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined]} disabled={isBusy}>
                   <Text isBold style={styles.primaryButtonText}>Opslaan</Text>
                 </Pressable>
@@ -463,7 +398,7 @@ export function AdminRevenueScreen() {
               {users.map((user) => (
                 <Pressable key={user.userId} onPress={() => setSelectedUserId(user.userId)} style={({ hovered }) => [styles.userRow, selectedUserId === user.userId ? styles.userRowSelected : undefined, hovered ? styles.userRowHovered : undefined]}>
                   <Text isSemibold style={styles.userRowTitle}>{buildUserLabel(user)}</Text>
-                  <Text style={styles.userRowMeta}>{user.planName || 'Geen plan'} | {formatMoney(user.customMonthlyPrice)} | {user.availableMinutesPerMonth} min</Text>
+                  <Text style={styles.userRowMeta}>{user.planName || 'Custom plan'} | {formatMoney(user.customMonthlyPrice)} | {user.availableMinutesPerMonth} min</Text>
                 </Pressable>
               ))}
             </View>
@@ -499,7 +434,7 @@ export function AdminRevenueScreen() {
                   <Text style={styles.fieldLabel}>Plan</Text>
                   <View style={styles.planSelectorWrap}>
                     <Pressable onPress={() => setSelectedUserForm((prev) => (prev ? { ...prev, planId: null } : prev))} style={({ hovered }) => [styles.accountTypeButton, selectedUserForm.planId == null ? styles.accountTypeButtonSelected : undefined, hovered ? styles.secondaryButtonHovered : undefined]}>
-                      <Text isBold style={selectedUserForm.planId == null ? styles.accountTypeButtonTextSelected : styles.accountTypeButtonText}>Geen plan</Text>
+                      <Text isBold style={selectedUserForm.planId == null ? styles.accountTypeButtonTextSelected : styles.accountTypeButtonText}>Custom plan</Text>
                     </Pressable>
                     {plans.map((plan) => (
                       <Pressable key={plan.id} onPress={() => setSelectedUserForm((prev) => (prev ? { ...prev, planId: plan.id } : prev))} style={({ hovered }) => [styles.accountTypeButton, selectedUserForm.planId === plan.id ? styles.accountTypeButtonSelected : undefined, hovered ? styles.secondaryButtonHovered : undefined]}>
@@ -511,7 +446,24 @@ export function AdminRevenueScreen() {
                   <View style={styles.userInputRow}>
                     <View style={styles.fieldColumn}>
                       <Text style={styles.fieldLabel}>Custom prijs p/m (optioneel)</Text>
-                      <TextInput value={selectedUserForm.customMonthlyPrice} onChangeText={(value) => setSelectedUserForm((prev) => (prev ? { ...prev, customMonthlyPrice: value } : prev))} placeholder="bijv. 49.95" placeholderTextColor={colors.textSecondary} keyboardType="numeric" style={styles.input} />
+                      <TextInput
+                        value={selectedUserForm.customMonthlyPrice}
+                        onChangeText={(value) =>
+                          setSelectedUserForm((prev) => {
+                            if (!prev) return prev
+                            const trimmed = value.trim()
+                            return {
+                              ...prev,
+                              customMonthlyPrice: value,
+                              planId: trimmed.length > 0 ? null : prev.planId,
+                            }
+                          })
+                        }
+                        placeholder="bijv. 49.95"
+                        placeholderTextColor={colors.textSecondary}
+                        keyboardType="numeric"
+                        style={styles.input}
+                      />
                     </View>
                     <View style={styles.fieldColumn}>
                       <Text style={styles.fieldLabel}>Extra minuten</Text>
@@ -648,11 +600,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 17,
     color: colors.textSecondary,
-  },
-  newPlanRow: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
   },
   planRow: {
     borderWidth: 1,
