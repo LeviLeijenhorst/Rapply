@@ -1,6 +1,7 @@
 import type { Express } from "express"
 import { requireAuthenticatedUser } from "../../auth"
 import { derivePlanStateFromRevenueCatSubscriber, fetchRevenueCatSubscriber } from "../../billing/revenuecat"
+import { readManualPricingContextForUser } from "../../billing/manualPricing"
 import { ensureBillingUser, readBillingStatus } from "../../billing/store"
 import { asyncHandler } from "../../http"
 import { randomBase64Url } from "../../transcription/random"
@@ -22,11 +23,14 @@ export function registerTranscriptionPreflightRoutes(app: Express, params: Regis
 
       const subscriber = await fetchRevenueCatSubscriber(user.userId)
       const planState = derivePlanStateFromRevenueCatSubscriber(subscriber)
+      const manualPricing = await readManualPricingContextForUser(user.userId)
+      const useManualCycle = manualPricing.includedSecondsPerCycle > 0 || manualPricing.planId != null || manualPricing.customMonthlyPrice != null
       const statusRaw = await readBillingStatus({
         userId: user.userId,
-        planKey: planState.planKey,
-        cycleStartMs: planState.cycleStartMs,
-        cycleEndMs: planState.cycleEndMs,
+        planKey: useManualCycle ? null : planState.planKey,
+        cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : planState.cycleStartMs,
+        cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : planState.cycleEndMs,
+        includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
       })
       const status = applyEmailBillingOverrides(statusRaw, user.email)
       const transcriptionProvider = resolveTranscriptionProvider()

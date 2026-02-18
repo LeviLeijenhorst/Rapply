@@ -163,7 +163,7 @@ export function AppShell({ onLogout }: Props) {
 
   const [isMyAccountModalOpen, setIsMyAccountModalOpen] = useState(false)
   const [isMySubscriptionModalOpen, setIsMySubscriptionModalOpen] = useState(false)
-  const [hasSubscriptionPlan, setHasSubscriptionPlan] = useState(false)
+  const [canOpenSubscription, setCanOpenSubscription] = useState(false)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
   const [isCoacheeModalOpen, setIsCoacheeModalOpen] = useState(false)
@@ -175,6 +175,17 @@ export function AppShell({ onLogout }: Props) {
   const [toastMessage, setToastMessage] = useState('')
   const [isToastVisible, setIsToastVisible] = useState(false)
   const isCurrentUserAdmin = currentUserAccountType === 'admin'
+
+  const refreshSubscriptionAccess = useCallback(async () => {
+    try {
+      const response = await callSecureApi<{ planId?: string | null; canSeePricingPage?: boolean }>('/pricing/me-visibility', {})
+      const hasPlan = Boolean(response?.planId)
+      const canSeePricingPage = Boolean(response?.canSeePricingPage)
+      setCanOpenSubscription(hasPlan && canSeePricingPage)
+    } catch {
+      setCanOpenSubscription(false)
+    }
+  }, [])
 
   const showToast = useCallback((message: string) => {
     setToastMessage(message)
@@ -231,20 +242,13 @@ export function AppShell({ onLogout }: Props) {
   }, [])
 
   useEffect(() => {
-    let isCancelled = false
-    void callSecureApi<{ planId?: string | null }>('/pricing/me-visibility', {})
-      .then((response) => {
-        if (isCancelled) return
-        setHasSubscriptionPlan(Boolean(response?.planId))
-      })
-      .catch(() => {
-        if (isCancelled) return
-        setHasSubscriptionPlan(false)
-      })
-    return () => {
-      isCancelled = true
-    }
-  }, [])
+    void refreshSubscriptionAccess()
+  }, [refreshSubscriptionAccess])
+
+  useEffect(() => {
+    if (!isSettingsMenuOpen) return
+    void refreshSubscriptionAccess()
+  }, [isSettingsMenuOpen, refreshSubscriptionAccess])
 
   const currentUserNavbarName = useMemo(() => {
     const fullName = [currentUserGivenName, currentUserSurname].filter(Boolean).join(' ').trim()
@@ -823,9 +827,9 @@ export function AppShell({ onLogout }: Props) {
         totalMinutes={totalMinutes}
         isUsageLoading={isUsageLoading}
         accountName={currentUserNavbarName}
-        isUsageClickable={hasSubscriptionPlan}
+        isUsageClickable={canOpenSubscription}
         onPressUsage={() => {
-          if (!hasSubscriptionPlan) return
+          if (!canOpenSubscription) return
           setIsMySubscriptionModalOpen(true)
         }}
       />
@@ -904,7 +908,7 @@ export function AppShell({ onLogout }: Props) {
               setIsMyAccountModalOpen(true)
             }}
             onOpenSubscription={() => {
-              if (!hasSubscriptionPlan) return
+              if (!canOpenSubscription) return
               setIsSettingsMenuOpen(false)
               setSettingsMenuAnchorPoint(null)
               setIsMySubscriptionModalOpen(true)
@@ -933,7 +937,7 @@ export function AppShell({ onLogout }: Props) {
               }
               void Linking.openURL(PRIVACY_BELEID_URL)
             }}
-            showSubscriptionItem={hasSubscriptionPlan}
+            showSubscriptionItem={canOpenSubscription}
           />
 
           <NewSessionModal

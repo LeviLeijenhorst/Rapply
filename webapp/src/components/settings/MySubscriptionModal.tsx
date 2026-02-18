@@ -28,6 +28,7 @@ type PricingPlansResponse = {
 
 type PricingVisibilityResponse = {
   canSeePricingPage: boolean
+  planId: string | null
 }
 
 function formatEuroPrice(value: number): string {
@@ -45,6 +46,7 @@ function getReportsFromMinutes(minutesPerMonth: number): number {
 export function MySubscriptionModal({ visible, onClose }: Props) {
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([])
   const [canSeePricingPage, setCanSeePricingPage] = useState(true)
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [isPricingLoading, setIsPricingLoading] = useState(false)
 
   useEffect(() => {
@@ -62,10 +64,12 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
         const nextPlans = Array.isArray(plansResponse.items) ? plansResponse.items : []
         setPricingPlans(nextPlans)
         setCanSeePricingPage(Boolean(visibilityResponse.canSeePricingPage))
+        setSelectedPlanId(typeof visibilityResponse.planId === 'string' ? visibilityResponse.planId : null)
       } catch {
         if (isCancelled) return
         setPricingPlans([])
         setCanSeePricingPage(true)
+        setSelectedPlanId(null)
       } finally {
         if (isCancelled) return
         setIsPricingLoading(false)
@@ -115,7 +119,7 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
           <>
             <View style={styles.plansRow}>
               {plans.map((plan) => (
-                <View key={plan.id} style={styles.planCard}>
+                <View key={plan.id} style={[styles.planCard, selectedPlanId === plan.id ? styles.planCardSelected : undefined]}>
                   <Text isSemibold style={styles.planTitle}>{plan.name}</Text>
                   <View style={styles.priceRow}>
                     <Text isBold style={styles.priceText}>{formatEuroPrice(plan.monthlyPrice)}</Text>
@@ -219,6 +223,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: 24,
     gap: 16,
+  },
+  planCardSelected: {
+    borderColor: colors.selected,
+    borderWidth: 2,
   },
   planTitle: {
     fontSize: 16,

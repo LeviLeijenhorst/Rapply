@@ -63,12 +63,20 @@ export async function ensureBillingUser(userId: string): Promise<void> {
 }
 
 // Intent: readBillingStatus
-export async function readBillingStatus(params: { userId: string; planKey: PlanKey | null; cycleStartMs: number | null; cycleEndMs: number | null }): Promise<BillingStatus> {
-  const { userId, planKey, cycleStartMs, cycleEndMs } = params
+export async function readBillingStatus(params: {
+  userId: string
+  planKey: PlanKey | null
+  cycleStartMs: number | null
+  cycleEndMs: number | null
+  includedSecondsOverride?: number | null
+}): Promise<BillingStatus> {
+  const { userId, planKey, cycleStartMs, cycleEndMs, includedSecondsOverride } = params
 
   await ensureBillingUsersCompatibility()
 
-  const includedSeconds = getIncludedSecondsForPlanKey(planKey)
+  const includedSeconds = Number.isFinite(includedSecondsOverride) && Number(includedSecondsOverride) >= 0
+    ? Math.floor(Number(includedSecondsOverride))
+    : getIncludedSecondsForPlanKey(planKey)
   const cycleKey = buildCycleKey(cycleStartMs, cycleEndMs)
 
   const row = await queryOne<{

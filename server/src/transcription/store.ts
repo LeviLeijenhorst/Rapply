@@ -78,9 +78,10 @@ export async function chargeSecondsIdempotent(params: {
   planKey: PlanKey | null
   cycleStartMs: number | null
   cycleEndMs: number | null
+  includedSecondsOverride?: number | null
   nonExpiringTotalSecondsOverride?: number
 }): Promise<ChargeResult> {
-  const { userId, operationId, secondsToCharge, planKey, cycleStartMs, cycleEndMs, nonExpiringTotalSecondsOverride } = params
+  const { userId, operationId, secondsToCharge, planKey, cycleStartMs, cycleEndMs, includedSecondsOverride, nonExpiringTotalSecondsOverride } = params
 
   const seconds = clampNonNegative(secondsToCharge)
   if (seconds <= 0) {
@@ -101,7 +102,9 @@ export async function chargeSecondsIdempotent(params: {
     }
   }
 
-  const includedSeconds = getIncludedSecondsForPlanKey(planKey)
+  const includedSeconds = Number.isFinite(includedSecondsOverride) && Number(includedSecondsOverride) >= 0
+    ? Math.floor(Number(includedSecondsOverride))
+    : getIncludedSecondsForPlanKey(planKey)
   const cycleKey = buildCycleKey(cycleStartMs, cycleEndMs)
   await ensureBillingUsersCompatibility()
 

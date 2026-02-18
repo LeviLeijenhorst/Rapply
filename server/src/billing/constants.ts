@@ -1,6 +1,6 @@
 export type PlanKey = "basis" | "professioneel" | "fulltime" | "praktijk"
 
-export const freeSeconds = 5400
+export const freeSeconds = 0
 
 export const extraTranscriptionProductId = "extra_transcription_1h"
 export const extraTranscriptionSecondsPerPurchase = 3600

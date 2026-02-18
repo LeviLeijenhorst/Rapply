@@ -1,6 +1,7 @@
 import type { Express } from "express"
 import { requireAuthenticatedUser } from "../../auth"
 import { derivePlanStateFromRevenueCatSubscriber, fetchRevenueCatSubscriber } from "../../billing/revenuecat"
+import { readManualPricingContextForUser } from "../../billing/manualPricing"
 import { readBillingStatus } from "../../billing/store"
 import { asyncHandler, sendError } from "../../http"
 import { generateSummary } from "../../summary/summary"
@@ -64,6 +65,8 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
 
         const subscriber = await fetchRevenueCatSubscriber(user.userId)
         const planState = derivePlanStateFromRevenueCatSubscriber(subscriber)
+        const manualPricing = await readManualPricingContextForUser(user.userId)
+        const useManualCycle = manualPricing.includedSecondsPerCycle > 0 || manualPricing.planId != null || manualPricing.customMonthlyPrice != null
         const nonExpiringTotalSecondsOverride = getNonExpiringTotalSecondsOverrideForEmail(user.email)
 
         let charge: { secondsCharged: number; remainingSecondsAfter: number }
@@ -72,9 +75,10 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
             userId: user.userId,
             operationId,
             secondsToCharge,
-            planKey: planState.planKey,
-            cycleStartMs: planState.cycleStartMs,
-            cycleEndMs: planState.cycleEndMs,
+            planKey: useManualCycle ? null : planState.planKey,
+            cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : planState.cycleStartMs,
+            cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : planState.cycleEndMs,
+            includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
             nonExpiringTotalSecondsOverride,
           })
         } catch (error: any) {
@@ -84,9 +88,10 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
           }
           const statusRaw = await readBillingStatus({
             userId: user.userId,
-            planKey: planState.planKey,
-            cycleStartMs: planState.cycleStartMs,
-            cycleEndMs: planState.cycleEndMs,
+            planKey: useManualCycle ? null : planState.planKey,
+            cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : planState.cycleStartMs,
+            cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : planState.cycleEndMs,
+            includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
           })
           const status = applyEmailBillingOverrides(statusRaw, user.email)
           sendError(res, 402, `Not enough seconds remaining. Needed ${secondsToCharge}s, remaining ${status.remainingSeconds}s.`)
@@ -110,7 +115,7 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
           summary,
           secondsCharged: charge.secondsCharged,
           remainingSecondsAfter: charge.remainingSecondsAfter,
-          planKey: planState.planKey,
+          planKey: useManualCycle ? null : planState.planKey,
         })
       } catch (error: any) {
         const errorMessage = String(error?.message || error)
