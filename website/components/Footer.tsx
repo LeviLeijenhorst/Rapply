@@ -10,7 +10,7 @@ const navigationLinks = [
   { label: "Veiligheid", destination: "/veiligheid" },
   { label: "Over Ons", destination: "/over-ons" },
   { label: "Contact", destination: "/contact" },
-  { label: "Wachtlijst", destination: "/wachtlijst" },
+  { label: "Probeer het uit", destination: "/wachtlijst" },
 ];
 
 const connectLinks = [

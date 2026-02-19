@@ -18,49 +18,49 @@ type CoachType = {
 
 const coachTypes: CoachType[] = [
   {
-    title: "Loopbaan Coach",
+    title: "Loopbaancoach",
     description:
       "Een loopbaancoach begeleidt mensen bij vragen over werk, richting en persoonlijke ontwikkeling, vaak over meerdere gesprekken en trajecten heen.",
     icon: briefcaseIcon,
   },
   {
-    title: "Life Coach",
+    title: "Lifecoach",
     description:
       "Een lifecoach helpt mensen bij persoonlijke vraagstukken en begeleidt hen in het creëren van meer balans, richting en bewustzijn in het dagelijks leven.",
     icon: lovelyIcon,
   },
   {
-    title: "Business Coach",
+    title: "Businesscoach",
     description:
       "Een business coach begeleidt professionals en ondernemers bij professionele ontwikkeling, besluitvorming en het realiseren van zakelijke doelen.",
     icon: presentationChartIcon,
   },
   {
-    title: "Budget Coach",
+    title: "Budgetcoach",
     description:
       "Een budgetcoach helpt mensen grip te krijgen op hun financiën door inzicht te creëren in inkomsten, uitgaven en financiële keuzes.",
     icon: emptyWalletIcon,
   },
   {
-    title: "Leadership Coach",
+    title: "Leadershipcoach",
     description:
       "Een leadership coach begeleidt professionals in het ontwikkelen van effectief leiderschap, zelfinzicht en impact binnen hun rol en organisatie.",
     icon: peopleIcon,
   },
   {
-    title: "Studenten Coach",
+    title: "Studentencoach",
     description:
       "Een studentencoach ondersteunt studenten bij studie, planning en ontwikkeling, zodat zij hun doelen beter kunnen bereiken en uitdagingen effectief aanpakken.",
     icon: teacherIcon,
   },
   {
-    title: "Mental Health Coach",
+    title: "Mentalhealthcoach",
     description:
       "Een mental health coach begeleidt mensen bij hun mentale welzijn, helpt bij het omgaan met stress en emoties, en ondersteunt hen in het versterken van veerkracht en balans.",
     icon: batteryEmptyIcon,
   },
   {
-    title: "Jongeren Coach",
+    title: "Jongerencoach",
     description:
       "Een jongerencoach ondersteunt jongeren bij persoonlijke ontwikkeling, keuzes en uitdagingen, zodat zij sterker, bewuster en veerkrachtiger in het leven staan.",
     icon: gameboyIcon,

@@ -103,7 +103,7 @@ export default function NavigationBar() {
               className="font-normal"
             />
             <Button
-              label="Wachtlijst"
+              label="Probeer het uit"
               destination="/wachtlijst"
               variant="primary"
               className="font-normal"
@@ -238,7 +238,7 @@ export default function NavigationBar() {
             </div>
             <div onClick={() => setIsMobileMenuOpen(false)}>
               <Button
-                label="Wachtlijst"
+                label="Probeer het uit"
                 destination="/wachtlijst"
                 variant="primary"
                 className="font-normal"

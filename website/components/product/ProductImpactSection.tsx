@@ -287,7 +287,7 @@ export default function ProductImpactSection() {
         </div>
         <div className="mt-10">
           <Button
-            label="Wachtlijst"
+            label="Probeer het uit"
             destination="/wachtlijst"
             variant="primary"
             showArrow

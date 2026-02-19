@@ -1,6 +1,8 @@
 import Button from "@/components/Button";
 import SectionContainer from "@/components/home/SectionContainer";
 
+const overOnsVideoUrl = "https://jnlsolutionswebsite.blob.core.windows.net/videos/over_ons-video.mp4";
+
 export default function OverOnsHeroSection() {
   return (
     <SectionContainer className="bg-white" contentClassName="lg:pt-[136px]">
@@ -29,7 +31,14 @@ export default function OverOnsHeroSection() {
         <div className="flex w-full justify-center lg:-translate-y-[60px] lg:self-center lg:justify-end">
           <div className="w-full max-w-[340px] overflow-hidden rounded-2xl md:max-w-[470px] xl:max-w-[600px]">
             <div className="aspect-[22/15] w-full">
-              <div className="h-full w-full bg-[#BD0265]" />
+              <video
+                src={overOnsVideoUrl}
+                className="h-full w-full object-cover"
+                playsInline
+                controls
+                preload="metadata"
+                loop
+              />
             </div>
           </div>
         </div>

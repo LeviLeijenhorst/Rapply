@@ -24,7 +24,7 @@ export default function HeroSection() {
           {/* Hero actions */}
           <div className="flex w-full flex-wrap items-center justify-center gap-4">
             <Button
-              label="Wachtlijst"
+              label="Probeer het uit"
               destination="/wachtlijst"
               variant="primary"
               showArrow

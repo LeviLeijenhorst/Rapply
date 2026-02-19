@@ -21,7 +21,7 @@ export default function CoachesCtaSection() {
           </div>
           <div className="mt-6">
             <Button
-              label="Wachtlijst"
+              label="Probeer het uit"
               destination="/wachtlijst"
               showArrow
               className="font-normal"

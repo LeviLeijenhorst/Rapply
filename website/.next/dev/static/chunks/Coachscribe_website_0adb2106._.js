@@ -335,7 +335,7 @@ const veiligheidDataFlowItems = [
         description: "Transcriptie en AI-functionaliteiten draaien binnen de Europese Unie."
     },
     {
-        title: "Dubbel-versleutelde opslag",
+        title: "Dubbele versleuteling tijdens opslag",
         description: "Gegevens worden versleuteld opgeslagen. Naast de standaardversleuteling in de cloud passen wij aanvullende versleuteling toe."
     },
     {

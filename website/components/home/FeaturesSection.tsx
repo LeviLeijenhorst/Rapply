@@ -42,7 +42,11 @@ const featureItems = [
 
 export default function FeaturesSection() {
   return (
-    <SectionContainer className="bg-white" contentClassName="md:pt-[160px] md:pb-20">
+    <SectionContainer
+      className="bg-white"
+      contentClassName="md:pt-[160px] md:pb-20"
+      disableReveal
+    >
       {/* Features content */}
       <div className="flex w-full flex-col gap-10">
         {/* Features list */}
@@ -75,7 +79,7 @@ export default function FeaturesSection() {
                   {/* Feature action */}
                   <div className="flex w-full">
                     <Button
-                      label="Wachtlijst"
+                      label="Probeer het uit"
                       destination="/wachtlijst"
                       variant="primary"
                       showArrow
@@ -105,7 +109,7 @@ export default function FeaturesSection() {
                       <Image
                         src={productFgOneImage}
                         alt=""
-                        className="translate-y-0"
+                        className="translate-y-0 layered-float-a"
                       />
                     </div>
                   ) : null}
@@ -120,7 +124,7 @@ export default function FeaturesSection() {
                       <Image
                         src={productFgTwoImage}
                         alt=""
-                        className="origin-top-right scale-[2.2] translate-y-0"
+                        className="origin-top-right scale-[2.2] translate-y-0 layered-float-b"
                       />
                     </div>
                   ) : null}
@@ -129,11 +133,7 @@ export default function FeaturesSection() {
                       <Image
                         src={productFgThreeImage}
                         alt=""
-                        style={{
-                          opacity: 1,
-                          transform: "translateY(8%) scale(1.17)",
-                          transformOrigin: "center center",
-                        }}
+                        className="layered-float-c translate-y-[8%] scale-[1.17]"
                       />
                     </div>
                   ) : null}
@@ -142,7 +142,7 @@ export default function FeaturesSection() {
                       <Image
                         src={productFgFourImage}
                         alt=""
-                        className="scale-[0.7] translate-x-[16%] translate-y-0"
+                        className="layered-float-d translate-x-[16%] translate-y-0 scale-[0.7]"
                       />
                     </div>
                   ) : null}

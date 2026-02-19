@@ -137,7 +137,7 @@ const navigationLinks = [
         destination: "/contact"
     },
     {
-        label: "Wachtlijst",
+        label: "Probeer het uit",
         destination: "/wachtlijst"
     }
 ];

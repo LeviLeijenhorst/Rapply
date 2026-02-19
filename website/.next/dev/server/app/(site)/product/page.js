@@ -1,6 +1,6 @@
 var R=require("../../../chunks/ssr/[turbopack]_runtime.js")("server/app/(site)/product/page.js")
 R.c("server/chunks/ssr/3215b_next_dist_29c889ad._.js")
-R.c("server/chunks/ssr/[root-of-the-server]__6a1d9ea6._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__85f902bb._.js")
 R.c("server/chunks/ssr/3215b_468ca898._.js")
 R.c("server/chunks/ssr/[externals]__e8a2741f._.js")
 R.c("server/chunks/ssr/Coachscribe_website_app_46deb43a._.js")
