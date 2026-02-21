@@ -37,6 +37,10 @@ export function CoacheeUpsertModal({ visible, mode, initialName, onClose, onSave
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
   const title = mode === 'create' ? 'Coachee toevoegen' : 'Coachee bewerken'
   const primaryLabel = mode === 'create' ? 'Toevoegen' : 'Opslaan'
+  const handleTopRightClose = (event?: { stopPropagation?: () => void }) => {
+    event?.stopPropagation?.()
+    onClose()
+  }
 
   return (
     <AnimatedOverlayModal visible={visible} onClose={onClose} contentContainerStyle={styles.container}>
@@ -54,7 +58,7 @@ export function CoacheeUpsertModal({ visible, mode, initialName, onClose, onSave
         </View>
 
         <Pressable
-          onPress={onClose}
+          onPress={handleTopRightClose}
           style={({ hovered, pressed }) => [
             styles.iconButton,
             hovered ? styles.iconButtonHovered : undefined,

@@ -331,10 +331,25 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
     try {
       const remoteRaw = await readAppData()
       const remote = await decryptRemoteData(remoteRaw)
-      setData(remote)
+      setData((previous) => {
+        const remoteBySessionId = new Map(remote.writtenReports.map((report) => [report.sessionId, report]))
+        const mergedWrittenReports = [...remote.writtenReports]
+        for (const localReport of previous.writtenReports) {
+          const remoteReport = remoteBySessionId.get(localReport.sessionId)
+          if (!remoteReport || localReport.updatedAtUnixMs > remoteReport.updatedAtUnixMs) {
+            const withoutSameSession = mergedWrittenReports.filter((report) => report.sessionId !== localReport.sessionId)
+            mergedWrittenReports.splice(0, mergedWrittenReports.length, localReport, ...withoutSameSession)
+          }
+        }
+        return { ...remote, writtenReports: mergedWrittenReports }
+      })
     } catch (error) {
       console.error('[LocalAppDataProvider] Failed to refresh remote app data', error)
     }
+  }
+
+  function wait(ms: number) {
+    return new Promise<void>((resolve) => setTimeout(resolve, ms))
   }
 
   function runRemoteAction(action: Promise<void>) {
@@ -533,7 +548,22 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         if (!trimmedText) return
         const report: WrittenReport = { sessionId, text: trimmedText, updatedAtUnixMs }
         if (e2ee) {
-          runRemoteAction(encryptWrittenReport(report).then(setWrittenReportRemote))
+          void (async () => {
+            const encryptedReport = await encryptWrittenReport(report)
+            let lastError: unknown = null
+            for (let attempt = 1; attempt <= 4; attempt += 1) {
+              try {
+                await setWrittenReportRemote(encryptedReport)
+                await refreshFromServer()
+                return
+              } catch (error) {
+                lastError = error
+                if (attempt >= 4) break
+                await wait(220 * attempt)
+              }
+            }
+            console.error('[LocalAppDataProvider] Failed to persist written report remotely', lastError)
+          })()
         }
       },
 

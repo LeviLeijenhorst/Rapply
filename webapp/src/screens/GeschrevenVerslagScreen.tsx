@@ -11,12 +11,13 @@ import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { getCoacheeDisplayName, unassignedCoacheeLabel } from '../utils/coachee'
 
 type Props = {
+  initialCoacheeId?: string | null
   onBack: () => void
   onOpenSession: (sessionId: string) => void
   onOpenNewCoachee: () => void
 }
 
-export function GeschrevenVerslagScreen({ onBack, onOpenSession, onOpenNewCoachee }: Props) {
+export function GeschrevenVerslagScreen({ initialCoacheeId = null, onBack, onOpenSession, onOpenNewCoachee }: Props) {
   const { data, createSession, setWrittenReport } = useLocalAppData()
   const [isCoacheeOpen, setIsCoacheeOpen] = useState(false)
   const activeCoachees = useMemo(() => data.coachees.filter((coachee) => !coachee.isArchived), [data.coachees])
@@ -46,6 +47,13 @@ export function GeschrevenVerslagScreen({ onBack, onOpenSession, onOpenNewCoache
     return () => clearTimeout(id)
   }, [])
 
+  useEffect(() => {
+    if (!initialCoacheeId) return
+    const exists = activeCoachees.some((coachee) => coachee.id === initialCoacheeId)
+    if (!exists) return
+    setSelectedCoacheeId(initialCoacheeId)
+  }, [activeCoachees, initialCoacheeId])
+
   const handleContinue = () => {
     const trimmedTitle = reportTitle.trim()
     const sessionTitle = trimmedTitle.length > 0 ? trimmedTitle : defaultTitle
@@ -59,7 +67,7 @@ export function GeschrevenVerslagScreen({ onBack, onOpenSession, onOpenNewCoache
     })
     if (!createdSessionId) return
     setWrittenReport(createdSessionId, reportText)
-    onOpenSession(createdSessionId)
+    setTimeout(() => onOpenSession(createdSessionId), 0)
   }
 
   return (

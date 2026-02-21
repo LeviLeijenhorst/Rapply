@@ -8,7 +8,7 @@ import { CopiedIcon } from '../icons/CopiedIcon'
 import { SharePdfIcon } from '../icons/SharePdfIcon'
 import { parseTimeLabelToSeconds } from '../../utils/time'
 import { useLocalAppData } from '../../local/LocalAppDataProvider'
-import { buildReportFooterLine, formatReportDate } from '../../report/layout'
+import { formatReportDate } from '../../report/layout'
 import { parseRichTextMarkdown, RichTextInlineSegment } from '../../utils/richTextFormatting'
 
 type Props = {
@@ -76,7 +76,8 @@ function parseHexColorToRgb(value: string, fallback: { r: number; g: number; b: 
 
 function buildMentionTokens(text: string): MentionToken[] {
   const tokens: MentionToken[] = []
-  const mentionPattern = /\[\[timestamp=([0-9:.]+)\|([^\]]+)\]\]/g
+  const mentionPattern =
+    /\[\[\s*(?:timestamp|time|bron|source)\s*=\s*([0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?(?:[.,][0-9]+)?)\s*(?:\|\s*([^\]]+?)\s*)?\]\]|\[([0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?(?:[.,][0-9]+)?)\]/gi
   let lastIndex = 0
   let match = mentionPattern.exec(text)
   while (match) {
@@ -84,7 +85,9 @@ function buildMentionTokens(text: string): MentionToken[] {
     if (start > lastIndex) {
       tokens.push({ kind: 'text', text: text.slice(lastIndex, start) })
     }
-    tokens.push({ kind: 'mention', text: match[2], timeLabel: match[1] })
+    const timeLabel = String(match[1] || match[3] || '').trim()
+    const label = String(match[2] || '').trim()
+    tokens.push({ kind: 'mention', text: label || timeLabel, timeLabel })
     lastIndex = start + match[0].length
     match = mentionPattern.exec(text)
   }
@@ -155,6 +158,7 @@ function TranscriptMention({ label, seconds, onPress }: { label: string; seconds
     <Text
       isBold
       onPress={() => onPress(seconds)}
+      accessibilityRole="link"
       style={[styles.transcriptMention, isHovered ? styles.transcriptMentionHovered : undefined]}
       {...hoverProps}
     >
@@ -240,7 +244,7 @@ function addFooters(
   marginRight: number,
   footerFontSize: number,
   websiteLabel: string,
-  practiceName: string,
+  practiceNameLabel: string,
 ) {
   const pageCount = document.getNumberOfPages()
   for (let i = 1; i <= pageCount; i++) {
@@ -256,11 +260,12 @@ function addFooters(
     const pageLabel = String(i)
     const pageLabelWidth = document.getTextWidth(pageLabel)
     document.text(pageLabel, pageWidth - marginRight - pageLabelWidth, pageHeight - 28)
-    const websiteWidth = document.getTextWidth(websiteLabel)
-    document.text(websiteLabel, pageWidth - marginRight - websiteWidth, pageHeight - 12)
-    const combinedFooter = buildReportFooterLine(practiceName, websiteLabel)
-    if (combinedFooter) {
-      document.text(combinedFooter, marginLeft, pageHeight - 12)
+    if (websiteLabel) {
+      const websiteWidth = document.getTextWidth(websiteLabel)
+      document.text(websiteLabel, pageWidth - marginRight - websiteWidth, pageHeight - 12)
+    }
+    if (practiceNameLabel) {
+      document.text(practiceNameLabel, marginLeft, pageHeight - 12)
     }
   }
 }
@@ -310,6 +315,30 @@ async function convertSvgToPngDataUrl(svgText: string, width: number, height: nu
     }
     image.src = url
   })
+}
+
+async function getImageAspectRatio(dataUrl: string) {
+  if (typeof window === 'undefined') return null
+  return new Promise<number | null>((resolve) => {
+    const image = new Image()
+    image.onload = () => {
+      const width = Number(image.naturalWidth || image.width)
+      const height = Number(image.naturalHeight || image.height)
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        resolve(null)
+        return
+      }
+      resolve(width / height)
+    }
+    image.onerror = () => resolve(null)
+    image.src = dataUrl
+  })
+}
+
+function getImageFormatFromDataUrl(dataUrl: string): 'PNG' | 'JPEG' {
+  const header = String(dataUrl || '').slice(0, 48).toLowerCase()
+  if (header.startsWith('data:image/jpeg') || header.startsWith('data:image/jpg')) return 'JPEG'
+  return 'PNG'
 }
 
 export async function exportMessageToPdf(messageText: string, reportTitle: string | undefined, practiceSettings: PdfPracticeSettings) {
@@ -372,6 +401,8 @@ export async function exportMessageToPdf(messageText: string, reportTitle: strin
     `
   const generatedLogoDataUrl = await convertSvgToPngDataUrl(logoSvg, 159, 24, 4)
   const logoDataUrl = practiceSettings.logoDataUrl || generatedLogoDataUrl
+  const logoAspectRatio = logoDataUrl ? await getImageAspectRatio(logoDataUrl) : null
+  const logoFormat = getImageFormatFromDataUrl(String(logoDataUrl || ''))
 
   const ensureSpace = (needed: number) => {
     if (cursorY + needed <= footerLineY - 12) return
@@ -382,11 +413,24 @@ export async function exportMessageToPdf(messageText: string, reportTitle: strin
 
   const drawLogo = () => {
     if (!logoDataUrl) return
-    const logoWidth = 140
-    const logoHeight = (logoWidth * 24) / 159
-    const logoX = pageWidth - marginRight - logoWidth
-    const logoY = marginTop - logoHeight
-    doc.addImage(logoDataUrl, 'PNG', logoX, logoY, logoWidth, logoHeight)
+    const ratio = logoAspectRatio && logoAspectRatio > 0 ? logoAspectRatio : 159 / 24
+    const preferredLogoWidth = 140
+    const minLogoOuterGap = 14
+    const maxLogoHeight = Math.max(12, marginTop - minLogoOuterGap)
+
+    let logoWidth = preferredLogoWidth
+    let logoHeight = logoWidth / ratio
+
+    if (logoHeight > maxLogoHeight) {
+      const scale = maxLogoHeight / logoHeight
+      logoHeight = maxLogoHeight
+      logoWidth = logoWidth * scale
+    }
+
+    const logoY = Math.max(minLogoOuterGap, marginTop - logoHeight)
+    const rightGap = logoY
+    const logoX = Math.max(marginLeft, pageWidth - rightGap - logoWidth)
+    doc.addImage(logoDataUrl, logoFormat, logoX, logoY, logoWidth, logoHeight)
   }
 
   const drawPageHeader = () => {

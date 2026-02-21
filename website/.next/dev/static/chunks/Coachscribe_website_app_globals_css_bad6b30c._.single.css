@@ -88,7 +88,6 @@
     --radius-3xl: 1.5rem;
     --ease-out: cubic-bezier(0, 0, .2, 1);
     --animate-spin: spin 1s linear infinite;
-    --blur-xl: 24px;
     --default-transition-duration: .15s;
     --default-transition-timing-function: cubic-bezier(.4, 0, .2, 1);
     --default-font-family: var(--font-catamaran);
@@ -397,10 +396,6 @@
     top: 2px;
   }
 
-  .top-\[30px\] {
-    top: 30px;
-  }
-
   .top-\[36px\] {
     top: 36px;
   }
@@ -631,20 +626,12 @@
     height: 150px;
   }
 
-  .h-\[166px\] {
-    height: 166px;
-  }
-
   .h-\[180px\] {
     height: 180px;
   }
 
   .h-\[196px\] {
     height: 196px;
-  }
-
-  .h-\[220px\] {
-    height: 220px;
   }
 
   .h-auto {
@@ -1087,10 +1074,6 @@
   .border-t {
     border-top-style: var(--tw-border-style);
     border-top-width: 1px;
-  }
-
-  .border-\[\"\]\)\<\/script\>\<script\>self\.__next_f\.push\(\[1\,\"\#DDDDDD\] {
-    border-color: "])</script><script>self.  next f.push([1,"#ddd;
   }
 
   .border-\[\#BD0265\] {
@@ -2120,12 +2103,6 @@
   }
 
   @media (min-width: 48rem) {
-    .md\:h-\[110px\] {
-      height: 110px;
-    }
-  }
-
-  @media (min-width: 48rem) {
     .md\:h-\[140px\] {
       height: 140px;
     }
@@ -2917,8 +2894,66 @@ body {
   animation: .42s cubic-bezier(.22, 1, .36, 1) pageEnter;
 }
 
+@keyframes layeredFloatA {
+  0% {
+    transform: translate3d(0, 0, 0)rotate(0);
+  }
+
+  50% {
+    transform: translate3d(0, -5px, 0)rotate(-.4deg);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0)rotate(0);
+  }
+}
+
+@keyframes layeredFloatB {
+  0% {
+    transform: translate3d(0, 0, 0)rotate(0);
+  }
+
+  50% {
+    transform: translate3d(0, -4px, 0)rotate(.4deg);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0)rotate(0);
+  }
+}
+
+@keyframes layeredFloatC {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(0, -6px, 0);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.layered-float-a {
+  animation: 10s ease-in-out infinite layeredFloatA;
+}
+
+.layered-float-b {
+  animation: 12s ease-in-out infinite layeredFloatB;
+}
+
+.layered-float-c {
+  animation: 11s ease-in-out infinite layeredFloatC;
+}
+
+.layered-float-d {
+  animation: 13s ease-in-out infinite layeredFloatB;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .page-enter-animation {
+  .page-enter-animation, .layered-float-a, .layered-float-b, .layered-float-c, .layered-float-d {
     animation: none;
   }
 }

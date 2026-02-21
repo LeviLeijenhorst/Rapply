@@ -1,5 +1,6 @@
 import type { Express } from "express"
 import { requireAuthenticatedUser } from "../../auth"
+import { isMollieConfigured, syncMollieSubscriptionForUser } from "../../billing/mollie"
 import { derivePlanStateFromRevenueCatSubscriber, fetchRevenueCatSubscriber } from "../../billing/revenuecat"
 import { readManualPricingContextForUser } from "../../billing/manualPricing"
 import { ensureBillingUser, readBillingStatus } from "../../billing/store"
@@ -21,10 +22,15 @@ export function registerTranscriptionPreflightRoutes(app: Express, params: Regis
       const user = await requireAuthenticatedUser(req)
       await ensureBillingUser(user.userId)
 
-      const subscriber = await fetchRevenueCatSubscriber(user.userId)
-      const planState = derivePlanStateFromRevenueCatSubscriber(subscriber)
+      const useMollie = isMollieConfigured()
+      if (useMollie) {
+        await syncMollieSubscriptionForUser(user.userId)
+      }
+
+      const subscriber = useMollie ? {} : await fetchRevenueCatSubscriber(user.userId)
+      const planState = useMollie ? { planKey: null, cycleStartMs: null, cycleEndMs: null } : derivePlanStateFromRevenueCatSubscriber(subscriber)
       const manualPricing = await readManualPricingContextForUser(user.userId)
-      const useManualCycle = manualPricing.includedSecondsPerCycle > 0 || manualPricing.planId != null || manualPricing.customMonthlyPrice != null
+      const useManualCycle = useMollie || manualPricing.includedSecondsPerCycle > 0 || manualPricing.planId != null || manualPricing.customMonthlyPrice != null
       const statusRaw = await readBillingStatus({
         userId: user.userId,
         planKey: useManualCycle ? null : planState.planKey,

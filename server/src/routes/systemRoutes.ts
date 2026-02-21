@@ -11,6 +11,9 @@ type RegisterSystemRoutesParams = {
   hasEntraOpenIdConfigurationUrl: boolean
   hasEntraAudience: boolean
   hasRevenueCatSecretKey: boolean
+  hasMollieApiKey: boolean
+  hasMollieWebhookUrl: boolean
+  hasMollieRedirectUrl: boolean
   runtimeEnvironment: string
   hasCorsAllowlist: boolean
   rateLimitWindowMs: number
@@ -43,6 +46,11 @@ export function registerSystemRoutes(app: Express, params: RegisterSystemRoutesP
         },
         revenuecat: {
           hasSecretKey: params.hasRevenueCatSecretKey,
+        },
+        mollie: {
+          hasApiKey: params.hasMollieApiKey,
+          hasWebhookUrl: params.hasMollieWebhookUrl,
+          hasRedirectUrl: params.hasMollieRedirectUrl,
         },
         security: {
           runtimeEnvironment: params.runtimeEnvironment,

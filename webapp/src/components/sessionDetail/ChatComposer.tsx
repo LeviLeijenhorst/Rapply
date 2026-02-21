@@ -22,6 +22,7 @@ const tabAutocompleteSuggestions = [
   'Vat dit samen in bullet points.',
   'Geef mij 3 verdiepende vragen voor de volgende sessie.',
 ]
+const SEND_BUTTON_SIZE = 44
 
 function applyTabAutocomplete(value: string): string | null {
   const trimmed = String(value || '').trim()
@@ -142,7 +143,7 @@ export function ChatComposer({
           }}
           style={({ hovered }) => [
             styles.sendButton,
-            { width: inputHeight, height: inputHeight, borderRadius: inputHeight / 2 },
+            { width: SEND_BUTTON_SIZE, height: SEND_BUTTON_SIZE, borderRadius: SEND_BUTTON_SIZE / 2 },
             isSendDisabled ? styles.sendButtonDisabled : undefined,
             hovered ? styles.sendButtonHovered : undefined,
           ]}

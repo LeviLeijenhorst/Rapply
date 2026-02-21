@@ -69,6 +69,7 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
           id: session.id,
           title: session.title,
           coacheeName,
+          isReport: session.kind === 'written',
           dateLabel: new Date(session.createdAtUnixMs).toLocaleDateString('nl-NL', { month: 'short', day: 'numeric', year: 'numeric' }),
           timeLabel: new Date(session.createdAtUnixMs).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
           durationLabel: formatDurationLabel(session.audioDurationSeconds),
@@ -215,7 +216,6 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
             </View>
           ) : null}
           {paginatedSessies.map((item) => {
-            const isReport = item.title.toLowerCase().includes('verslag')
             return (
               <View key={item.id} style={styles.listItem}>
                 <SessieListItemCard
@@ -224,7 +224,7 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
                   timeLabel={item.timeLabel}
                   durationLabel={item.durationLabel}
                   coacheeName={item.coacheeName}
-                  isReport={isReport}
+                  isReport={item.isReport}
                   transcriptionStatus={item.transcriptionStatus}
                   onPress={() => onSelectSessie(item.id)}
                   onPressEdit={() => {

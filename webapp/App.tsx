@@ -11,6 +11,7 @@ import { LocalAppDataProvider } from './src/local/LocalAppDataProvider'
 import { getStoredAccessToken, signOutFromEntra } from './src/auth/entraAuth'
 import { navigate } from './src/auth/router/webRouter'
 import { E2eeProvider } from './src/e2ee/E2eeProvider'
+import { warmUpSecureApi } from './src/services/secureApi'
 import { ThemeProvider } from './src/theme/ThemeProvider'
 
 export default function App() {
@@ -31,6 +32,11 @@ export default function App() {
       setIsAuthenticated(true)
     }
   }, [])
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    void warmUpSecureApi()
+  }, [isAuthenticated])
 
   useEffect(() => {
     return () => {

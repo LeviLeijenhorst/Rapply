@@ -152,7 +152,17 @@ export function MijnPraktijkScreen() {
   function handleTintColorChange(nextValue: string) {
     const sanitized = sanitizeHexInput(nextValue)
     setTintColorInput(sanitized)
-    if (sanitized.length === 6) persistTintColor(`#${sanitized}`)
+    if (sanitized.length === 6) {
+      persistTintColor(`#${sanitized}`)
+      return
+    }
+    if (sanitized.length === 3) {
+      const expanded = sanitized
+        .split('')
+        .map((character) => `${character}${character}`)
+        .join('')
+      persistTintColor(`#${expanded}`)
+    }
   }
 
   function handleTintColorBlur() {

@@ -23,10 +23,6 @@ export function AuthFlow({ onAuthenticated }: Props) {
   const [isAllowlistBlocked, setIsAllowlistBlocked] = useState(false)
   const hasHandledCallback = useRef(false)
   const hasStartedDirectSignIn = useRef(false)
-  const authModeFromQuery =
-    typeof window !== 'undefined' && pathname === '/inloggen'
-      ? new URLSearchParams(window.location.search).get('mode')
-      : null
 
   useEffect(() => {
     if (pathname === '/') {
@@ -128,10 +124,7 @@ export function AuthFlow({ onAuthenticated }: Props) {
     }
 
     if (routePathname === '/inloggen' || routePathname === '/registreren') {
-      const entryKey =
-        routePathname === '/registreren' || (routePathname === '/inloggen' && authModeFromQuery === 'signup')
-          ? 'registreren'
-          : 'inloggen'
+      const entryKey = routePathname === '/registreren' ? 'registreren' : 'inloggen'
 
       return (
         <AuthCardVerticalSwapTransition

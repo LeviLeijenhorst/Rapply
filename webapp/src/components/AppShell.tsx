@@ -146,6 +146,7 @@ export function AppShell({ onLogout }: Props) {
   const [sessionOriginRoute, setSessionOriginRoute] = useState<RouteState | null>(null)
   const [isNewSessionModalOpen, setIsNewSessionModalOpen] = useState(false)
   const [newSessionCoacheeId, setNewSessionCoacheeId] = useState<string | null>(null)
+  const [writtenReportInitialCoacheeId, setWrittenReportInitialCoacheeId] = useState<string | null>(null)
   const [isGeschrevenVerslagOpen, setIsGeschrevenVerslagOpen] = useState(false)
   const [overlayScreenKey, setOverlayScreenKey] = useState<OverlayScreenKey | null>(null)
   const [isAdminScreenOpen, setIsAdminScreenOpen] = useState(false)
@@ -249,12 +250,6 @@ export function AppShell({ onLogout }: Props) {
     if (!isSettingsMenuOpen) return
     void refreshSubscriptionAccess()
   }, [isSettingsMenuOpen, refreshSubscriptionAccess])
-
-  const currentUserNavbarName = useMemo(() => {
-    const fullName = [currentUserGivenName, currentUserSurname].filter(Boolean).join(' ').trim()
-    if (fullName.length > 0) return fullName
-    return currentUserName
-  }, [currentUserGivenName, currentUserName, currentUserSurname])
 
   useEffect(() => {
     if (!isAppDataLoaded) return
@@ -704,7 +699,9 @@ export function AppShell({ onLogout }: Props) {
     if (isGeschrevenVerslagOpen) {
       return (
         <GeschrevenVerslagScreen
+          initialCoacheeId={writtenReportInitialCoacheeId}
           onBack={() => {
+            setWrittenReportInitialCoacheeId(null)
             if (previousRoute) {
               navigateTo(previousRoute)
               setPreviousRoute(null)
@@ -714,6 +711,7 @@ export function AppShell({ onLogout }: Props) {
           }}
           onOpenNewCoachee={openNewCoacheeModal}
           onOpenSession={(sessionId) => {
+            setWrittenReportInitialCoacheeId(null)
             setPreviousRoute(null)
             navigateToReplacingHistory({ kind: 'sessie', sessieId: sessionId })
           }}
@@ -826,7 +824,6 @@ export function AppShell({ onLogout }: Props) {
         usedMinutes={usedMinutes}
         totalMinutes={totalMinutes}
         isUsageLoading={isUsageLoading}
-        accountName={currentUserNavbarName}
         isUsageClickable={canOpenSubscription}
         onPressUsage={() => {
           if (!canOpenSubscription) return
@@ -953,7 +950,7 @@ export function AppShell({ onLogout }: Props) {
             onNewlyCreatedCoacheeHandled={() => setNewlyCreatedCoacheeId(null)}
             onStartWrittenReport={() => {
               setIsNewSessionModalOpen(false)
-              setNewSessionCoacheeId(null)
+              setWrittenReportInitialCoacheeId(newSessionCoacheeId)
               setPreviousRoute(currentRoute)
               navigateTo({ kind: 'geschrevenVerslag' })
             }}
@@ -970,7 +967,10 @@ export function AppShell({ onLogout }: Props) {
             accountName={currentUserName}
             accountEmail={currentUserEmail}
             onClose={() => setIsMyAccountModalOpen(false)}
-            onLogout={() => setIsMyAccountModalOpen(false)}
+            onLogout={() => {
+              setIsMyAccountModalOpen(false)
+              onLogout()
+            }}
             onDeleteAccount={() => {
               if (isDeletingAccount) return
               setDeleteAccountErrorMessage(null)

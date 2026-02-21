@@ -25,7 +25,7 @@ import {
   loadQuickQuestionsChatForCoachee,
   saveQuickQuestionsChatForCoachee,
 } from '../local/quickQuestionsChatStore'
-import { buildCoacheeSummariesSystemMessages } from '../utils/quickQuestionsContext'
+import { buildCoacheeSummariesSystemMessages, buildCoacheeWrittenReportsSystemMessages } from '../utils/quickQuestionsContext'
 import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
 import { ConfirmChatClearModal } from '../components/sessionDetail/ConfirmChatClearModal'
 
@@ -158,17 +158,33 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
     setIsChatSending(true)
 
     try {
-      const coacheeSessions = data.sessions
-        .filter((item) => item.coacheeId === coacheeId && item.kind !== 'notes')
-        .map((item) => ({ title: item.title, createdAtUnixMs: item.createdAtUnixMs, summary: item.summary }))
+      const coacheeSessions = data.sessions.filter((item) => item.coacheeId === coacheeId && item.kind !== 'notes')
+      const writtenReportBySessionId = new Map(data.writtenReports.map((report) => [report.sessionId, report.text]))
+      const coacheeSummarySessions = coacheeSessions.map((item) => ({
+        title: item.title,
+        createdAtUnixMs: item.createdAtUnixMs,
+        summary: item.summary,
+      }))
+      const coacheeWrittenReportSessions = coacheeSessions.map((item) => ({
+        title: item.title,
+        createdAtUnixMs: item.createdAtUnixMs,
+        reportText: item.kind === 'written' ? writtenReportBySessionId.get(item.id) ?? null : null,
+      }))
 
       const responseText = await completeChat({
         messages: [
           ...buildCoacheeSummariesSystemMessages({
             coacheeName,
-            sessions: coacheeSessions,
+            sessions: coacheeSummarySessions,
             maxTotalCharacters: 45000,
             maxSummaryCharactersPerSession: 2500,
+            maxSessions: 80,
+          }),
+          ...buildCoacheeWrittenReportsSystemMessages({
+            coacheeName,
+            sessions: coacheeWrittenReportSessions,
+            maxTotalCharacters: 45000,
+            maxReportCharactersPerSession: 3500,
             maxSessions: 80,
           }),
           ...nextChatMessages.map<LocalChatMessage>((message) => ({

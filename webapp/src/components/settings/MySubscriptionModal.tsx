@@ -8,6 +8,8 @@ import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
 import { MijnAbonnementIcon } from '../icons/MijnAbonnementIcon'
 import { HoursPerMonthIcon } from '../icons/HoursPerMonthIcon'
 import { callSecureApi } from '../../services/secureApi'
+import { AppButton } from '../AppButton'
+import { createMollieCheckout } from '../../services/billing'
 
 type Props = {
   visible: boolean
@@ -48,6 +50,8 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
   const [canSeePricingPage, setCanSeePricingPage] = useState(true)
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [isPricingLoading, setIsPricingLoading] = useState(false)
+  const [checkoutLoadingPlanId, setCheckoutLoadingPlanId] = useState<string | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!visible) return
@@ -92,6 +96,24 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
     [pricingPlans],
   )
 
+  const handleSelectPlan = async (planId: string) => {
+    try {
+      setCheckoutError(null)
+      setCheckoutLoadingPlanId(planId)
+      const response = await createMollieCheckout(planId)
+      const checkoutUrl = String(response.checkoutUrl || '').trim()
+      if (!checkoutUrl) {
+        throw new Error('Geen checkout URL ontvangen')
+      }
+      if (typeof window !== 'undefined') {
+        window.location.assign(checkoutUrl)
+      }
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : 'Betalen starten lukt nu niet. Probeer het opnieuw.')
+      setCheckoutLoadingPlanId(null)
+    }
+  }
+
   if (!visible) return null
 
   return (
@@ -117,6 +139,7 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
           <Text style={styles.infoText}>Er zijn nog geen abonnementen beschikbaar.</Text>
         ) : (
           <>
+            {checkoutError ? <Text style={styles.errorText}>{checkoutError}</Text> : null}
             <View style={styles.plansRow}>
               {plans.map((plan) => (
                 <View key={plan.id} style={[styles.planCard, selectedPlanId === plan.id ? styles.planCardSelected : undefined]}>
@@ -141,6 +164,21 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                       </View>
                     ) : null}
                   </View>
+                  <AppButton
+                    label={
+                      selectedPlanId === plan.id
+                        ? 'Huidig abonnement'
+                        : checkoutLoadingPlanId === plan.id
+                          ? 'Doorsturen...'
+                          : 'Kies en betaal'
+                    }
+                    onPress={() => {
+                      if (selectedPlanId === plan.id || checkoutLoadingPlanId) return
+                      void handleSelectPlan(plan.id)
+                    }}
+                    variant={selectedPlanId === plan.id ? 'neutral' : 'filled'}
+                    isDisabled={selectedPlanId === plan.id || !!checkoutLoadingPlanId}
+                  />
                 </View>
               ))}
             </View>
@@ -208,6 +246,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: colors.textSecondary,
+  },
+  errorText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#B42318',
   },
   plansRow: {
     width: '100%',

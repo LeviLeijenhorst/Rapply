@@ -1114,7 +1114,10 @@ export function NewSessionModal({
             ) : null}
 
             <Pressable
-              onPress={requestClose}
+              onPress={(event) => {
+                event.stopPropagation?.()
+                requestClose()
+              }}
               style={({ hovered, pressed }) => [
                 styles.iconButton,
                 webTransitionSmooth,
@@ -1649,22 +1652,22 @@ export function NewSessionModal({
       >
         <View style={styles.closeWarningContent}>
           <Text isBold style={styles.closeWarningTitle}>
-            Weet je zeker dat je wil annuleren?
+            Weet je zeker dat je de opname wil verwijderen?
           </Text>
           <Text style={styles.closeWarningText}>
-            Als je annuleert, gaat je huidige opname of invoer verloren.
+            Als je verwijdert, gaat je huidige opname of invoer verloren.
           </Text>
-          <View style={styles.closeWarningActions}>
+        </View>
+        <View style={styles.recordedCloseWarningFooter}>
             <Pressable
               onPress={() => setIsRecordedCloseWarningVisible(false)}
               style={({ hovered }) => [
-                styles.closeWarningButton,
-                styles.closeWarningButtonSecondary,
-                hovered ? styles.closeWarningButtonSecondaryHovered : undefined,
+                styles.recordedCloseWarningSecondaryButton,
+                hovered ? styles.recordedCloseWarningSecondaryButtonHovered : undefined,
               ]}
             >
-              <Text isBold style={styles.closeWarningButtonSecondaryText}>
-                Terug
+              <Text isBold style={styles.recordedCloseWarningSecondaryButtonText}>
+                Annuleren
               </Text>
             </Pressable>
             <Pressable
@@ -1673,16 +1676,14 @@ export function NewSessionModal({
                 handleClose()
               }}
               style={({ hovered }) => [
-                styles.closeWarningButton,
-                styles.closeWarningButtonPrimary,
-                hovered ? styles.closeWarningButtonPrimaryHovered : undefined,
+                styles.recordedCloseWarningPrimaryButton,
+                hovered ? styles.recordedCloseWarningPrimaryButtonHovered : undefined,
               ]}
             >
-              <Text isBold style={styles.closeWarningButtonPrimaryText}>
-                Annuleren
+              <Text isBold style={styles.recordedCloseWarningPrimaryButtonText}>
+                Verwijderen
               </Text>
             </Pressable>
-          </View>
         </View>
       </AnimatedOverlayModal>
       <AnimatedOverlayModal
@@ -2194,6 +2195,55 @@ const styles = StyleSheet.create({
     backgroundColor: '#A50058',
   },
   closeWarningButtonPrimaryText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#FFFFFF',
+  },
+  recordedCloseWarningFooter: {
+    width: '100%',
+    padding: 0,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 0,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  recordedCloseWarningSecondaryButton: {
+    height: 48,
+    borderRadius: 0,
+    borderBottomLeftRadius: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    paddingHorizontal: 24,
+    paddingVertical: 0,
+    minWidth: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recordedCloseWarningSecondaryButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  recordedCloseWarningSecondaryButtonText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+  },
+  recordedCloseWarningPrimaryButton: {
+    height: 48,
+    borderRadius: 0,
+    borderBottomRightRadius: 16,
+    backgroundColor: colors.selected,
+    paddingHorizontal: 24,
+    paddingVertical: 0,
+    minWidth: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recordedCloseWarningPrimaryButtonHovered: {
+    backgroundColor: '#A50058',
+  },
+  recordedCloseWarningPrimaryButtonText: {
     fontSize: 14,
     lineHeight: 18,
     color: '#FFFFFF',

@@ -23,12 +23,7 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
     setIsStartingLogin(true)
     try {
       onStartLogin?.()
-      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
-      const queryMode = urlParams?.get('mode')
-      const shouldSignUp =
-        mode === 'registreren' || queryMode === 'signup' || (mode === 'inloggen' && queryMode !== 'signin')
-
-      if (shouldSignUp) {
+      if (mode === 'registreren') {
         const { signUpWithEntra } = await import('../entraAuth')
         await signUpWithEntra()
         return

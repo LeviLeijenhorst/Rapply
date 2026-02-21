@@ -270,8 +270,8 @@ function OverOnsHeroSection() {
                                 className: "h-full w-full object-cover",
                                 playsInline: true,
                                 controls: true,
-                                preload: "metadata",
-                                loop: true
+                                preload: "auto",
+                                controlsList: "nodownload"
                             }, void 0, false, {
                                 fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
                                 lineNumber: 34,

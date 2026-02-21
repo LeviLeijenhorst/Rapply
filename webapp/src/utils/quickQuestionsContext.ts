@@ -8,15 +8,28 @@ function formatDateLabel(unixMs: number) {
   return new Date(unixMs).toLocaleDateString('nl-NL', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-export function buildConversationTranscriptSystemMessages(params: { transcript: string | null; sessionId?: string }): LocalChatMessage[] {
+export function buildConversationTranscriptSystemMessages(params: {
+  transcript: string | null
+  writtenReportText?: string | null
+  sessionId?: string
+}): LocalChatMessage[] {
   const transcript = normalizeText(params.transcript)
+  const writtenReport = normalizeText(params.writtenReportText)
   const sessionId = normalizeText(params.sessionId)
   const scopeHeader = sessionId
     ? `[COACHSCRIBE_SESSION_SCOPE]\nSession-ID: ${sessionId}\nGebruik uitsluitend context uit deze sessie.`
     : 'Gebruik uitsluitend context uit deze sessie.'
-  const text = transcript
-    ? `${scopeHeader}\n\nHier is het transcript van het gesprek:\n\n${transcript}\n\nGebruik dit transcript om de vragen te beantwoorden.`
-    : `${scopeHeader}\n\nEr is nog geen transcript beschikbaar voor dit gesprek. Beantwoord vragen zo goed mogelijk op basis van wat de gebruiker typt.`
+  const contextBlocks: string[] = []
+  if (transcript) {
+    contextBlocks.push(`Transcript van het gesprek:\n\n${transcript}`)
+  }
+  if (writtenReport) {
+    contextBlocks.push(`Geschreven verslag van deze sessie:\n\n${writtenReport}`)
+  }
+
+  const text = contextBlocks.length
+    ? `${scopeHeader}\n\nHier is de sessiecontext:\n\n${contextBlocks.join('\n\n')}\n\nGebruik uitsluitend deze context om de vragen te beantwoorden.`
+    : `${scopeHeader}\n\nEr is nog geen transcript of geschreven verslag beschikbaar voor deze sessie. Beantwoord vragen zo goed mogelijk op basis van wat de gebruiker typt.`
 
   return [{ role: 'system', text }]
 }
@@ -123,6 +136,55 @@ export function buildCoacheeTranscriptsSystemMessages(params: {
         .map((session, index) => `${index + 1}. ${session.title} (${session.dateLabel})\n${session.transcript}`)
         .join('\n\n')}${isTruncated ? '\n\nLet op: niet alle transcripties passen in de context. Oudere transcripties zijn weggelaten.' : ''}\n\nGebruik deze transcripties om de vragen te beantwoorden.`
     : `Er zijn nog geen transcripties beschikbaar voor ${params.coacheeName}. Beantwoord vragen zo goed mogelijk op basis van wat de gebruiker typt.`
+
+  return [{ role: 'system', text }]
+}
+
+export function buildCoacheeWrittenReportsSystemMessages(params: {
+  coacheeName: string
+  sessions: { title: string; createdAtUnixMs: number; reportText: string | null }[]
+  maxTotalCharacters?: number
+  maxReportCharactersPerSession?: number
+  maxSessions?: number
+}): LocalChatMessage[] {
+  const maxTotalCharacters = Math.max(1000, params.maxTotalCharacters ?? 60000)
+  const maxReportCharactersPerSession = Math.max(500, params.maxReportCharactersPerSession ?? 5000)
+  const maxSessions = Math.max(1, params.maxSessions ?? 80)
+
+  const sortedSessions = [...params.sessions].sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
+  const included: Array<{ title: string; dateLabel: string; reportText: string }> = []
+  let totalCharacters = 0
+  let isTruncated = false
+
+  for (const session of sortedSessions) {
+    if (included.length >= maxSessions || totalCharacters >= maxTotalCharacters) {
+      isTruncated = true
+      break
+    }
+
+    const reportText = normalizeText(session.reportText)
+    if (!reportText) continue
+
+    const clippedReport = reportText.length > maxReportCharactersPerSession ? reportText.slice(0, maxReportCharactersPerSession) : reportText
+    const nextTotal = totalCharacters + clippedReport.length
+    if (nextTotal > maxTotalCharacters) {
+      isTruncated = true
+      break
+    }
+
+    included.push({
+      title: normalizeText(session.title) || 'Sessie',
+      dateLabel: formatDateLabel(session.createdAtUnixMs),
+      reportText: clippedReport,
+    })
+    totalCharacters = nextTotal
+  }
+
+  const text = included.length
+    ? `Hier zijn geschreven verslagen van gesprekken met ${params.coacheeName}:\n\n${included
+        .map((session, index) => `${index + 1}. ${session.title} (${session.dateLabel})\n${session.reportText}`)
+        .join('\n\n')}${isTruncated ? '\n\nLet op: niet alle verslagen passen in de context. Oudere verslagen zijn weggelaten.' : ''}\n\nGebruik deze verslagen om de vragen te beantwoorden.`
+    : `Er zijn nog geen geschreven verslagen beschikbaar voor ${params.coacheeName}.`
 
   return [{ role: 'system', text }]
 }

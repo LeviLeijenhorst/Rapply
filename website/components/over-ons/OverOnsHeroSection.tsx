@@ -36,8 +36,8 @@ export default function OverOnsHeroSection() {
                 className="h-full w-full object-cover"
                 playsInline
                 controls
-                preload="metadata"
-                loop
+                preload="auto"
+                controlsList="nodownload"
               />
             </div>
           </div>

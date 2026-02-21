@@ -68,7 +68,7 @@ const rateLimitTranscription = createRateLimitMiddleware({
 })
 const rateLimitAccount = createRateLimitMiddleware({ windowMs: rateLimitWindowMs, maxRequests: 60, keyPrefix: "account" })
 
-registerRoutes(app, {
+  registerRoutes(app, {
   diagnosticLogVersion,
   rateLimitAi,
   rateLimitBilling,
@@ -80,8 +80,11 @@ registerRoutes(app, {
   hasAzureStorageAccountKey: !!env.azureStorageAccountKey,
   hasEntraOpenIdConfigurationUrl: !!env.entraOpenIdConfigurationUrl,
   hasEntraAudience: env.entraAudience.length > 0,
-  hasRevenueCatSecretKey: !!env.revenueCatSecretKey,
-  runtimeEnvironment: env.runtimeEnvironment,
+    hasRevenueCatSecretKey: !!env.revenueCatSecretKey,
+    hasMollieApiKey: !!env.mollieApiKey,
+    hasMollieWebhookUrl: !!env.mollieWebhookUrl,
+    hasMollieRedirectUrl: !!env.mollieRedirectUrl,
+    runtimeEnvironment: env.runtimeEnvironment,
   hasCorsAllowlist: !!corsAllowedOrigins?.length,
   rateLimitWindowMs,
   rateLimitMaxRequests,

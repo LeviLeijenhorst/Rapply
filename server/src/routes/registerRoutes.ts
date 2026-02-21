@@ -23,6 +23,9 @@ type RegisterRoutesParams = {
   hasEntraOpenIdConfigurationUrl: boolean
   hasEntraAudience: boolean
   hasRevenueCatSecretKey: boolean
+  hasMollieApiKey: boolean
+  hasMollieWebhookUrl: boolean
+  hasMollieRedirectUrl: boolean
   runtimeEnvironment: string
   hasCorsAllowlist: boolean
   rateLimitWindowMs: number
@@ -43,6 +46,9 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
     hasEntraOpenIdConfigurationUrl: params.hasEntraOpenIdConfigurationUrl,
     hasEntraAudience: params.hasEntraAudience,
     hasRevenueCatSecretKey: params.hasRevenueCatSecretKey,
+    hasMollieApiKey: params.hasMollieApiKey,
+    hasMollieWebhookUrl: params.hasMollieWebhookUrl,
+    hasMollieRedirectUrl: params.hasMollieRedirectUrl,
     runtimeEnvironment: params.runtimeEnvironment,
     hasCorsAllowlist: params.hasCorsAllowlist,
     rateLimitWindowMs: params.rateLimitWindowMs,
