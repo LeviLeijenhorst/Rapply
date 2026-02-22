@@ -204,7 +204,7 @@ export async function createMolliePlanCheckout(params: {
   email: string | null
   displayName: string | null
   planId: string
-}): Promise<{ checkoutUrl: string; paymentId: string }> {
+}): Promise<{ checkoutUrl: string; paymentId: string; requiresRedirect: boolean }> {
   await ensureMollieSchema()
 
   const redirectUrl = optionalTrimmed(env.mollieRedirectUrl)
@@ -239,6 +239,9 @@ export async function createMolliePlanCheckout(params: {
   const checkoutAmount = canTreatAsUpgrade
     ? Math.max(0, plan.monthlyPrice - Number(existingSubscription.currentPlanMonthlyPrice || 0))
     : plan.monthlyPrice
+  if (checkoutAmount <= 0) {
+    throw new Error("Selected plan change does not require checkout")
+  }
   const metadata: Record<string, unknown> = canTreatAsUpgrade
     ? {
         userId: params.userId,
@@ -319,7 +322,7 @@ export async function createMolliePlanCheckout(params: {
     ],
   )
 
-  return { checkoutUrl, paymentId: payment.id }
+  return { checkoutUrl, paymentId: payment.id, requiresRedirect: true }
 }
 
 async function upsertSubscriptionRecord(params: {
@@ -482,6 +485,65 @@ async function createSubscriptionForPlan(params: {
       ...(startDate ? { startDate } : {}),
     }),
   })
+}
+
+export async function changeMollieSubscriptionPlanForUser(params: {
+  userId: string
+  planId: string
+}): Promise<{ changed: boolean }> {
+  await ensureMollieSchema()
+  const plan = await readPlanSummary(params.planId)
+  if (!plan || !(plan.monthlyPrice > 0)) {
+    throw new Error("Invalid plan")
+  }
+
+  const existing = await readSubscriptionContextForUser(params.userId)
+  if (!existing) {
+    await applyPlanForUser({ userId: params.userId, planId: params.planId })
+    return { changed: true }
+  }
+
+  if (optionalTrimmed(existing.planId) === params.planId) {
+    return { changed: false }
+  }
+
+  const replacement = await createSubscriptionForPlan({
+    userId: params.userId,
+    customerId: existing.customerId,
+    planId: params.planId,
+    startDate: existing.nextPaymentDate,
+  })
+
+  await upsertSubscriptionRecord({
+    userId: params.userId,
+    customerId: existing.customerId,
+    subscriptionId: replacement.id,
+    planId: params.planId,
+    status: replacement.status,
+    nextPaymentDate: optionalTrimmed(replacement.nextPaymentDate || null),
+  })
+  await applyPlanForUser({ userId: params.userId, planId: params.planId })
+
+  if (existing.subscriptionId !== replacement.id) {
+    try {
+      await mollieApiRequest<void>(
+        `/customers/${encodeURIComponent(existing.customerId)}/subscriptions/${encodeURIComponent(existing.subscriptionId)}`,
+        { method: "DELETE" },
+      )
+    } catch (error: any) {
+      const message = String(error?.message || error || "")
+      if (!message.toLowerCase().includes("not found")) {
+        console.log("[billing:mollie] failed to cancel previous subscription on manual plan change", {
+          userId: params.userId,
+          previousCustomerId: existing.customerId,
+          previousSubscriptionId: existing.subscriptionId,
+          message,
+        })
+      }
+    }
+  }
+
+  return { changed: true }
 }
 
 async function createSubscriptionAfterFirstPayment(params: {
@@ -754,22 +816,39 @@ export async function syncMollieSubscriptionForUser(userId: string): Promise<voi
 export async function syncRecentMolliePaymentsForUser(userId: string): Promise<void> {
   await ensureMollieSchema()
 
-  const pendingPayments = await queryMany<{ mollie_payment_id: string }>(
+  const unresolvedPayments = await queryMany<{ mollie_payment_id: string }>(
     `
     select mollie_payment_id
     from public.mollie_payments
     where user_id = $1
-      and lower(status) in ('open', 'pending', 'authorized', 'paid')
+      and lower(status) in ('open', 'pending', 'authorized')
       and created_at >= now() - interval '14 days'
     order by created_at desc
     limit 10
     `,
     [userId],
   )
+  const latestPaidPayment = await queryOne<{ mollie_payment_id: string }>(
+    `
+    select mollie_payment_id
+    from public.mollie_payments
+    where user_id = $1
+      and lower(status) = 'paid'
+      and created_at >= now() - interval '48 hours'
+    order by created_at desc
+    limit 1
+    `,
+    [userId],
+  )
+  const paymentIds = new Set<string>()
+  for (const row of unresolvedPayments) {
+    const paymentId = optionalTrimmed(row.mollie_payment_id)
+    if (paymentId) paymentIds.add(paymentId)
+  }
+  const latestPaidId = optionalTrimmed(latestPaidPayment?.mollie_payment_id)
+  if (latestPaidId) paymentIds.add(latestPaidId)
 
-  for (const payment of pendingPayments) {
-    const paymentId = optionalTrimmed(payment.mollie_payment_id)
-    if (!paymentId) continue
+  for (const paymentId of paymentIds) {
     try {
       await processMolliePaymentWebhook(paymentId)
     } catch (error: any) {

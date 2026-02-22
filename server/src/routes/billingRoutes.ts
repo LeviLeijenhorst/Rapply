@@ -1,8 +1,8 @@
 import express, { type Express, type RequestHandler } from "express"
 import { requireAuthenticatedUser } from "../auth"
-import { cancelMollieSubscriptionForUser, createMolliePlanCheckout, isMollieConfigured, processMolliePaymentWebhook, syncMollieSubscriptionForUser, syncRecentMolliePaymentsForUser } from "../billing/mollie"
-import { derivePlanStateFromRevenueCatSubscriber, derivePurchasedSecondsFromRevenueCatSubscriber, fetchRevenueCatSubscriber } from "../billing/revenuecat"
+import { cancelMollieSubscriptionForUser, changeMollieSubscriptionPlanForUser, createMolliePlanCheckout, isMollieConfigured, processMolliePaymentWebhook, syncMollieSubscriptionForUser, syncRecentMolliePaymentsForUser } from "../billing/mollie"
 import { readManualPricingContextForUser } from "../billing/manualPricing"
+import { derivePlanStateFromRevenueCatSubscriber, derivePurchasedSecondsFromRevenueCatSubscriber, fetchRevenueCatSubscriber } from "../billing/revenuecat"
 import { ensureBillingUser, readBillingStatus } from "../billing/store"
 import { execute, queryOne } from "../db"
 import { asyncHandler, sendError } from "../http"
@@ -65,6 +65,32 @@ export function registerBillingRoutes(app: Express, params: RegisterBillingRoute
         return
       }
 
+      const currentPricing = await readManualPricingContextForUser(user.userId)
+      const currentPlanId = currentPricing.planId
+      if (currentPlanId) {
+        const prices = await queryOne<{ current_monthly_price: string; target_monthly_price: string }>(
+          `
+          select
+            (select monthly_price from public.plans where id = $1 limit 1) as current_monthly_price,
+            (select monthly_price from public.plans where id = $2 limit 1) as target_monthly_price
+          `,
+          [currentPlanId, plan.id],
+        )
+        const currentPrice = Number(prices?.current_monthly_price ?? NaN)
+        const targetPrice = Number(prices?.target_monthly_price ?? NaN)
+        const isDowngradeOrEqual = Number.isFinite(currentPrice) && Number.isFinite(targetPrice) && targetPrice <= currentPrice
+        if (isDowngradeOrEqual && currentPlanId !== plan.id) {
+          await changeMollieSubscriptionPlanForUser({ userId: user.userId, planId: plan.id })
+          res.status(200).json({
+            ok: true,
+            checkoutUrl: "",
+            paymentId: "",
+            requiresRedirect: false,
+          })
+          return
+        }
+      }
+
       const checkout = await createMolliePlanCheckout({
         userId: user.userId,
         email: user.email,
@@ -76,6 +102,7 @@ export function registerBillingRoutes(app: Express, params: RegisterBillingRoute
         ok: true,
         checkoutUrl: checkout.checkoutUrl,
         paymentId: checkout.paymentId,
+        requiresRedirect: checkout.requiresRedirect,
       })
     }),
   )

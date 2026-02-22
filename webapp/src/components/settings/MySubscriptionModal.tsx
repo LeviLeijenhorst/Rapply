@@ -9,7 +9,7 @@ import { MijnAbonnementIcon } from '../icons/MijnAbonnementIcon'
 import { HoursPerMonthIcon } from '../icons/HoursPerMonthIcon'
 import { callSecureApi } from '../../services/secureApi'
 import { AppButton } from '../AppButton'
-import { createMollieCheckout } from '../../services/billing'
+import { cancelMollieSubscription, createMollieCheckout } from '../../services/billing'
 
 type Props = {
   visible: boolean
@@ -52,11 +52,17 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
   const [isPricingLoading, setIsPricingLoading] = useState(false)
   const [checkoutLoadingPlanId, setCheckoutLoadingPlanId] = useState<string | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [isCancelViewOpen, setIsCancelViewOpen] = useState(false)
+  const [isCancelBusy, setIsCancelBusy] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!visible) return
     let isCancelled = false
     setCheckoutLoadingPlanId(null)
+    setIsCancelViewOpen(false)
+    setIsCancelBusy(false)
+    setCancelError(null)
 
     const loadPricing = async () => {
       try {
@@ -116,6 +122,12 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
       setCheckoutError(null)
       setCheckoutLoadingPlanId(planId)
       const response = await createMollieCheckout(planId)
+      if (response.requiresRedirect === false) {
+        const visibilityResponse = await callSecureApi<PricingVisibilityResponse>('/pricing/me-visibility', {})
+        setSelectedPlanId(typeof visibilityResponse.planId === 'string' ? visibilityResponse.planId : null)
+        setCheckoutLoadingPlanId(null)
+        return
+      }
       const checkoutUrl = String(response.checkoutUrl || '').trim()
       if (!checkoutUrl) {
         throw new Error('Geen checkout URL ontvangen')
@@ -126,6 +138,21 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
     } catch (error) {
       setCheckoutError(error instanceof Error ? error.message : 'Betalen starten lukt nu niet. Probeer het opnieuw.')
       setCheckoutLoadingPlanId(null)
+    }
+  }
+
+  const handleCancelSubscription = async () => {
+    try {
+      setCancelError(null)
+      setIsCancelBusy(true)
+      await cancelMollieSubscription()
+      const visibilityResponse = await callSecureApi<PricingVisibilityResponse>('/pricing/me-visibility', {})
+      setSelectedPlanId(typeof visibilityResponse.planId === 'string' ? visibilityResponse.planId : null)
+      setIsCancelViewOpen(false)
+    } catch (error) {
+      setCancelError(error instanceof Error ? error.message : 'Opzeggen lukt nu niet. Probeer het opnieuw.')
+    } finally {
+      setIsCancelBusy(false)
     }
   }
 
@@ -157,45 +184,79 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
         ) : (
           <>
             {checkoutError ? <Text style={styles.errorText}>{checkoutError}</Text> : null}
-            <View style={styles.plansRow}>
-              {plans.map((plan) => (
-                <View key={plan.id} style={[styles.planCard, selectedPlanId === plan.id ? styles.planCardSelected : undefined]}>
-                  <Text isSemibold style={styles.planTitle}>{plan.name}</Text>
-                  <View style={styles.priceRow}>
-                    <Text isBold style={styles.priceText}>{formatEuroPrice(plan.monthlyPrice)}</Text>
-                    <Text style={styles.priceSuffix}>/maand</Text>
-                  </View>
-                  <View style={styles.featuresColumn}>
-                    <View style={styles.featureRow}>
-                      <HoursPerMonthIcon size={24} />
-                      <Text style={styles.featureText}>{plan.reportsPerMonth} gespreksverslagen</Text>
-                    </View>
-                    <View style={styles.featureRow}>
-                      <HoursPerMonthIcon size={24} />
-                      <Text style={styles.featureText}>{plan.minutesPerMonth} minuten per maand</Text>
-                    </View>
-                  </View>
+            {isCancelViewOpen ? (
+              <View style={styles.cancelView}>
+                <Text isSemibold style={styles.cancelTitle}>Abonnement opzeggen</Text>
+                <Text style={styles.cancelText}>Weet je zeker dat je je abonnement wilt opzeggen? Je toegang blijft actief tot het einde van de huidige periode.</Text>
+                {cancelError ? <Text style={styles.errorText}>{cancelError}</Text> : null}
+                <View style={styles.cancelButtonsRow}>
                   <AppButton
-                    label={
-                      checkoutLoadingPlanId === plan.id
-                        ? ''
-                        : selectedPlanId === plan.id
-                        ? 'Huidig abonnement'
-                        : selectedPlan && plan.monthlyPrice < selectedPlan.monthlyPrice
-                          ? 'Downgraden'
-                          : 'Upgraden'
-                    }
-                    leading={checkoutLoadingPlanId === plan.id ? <ActivityIndicator size="small" color="#FFFFFF" /> : undefined}
+                    label="Terug"
                     onPress={() => {
-                      if (selectedPlanId === plan.id || checkoutLoadingPlanId) return
-                      void handleSelectPlan(plan.id)
+                      if (isCancelBusy) return
+                      setIsCancelViewOpen(false)
                     }}
-                    variant={selectedPlanId === plan.id ? 'neutral' : 'filled'}
-                    isDisabled={selectedPlanId === plan.id || !!checkoutLoadingPlanId}
+                    variant="neutral"
+                    isDisabled={isCancelBusy}
+                  />
+                  <AppButton
+                    label={isCancelBusy ? '' : 'Opzeggen'}
+                    leading={isCancelBusy ? <ActivityIndicator size="small" color="#FFFFFF" /> : undefined}
+                    onPress={() => {
+                      if (isCancelBusy) return
+                      void handleCancelSubscription()
+                    }}
+                    variant="filled"
+                    isDisabled={isCancelBusy}
                   />
                 </View>
-              ))}
-            </View>
+              </View>
+            ) : (
+              <>
+                <View style={styles.plansRow}>
+                  {plans.map((plan) => (
+                    <View key={plan.id} style={[styles.planCard, selectedPlanId === plan.id ? styles.planCardSelected : undefined]}>
+                      <Text isSemibold style={styles.planTitle}>{plan.name}</Text>
+                      <View style={styles.priceRow}>
+                        <Text isBold style={styles.priceText}>{formatEuroPrice(plan.monthlyPrice)}</Text>
+                        <Text style={styles.priceSuffix}>/maand</Text>
+                      </View>
+                      <View style={styles.featuresColumn}>
+                        <View style={styles.featureRow}>
+                          <HoursPerMonthIcon size={24} />
+                          <Text style={styles.featureText}>{plan.reportsPerMonth} gespreksverslagen</Text>
+                        </View>
+                        <View style={styles.featureRow}>
+                          <HoursPerMonthIcon size={24} />
+                          <Text style={styles.featureText}>{plan.minutesPerMonth} minuten per maand</Text>
+                        </View>
+                      </View>
+                      <AppButton
+                        label={
+                          checkoutLoadingPlanId === plan.id
+                            ? ''
+                            : selectedPlanId === plan.id
+                            ? 'Huidig abonnement'
+                            : selectedPlan && plan.monthlyPrice < selectedPlan.monthlyPrice
+                              ? 'Downgraden'
+                              : 'Upgraden'
+                        }
+                        leading={checkoutLoadingPlanId === plan.id ? <ActivityIndicator size="small" color="#FFFFFF" /> : undefined}
+                        onPress={() => {
+                          if (selectedPlanId === plan.id || checkoutLoadingPlanId) return
+                          void handleSelectPlan(plan.id)
+                        }}
+                        variant={selectedPlanId === plan.id ? 'neutral' : 'filled'}
+                        isDisabled={selectedPlanId === plan.id || !!checkoutLoadingPlanId}
+                      />
+                    </View>
+                  ))}
+                </View>
+                <Pressable onPress={() => setIsCancelViewOpen(true)} style={({ hovered }) => [styles.cancelLinkWrap, hovered ? styles.cancelLinkWrapHovered : undefined]}>
+                  <Text style={styles.cancelLinkText}>opzeggen</Text>
+                </Pressable>
+              </>
+            )}
             <Text style={styles.footnoteText}>Gespreksverslagen worden berekend op basis van 60 minuten per gesprek.</Text>
           </>
         )}
@@ -329,5 +390,41 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     color: colors.textSecondary,
+  },
+  cancelLinkWrap: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  cancelLinkWrapHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  cancelLinkText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
+    textDecorationLine: 'underline',
+  },
+  cancelView: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 16,
+    paddingHorizontal: 8,
+  },
+  cancelTitle: {
+    fontSize: 20,
+    lineHeight: 24,
+    color: colors.textStrong,
+  },
+  cancelText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+  },
+  cancelButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
   },
 })

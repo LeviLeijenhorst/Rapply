@@ -15,6 +15,7 @@ export type MollieCheckoutResponse = {
   ok: boolean
   checkoutUrl: string
   paymentId: string
+  requiresRedirect?: boolean
 }
 
 export async function fetchBillingStatus(): Promise<BillingStatusResponse> {
@@ -23,4 +24,8 @@ export async function fetchBillingStatus(): Promise<BillingStatusResponse> {
 
 export async function createMollieCheckout(planId: string): Promise<MollieCheckoutResponse> {
   return callSecureApi<MollieCheckoutResponse>('/billing/mollie/create-checkout', { planId })
+}
+
+export async function cancelMollieSubscription(): Promise<{ ok: boolean; canceled: boolean }> {
+  return callSecureApi<{ ok: boolean; canceled: boolean }>('/billing/mollie/cancel-subscription', {})
 }
