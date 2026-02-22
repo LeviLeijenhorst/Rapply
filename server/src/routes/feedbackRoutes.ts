@@ -1092,8 +1092,16 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
       }
 
       if (isMollieConfigured()) {
-        await syncRecentMolliePaymentsForUser(user.userId)
-        await syncMollieSubscriptionForUser(user.userId)
+        try {
+          await syncRecentMolliePaymentsForUser(user.userId)
+          await syncMollieSubscriptionForUser(user.userId)
+        } catch (error: any) {
+          const message = String(error?.message || error || "")
+          console.warn("[pricing:me-visibility] mollie sync failed; continuing with existing pricing visibility", {
+            userId: user.userId,
+            message,
+          })
+        }
       }
 
       const row = (

@@ -182,8 +182,9 @@ export function AppShell({ onLogout }: Props) {
       const response = await callSecureApi<{ planId?: string | null; canSeePricingPage?: boolean }>('/pricing/me-visibility', {})
       const canSeePricingPage = Boolean(response?.canSeePricingPage)
       setCanOpenSubscription(canSeePricingPage)
-    } catch {
-      setCanOpenSubscription(false)
+    } catch (error) {
+      console.warn('[pricing] failed to refresh subscription access; keeping pricing page available', error)
+      setCanOpenSubscription(true)
     }
   }, [])
 

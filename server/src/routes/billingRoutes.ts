@@ -104,8 +104,16 @@ export function registerBillingRoutes(app: Express, params: RegisterBillingRoute
 
       const useMollie = isMollieConfigured()
       if (useMollie) {
-        await syncRecentMolliePaymentsForUser(user.userId)
-        await syncMollieSubscriptionForUser(user.userId)
+        try {
+          await syncRecentMolliePaymentsForUser(user.userId)
+          await syncMollieSubscriptionForUser(user.userId)
+        } catch (error: any) {
+          const message = String(error?.message || error || "")
+          console.warn("[billing:sync] mollie sync failed; continuing with existing billing state", {
+            userId: user.userId,
+            message,
+          })
+        }
       }
 
       const subscriber = useMollie ? {} : await fetchRevenueCatSubscriber(user.userId)
@@ -150,8 +158,16 @@ export function registerBillingRoutes(app: Express, params: RegisterBillingRoute
 
       const useMollie = isMollieConfigured()
       if (useMollie) {
-        await syncRecentMolliePaymentsForUser(user.userId)
-        await syncMollieSubscriptionForUser(user.userId)
+        try {
+          await syncRecentMolliePaymentsForUser(user.userId)
+          await syncMollieSubscriptionForUser(user.userId)
+        } catch (error: any) {
+          const message = String(error?.message || error || "")
+          console.warn("[billing:status] mollie sync failed; continuing with existing billing state", {
+            userId: user.userId,
+            message,
+          })
+        }
       }
 
       const subscriber = useMollie ? {} : await fetchRevenueCatSubscriber(user.userId)

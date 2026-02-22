@@ -44,8 +44,6 @@ export function useBillingUsage(): BillingUsage {
       } catch (error) {
         if (!isActive) return
         console.error('[billing] failed to load status', error)
-        setUsedMinutes(0)
-        setTotalMinutes(0)
       } finally {
         if (!isActive) return
         setIsLoading(false)
