@@ -407,15 +407,17 @@ async function readCurrentSubscriptionForUser(userId: string): Promise<{
   mollie_subscription_id: string
   plan_id: string | null
   status: string
+  canceled_at: string | null
 } | null> {
   const row = await queryOne<{
     mollie_customer_id: string
     mollie_subscription_id: string
     plan_id: string | null
     status: string
+    canceled_at: string | null
   }>(
     `
-    select mollie_customer_id, mollie_subscription_id, plan_id, status
+    select mollie_customer_id, mollie_subscription_id, plan_id, status, canceled_at::text as canceled_at
     from public.mollie_subscriptions
     where user_id = $1
     limit 1
@@ -453,6 +455,13 @@ function normalizeDateOnly(value: string | null | undefined): string | null {
   if (!raw) return null
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
   return null
+}
+
+function parseDateMs(value: string | null | undefined): number | null {
+  const raw = optionalTrimmed(value)
+  if (!raw) return null
+  const ms = Date.parse(raw)
+  return Number.isFinite(ms) ? ms : null
 }
 
 async function createSubscriptionForPlan(params: {
@@ -657,6 +666,19 @@ export async function processMolliePaymentWebhook(paymentId: string): Promise<vo
         await applyPlanForUser({ userId, planId: null })
       }
     }
+    return
+  }
+
+  const currentSubscriptionState = await readCurrentSubscriptionForUser(userId)
+  const paidAtMs = parseDateMs(optionalTrimmed(payment.paidAt || null))
+  const canceledAtMs = parseDateMs(currentSubscriptionState?.canceled_at ?? null)
+  if (
+    currentSubscriptionState &&
+    String(currentSubscriptionState.status || "").trim().toLowerCase() === "canceled" &&
+    canceledAtMs != null &&
+    (paidAtMs == null || paidAtMs <= canceledAtMs)
+  ) {
+    await applyPlanForUser({ userId, planId: null })
     return
   }
 
@@ -885,6 +907,7 @@ export async function cancelMollieSubscriptionForUser(userId: string): Promise<{
     `
     update public.mollie_subscriptions
     set status = 'canceled',
+        plan_id = null,
         canceled_at = now(),
         updated_at = now()
     where user_id = $1

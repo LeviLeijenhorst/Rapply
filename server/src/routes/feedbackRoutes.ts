@@ -1,7 +1,7 @@
 import crypto from "crypto"
 import type { Express, RequestHandler } from "express"
 import { requireAuthenticatedUser } from "../auth"
-import { isMollieConfigured, syncMollieSubscriptionForUser, syncRecentMolliePaymentsForUser } from "../billing/mollie"
+import { cancelMollieSubscriptionForUser, isMollieConfigured, syncMollieSubscriptionForUser, syncRecentMolliePaymentsForUser } from "../billing/mollie"
 import { ensureBillingUser, readBillingStatus } from "../billing/store"
 import { isAdminEmail, normalizeEmail } from "../admin"
 import { execute, queryMany } from "../db"
@@ -1460,6 +1460,15 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
             : "Kon Entra account niet verwijderen. Controleer de Entra Graph configuratie op de server.",
         )
         return
+      }
+
+      if (isMollieConfigured()) {
+        try {
+          await cancelMollieSubscriptionForUser(user.userId)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          console.log("[account/delete] Mollie cancellation failed", { userId: user.userId, message })
+        }
       }
 
       await execute(`delete from public.users where id = $1`, [user.userId])

@@ -252,12 +252,18 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                     </View>
                   ))}
                 </View>
+              </>
+            )}
+            <View style={styles.footerRow}>
+              <Text style={styles.footnoteText}>Gespreksverslagen worden berekend op basis van 60 minuten per gesprek.</Text>
+              {!isCancelViewOpen ? (
                 <Pressable onPress={() => setIsCancelViewOpen(true)} style={({ hovered }) => [styles.cancelLinkWrap, hovered ? styles.cancelLinkWrapHovered : undefined]}>
                   <Text style={styles.cancelLinkText}>opzeggen</Text>
                 </Pressable>
-              </>
-            )}
-            <Text style={styles.footnoteText}>Gespreksverslagen worden berekend op basis van 60 minuten per gesprek.</Text>
+              ) : (
+                <View />
+              )}
+            </View>
           </>
         )}
       </View>
@@ -390,6 +396,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     color: colors.textSecondary,
+    flex: 1,
+  },
+  footerRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   cancelLinkWrap: {
     alignSelf: 'flex-end',
@@ -408,9 +422,11 @@ const styles = StyleSheet.create({
   },
   cancelView: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
     gap: 16,
     paddingHorizontal: 8,
+    paddingTop: 4,
   },
   cancelTitle: {
     fontSize: 20,
