@@ -1,6 +1,7 @@
 import crypto from "crypto"
 import type { Express, RequestHandler } from "express"
 import { requireAuthenticatedUser } from "../auth"
+import { isMollieConfigured, syncMollieSubscriptionForUser, syncRecentMolliePaymentsForUser } from "../billing/mollie"
 import { ensureBillingUser, readBillingStatus } from "../billing/store"
 import { isAdminEmail, normalizeEmail } from "../admin"
 import { execute, queryMany } from "../db"
@@ -1088,6 +1089,11 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
       if (!user) {
         sendError(res, 401, "Unauthorized")
         return
+      }
+
+      if (isMollieConfigured()) {
+        await syncRecentMolliePaymentsForUser(user.userId)
+        await syncMollieSubscriptionForUser(user.userId)
       }
 
       const row = (

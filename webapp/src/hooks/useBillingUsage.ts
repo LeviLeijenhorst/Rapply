@@ -52,10 +52,25 @@ export function useBillingUsage(): BillingUsage {
       }
     }
 
-    loadStatus()
+    void loadStatus()
+
+    const onVisibilityOrFocus = () => {
+      void loadStatus()
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', onVisibilityOrFocus)
+      window.addEventListener('pageshow', onVisibilityOrFocus)
+      document.addEventListener('visibilitychange', onVisibilityOrFocus)
+    }
 
     return () => {
       isActive = false
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', onVisibilityOrFocus)
+        window.removeEventListener('pageshow', onVisibilityOrFocus)
+        document.removeEventListener('visibilitychange', onVisibilityOrFocus)
+      }
     }
   }, [])
 
