@@ -180,9 +180,8 @@ export function AppShell({ onLogout }: Props) {
   const refreshSubscriptionAccess = useCallback(async () => {
     try {
       const response = await callSecureApi<{ planId?: string | null; canSeePricingPage?: boolean }>('/pricing/me-visibility', {})
-      const hasPlan = Boolean(response?.planId)
       const canSeePricingPage = Boolean(response?.canSeePricingPage)
-      setCanOpenSubscription(hasPlan && canSeePricingPage)
+      setCanOpenSubscription(canSeePricingPage)
     } catch {
       setCanOpenSubscription(false)
     }
