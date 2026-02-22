@@ -227,12 +227,40 @@ export async function createMolliePlanCheckout(params: {
     displayName: params.displayName,
   })
 
+  const existingSubscription = await readSubscriptionContextForUser(params.userId)
+  const canTreatAsUpgrade =
+    existingSubscription &&
+    isSubscriptionActiveStatus(existingSubscription.status) &&
+    optionalTrimmed(existingSubscription.planId) != null &&
+    optionalTrimmed(existingSubscription.planId) !== params.planId &&
+    Number.isFinite(existingSubscription.currentPlanMonthlyPrice) &&
+    Number(existingSubscription.currentPlanMonthlyPrice) >= 0 &&
+    plan.monthlyPrice > Number(existingSubscription.currentPlanMonthlyPrice)
+  const checkoutAmount = canTreatAsUpgrade
+    ? Math.max(0, plan.monthlyPrice - Number(existingSubscription.currentPlanMonthlyPrice || 0))
+    : plan.monthlyPrice
+  const metadata: Record<string, unknown> = canTreatAsUpgrade
+    ? {
+        userId: params.userId,
+        planId: params.planId,
+        kind: "subscription_upgrade_difference",
+        previousPlanId: existingSubscription?.planId ?? null,
+        previousCustomerId: existingSubscription?.customerId ?? null,
+        previousSubscriptionId: existingSubscription?.subscriptionId ?? null,
+        nextPaymentDate: existingSubscription?.nextPaymentDate ?? null,
+      }
+    : {
+        userId: params.userId,
+        planId: params.planId,
+        kind: "subscription_first_payment",
+      }
+
   const payment = await mollieApiRequest<MolliePayment>("/payments", {
     method: "POST",
     body: JSON.stringify({
       amount: {
         currency: "EUR",
-        value: normalizeAmountValue(plan.monthlyPrice),
+        value: normalizeAmountValue(checkoutAmount),
       },
       sequenceType: "first",
       customerId,
@@ -240,11 +268,7 @@ export async function createMolliePlanCheckout(params: {
       description: `Coachscribe ${plan.name}`,
       redirectUrl,
       webhookUrl,
-      metadata: {
-        userId: params.userId,
-        planId: params.planId,
-        kind: "subscription_first_payment",
-      },
+      metadata,
     }),
   })
 
@@ -288,10 +312,10 @@ export async function createMolliePlanCheckout(params: {
       payment.id,
       payment.status || "open",
       optionalTrimmed(payment.sequenceType || null),
-      payment.amount?.value ? Number(payment.amount.value) : plan.monthlyPrice,
+      payment.amount?.value ? Number(payment.amount.value) : checkoutAmount,
       optionalTrimmed(payment.amount?.currency || "EUR"),
       checkoutUrl,
-      JSON.stringify(payment.metadata || {}),
+      JSON.stringify(metadata),
     ],
   )
 
@@ -331,6 +355,48 @@ async function upsertSubscriptionRecord(params: {
     `,
     [params.userId, params.customerId, params.subscriptionId, params.planId, params.status, params.nextPaymentDate],
   )
+}
+
+async function readSubscriptionContextForUser(userId: string): Promise<{
+  customerId: string
+  subscriptionId: string
+  planId: string | null
+  status: string
+  nextPaymentDate: string | null
+  currentPlanMonthlyPrice: number | null
+} | null> {
+  const row = await queryOne<{
+    mollie_customer_id: string
+    mollie_subscription_id: string
+    plan_id: string | null
+    status: string
+    next_payment_date: string | null
+    current_plan_monthly_price: string | null
+  }>(
+    `
+    select
+      ms.mollie_customer_id,
+      ms.mollie_subscription_id,
+      ms.plan_id,
+      ms.status,
+      ms.next_payment_date::text as next_payment_date,
+      p.monthly_price as current_plan_monthly_price
+    from public.mollie_subscriptions ms
+    left join public.plans p on p.id = ms.plan_id
+    where ms.user_id = $1
+    limit 1
+    `,
+    [userId],
+  )
+  if (!row?.mollie_customer_id || !row?.mollie_subscription_id) return null
+  return {
+    customerId: row.mollie_customer_id,
+    subscriptionId: row.mollie_subscription_id,
+    planId: row.plan_id,
+    status: row.status,
+    nextPaymentDate: optionalTrimmed(row.next_payment_date),
+    currentPlanMonthlyPrice: row.current_plan_monthly_price == null ? null : Number(row.current_plan_monthly_price),
+  }
 }
 
 async function readCurrentSubscriptionForUser(userId: string): Promise<{
@@ -379,18 +445,27 @@ async function fetchSubscription(customerId: string, subscriptionId: string): Pr
   return mollieApiRequest<MollieSubscription>(`/customers/${encodeURIComponent(customerId)}/subscriptions/${encodeURIComponent(subscriptionId)}`)
 }
 
-async function createSubscriptionAfterFirstPayment(params: {
+function normalizeDateOnly(value: string | null | undefined): string | null {
+  const raw = optionalTrimmed(value)
+  if (!raw) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
+  return null
+}
+
+async function createSubscriptionForPlan(params: {
   userId: string
   customerId: string
   planId: string
-}): Promise<void> {
+  startDate?: string | null
+}): Promise<MollieSubscription> {
   const plan = await readPlanSummary(params.planId)
   if (!plan || !(plan.monthlyPrice > 0)) {
     throw new Error("Cannot create subscription for invalid plan")
   }
 
   const webhookUrl = requireMollieWebhookUrl()
-  const subscription = await mollieApiRequest<MollieSubscription>(`/customers/${encodeURIComponent(params.customerId)}/subscriptions`, {
+  const startDate = normalizeDateOnly(params.startDate ?? null)
+  return mollieApiRequest<MollieSubscription>(`/customers/${encodeURIComponent(params.customerId)}/subscriptions`, {
     method: "POST",
     body: JSON.stringify({
       amount: {
@@ -404,7 +479,20 @@ async function createSubscriptionAfterFirstPayment(params: {
         userId: params.userId,
         planId: params.planId,
       },
+      ...(startDate ? { startDate } : {}),
     }),
+  })
+}
+
+async function createSubscriptionAfterFirstPayment(params: {
+  userId: string
+  customerId: string
+  planId: string
+}): Promise<void> {
+  const subscription = await createSubscriptionForPlan({
+    userId: params.userId,
+    customerId: params.customerId,
+    planId: params.planId,
   })
 
   await upsertSubscriptionRecord({
@@ -505,6 +593,64 @@ export async function processMolliePaymentWebhook(paymentId: string): Promise<vo
       })
       if (!isSubscriptionActiveStatus(subscription.status)) {
         await applyPlanForUser({ userId, planId: null })
+      }
+    }
+    return
+  }
+
+  const metadataKind = optionalTrimmed((metadata as any).kind)
+  if (metadataKind === "subscription_upgrade_difference") {
+    const previousCustomerId = optionalTrimmed((metadata as any).previousCustomerId || payment.customerId)
+    const previousSubscriptionId = optionalTrimmed((metadata as any).previousSubscriptionId)
+    const nextPaymentDate = optionalTrimmed((metadata as any).nextPaymentDate)
+    const currentSubscription = await readCurrentSubscriptionForUser(userId)
+    if (
+      currentSubscription &&
+      isSubscriptionActiveStatus(currentSubscription.status) &&
+      optionalTrimmed(currentSubscription.plan_id) === planId &&
+      optionalTrimmed(currentSubscription.mollie_subscription_id) !== previousSubscriptionId
+    ) {
+      await applyPlanForUser({ userId, planId })
+      return
+    }
+
+    const customerId = previousCustomerId || optionalTrimmed(payment.customerId || null)
+    if (!customerId) {
+      throw new Error("Upgrade payment is missing customerId")
+    }
+
+    const replacement = await createSubscriptionForPlan({
+      userId,
+      customerId,
+      planId,
+      startDate: nextPaymentDate,
+    })
+    await upsertSubscriptionRecord({
+      userId,
+      customerId,
+      subscriptionId: replacement.id,
+      planId,
+      status: replacement.status,
+      nextPaymentDate: optionalTrimmed(replacement.nextPaymentDate || null),
+    })
+    await applyPlanForUser({ userId, planId })
+
+    if (previousCustomerId && previousSubscriptionId && previousSubscriptionId !== replacement.id) {
+      try {
+        await mollieApiRequest<void>(
+          `/customers/${encodeURIComponent(previousCustomerId)}/subscriptions/${encodeURIComponent(previousSubscriptionId)}`,
+          { method: "DELETE" },
+        )
+      } catch (error: any) {
+        const message = String(error?.message || error || "")
+        if (!message.toLowerCase().includes("not found")) {
+          console.log("[billing:mollie] failed to cancel previous subscription after upgrade", {
+            userId,
+            previousCustomerId,
+            previousSubscriptionId,
+            message,
+          })
+        }
       }
     }
     return
