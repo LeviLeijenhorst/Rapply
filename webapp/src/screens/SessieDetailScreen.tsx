@@ -60,6 +60,8 @@ import {
 import { RichTextEditorModal } from '../components/editor/RichTextEditorModal'
 import { normalizeTranscriptionError } from '../utils/transcriptionError'
 import { ConfirmChatClearModal } from '../components/sessionDetail/ConfirmChatClearModal'
+import { AnimatedOverlayModal } from '../components/AnimatedOverlayModal'
+import { fetchBillingStatus, type BillingStatus } from '../services/billing'
 
 type Props = {
   sessionId: string
@@ -68,6 +70,7 @@ type Props = {
   dateLabel: string
   onBack: () => void
   onOpenNewCoachee: () => void
+  onOpenMySubscription: () => void
   onChangeCoachee: (coacheeId: string | null) => void
   newlyCreatedCoacheeName?: string | null
   onNewlyCreatedCoacheeHandled?: () => void
@@ -80,6 +83,7 @@ export function SessieDetailScreen({
   dateLabel,
   onBack,
   onOpenNewCoachee,
+  onOpenMySubscription,
   onChangeCoachee,
   newlyCreatedCoacheeName,
   onNewlyCreatedCoacheeHandled,
@@ -125,6 +129,9 @@ export function SessieDetailScreen({
   const [isCancelTranscriptionModalVisible, setIsCancelTranscriptionModalVisible] = useState(false)
   const [isDownloadingAudio, setIsDownloadingAudio] = useState(false)
   const [isDeletingAudio, setIsDeletingAudio] = useState(false)
+  const [isNoMinutesModalVisible, setIsNoMinutesModalVisible] = useState(false)
+  const [requiredTranscriptionSeconds, setRequiredTranscriptionSeconds] = useState(0)
+  const [remainingTranscriptionSeconds, setRemainingTranscriptionSeconds] = useState(0)
 
   const coacheeButtonRef = useRef<any>(null)
   const templates = data.templates ?? []
@@ -646,8 +653,33 @@ export function SessieDetailScreen({
     }
   }
 
+  function readRemainingTranscriptionSeconds(status: BillingStatus | null): number {
+    if (!status) return 0
+    const includedRemainingSeconds = Math.max(0, Math.floor(status.includedSeconds - status.cycleUsedSeconds))
+    const nonExpiringRemainingSeconds = Math.max(0, Math.floor(status.nonExpiringTotalSeconds - status.nonExpiringUsedSeconds))
+    return includedRemainingSeconds + nonExpiringRemainingSeconds
+  }
+
+  async function ensureSufficientTranscriptionMinutes(): Promise<boolean> {
+    const requiredSeconds = Math.max(1, Math.ceil(currentAudioDurationSeconds ?? session?.audioDurationSeconds ?? 1))
+    try {
+      const response = await fetchBillingStatus()
+      const remainingSeconds = readRemainingTranscriptionSeconds(response?.billingStatus ?? null)
+      if (remainingSeconds < requiredSeconds) {
+        setRequiredTranscriptionSeconds(requiredSeconds)
+        setRemainingTranscriptionSeconds(remainingSeconds)
+        setIsNoMinutesModalVisible(true)
+        return false
+      }
+    } catch (error) {
+      console.error('[SessieDetailScreen] Failed to read billing status before transcription start', error)
+    }
+    return true
+  }
+
   async function retryTranscription() {
     if (session?.transcriptionStatus === 'transcribing' || session?.transcriptionStatus === 'generating') return
+    if (!(await ensureSufficientTranscriptionMinutes())) return
 
     const runId = beginGenerationRun()
     const transcriptionAbortController = new AbortController()
@@ -735,6 +767,8 @@ export function SessieDetailScreen({
 
   async function generateReportForTemplate(templateId: string) {
     if (session?.transcriptionStatus === 'transcribing' || session?.transcriptionStatus === 'generating') return
+    const existingTranscript = String(session?.transcript || '').trim()
+    if (!existingTranscript && !(await ensureSufficientTranscriptionMinutes())) return
     const runId = beginGenerationRun()
     const template = templates.find((item) => item.id === templateId) ?? null
     const templateForSummary = template
@@ -754,7 +788,7 @@ export function SessieDetailScreen({
     try {
       const transcriptionAbortController = new AbortController()
       setTranscriptionAbortController(sessionId, runId, transcriptionAbortController)
-      let transcript = String(session?.transcript || '').trim()
+      let transcript = existingTranscript
       if (!transcript) {
         setForcedTranscriptionStatus('transcribing')
         console.log('[transcription][report] audio-download-start', { sessionId, audioId: session?.audioBlobId ?? null })
@@ -1084,6 +1118,50 @@ export function SessieDetailScreen({
             void generateReportForTemplate(templateId)
           }}
         />
+
+        <AnimatedOverlayModal
+          visible={isNoMinutesModalVisible}
+          onClose={() => setIsNoMinutesModalVisible(false)}
+          contentContainerStyle={styles.noMinutesModalContainer}
+        >
+          <View style={styles.noMinutesModalContent}>
+            <Text isBold style={styles.noMinutesModalTitle}>
+              Onvoldoende minuten voor transcriptie
+            </Text>
+            <Text style={styles.noMinutesModalText}>
+              U heeft {remainingTranscriptionSeconds}s over en dit verslag heeft ongeveer {requiredTranscriptionSeconds}s nodig. Bekijk uw abonnement om extra minuten te regelen.
+            </Text>
+            <View style={styles.noMinutesModalActions}>
+              <Pressable
+                onPress={() => setIsNoMinutesModalVisible(false)}
+                style={({ hovered }) => [
+                  styles.noMinutesActionButton,
+                  styles.noMinutesActionButtonSecondary,
+                  hovered ? styles.noMinutesActionButtonSecondaryHovered : undefined,
+                ]}
+              >
+                <Text isBold style={styles.noMinutesActionButtonSecondaryText}>
+                  Sluiten
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setIsNoMinutesModalVisible(false)
+                  onOpenMySubscription()
+                }}
+                style={({ hovered }) => [
+                  styles.noMinutesActionButton,
+                  styles.noMinutesActionButtonPrimary,
+                  hovered ? styles.noMinutesActionButtonPrimaryHovered : undefined,
+                ]}
+              >
+                <Text isBold style={styles.noMinutesActionButtonPrimaryText}>
+                  Mijn abonnement
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </AnimatedOverlayModal>
 
       </View>
     )
@@ -1445,6 +1523,50 @@ export function SessieDetailScreen({
           resetChat()
         }}
       />
+
+      <AnimatedOverlayModal
+        visible={isNoMinutesModalVisible}
+        onClose={() => setIsNoMinutesModalVisible(false)}
+        contentContainerStyle={styles.noMinutesModalContainer}
+      >
+        <View style={styles.noMinutesModalContent}>
+          <Text isBold style={styles.noMinutesModalTitle}>
+            Onvoldoende minuten voor transcriptie
+          </Text>
+          <Text style={styles.noMinutesModalText}>
+            U heeft {remainingTranscriptionSeconds}s over en dit verslag heeft ongeveer {requiredTranscriptionSeconds}s nodig. Bekijk uw abonnement om extra minuten te regelen.
+          </Text>
+          <View style={styles.noMinutesModalActions}>
+            <Pressable
+              onPress={() => setIsNoMinutesModalVisible(false)}
+              style={({ hovered }) => [
+                styles.noMinutesActionButton,
+                styles.noMinutesActionButtonSecondary,
+                hovered ? styles.noMinutesActionButtonSecondaryHovered : undefined,
+              ]}
+            >
+              <Text isBold style={styles.noMinutesActionButtonSecondaryText}>
+                Sluiten
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setIsNoMinutesModalVisible(false)
+                onOpenMySubscription()
+              }}
+              style={({ hovered }) => [
+                styles.noMinutesActionButton,
+                styles.noMinutesActionButtonPrimary,
+                hovered ? styles.noMinutesActionButtonPrimaryHovered : undefined,
+              ]}
+            >
+              <Text isBold style={styles.noMinutesActionButtonPrimaryText}>
+                Mijn abonnement
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </AnimatedOverlayModal>
 
       {isChatMaximizedRendered ? (
         <WebPortal>
@@ -1973,6 +2095,60 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginTop: 2,
+  },
+  noMinutesModalContainer: {
+    width: 560,
+  },
+  noMinutesModalContent: {
+    padding: 24,
+    gap: 16,
+  },
+  noMinutesModalTitle: {
+    fontSize: 18,
+    lineHeight: 22,
+    color: colors.textStrong,
+  },
+  noMinutesModalText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.text,
+  },
+  noMinutesModalActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  noMinutesActionButton: {
+    height: 40,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noMinutesActionButtonSecondary: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  noMinutesActionButtonSecondaryHovered: {
+    backgroundColor: 'rgba(0,0,0,0.06)',
+  },
+  noMinutesActionButtonSecondaryText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+  },
+  noMinutesActionButtonPrimary: {
+    backgroundColor: colors.selected,
+  },
+  noMinutesActionButtonPrimaryHovered: {
+    backgroundColor: '#A50058',
+  },
+  noMinutesActionButtonPrimaryText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#FFFFFF',
   },
   tabAnimated: {
     flex: 1,

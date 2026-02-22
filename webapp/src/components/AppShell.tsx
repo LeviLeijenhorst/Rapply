@@ -740,12 +740,13 @@ export function AppShell({ onLogout }: Props) {
           dateLabel={dateLabel}
           onBack={goBack}
           onOpenNewCoachee={openNewCoacheeModal}
-            onChangeCoachee={(nextCoacheeId) => {
-              if (!nextCoacheeId) {
-                setSelectedSidebarItemKey('sessies')
-                setSessionOriginRoute(null)
-              }
-            }}
+          onOpenMySubscription={() => setIsMySubscriptionModalOpen(true)}
+          onChangeCoachee={(nextCoacheeId) => {
+            if (!nextCoacheeId) {
+              setSelectedSidebarItemKey('sessies')
+              setSessionOriginRoute(null)
+            }
+          }}
           newlyCreatedCoacheeName={newlyCreatedCoacheeName}
           onNewlyCreatedCoacheeHandled={() => {
             setNewlyCreatedCoacheeId(null)

@@ -40,6 +40,16 @@ type AllowlistItem = {
   createdAt: string
 }
 type AllowlistResponse = { items: AllowlistItem[] }
+type FeedbackItem = {
+  id: string
+  userId: string
+  name: string | null
+  email: string | null
+  accountEmail: string | null
+  message: string
+  createdAt: string
+}
+type FeedbackListResponse = { items: FeedbackItem[] }
 
 type UserFormState = {
   planId: string | null
@@ -84,6 +94,7 @@ export function AdminRevenueScreen() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [users, setUsers] = useState<AdminUser[]>([])
   const [allowlistItems, setAllowlistItems] = useState<AllowlistItem[]>([])
+  const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([])
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [selectedUserForm, setSelectedUserForm] = useState<UserFormState | null>(null)
   const [isBusy, setIsBusy] = useState(false)
@@ -100,14 +111,17 @@ export function AdminRevenueScreen() {
     try {
       setIsLoading(true)
       setErrorMessage(null)
-      const [plansResponse, usersResponse] = await Promise.all([
+      const [plansResponse, usersResponse, feedbackResponse] = await Promise.all([
         callSecureApi<PlanListResponse>('/admin/plans/list', {}),
         callSecureApi<UserListResponse>('/admin/users/list', {}),
+        callSecureApi<FeedbackListResponse>('/admin/feedback/list', { limit: 200 }),
       ])
       const nextPlans = Array.isArray(plansResponse.items) ? plansResponse.items : []
       const nextUsers = Array.isArray(usersResponse.items) ? usersResponse.items : []
+      const nextFeedbackItems = Array.isArray(feedbackResponse.items) ? feedbackResponse.items : []
       setPlans(nextPlans)
       setUsers(nextUsers)
+      setFeedbackItems(nextFeedbackItems)
       setSelectedUserId((current) => {
         if (current && nextUsers.some((user) => user.userId === current)) return current
         return nextUsers[0]?.userId ?? null
@@ -116,6 +130,7 @@ export function AdminRevenueScreen() {
       setErrorMessage(parseError(error))
       setPlans([])
       setUsers([])
+      setFeedbackItems([])
       setSelectedUserId(null)
       setSelectedUserForm(null)
     } finally {
@@ -304,6 +319,41 @@ export function AdminRevenueScreen() {
       {statusMessage ? <Text style={styles.statusText}>{statusMessage}</Text> : null}
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.card}>
+          <View style={styles.feedbackHeaderRow}>
+            <View>
+              <Text isSemibold style={styles.cardTitle}>Feedback</Text>
+              <Text style={styles.cardSubtitle}>{feedbackItems.length} berichten</Text>
+            </View>
+            <Pressable
+              onPress={() => void loadData()}
+              style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]}
+              disabled={isLoading || isBusy}
+            >
+              <Text isBold style={styles.secondaryButtonText}>Verversen</Text>
+            </Pressable>
+          </View>
+          {isLoading ? (
+            <Text style={styles.cardSubtitle}>Feedback laden...</Text>
+          ) : feedbackItems.length === 0 ? (
+            <Text style={styles.cardSubtitle}>Nog geen feedback gevonden.</Text>
+          ) : (
+            <View style={styles.feedbackList}>
+              {feedbackItems.map((item) => (
+                <View key={item.id} style={styles.feedbackItem}>
+                  <View style={styles.feedbackMetaRow}>
+                    <Text isSemibold style={styles.feedbackMetaTitle}>{formatDateTime(item.createdAt)}</Text>
+                    <Text style={styles.feedbackMetaMuted}>{item.accountEmail || item.userId}</Text>
+                  </View>
+                  <Text style={styles.feedbackMetaLine}>Naam: {item.name || '-'}</Text>
+                  <Text style={styles.feedbackMetaLine}>Feedback e-mail: {item.email || '-'}</Text>
+                  <Text style={styles.feedbackMessage}>{item.message}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
         <View style={styles.card}>
           <View style={styles.allowlistHeaderRow}>
             <View>
@@ -549,6 +599,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
+  },
+  feedbackHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  feedbackList: {
+    gap: 8,
+  },
+  feedbackItem: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: colors.pageBackground,
+    gap: 4,
+  },
+  feedbackMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  feedbackMetaTitle: {
+    fontSize: 13,
+    lineHeight: 17,
+    color: colors.textStrong,
+  },
+  feedbackMetaMuted: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
+  },
+  feedbackMetaLine: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
+  },
+  feedbackMessage: {
+    marginTop: 2,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textStrong,
   },
   allowlistAddRow: {
     flexDirection: 'row',

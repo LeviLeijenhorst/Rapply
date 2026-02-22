@@ -414,7 +414,16 @@ export async function exportMessageToPdf(messageText: string, reportTitle: strin
     String(practiceSettings.website || '').trim(),
     String(practiceSettings.practiceName || '').trim(),
   )
-  doc.save(buildPdfFileName(title))
+  const fileName = buildPdfFileName(title)
+  const pdfBlob = doc.output('blob')
+  const downloadUrl = URL.createObjectURL(pdfBlob)
+  const anchor = document.createElement('a')
+  anchor.href = downloadUrl
+  anchor.download = fileName
+  document.body.appendChild(anchor)
+  anchor.click()
+  document.body.removeChild(anchor)
+  window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000)
 }
 
 function renderInlineSegments({
