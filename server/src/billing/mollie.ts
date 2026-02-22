@@ -333,6 +333,30 @@ async function upsertSubscriptionRecord(params: {
   )
 }
 
+async function readCurrentSubscriptionForUser(userId: string): Promise<{
+  mollie_customer_id: string
+  mollie_subscription_id: string
+  plan_id: string | null
+  status: string
+} | null> {
+  const row = await queryOne<{
+    mollie_customer_id: string
+    mollie_subscription_id: string
+    plan_id: string | null
+    status: string
+  }>(
+    `
+    select mollie_customer_id, mollie_subscription_id, plan_id, status
+    from public.mollie_subscriptions
+    where user_id = $1
+    limit 1
+    `,
+    [userId],
+  )
+  if (!row?.mollie_customer_id || !row?.mollie_subscription_id) return null
+  return row
+}
+
 function isSubscriptionActiveStatus(status: string | null | undefined): boolean {
   const normalized = String(status || "").trim().toLowerCase()
   return normalized === "active" || normalized === "pending"
@@ -491,6 +515,15 @@ export async function processMolliePaymentWebhook(paymentId: string): Promise<vo
     if (!customerId) {
       throw new Error("Paid first Mollie payment is missing customerId")
     }
+    const existingSubscription = await readCurrentSubscriptionForUser(userId)
+    if (
+      existingSubscription &&
+      isSubscriptionActiveStatus(existingSubscription.status) &&
+      optionalTrimmed(existingSubscription.plan_id) === planId
+    ) {
+      await applyPlanForUser({ userId, planId })
+      return
+    }
     await createSubscriptionAfterFirstPayment({
       userId,
       customerId,
@@ -580,9 +613,10 @@ export async function syncRecentMolliePaymentsForUser(userId: string): Promise<v
     select mollie_payment_id
     from public.mollie_payments
     where user_id = $1
-      and lower(status) in ('open', 'pending', 'authorized')
+      and lower(status) in ('open', 'pending', 'authorized', 'paid')
+      and created_at >= now() - interval '14 days'
     order by created_at desc
-    limit 5
+    limit 10
     `,
     [userId],
   )
