@@ -1,5 +1,5 @@
 import crypto from "crypto"
-import { execute, queryOne } from "../db"
+import { execute, queryMany, queryOne } from "../db"
 import { env } from "../env"
 
 type MollieAmount = {
@@ -569,6 +569,33 @@ export async function syncMollieSubscriptionForUser(userId: string): Promise<voi
       return
     }
     throw error
+  }
+}
+
+export async function syncRecentMolliePaymentsForUser(userId: string): Promise<void> {
+  await ensureMollieSchema()
+
+  const pendingPayments = await queryMany<{ mollie_payment_id: string }>(
+    `
+    select mollie_payment_id
+    from public.mollie_payments
+    where user_id = $1
+      and lower(status) in ('open', 'pending', 'authorized')
+    order by created_at desc
+    limit 5
+    `,
+    [userId],
+  )
+
+  for (const payment of pendingPayments) {
+    const paymentId = optionalTrimmed(payment.mollie_payment_id)
+    if (!paymentId) continue
+    try {
+      await processMolliePaymentWebhook(paymentId)
+    } catch (error: any) {
+      const message = String(error?.message || error || "")
+      console.log("[billing:mollie:sync-payments] failed", { userId, paymentId, message })
+    }
   }
 }
 

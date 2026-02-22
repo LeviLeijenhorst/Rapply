@@ -56,6 +56,7 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
   useEffect(() => {
     if (!visible) return
     let isCancelled = false
+    setCheckoutLoadingPlanId(null)
 
     const loadPricing = async () => {
       try {
@@ -84,6 +85,19 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
 
     return () => {
       isCancelled = true
+    }
+  }, [visible])
+
+  useEffect(() => {
+    if (!visible || typeof window === 'undefined') return
+    const handleReturnToPage = () => {
+      setCheckoutLoadingPlanId(null)
+    }
+    window.addEventListener('pageshow', handleReturnToPage)
+    window.addEventListener('focus', handleReturnToPage)
+    return () => {
+      window.removeEventListener('pageshow', handleReturnToPage)
+      window.removeEventListener('focus', handleReturnToPage)
     }
   }, [visible])
 
@@ -160,12 +174,6 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                       <HoursPerMonthIcon size={24} />
                       <Text style={styles.featureText}>{plan.minutesPerMonth} minuten per maand</Text>
                     </View>
-                    {plan.description ? (
-                      <View style={styles.featureRow}>
-                        <HoursPerMonthIcon size={24} />
-                        <Text style={styles.featureText}>{plan.description}</Text>
-                      </View>
-                    ) : null}
                   </View>
                   <AppButton
                     label={

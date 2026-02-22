@@ -1,6 +1,6 @@
 import express, { type Express, type RequestHandler } from "express"
 import { requireAuthenticatedUser } from "../auth"
-import { cancelMollieSubscriptionForUser, createMolliePlanCheckout, isMollieConfigured, processMolliePaymentWebhook, syncMollieSubscriptionForUser } from "../billing/mollie"
+import { cancelMollieSubscriptionForUser, createMolliePlanCheckout, isMollieConfigured, processMolliePaymentWebhook, syncMollieSubscriptionForUser, syncRecentMolliePaymentsForUser } from "../billing/mollie"
 import { derivePlanStateFromRevenueCatSubscriber, derivePurchasedSecondsFromRevenueCatSubscriber, fetchRevenueCatSubscriber } from "../billing/revenuecat"
 import { readManualPricingContextForUser } from "../billing/manualPricing"
 import { ensureBillingUser, readBillingStatus } from "../billing/store"
@@ -104,6 +104,7 @@ export function registerBillingRoutes(app: Express, params: RegisterBillingRoute
 
       const useMollie = isMollieConfigured()
       if (useMollie) {
+        await syncRecentMolliePaymentsForUser(user.userId)
         await syncMollieSubscriptionForUser(user.userId)
       }
 
@@ -149,6 +150,7 @@ export function registerBillingRoutes(app: Express, params: RegisterBillingRoute
 
       const useMollie = isMollieConfigured()
       if (useMollie) {
+        await syncRecentMolliePaymentsForUser(user.userId)
         await syncMollieSubscriptionForUser(user.userId)
       }
 
