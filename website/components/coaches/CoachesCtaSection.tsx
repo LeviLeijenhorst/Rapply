@@ -1,4 +1,4 @@
-import Image from "next/image";
+﻿import Image from "next/image";
 import Button from "@/components/Button";
 import SectionContainer from "@/components/home/SectionContainer";
 import ctaImage from "@/coaches/coaches-1.jpg";
@@ -14,15 +14,16 @@ export default function CoachesCtaSection() {
               <span className="block text-[#BD0265]">iets voor jou?</span>
             </h1>
             <p className="max-w-xl text-[16px] font-medium text-black/70">
-              Ben jij een coach en ervaar je mentale druk door het bijhouden van
-              sessies en cliënten? Ben je teveel tijd kwijt aan voorbereiding en
-              naslagwerk? Wellicht dat wij jou kunnen helpen :)
+              Ben jij een loopbaan- of re-integratiecoach en ervaar je mentale
+              druk door het bijhouden van sessies en clienten? Ben je te veel
+              tijd kwijt aan voorbereiding en naslagwerk? Wellicht dat wij jou
+              kunnen helpen.
             </p>
           </div>
           <div className="mt-6">
             <Button
               label="Probeer het uit"
-              destination="/wachtlijst"
+              destination="https://app.coachscribe.nl"
               showArrow
               className="font-normal"
             />
@@ -40,3 +41,4 @@ export default function CoachesCtaSection() {
     </SectionContainer>
   );
 }
+

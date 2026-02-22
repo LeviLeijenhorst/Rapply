@@ -184,123 +184,128 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$co
 ;
 ;
 ;
-const overOnsVideoUrl = "https://jnlsolutionswebsite.blob.core.windows.net/videos/over_ons-video.mp4";
 function OverOnsHeroSection() {
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$home$2f$SectionContainer$2e$tsx__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"], {
         className: "bg-white",
-        contentClassName: "lg:pt-[136px]",
+        contentClassName: "pt-10 md:pt-12",
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-            className: "grid w-full items-start gap-10 lg:grid-cols-2",
-            children: [
-                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                    className: "flex w-full flex-col items-start",
-                    children: [
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "flex w-full max-w-xl flex-col items-start gap-4",
-                            children: [
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
-                                    className: "font-[var(--font-catamaran)] text-[38px] font-medium leading-[110%] text-black md:text-[50px] xl:text-[64px]",
-                                    children: [
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                            children: "Aangenaam "
-                                        }, void 0, false, {
-                                            fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
-                                            lineNumber: 13,
-                                            columnNumber: 15
-                                        }, this),
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                            className: "text-[#BD0265]",
-                                            children: ":)"
-                                        }, void 0, false, {
-                                            fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
-                                            lineNumber: 14,
-                                            columnNumber: 15
-                                        }, this)
-                                    ]
-                                }, void 0, true, {
-                                    fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
-                                    lineNumber: 12,
-                                    columnNumber: 13
-                                }, this),
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                    className: "max-w-xl text-[16px] font-medium text-black/70 lg:pr-10",
-                                    children: "Wij geloven dat goede coaching begint bij rust, focus en aandacht. Coaches doen intens en betekenisvol werk en wij willen hen ondersteunen met tools die ruimte geven om echt aanwezig te zijn."
-                                }, void 0, false, {
-                                    fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
-                                    lineNumber: 16,
-                                    columnNumber: 13
-                                }, this)
-                            ]
-                        }, void 0, true, {
-                            fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
-                            lineNumber: 11,
-                            columnNumber: 11
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "mt-6",
-                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$Button$2e$tsx__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"], {
-                                label: "Contact",
-                                destination: "/contact",
-                                showArrow: true,
-                                className: "font-normal"
-                            }, void 0, false, {
+            className: "flex w-full items-start justify-center",
+            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "flex w-full flex-col items-center",
+                children: [
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        className: "flex w-full max-w-3xl flex-col items-center gap-8 text-center",
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
+                                className: "font-[var(--font-catamaran)] text-[38px] font-medium leading-[110%] text-black md:text-[50px] xl:text-[64px]",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        children: "Wij helpen coaches terug te keren naar "
+                                    }, void 0, false, {
+                                        fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
+                                        lineNumber: 11,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        className: "text-[#BD0265]",
+                                        children: "waarom ze het vak zijn ingestapt"
+                                    }, void 0, false, {
+                                        fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
+                                        lineNumber: 12,
+                                        columnNumber: 15
+                                    }, this)
+                                ]
+                            }, void 0, true, {
                                 fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
-                                lineNumber: 23,
+                                lineNumber: 10,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                className: "mt-2 max-w-3xl text-[16px] font-medium text-black/70",
+                                children: [
+                                    "We leven in een tijd waarin technologie meer overneemt dan ooit. De klantenservice is een chatbot, de kassa een zelfscan en de bank een app op je smartphone. En toch, diezelfde technologie brengt ons ook dichter bij de mensen die we liefhebben.",
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
+                                        fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
+                                        lineNumber: 21,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
+                                        fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
+                                        lineNumber: 22,
+                                        columnNumber: 15
+                                    }, this),
+                                    "Je bezoekt vrienden aan de andere kant van het land met je auto, je belt tussendoor even je moeder op om te vragen hoe het gaat en veel werk kan tegenwoordig vanaf je laptop op de bank bij je gezin.",
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
+                                        fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
+                                        lineNumber: 27,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
+                                        fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
+                                        lineNumber: 28,
+                                        columnNumber: 15
+                                    }, this),
+                                    "Wij geloven dat de versnelling van technologie niet hoeft te betekenen dat menselijk contact verdwijnt. Wij zien juist kansen om technologie in te zetten voor het tegendeel: het versterken van die connectie.",
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
+                                        fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
+                                        lineNumber: 33,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
+                                        fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
+                                        lineNumber: 34,
+                                        columnNumber: 15
+                                    }, this),
+                                    "Daarom bouwen wij CoachScribe: zodat loopbaancoaches en re-integratieprofessionals geen tijd meer verliezen aan notities, verslagen en administratie, maar zich volledig kunnen richten op wat echt telt. Het helpen van mensen.",
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
+                                        fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
+                                        lineNumber: 39,
+                                        columnNumber: 15
+                                    }, this),
+                                    "Want dat is waarom je dit vak hebt gekozen."
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
+                                lineNumber: 16,
                                 columnNumber: 13
                             }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
+                        lineNumber: 9,
+                        columnNumber: 11
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        className: "mt-6",
+                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$Button$2e$tsx__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"], {
+                            label: "Contact",
+                            destination: "/contact",
+                            showArrow: true,
+                            className: "font-normal"
                         }, void 0, false, {
                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
-                            lineNumber: 22,
-                            columnNumber: 11
-                        }, this)
-                    ]
-                }, void 0, true, {
-                    fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
-                    lineNumber: 10,
-                    columnNumber: 9
-                }, this),
-                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                    className: "flex w-full justify-center lg:-translate-y-[60px] lg:self-center lg:justify-end",
-                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "w-full max-w-[340px] overflow-hidden rounded-2xl md:max-w-[470px] xl:max-w-[600px]",
-                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "aspect-[22/15] w-full",
-                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("video", {
-                                src: overOnsVideoUrl,
-                                className: "h-full w-full object-cover",
-                                playsInline: true,
-                                controls: true,
-                                preload: "auto",
-                                controlsList: "nodownload"
-                            }, void 0, false, {
-                                fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
-                                lineNumber: 34,
-                                columnNumber: 15
-                            }, this)
-                        }, void 0, false, {
-                            fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
-                            lineNumber: 33,
+                            lineNumber: 44,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
-                        lineNumber: 32,
+                        lineNumber: 43,
                         columnNumber: 11
                     }, this)
-                }, void 0, false, {
-                    fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
-                    lineNumber: 31,
-                    columnNumber: 9
-                }, this)
-            ]
-        }, void 0, true, {
+                ]
+            }, void 0, true, {
+                fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
+                lineNumber: 8,
+                columnNumber: 9
+            }, this)
+        }, void 0, false, {
             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
-            lineNumber: 9,
+            lineNumber: 7,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsHeroSection.tsx",
-        lineNumber: 8,
+        lineNumber: 6,
         columnNumber: 5
     }, this);
 }
@@ -406,9 +411,10 @@ const founders = [
     {
         name: "Levi Leijenhorst",
         description: [
-            "Levi heeft een achtergrond in toegepaste-psychologie en tijdens zijn stage als studentencoach is het idee voor CoachScribe ontstaan.",
-            "Levi is technisch aangelegd en heeft zichzelf leren coderen als hobby, deze hobby is ondertussen flink uit de hand gelopen en hij is verantwoordelijk over de gehele technische kant van CoachScribe, de veiligheid en alles wat hiermee te maken heeft.",
-            "Daarnaast voert Levi regelmatig feedback- en salesgesprekken met coaches, is nauw betrokken bij het design en gebruikerservaring en is een gepassioneerde ondernemer."
+            "Levi heeft een achtergrond in toegepaste psychologie en merkte tijdens zijn werk als begeleider hoe tijdrovend en mentaal belastend verslaglegging kan zijn.",
+            "Dat inzicht vormde de basis voor CoachScribe.",
+            "Binnen CoachScribe richt Levi zich op het vertalen van praktijkproblemen naar een goed doordachte digitale oplossing. De technische infrastructuur en beveiliging zijn ingericht op basis van technologie van gespecialiseerde cloud- en AI-partners die binnen de EU veel worden gebruikt voor het verwerken van gevoelige informatie.",
+            "Levi is verantwoordelijk voor de architectuurkeuzes, de manier waarop deze technologieen worden geintegreerd en de verdere doorontwikkeling van het platform. Daarnaast is hij nauw betrokken bij design, gebruikerservaring en de gesprekken met professionals die CoachScribe dagelijks gebruiken."
         ],
         image: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$over_ons$2f$over_ons$2d$Levi$2e$jpg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$over_ons$2f$over_ons$2d$Levi$2e$jpg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$rsc$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"],
         imageClassName: "lg:rounded-l-[24px]",
@@ -419,9 +425,8 @@ const founders = [
     {
         name: "Jonas Kroon",
         description: [
-            "Jonas is een oude jeugdvriend van Levi. Ook hij heeft toegepaste-psychologie gestudeerd en herkende de problemen die Levi omschreef. Toen Jonas het idee voor CoachScribe hoorde was hij gelijk verkocht.",
-            "Jonas is creatief en strategisch ingesteld. Hij neemt het design, de gebruikerservaring en marketing voor zijn rekening en houdt zich bezig met alles aan de voorkant van CoachScribe.",
-            "Ook Jonas voert regelmatig feedback- en salesgesprekken met coaches, is constant opzoek naar ruimte voor verbetering en een gepassioneerde ondernemer."
+            "Jonas heeft een achtergrond in toegepaste psychologie en herkende direct de uitdagingen waar professionals dagelijks mee te maken hebben.",
+            "Als creatief oprichter is Jonas verantwoordelijk voor design, gebruikerservaring en marketing. Hij zorgt ervoor dat CoachScribe niet alleen goed werkt, maar ook prettig en intuitief aanvoelt. Jonas staat in nauw contact met coaches en re-integratieprofessionals om het product continu te verbeteren."
         ],
         image: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$over_ons$2f$over_ons$2d$Jonas$2e$jpg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$over_ons$2f$over_ons$2d$Jonas$2e$jpg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$rsc$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"],
         textContainerClassName: "lg:px-[80px]",

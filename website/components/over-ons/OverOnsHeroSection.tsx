@@ -1,22 +1,43 @@
 import Button from "@/components/Button";
 import SectionContainer from "@/components/home/SectionContainer";
 
-const overOnsVideoUrl = "https://jnlsolutionswebsite.blob.core.windows.net/videos/over_ons-video.mp4";
-
 export default function OverOnsHeroSection() {
   return (
-    <SectionContainer className="bg-white" contentClassName="lg:pt-[136px]">
-      <div className="grid w-full items-start gap-10 lg:grid-cols-2">
-        <div className="flex w-full flex-col items-start">
-          <div className="flex w-full max-w-xl flex-col items-start gap-4">
+    <SectionContainer className="bg-white" contentClassName="pt-10 md:pt-12">
+      <div className="flex w-full items-start justify-center">
+        <div className="flex w-full flex-col items-center">
+          <div className="flex w-full max-w-3xl flex-col items-center gap-8 text-center">
             <h1 className="font-[var(--font-catamaran)] text-[38px] font-medium leading-[110%] text-black md:text-[50px] xl:text-[64px]">
-              <span>Aangenaam </span>
-              <span className="text-[#BD0265]">:)</span>
+              <span>Wij helpen coaches terug te keren naar </span>
+              <span className="text-[#BD0265]">
+                waarom ze het vak zijn ingestapt
+              </span>
             </h1>
-            <p className="max-w-xl text-[16px] font-medium text-black/70 lg:pr-10">
-              Wij geloven dat goede coaching begint bij rust, focus en aandacht.
-              Coaches doen intens en betekenisvol werk en wij willen hen
-              ondersteunen met tools die ruimte geven om echt aanwezig te zijn.
+            <p className="mt-2 max-w-3xl text-[16px] font-medium text-black/70">
+              We leven in een tijd waarin technologie meer overneemt dan ooit.
+              De klantenservice is een chatbot, de kassa een zelfscan en de
+              bank een app op je smartphone. En toch, diezelfde technologie
+              brengt ons ook dichter bij de mensen die we liefhebben.
+              <br />
+              <br />
+              Je bezoekt vrienden aan de andere kant van het land met je auto,
+              je belt tussendoor even je moeder op om te vragen hoe het gaat en
+              veel werk kan tegenwoordig vanaf je laptop op de bank bij je
+              gezin.
+              <br />
+              <br />
+              Wij geloven dat de versnelling van technologie niet hoeft te
+              betekenen dat menselijk contact verdwijnt. Wij zien juist kansen
+              om technologie in te zetten voor het tegendeel: het versterken van
+              die connectie.
+              <br />
+              <br />
+              Daarom bouwen wij CoachScribe: zodat loopbaancoaches en
+              re-integratieprofessionals geen tijd meer verliezen aan notities,
+              verslagen en administratie, maar zich volledig kunnen richten op
+              wat echt telt. Het helpen van mensen.
+              <br />
+              Want dat is waarom je dit vak hebt gekozen.
             </p>
           </div>
           <div className="mt-6">
@@ -26,20 +47,6 @@ export default function OverOnsHeroSection() {
               showArrow
               className="font-normal"
             />
-          </div>
-        </div>
-        <div className="flex w-full justify-center lg:-translate-y-[60px] lg:self-center lg:justify-end">
-          <div className="w-full max-w-[340px] overflow-hidden rounded-2xl md:max-w-[470px] xl:max-w-[600px]">
-            <div className="aspect-[22/15] w-full">
-              <video
-                src={overOnsVideoUrl}
-                className="h-full w-full object-cover"
-                playsInline
-                controls
-                preload="auto"
-                controlsList="nodownload"
-              />
-            </div>
           </div>
         </div>
       </div>

@@ -6,17 +6,13 @@ type Props = {
 }
 
 export function AuthScreenLayout({ children }: Props) {
-  const { width, height } = useWindowDimensions()
+  const { height } = useWindowDimensions()
   const minHeight = Math.max(760, height)
 
   return (
     <View style={[styles.page, { minHeight }]}>
-      {/* Top spacer */}
-      <View style={styles.topSpacer} />
       {/* Authentication layout */}
       <View style={styles.content}>{children}</View>
-      {/* Bottom spacer */}
-      <View style={styles.bottomSpacer} />
     </View>
   )
 }
@@ -26,21 +22,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingHorizontal: 40,
-    paddingVertical: 0,
+    paddingTop: 40,
+    paddingBottom: 64,
     ...( { height: '100vh' } as any ),
   },
   content: {
+    flex: 1,
     width: 1240,
     maxWidth: '100%',
     alignItems: 'center',
-  },
-  topSpacer: {
-    flex: 1,
-  },
-  bottomSpacer: {
-    flex: 1.2,
+    justifyContent: 'flex-end',
   },
 })
 

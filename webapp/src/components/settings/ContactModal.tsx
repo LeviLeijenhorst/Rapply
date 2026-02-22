@@ -107,6 +107,9 @@ export function ContactModal({ visible, onClose, onSubmitted }: Props) {
           <Text style={styles.description}>
             Heb je een vraag, wil je input geven of ben je benieuwd wat wij voor jou kunnen betekenen? Neem contact met ons op!
           </Text>
+          <Text style={styles.callout}>
+            Je kunt ook bellen naar 0622168360 (Levi).
+          </Text>
         </View>
 
         <View style={styles.formColumn}>
@@ -220,7 +223,13 @@ const styles = StyleSheet.create({
   leftColumn: {
     flex: 1,
     gap: 18,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+  },
+  callout: {
+    maxWidth: 420,
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#FFFFFF',
   },
   description: {
     maxWidth: 420,

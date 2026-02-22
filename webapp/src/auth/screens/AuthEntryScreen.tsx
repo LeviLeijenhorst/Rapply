@@ -48,7 +48,7 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
             {/* Brand logo */}
             <CoachscribeLogo />
             {/* Brand tagline */}
-            <Text style={styles.brandTagline}>Focus je op wat er echt toe doet</Text>
+            <Text style={styles.brandTagline}>Focus op de mens</Text>
           </View>
           {/* Welcome illustration */}
           <View style={styles.illustrationContainer}>
@@ -66,11 +66,11 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
             </Text>
             {/* Welcome description */}
             <Text style={styles.welcomeParagraph}>
-              CoachScribe helpt coaches bij de verslaglegging van hun verslagen en het bewaren van het overzicht.
+              CoachScribe ondersteunt verzuimcoaches, casemanagers en jobcoaches bij heldere dossiervorming en het bewaren van overzicht.
             </Text>
             {/* Welcome description */}
             <Text style={styles.welcomeParagraph}>
-              Gesprekken worden veilig vastgelegd en georganiseerd, zodat jij je volledig kunt richten op de cliënt.
+              Gesprekken en afspraken worden veilig vastgelegd en gestructureerd, zodat jij meer tijd houdt voor de begeleiding van je client.
             </Text>
             {/* Continue button */}
             <Pressable
@@ -199,4 +199,5 @@ const styles = StyleSheet.create({
     color: '#FFE5E5',
   },
 })
+
 

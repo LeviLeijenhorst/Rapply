@@ -18,17 +18,17 @@ export default function ProductCoachesSection() {
         </div>
         <div className="flex w-full flex-col items-start">
           <h2 className="text-3xl font-semibold leading-tight text-black md:text-4xl">
-            Voor coaches, <span className="text-[#BD0265]">door coaches</span>
+            In samenwerking met <span className="text-[#BD0265]">professionals</span>
           </h2>
           <div className="mt-3 flex w-full flex-col gap-6">
             <p className="text-[16px] font-medium text-black/70">
-              CoachScribe is ontstaan uit tientallen gesprekken met professionals
-              in het werkveld. Door te onderzoeken welke functies echt waardevol
-              zijn, hebben we een product ontwikkeld dat volledig aansluit bij de
-              behoeften van coaches.
+              CoachScribe is ontstaan uit tientallen gesprekken met loopbaan-
+              en re-integratieprofessionals uit het werkveld. Door te
+              onderzoeken welke functies echt waardevol zijn, hebben we een
+              product ontwikkeld dat volledig aansluit bij hun behoeften.
             </p>
             <p className="text-[16px] font-medium text-black/70">
-              We blijven continu in contact met coaches om het product te
+              We blijven continu in contact met professionals om het product te
               verbeteren en verder te ontwikkelen.
             </p>
             <p className="text-[16px] font-medium text-black/70">

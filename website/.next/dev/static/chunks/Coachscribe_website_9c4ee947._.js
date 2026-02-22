@@ -785,7 +785,7 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                                         ...previousValues,
                                                         phone: event.target.value
                                                     })),
-                                            placeholder: "Jouw telefoon nummer",
+                                            placeholder: "Jouw telefoonnummer",
                                             className: fieldClassName
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",

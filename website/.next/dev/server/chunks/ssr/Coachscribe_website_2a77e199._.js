@@ -98,7 +98,7 @@ const questions = [
     },
     {
         question: "Worden onze gegevens gebruikt om AI-modellen te trainen?",
-        answer: "Nee. Gegevens binnen CoachScribe worden niet gebruikt om publieke AI-modellen te trainen of commercieel te exploiteren."
+        answer: "Nee. Gegevens binnen CoachScribe worden niet gebruikt om AI-modellen te trainen of commercieel te exploiteren."
     },
     {
         question: "Wie is verantwoordelijk onder de AVG?",
@@ -359,7 +359,7 @@ const securityItems = [
     },
     {
         title: "Jouw data blijft van jou",
-        description: "Jouw data wordt niet gebruikt om publieke AI-modellen te trainen. Jij bepaalt wat je bewaart en kunt je gegevens verwijderen wanneer jij wilt.",
+        description: "Jouw data wordt niet gebruikt om AI-modellen te trainen. Jij bepaalt wat je bewaart en kunt je gegevens verwijderen wanneer jij wilt.",
         icon: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$home$2f$security$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$home$2f$security$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"]
     }
 ];

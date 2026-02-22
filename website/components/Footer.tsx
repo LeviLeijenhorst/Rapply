@@ -1,4 +1,4 @@
-import Image from "next/image";
+﻿import Image from "next/image";
 import Link from "next/link";
 import logo from "@/home/logo.png";
 import linkedinIcon from "@/home/LinkedIn.svg";
@@ -6,11 +6,11 @@ import instagramIcon from "@/home/Instagram.svg";
 
 const navigationLinks = [
   { label: "Product", destination: "/product" },
-  { label: "Coaches", destination: "/coaches" },
+  { label: "Doelgroep", destination: "/coaches" },
   { label: "Veiligheid", destination: "/veiligheid" },
   { label: "Over Ons", destination: "/over-ons" },
   { label: "Contact", destination: "/contact" },
-  { label: "Probeer het uit", destination: "/wachtlijst" },
+  { label: "Probeer het uit", destination: "https://app.coachscribe.nl" },
 ];
 
 const connectLinks = [
@@ -120,7 +120,7 @@ export default function Footer() {
         {/* Footer legal */}
         <div className="mt-40 flex w-full flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[16px] font-medium text-[#2D3B4A]">
           {/* Copyright */}
-          <span>Copyright © 2026 CoachScribe. Alle rechten voorbehouden.</span>
+          <span>Copyright Â© 2026 CoachScribe. Alle rechten voorbehouden.</span>
           {/* Legal links */}
           <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
             <Link
@@ -141,3 +141,5 @@ export default function Footer() {
     </footer>
   );
 }
+
+

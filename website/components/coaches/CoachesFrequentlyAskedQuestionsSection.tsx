@@ -7,33 +7,32 @@ const questions = [
   {
     question: "Voor welke coaches is CoachScribe geschikt?",
     answer:
-      "CoachScribe is geschikt voor alle professionals die gesprekken voeren met cliënten en daar gestructureerde verslagen van willen bijhouden. Het helpt coaches overzicht te houden, informatie veilig te bewaren en sneller terug te vinden wat belangrijk is uit sessies.",
+      "CoachScribe is specifiek ontwikkeld voor loopbaan- en re-integratiecoaches. Het helpt je om sessies gestructureerd vast te leggen, clientinformatie veilig te bewaren en snel terug te vinden wat belangrijk is zodat jij je kunt focussen op de begeleiding zelf.",
   },
   {
-    question: "Kan CoachScribe worden gebruikt door loopbaancoaches?",
+    question: "Kan CoachScribe worden gebruikt voor re-integratietrajecten?",
     answer:
-      "Ja. Loopbaancoaches kunnen CoachScribe gebruiken om gesprekken met cliënten vast te leggen, verslagen te maken en belangrijke inzichten overzichtelijk bij te houden. Dit maakt het makkelijker om trajecten te volgen en opvolging te plannen.",
+      "Ja. CoachScribe ondersteunt re-integratiecoaches bij het vastleggen van gesprekken en het bijhouden van voortgang per client. Of je nu werkt aan een eerste of tweede spoor traject, CoachScribe helpt je om overzicht te bewaren en verslaglegging efficient te houden.",
   },
   {
-    question:
-      "Kan ik CoachScribe gebruiken als zelfstandig coach of alleen in een organisatie?",
+    question: "Ondersteunt CoachScribe verslaglegging voor UWV of werkgevers?",
     answer:
-      "CoachScribe is geschikt voor zowel zelfstandige coaches als coaches die in een organisatie werken.",
+      "CoachScribe helpt je om sessieverslagen gestructureerd bij te houden. De gegenereerde verslagen kun je gebruiken als basis voor rapportages richting UWV, werkgevers of opdrachtgevers. Jij bepaalt altijd wat je deelt en wat je bewaart.",
   },
   {
-    question: "Is er een minimum aantal cliënten of sessies nodig om te beginnen?",
+    question: "Is CoachScribe geschikt als ik werk met meerdere opdrachtgevers tegelijk?",
     answer:
-      "Nee. Je kunt CoachScribe vanaf het eerste gesprek gebruiken, ongeacht het aantal cliënten of sessies. Het systeem werkt direct, waardoor je meteen overzicht krijgt en efficiënt notities en verslagen kunt bijhouden.",
+      "Ja. CoachScribe is ontworpen voor coaches die meerdere clienten en trajecten tegelijk begeleiden. Je houdt per client een overzichtelijk dossier bij, ongeacht voor welke opdrachtgever of organisatie je werkt.",
   },
   {
-    question: "Kunnen onderwijscoaches of begeleiders CoachScribe gebruiken?",
+    question: "Kan ik CoachScribe gebruiken als zelfstandig loopbaancoach?",
     answer:
-      "Ja. CoachScribe kan worden ingezet door onderwijscoaches, mentoren en begeleiders om gesprekken met studenten of leerlingen gestructureerd vast te leggen. Het biedt een veilig overzicht van sessies en maakt het eenvoudiger om belangrijke informatie terug te vinden en te gebruiken voor begeleiding.",
+      "Ja. CoachScribe is geschikt voor zowel zelfstandige coaches als coaches die in dienst zijn van een organisatie of re-integratiebureau. Je kunt direct starten, zonder minimum aantal clienten of sessies.",
   },
   {
-    question: "Is CoachScribe geschikt voor nieuwe coaches zonder veel ervaring?",
+    question: "Hoe zit het met de privacy van mijn clienten?",
     answer:
-      "Ja. CoachScribe ondersteunt zowel ervaren als nieuwe coaches door structuur en overzicht te bieden bij sessies en verslaglegging. Het helpt nieuwe coaches om gespreksinformatie efficiënt te beheren en sneller vertrouwd te raken met het bijhouden van professionele verslagen.",
+      "Privacy staat bij CoachScribe op de eerste plaats. Alle gegevens worden versleuteld opgeslagen en verwerkt binnen de Europese Unie, in lijn met de AVG. Jouw data wordt nooit gebruikt om AI-modellen te trainen, en jij bepaalt zelf wat je bewaart of verwijdert.",
   },
 ];
 

@@ -14,18 +14,16 @@ export default function CoachesWorkflowSection() {
             <div className="max-w-xl space-y-5 text-[16px] font-medium text-black/70">
               <p>
                 Elke coach heeft een eigen werkwijze. Daarom werkt CoachScribe
-                met templates die zijn afgestemd op verschillende
-                coachingsvormen, zoals loopbaan-, life-, budget- en
-                studentencoaching.
+                met templates afgestemd op loopbaan- en re-integratiecoaching.
               </p>
               <p>
-                Deze templates zijn ontwikkeld in samenwerking met coaches,
-                zodat ze aansluiten op hoe gesprekken echt verlopen.
+                De templates zijn ontwikkeld in samenwerking met coaches uit het
+                werkveld, zodat ze aansluiten op hoe gesprekken echt verlopen en
+                hoe rapportages worden samengesteld.
               </p>
               <p>
                 Mocht er niets tussen zitten? Geen probleem. Ontwerp gemakkelijk
-                je eigen template die precies aansluit op jouw unieke manier van
-                verslaglegging.
+                je eigen template die precies aansluit op jouw unieke stijl.
               </p>
             </div>
           </div>

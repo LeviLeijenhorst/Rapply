@@ -1,4 +1,4 @@
-import Image from "next/image";
+﻿import Image from "next/image";
 import Button from "@/components/Button";
 import SectionContainer from "@/components/home/SectionContainer";
 import productOneImage from "@/home/Product BG 1 2.png";
@@ -17,25 +17,25 @@ const featureItems = [
   {
     title: "Leg je sessie vast",
     description:
-      "Zet de opname aan en focus je volledig op jouw cliënt. CoachScribe neemt het gehele gesprek veilig op terwijl jij je bezig houdt met waar je goed in bent; mensen helpen.\n\nCoachScript is gebouwd voor maximale focus.",
+      "Zet de opname aan en focus je volledig op jouw client. CoachScribe neemt het gehele gesprek veilig op terwijl jij je bezig houdt met waar jij goed in bent: mensen helpen.",
     image: productOneImage,
   },
   {
     title: "Kies jouw workflow",
     description:
-      "Er zijn meerdere templates inbegrepen die je kan gebruiken zodat de sessie wordt vastgelegd zoals jij dat wil. Gebruik je liever je eigen template? geen probleem!\n\nOntworpen om aan te sluiten op jouw workflow.",
+      "Er zijn templates inbegrepen die speciaal zijn afgestemd op loopbaan- en re-integratietrajecten. Gebruik je liever je eigen template? Geen probleem!\n\nOntworpen om aan te sluiten op jouw workflow.",
     image: productTwoImage,
   },
   {
     title: "Beheer de sessie",
     description:
-      "Lees het automatische verslag en pas aan waar nodig, stel snelle vragen aan de slimme AI-Chat, maak notities en lees of luister specifieke momenten terug uit het gesprek.\n\nOverzichtelijk, simpel en alles op één plek.",
+      "Lees het automatische verslag en pas aan waar nodig, stel snelle vragen aan de slimme AI-Chat, maak notities en lees of luister specifieke momenten terug uit het gesprek.\n\nOverzichtelijk, simpel en alles op een plek.",
     image: productFourImage,
   },
   {
     title: "Deel in jouw huisstijl",
     description:
-      "Deel verslagen direct met je coachee, in jouw eigen huisstijl. Voeg je logo en praktijkkleur toe, zodat elke PDF direct herkenbaar en professioneel oogt.\n\nGemaakt met oog op coach én coachee.",
+      "Deel verslagen direct met je coachee, in jouw eigen huisstijl. Voeg je logo en praktijkkleur toe, zodat elke PDF direct herkenbaar en professioneel oogt.\n\nGemaakt met oog op coach en coachee.",
     image: productThreeImage,
   },
 ];
@@ -62,7 +62,7 @@ export default function FeaturesSection() {
             return (
               <div
                 key={featureItem.title}
-                className={`mx-auto flex w-full max-w-[1147px] flex-col gap-6 rounded-3xl bg-[#F8FAFC] px-[80px] py-6 md:h-[480px] md:items-center ${containerGapClass} ${
+                className={`mx-auto flex w-full max-w-[1147px] flex-col gap-6 rounded-3xl bg-[#F8FAFC] px-6 py-6 md:h-[480px] md:items-center md:px-[80px] ${containerGapClass} ${
                   isReversed ? "md:flex-row-reverse" : "md:flex-row"
                 }`}
               >
@@ -80,7 +80,7 @@ export default function FeaturesSection() {
                   <div className="flex w-full">
                     <Button
                       label="Probeer het uit"
-                      destination="/wachtlijst"
+                      destination="https://app.coachscribe.nl"
                       variant="primary"
                       showArrow
                       className="font-normal"
@@ -155,3 +155,4 @@ export default function FeaturesSection() {
     </SectionContainer>
   );
 }
+

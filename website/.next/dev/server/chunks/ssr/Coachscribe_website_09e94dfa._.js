@@ -121,7 +121,7 @@ const navigationLinks = [
         destination: "/product"
     },
     {
-        label: "Coaches",
+        label: "Doelgroep",
         destination: "/coaches"
     },
     {
@@ -138,7 +138,7 @@ const navigationLinks = [
     },
     {
         label: "Probeer het uit",
-        destination: "/wachtlijst"
+        destination: "https://app.coachscribe.nl"
     }
 ];
 const connectLinks = [
@@ -349,7 +349,7 @@ function Footer() {
                     className: "mt-40 flex w-full flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[16px] font-medium text-[#2D3B4A]",
                     children: [
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                            children: "Copyright © 2026 CoachScribe. Alle rechten voorbehouden."
+                            children: "Copyright Â© 2026 CoachScribe. Alle rechten voorbehouden."
                         }, void 0, false, {
                             fileName: "[project]/Coachscribe/website/components/Footer.tsx",
                             lineNumber: 123,

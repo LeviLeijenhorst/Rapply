@@ -195,11 +195,22 @@ function HeroSection() {
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
                         className: "font-[var(--font-catamaran)] text-[38px] font-medium leading-[120%] text-black md:text-[50px] xl:text-[64px]",
                         children: [
-                            "Betere coaching begint bij",
+                            "AI-gegenereerde rapportages",
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                className: "block text-[#BD0265]",
-                                children: "volledige aandacht"
-                            }, void 0, false, {
+                                className: "block",
+                                children: [
+                                    "voor",
+                                    " ",
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        className: "text-[#BD0265]",
+                                        children: "loopbaan- en re-integratieprofessionals"
+                                    }, void 0, false, {
+                                        fileName: "[project]/Coachscribe/website/components/home/HeroSection.tsx",
+                                        lineNumber: 16,
+                                        columnNumber: 15
+                                    }, this)
+                                ]
+                            }, void 0, true, {
                                 fileName: "[project]/Coachscribe/website/components/home/HeroSection.tsx",
                                 lineNumber: 14,
                                 columnNumber: 13
@@ -213,17 +224,17 @@ function HeroSection() {
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                         className: "max-w-3xl text-[16px] font-medium text-black/70",
                         children: [
-                            "CoachScribe helpt coaches bij verslaglegging van hun sessies en het bewaren van overzicht.",
+                            "CoachScribe helpt loopbaan- en re-integratieprofessionals bij de verslaglegging van hun sessies en het bewaren van overzicht per traject.",
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
                                 fileName: "[project]/Coachscribe/website/components/home/HeroSection.tsx",
-                                lineNumber: 20,
+                                lineNumber: 26,
                                 columnNumber: 13
                             }, this),
-                            "Gesprekken worden veilig vastgelegd en georganiseerd, zodat jij je volledig kan focussen op de cliënt."
+                            "Gesprekken worden veilig vastgelegd en georganiseerd, zodat jij je volledig kunt focussen op de client."
                         ]
                     }, void 0, true, {
                         fileName: "[project]/Coachscribe/website/components/home/HeroSection.tsx",
-                        lineNumber: 17,
+                        lineNumber: 22,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -231,13 +242,13 @@ function HeroSection() {
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$Button$2e$tsx__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"], {
                                 label: "Probeer het uit",
-                                destination: "/wachtlijst",
+                                destination: "https://app.coachscribe.nl",
                                 variant: "primary",
                                 showArrow: true,
                                 className: "font-normal"
                             }, void 0, false, {
                                 fileName: "[project]/Coachscribe/website/components/home/HeroSection.tsx",
-                                lineNumber: 26,
+                                lineNumber: 32,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$Button$2e$tsx__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"], {
@@ -247,13 +258,13 @@ function HeroSection() {
                                 className: "font-normal"
                             }, void 0, false, {
                                 fileName: "[project]/Coachscribe/website/components/home/HeroSection.tsx",
-                                lineNumber: 33,
+                                lineNumber: 39,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/Coachscribe/website/components/home/HeroSection.tsx",
-                        lineNumber: 25,
+                        lineNumber: 31,
                         columnNumber: 11
                     }, this)
                 ]
@@ -478,22 +489,22 @@ const FG1_WHITE_TO_BOUNDING_BOTTOM_PX = 14;
 const featureItems = [
     {
         title: "Leg je sessie vast",
-        description: "Zet de opname aan en focus je volledig op jouw cliënt. CoachScribe neemt het gehele gesprek veilig op terwijl jij je bezig houdt met waar je goed in bent; mensen helpen.\n\nCoachScript is gebouwd voor maximale focus.",
+        description: "Zet de opname aan en focus je volledig op jouw client. CoachScribe neemt het gehele gesprek veilig op terwijl jij je bezig houdt met waar jij goed in bent: mensen helpen.",
         image: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$home$2f$Product__BG__1__2$2e$png$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$home$2f$Product__BG__1__2$2e$png__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$rsc$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"]
     },
     {
         title: "Kies jouw workflow",
-        description: "Er zijn meerdere templates inbegrepen die je kan gebruiken zodat de sessie wordt vastgelegd zoals jij dat wil. Gebruik je liever je eigen template? geen probleem!\n\nOntworpen om aan te sluiten op jouw workflow.",
+        description: "Er zijn templates inbegrepen die speciaal zijn afgestemd op loopbaan- en re-integratietrajecten. Gebruik je liever je eigen template? Geen probleem!\n\nOntworpen om aan te sluiten op jouw workflow.",
         image: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$home$2f$Product__BG__2$2e$jpg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$home$2f$Product__BG__2$2e$jpg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$rsc$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"]
     },
     {
         title: "Beheer de sessie",
-        description: "Lees het automatische verslag en pas aan waar nodig, stel snelle vragen aan de slimme AI-Chat, maak notities en lees of luister specifieke momenten terug uit het gesprek.\n\nOverzichtelijk, simpel en alles op één plek.",
+        description: "Lees het automatische verslag en pas aan waar nodig, stel snelle vragen aan de slimme AI-Chat, maak notities en lees of luister specifieke momenten terug uit het gesprek.\n\nOverzichtelijk, simpel en alles op een plek.",
         image: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$home$2f$Product__BG__3$2e$jpg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$home$2f$Product__BG__3$2e$jpg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$rsc$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"]
     },
     {
         title: "Deel in jouw huisstijl",
-        description: "Deel verslagen direct met je coachee, in jouw eigen huisstijl. Voeg je logo en praktijkkleur toe, zodat elke PDF direct herkenbaar en professioneel oogt.\n\nGemaakt met oog op coach én coachee.",
+        description: "Deel verslagen direct met je coachee, in jouw eigen huisstijl. Voeg je logo en praktijkkleur toe, zodat elke PDF direct herkenbaar en professioneel oogt.\n\nGemaakt met oog op coach en coachee.",
         image: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$home$2f$Product__BG__4$2e$jpg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$home$2f$Product__BG__4$2e$jpg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$rsc$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"]
     }
 ];
@@ -510,7 +521,7 @@ function FeaturesSection() {
                     const isReversed = index % 2 === 1;
                     const containerGapClass = index === 1 ? "md:gap-[80px]" : index === 3 ? "md:gap-[80px]" : "md:gap-10";
                     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: `mx-auto flex w-full max-w-[1147px] flex-col gap-6 rounded-3xl bg-[#F8FAFC] px-[80px] py-6 md:h-[480px] md:items-center ${containerGapClass} ${isReversed ? "md:flex-row-reverse" : "md:flex-row"}`,
+                        className: `mx-auto flex w-full max-w-[1147px] flex-col gap-6 rounded-3xl bg-[#F8FAFC] px-6 py-6 md:h-[480px] md:items-center md:px-[80px] ${containerGapClass} ${isReversed ? "md:flex-row-reverse" : "md:flex-row"}`,
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "flex w-full flex-col gap-6 md:w-1/2",
@@ -535,7 +546,7 @@ function FeaturesSection() {
                                         className: "flex w-full",
                                         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$Button$2e$tsx__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"], {
                                             label: "Probeer het uit",
-                                            destination: "/wachtlijst",
+                                            destination: "https://app.coachscribe.nl",
                                             variant: "primary",
                                             showArrow: true,
                                             className: "font-normal"

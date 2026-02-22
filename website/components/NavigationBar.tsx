@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -9,7 +9,7 @@ import logo from "@/home/logo.png";
 
 const navigationLinks = [
   { label: "Product", destination: "/product" },
-  { label: "Coaches", destination: "/coaches" },
+  { label: "Doelgroep", destination: "/coaches" },
   { label: "Veiligheid", destination: "/veiligheid" },
   { label: "Over Ons", destination: "/over-ons" },
 ];
@@ -86,7 +86,7 @@ export default function NavigationBar() {
                 href={navigationLink.destination}
                 className={`transition-colors hover:text-[#BD0265] ${
                   isActiveDestination(navigationLink.destination)
-                    ? "font-bold text-[#BD0265]"
+                    ? "font-medium text-[#BD0265]"
                     : "font-medium text-black"
                 }`}
               >
@@ -104,7 +104,7 @@ export default function NavigationBar() {
             />
             <Button
               label="Probeer het uit"
-              destination="/wachtlijst"
+              destination="https://app.coachscribe.nl"
               variant="primary"
               className="font-normal"
             />
@@ -218,7 +218,7 @@ export default function NavigationBar() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`transition-colors hover:text-[#BD0265] ${
                   isActiveDestination(navigationLink.destination)
-                    ? "font-bold text-[#BD0265]"
+                    ? "font-normal text-[#BD0265]"
                     : "font-normal text-black"
                 }`}
               >
@@ -239,7 +239,7 @@ export default function NavigationBar() {
             <div onClick={() => setIsMobileMenuOpen(false)}>
               <Button
                 label="Probeer het uit"
-                destination="/wachtlijst"
+                destination="https://app.coachscribe.nl"
                 variant="primary"
                 className="font-normal"
               />
@@ -250,3 +250,5 @@ export default function NavigationBar() {
     </header>
   );
 }
+
+

@@ -18,9 +18,13 @@ export function AuthCard({ children }: Props) {
 
 const styles = StyleSheet.create({
   card: {
+    height: '100%',
     width: '100%',
-    borderRadius: 12,
-    backgroundColor: colors.surface,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',

@@ -366,32 +366,10 @@ function VeiligheidEthicsSection() {
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "w-full text-left",
-                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                    className: "flex flex-col gap-4 text-base font-normal leading-relaxed text-[#1D0A00]",
-                                    children: [
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                            children: "Gegevens worden opgeslagen binnen de Europese Unie en zijn versleuteld."
-                                        }, void 0, false, {
-                                            fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                            lineNumber: 14,
-                                            columnNumber: 17
-                                        }, this),
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                            children: "Daarnaast passen wij een extra versleutelingslaag toe. De encryptiesleutels worden beheerd buiten de cloud-omgeving waarin de gegevens worden opgeslagen."
-                                        }, void 0, false, {
-                                            fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                            lineNumber: 18,
-                                            columnNumber: 17
-                                        }, this),
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                            children: "De aanvullende versleuteling zorgt ervoor dat opgeslagen gegevens binnen de cloud niet leesbaar zijn voor de cloud-provider."
-                                        }, void 0, false, {
-                                            fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                            lineNumber: 23,
-                                            columnNumber: 17
-                                        }, this)
-                                    ]
-                                }, void 0, true, {
+                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                    className: "text-base font-normal leading-relaxed text-[#1D0A00]",
+                                    children: "Gegevens worden opgeslagen binnen de Europese Unie en zijn versleuteld. Daarnaast passen wij een extra versleutelingslaag toe. De encryptiesleutels worden beheerd buiten de cloud-omgeving waarin de gegevens worden opgeslagen. De aanvullende versleuteling zorgt ervoor dat opgeslagen gegevens binnen de cloud niet leesbaar zijn voor de cloud-provider."
+                                }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
                                     lineNumber: 13,
                                     columnNumber: 15
@@ -432,13 +410,13 @@ function VeiligheidEthicsSection() {
                                     children: "wel en niet doen"
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                    lineNumber: 39,
+                                    lineNumber: 31,
                                     columnNumber: 20
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                            lineNumber: 38,
+                            lineNumber: 30,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -456,13 +434,13 @@ function VeiligheidEthicsSection() {
                                                     children: "doen"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                                    lineNumber: 44,
+                                                    lineNumber: 36,
                                                     columnNumber: 24
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                            lineNumber: 43,
+                                            lineNumber: 35,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("ul", {
@@ -472,47 +450,47 @@ function VeiligheidEthicsSection() {
                                                     children: "Opslag van aan sessies gerelateerde gegevens binnen de Europese Unie"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                                    lineNumber: 47,
+                                                    lineNumber: 39,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("li", {
                                                     children: "Versleutelde opslag met aanvullende versleutelingslaag"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                                    lineNumber: 48,
+                                                    lineNumber: 40,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("li", {
                                                     children: "Encryptiesleutels worden buiten de opslagomgeving beheerd"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                                    lineNumber: 49,
+                                                    lineNumber: 41,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("li", {
                                                     children: "Verwerkersovereenkomst beschikbaar"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                                    lineNumber: 50,
+                                                    lineNumber: 42,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("li", {
                                                     children: "Transparantie over subverwerkers"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                                    lineNumber: 51,
+                                                    lineNumber: 43,
                                                     columnNumber: 17
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                            lineNumber: 46,
+                                            lineNumber: 38,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                    lineNumber: 42,
+                                    lineNumber: 34,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -527,13 +505,13 @@ function VeiligheidEthicsSection() {
                                                     children: "niet doen"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                                    lineNumber: 56,
+                                                    lineNumber: 48,
                                                     columnNumber: 24
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                            lineNumber: 55,
+                                            lineNumber: 47,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("ul", {
@@ -543,57 +521,57 @@ function VeiligheidEthicsSection() {
                                                     children: "Geen verkoop van data"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                                    lineNumber: 59,
+                                                    lineNumber: 51,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("li", {
                                                     children: "Geen advertenties"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                                    lineNumber: 60,
+                                                    lineNumber: 52,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("li", {
-                                                    children: "Geen training van publieke AI-modellen op jouw inhoud"
+                                                    children: "Geen training van AI-modellen op jouw inhoud"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                                    lineNumber: 61,
+                                                    lineNumber: 53,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("li", {
                                                     children: "Geen verwerking buiten de Europese Unie"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                                    lineNumber: 62,
+                                                    lineNumber: 54,
                                                     columnNumber: 17
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                            lineNumber: 58,
+                                            lineNumber: 50,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                                    lineNumber: 54,
+                                    lineNumber: 46,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                            lineNumber: 41,
+                            lineNumber: 33,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                    lineNumber: 37,
+                    lineNumber: 29,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/veiligheid/VeiligheidEthicsSection.tsx",
-                lineNumber: 33,
+                lineNumber: 25,
                 columnNumber: 7
             }, this)
         ]

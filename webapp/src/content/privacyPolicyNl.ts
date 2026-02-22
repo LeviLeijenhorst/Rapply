@@ -76,7 +76,7 @@ Authenticatie: Microsoft Entra (inloggen).
 Infrastructuur/hosting: hostingpartijen voor database en opslag.
 Opslag van uploads: cloudopslag voor het tijdelijk verwerken van versleutelde audio-uploads.
 AI-diensten: voor transcriptie, samenvattingen en chatfunctionaliteit.
-Betalingen/abonnementen: diensten voor abonnementstatus en aankopen (bijvoorbeeld RevenueCat en de app stores).
+Betalingen/abonnementen: diensten voor abonnementstatus en aankopen (bijvoorbeeld Mollie en de app stores).
 Wij maken met relevante partijen afspraken over beveiliging en vertrouwelijkheid, en sluiten waar nodig een verwerkersovereenkomst.
 Verwerking binnen en buiten de EU
 Wij streven ernaar om opslag en backend-infrastructuur binnen de Europese Unie te laten plaatsvinden (bijvoorbeeld in een EU-regio zoals “North Europe”), voor zover dit past bij de gekozen infrastructuur.

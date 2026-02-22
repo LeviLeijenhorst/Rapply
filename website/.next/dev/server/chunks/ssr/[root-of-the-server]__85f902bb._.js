@@ -248,16 +248,8 @@ function ProductHeroSection() {
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                     className: "max-w-xl text-[16px] font-medium text-black/70",
-                                    children: [
-                                        "CoachScribe neemt het noteren van gesprekken en verslaggeving uit handen. Jij behoudt de volledige controle, wij helpen je met de details,",
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
-                                            fileName: "[project]/Coachscribe/website/components/product/ProductHeroSection.tsx",
-                                            lineNumber: 20,
-                                            columnNumber: 15
-                                        }, this),
-                                        "en het overzicht."
-                                    ]
-                                }, void 0, true, {
+                                    children: "CoachScribe neemt het maken van notities tijdens gesprekken en de verslaglegging uit handen. Op een manier die is afgestemd op de werkwijze van loopbaan- en re-integratieprofessionals."
+                                }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/product/ProductHeroSection.tsx",
                                     lineNumber: 16,
                                     columnNumber: 13
@@ -272,18 +264,18 @@ function ProductHeroSection() {
                             className: "mt-6",
                             children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$Button$2e$tsx__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"], {
                                 label: "Probeer het uit",
-                                destination: "/wachtlijst",
+                                destination: "https://app.coachscribe.nl",
                                 variant: "primary",
                                 showArrow: true,
                                 className: "font-normal"
                             }, void 0, false, {
                                 fileName: "[project]/Coachscribe/website/components/product/ProductHeroSection.tsx",
-                                lineNumber: 25,
+                                lineNumber: 23,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/Coachscribe/website/components/product/ProductHeroSection.tsx",
-                            lineNumber: 24,
+                            lineNumber: 22,
                             columnNumber: 11
                         }, this)
                     ]
@@ -301,12 +293,12 @@ function ProductHeroSection() {
                         priority: true
                     }, void 0, false, {
                         fileName: "[project]/Coachscribe/website/components/product/ProductHeroSection.tsx",
-                        lineNumber: 35,
+                        lineNumber: 33,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/Coachscribe/website/components/product/ProductHeroSection.tsx",
-                    lineNumber: 34,
+                    lineNumber: 32,
                     columnNumber: 9
                 }, this)
             ]
@@ -524,14 +516,14 @@ function ProductCoachesSection() {
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("h2", {
                             className: "text-3xl font-semibold leading-tight text-black md:text-4xl",
                             children: [
-                                "Voor coaches, ",
+                                "In samenwerking met ",
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                     className: "text-[#BD0265]",
-                                    children: "door coaches"
+                                    children: "professionals"
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/product/ProductCoachesSection.tsx",
                                     lineNumber: 21,
-                                    columnNumber: 27
+                                    columnNumber: 33
                                 }, this)
                             ]
                         }, void 0, true, {
@@ -544,7 +536,7 @@ function ProductCoachesSection() {
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                     className: "text-[16px] font-medium text-black/70",
-                                    children: "CoachScribe is ontstaan uit tientallen gesprekken met professionals in het werkveld. Door te onderzoeken welke functies echt waardevol zijn, hebben we een product ontwikkeld dat volledig aansluit bij de behoeften van coaches."
+                                    children: "CoachScribe is ontstaan uit tientallen gesprekken met loopbaan- en re-integratieprofessionals uit het werkveld. Door te onderzoeken welke functies echt waardevol zijn, hebben we een product ontwikkeld dat volledig aansluit bij hun behoeften."
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/product/ProductCoachesSection.tsx",
                                     lineNumber: 24,
@@ -552,7 +544,7 @@ function ProductCoachesSection() {
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                     className: "text-[16px] font-medium text-black/70",
-                                    children: "We blijven continu in contact met coaches om het product te verbeteren en verder te ontwikkelen."
+                                    children: "We blijven continu in contact met professionals om het product te verbeteren en verder te ontwikkelen."
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/product/ProductCoachesSection.tsx",
                                     lineNumber: 30,

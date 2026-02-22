@@ -5,14 +5,9 @@ import SectionContainer from "@/components/home/SectionContainer";
 
 const questions = [
   {
-    question: "Kan ik templates gebruiken voor mijn verslagen?",
-    answer:
-      "Ja. Je kunt vooraf ingestelde templates gebruiken om snel gestructureerde verslagen te maken. Zo hoef je niet telkens vanaf nul te beginnen en houd je verslagen consistent en overzichtelijk. Zit er geen template tussen die bij jouw workflow past? Geen probleem, het is ook mogelijk om je eigen templates te maken.",
-  },
-  {
     question: "Kan ik mijn huisstijl toevoegen aan verslagen?",
     answer:
-      "Ja. Je kunt je eigen logo en praktijk kleur toevoegen, zodat elk verslag direct herkenbaar is en professioneel oogt. Zo blijft de uitstraling consistent en duidelijk voor jou en je cliënten.",
+      "Ja. Je kunt je eigen logo en praktijk kleur toevoegen, zodat elk verslag direct herkenbaar is en professioneel oogt. Zo blijft de uitstraling consistent en duidelijk voor jou en je clienten.",
   },
   {
     question: "Is er een app voor CoachScribe?",
@@ -20,14 +15,19 @@ const questions = [
       "Binnenkort. Naar verwachting zal deze halverwege maart op de AppStore en PlayStore uit worden gebracht.",
   },
   {
-    question: "Kan ik verslagen delen met cliënten?",
+    question: "Kan ik verslagen delen met clienten?",
     answer:
-      "Ja. Je kunt verslagen eenvoudig delen met cliënten of collega’s, en ze worden gedeeld in jouw huisstijl met logo en praktijkkleur, zodat alles herkenbaar en professioneel blijft.",
+      "Ja. Je kunt verslagen eenvoudig delen met clienten of collega's, en ze worden gedeeld in jouw huisstijl met logo en praktijkkleur, zodat alles herkenbaar en professioneel blijft.",
   },
   {
-    question: "Kan ik zelf notities maken?",
+    question: "Kan ik verslagen delen met opdrachtgevers of werkgevers?",
     answer:
-      "Ja. Je kunt altijd zelf notities toevoegen bij een sessie, zodat belangrijke informatie niet verloren gaat en je later snel terug kunt vinden wat er besproken is.",
+      "Ja. Je kunt verslagen eenvoudig delen met clienten, opdrachtgevers of werkgevers, in jouw eigen huisstijl. Handig voor re-integratietrajecten waarbij meerdere partijen betrokken zijn.",
+  },
+  {
+    question: "Kan ik templates gebruiken?",
+    answer:
+      "Ja. Je kunt vooraf ingestelde templates gebruiken die zijn afgestemd op loopbaan- en re-integratieprofessionals. Zo hoef je niet telkens vanaf nul te beginnen en houd je verslagen consistent. Past er geen template bij jouw werkwijze? Dan maak je eenvoudig je eigen template.",
   },
   {
     question: "Kan ik specifieke momenten in sessies terugluisteren?",

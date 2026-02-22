@@ -196,7 +196,7 @@ export default function OverOnsContactSection({
                     phone: event.target.value,
                   }))
                 }
-                placeholder="Jouw telefoon nummer"
+                placeholder="Jouw telefoonnummer"
                 className={fieldClassName}
               />
             </label>

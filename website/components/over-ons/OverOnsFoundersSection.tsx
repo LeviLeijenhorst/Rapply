@@ -19,9 +19,10 @@ const founders: Founder[] = [
   {
     name: "Levi Leijenhorst",
     description: [
-      "Levi heeft een achtergrond in toegepaste-psychologie en tijdens zijn stage als studentencoach is het idee voor CoachScribe ontstaan.",
-      "Levi is technisch aangelegd en heeft zichzelf leren coderen als hobby, deze hobby is ondertussen flink uit de hand gelopen en hij is verantwoordelijk over de gehele technische kant van CoachScribe, de veiligheid en alles wat hiermee te maken heeft.",
-      "Daarnaast voert Levi regelmatig feedback- en salesgesprekken met coaches, is nauw betrokken bij het design en gebruikerservaring en is een gepassioneerde ondernemer.",
+      "Levi heeft een achtergrond in toegepaste psychologie en merkte tijdens zijn werk als begeleider hoe tijdrovend en mentaal belastend verslaglegging kan zijn.",
+      "Dat inzicht vormde de basis voor CoachScribe.",
+      "Binnen CoachScribe richt Levi zich op het vertalen van praktijkproblemen naar een goed doordachte digitale oplossing. De technische infrastructuur en beveiliging zijn ingericht op basis van technologie van gespecialiseerde cloud- en AI-partners die binnen de EU veel worden gebruikt voor het verwerken van gevoelige informatie.",
+      "Levi is verantwoordelijk voor de architectuurkeuzes, de manier waarop deze technologieen worden geintegreerd en de verdere doorontwikkeling van het platform. Daarnaast is hij nauw betrokken bij design, gebruikerservaring en de gesprekken met professionals die CoachScribe dagelijks gebruiken.",
     ],
     image: leviImage,
     imageClassName: "lg:rounded-l-[24px]",
@@ -32,9 +33,8 @@ const founders: Founder[] = [
   {
     name: "Jonas Kroon",
     description: [
-      "Jonas is een oude jeugdvriend van Levi. Ook hij heeft toegepaste-psychologie gestudeerd en herkende de problemen die Levi omschreef. Toen Jonas het idee voor CoachScribe hoorde was hij gelijk verkocht.",
-      "Jonas is creatief en strategisch ingesteld. Hij neemt het design, de gebruikerservaring en marketing voor zijn rekening en houdt zich bezig met alles aan de voorkant van CoachScribe.",
-      "Ook Jonas voert regelmatig feedback- en salesgesprekken met coaches, is constant opzoek naar ruimte voor verbetering en een gepassioneerde ondernemer.",
+      "Jonas heeft een achtergrond in toegepaste psychologie en herkende direct de uitdagingen waar professionals dagelijks mee te maken hebben.",
+      "Als creatief oprichter is Jonas verantwoordelijk voor design, gebruikerservaring en marketing. Hij zorgt ervoor dat CoachScribe niet alleen goed werkt, maar ook prettig en intuitief aanvoelt. Jonas staat in nauw contact met coaches en re-integratieprofessionals om het product continu te verbeteren.",
     ],
     image: jonasImage,
     textContainerClassName: "lg:px-[80px]",

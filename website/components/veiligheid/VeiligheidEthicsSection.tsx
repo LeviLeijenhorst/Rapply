@@ -10,22 +10,14 @@ export default function VeiligheidEthicsSection() {
               Aanvullende <span className="text-[#BD0265]">versleuteling tijdens opslag</span>
             </h2>
             <div className="w-full text-left">
-              <div className="flex flex-col gap-4 text-base font-normal leading-relaxed text-[#1D0A00]">
-                <p>
-                  Gegevens worden opgeslagen binnen de Europese Unie en zijn
-                  versleuteld.
-                </p>
-                <p>
-                  Daarnaast passen wij een extra versleutelingslaag toe. De
-                  encryptiesleutels worden beheerd buiten de cloud-omgeving waarin
-                  de gegevens worden opgeslagen.
-                </p>
-                <p>
-                  De aanvullende versleuteling zorgt ervoor dat opgeslagen
-                  gegevens binnen de cloud niet leesbaar zijn voor de
-                  cloud-provider.
-                </p>
-              </div>
+              <p className="text-base font-normal leading-relaxed text-[#1D0A00]">
+                Gegevens worden opgeslagen binnen de Europese Unie en zijn
+                versleuteld. Daarnaast passen wij een extra versleutelingslaag
+                toe. De encryptiesleutels worden beheerd buiten de cloud-omgeving
+                waarin de gegevens worden opgeslagen. De aanvullende
+                versleuteling zorgt ervoor dat opgeslagen gegevens binnen de
+                cloud niet leesbaar zijn voor de cloud-provider.
+              </p>
             </div>
           </div>
         </div>
@@ -58,7 +50,7 @@ export default function VeiligheidEthicsSection() {
               <ul className="list-disc pl-6 text-sm font-normal leading-relaxed text-[#1D0A00] md:text-base">
                 <li>Geen verkoop van data</li>
                 <li>Geen advertenties</li>
-                <li>Geen training van publieke AI-modellen op jouw inhoud</li>
+                <li>Geen training van AI-modellen op jouw inhoud</li>
                 <li>Geen verwerking buiten de Europese Unie</li>
               </ul>
             </div>

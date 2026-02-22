@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image, { StaticImageData } from "next/image";
 import { ReactNode } from "react";
@@ -209,21 +209,21 @@ const impactItems: ImpactItem[] = [
   {
     title: "Overzicht",
     description:
-      "Alle sessies en context komen samen op één plek, per client en per traject. Zo behoud je overzicht, ook wanneer je meerdere clienten en gesprekken tegelijk begeleidt.",
+      "Alle sessies en context komen samen op een plek, per client en per traject. Ideaal als je meerdere loopbaan- of re-integratietrajecten tegelijk hebt lopen.",
     image: imageA,
     icon: searchIcon,
   },
   {
     title: "Tijd",
     description:
-      "CoachScribe legt gesprekken automatisch vast in duidelijke verslagen, waardoor je een hoop tijd bespaart met de voorbereiding en verslaglegging.",
+      "CoachScribe legt gesprekken automatisch vast in duidelijke verslagen. Minder tijd naar administratie, meer tijd voor je clienten.",
     image: imageB,
     icon: clockIcon,
   },
   {
     title: "Kwaliteit",
     description:
-      "Alle context blijft bewaard, waardoor je coaching consistenter en scherper wordt. Je ziet sneller patronen en kunt gerichter begeleiden.",
+      "Alle context blijft bewaard, waardoor je begeleiding consistenter en scherper wordt. Je ziet sneller patronen in een traject en kunt gerichter sturen.",
     image: imageC,
     icon: awardIcon,
   },
@@ -237,7 +237,7 @@ const impactItems: ImpactItem[] = [
   {
     title: "Connectie",
     description:
-      "Wanneer je alle details van je coachee kent, voelt die zich vertrouwd en kan jij door afwezigheid van notities de connectie verdiepen.",
+      "Wanneer je alle details over je cliÃ«nt onthoudt, voelt die zich vertrouwd waardoor de connectie vergroot.",
     image: imageE,
     icon: connectionIcon,
   },
@@ -288,7 +288,7 @@ export default function ProductImpactSection() {
         <div className="mt-10">
           <Button
             label="Probeer het uit"
-            destination="/wachtlijst"
+            destination="https://app.coachscribe.nl"
             variant="primary"
             showArrow
             className="font-normal"
@@ -298,3 +298,5 @@ export default function ProductImpactSection() {
     </SectionContainer>
   );
 }
+
+

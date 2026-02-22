@@ -12,7 +12,7 @@ const questions = [
   {
     question: "Worden onze gegevens gebruikt om AI-modellen te trainen?",
     answer:
-      "Nee. Gegevens binnen CoachScribe worden niet gebruikt om publieke AI-modellen te trainen of commercieel te exploiteren.",
+      "Nee. Gegevens binnen CoachScribe worden niet gebruikt om AI-modellen te trainen of commercieel te exploiteren.",
   },
   {
     question: "Wie is verantwoordelijk onder de AVG?",

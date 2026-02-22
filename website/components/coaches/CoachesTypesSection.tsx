@@ -1,14 +1,7 @@
 import Image, { StaticImageData } from "next/image";
 import SectionContainer from "@/components/home/SectionContainer";
 import briefcaseIcon from "@/coaches/briefcase.svg";
-import lovelyIcon from "@/coaches/lovely.svg";
-import presentationChartIcon from "@/coaches/presention-chart.svg";
-import emptyWalletIcon from "@/coaches/empty-wallet.svg";
 import peopleIcon from "@/coaches/people.svg";
-import teacherIcon from "@/coaches/teacher.svg";
-import batteryEmptyIcon from "@/coaches/battery-empty-2.svg";
-import gameboyIcon from "@/coaches/gameboy.svg";
-import globalIcon from "@/coaches/global.svg";
 
 type CoachType = {
   title: string;
@@ -24,52 +17,10 @@ const coachTypes: CoachType[] = [
     icon: briefcaseIcon,
   },
   {
-    title: "Lifecoach",
+    title: "Re-integratiecoach",
     description:
-      "Een lifecoach helpt mensen bij persoonlijke vraagstukken en begeleidt hen in het creëren van meer balans, richting en bewustzijn in het dagelijks leven.",
-    icon: lovelyIcon,
-  },
-  {
-    title: "Businesscoach",
-    description:
-      "Een business coach begeleidt professionals en ondernemers bij professionele ontwikkeling, besluitvorming en het realiseren van zakelijke doelen.",
-    icon: presentationChartIcon,
-  },
-  {
-    title: "Budgetcoach",
-    description:
-      "Een budgetcoach helpt mensen grip te krijgen op hun financiën door inzicht te creëren in inkomsten, uitgaven en financiële keuzes.",
-    icon: emptyWalletIcon,
-  },
-  {
-    title: "Leadershipcoach",
-    description:
-      "Een leadership coach begeleidt professionals in het ontwikkelen van effectief leiderschap, zelfinzicht en impact binnen hun rol en organisatie.",
+      "Een re-integratiecoach begeleidt mensen die na ziekte, ontslag of een andere onderbreking terugkeren naar de arbeidsmarkt. Zorgvuldige verslaglegging is hierbij essentieel.",
     icon: peopleIcon,
-  },
-  {
-    title: "Studentencoach",
-    description:
-      "Een studentencoach ondersteunt studenten bij studie, planning en ontwikkeling, zodat zij hun doelen beter kunnen bereiken en uitdagingen effectief aanpakken.",
-    icon: teacherIcon,
-  },
-  {
-    title: "Mentalhealthcoach",
-    description:
-      "Een mental health coach begeleidt mensen bij hun mentale welzijn, helpt bij het omgaan met stress en emoties, en ondersteunt hen in het versterken van veerkracht en balans.",
-    icon: batteryEmptyIcon,
-  },
-  {
-    title: "Jongerencoach",
-    description:
-      "Een jongerencoach ondersteunt jongeren bij persoonlijke ontwikkeling, keuzes en uitdagingen, zodat zij sterker, bewuster en veerkrachtiger in het leven staan.",
-    icon: gameboyIcon,
-  },
-  {
-    title: "Nog veel meer",
-    description:
-      "Het coachingsveld is rijk en gevarieerd, met nog talloze coaches die elk op hun eigen manier impact maken en waarde toevoegen aan het traject van hun cliënten.",
-    icon: globalIcon,
   },
 ];
 
@@ -81,9 +32,9 @@ export default function CoachesTypesSection() {
     >
       <div className="flex w-full flex-col gap-8 md:gap-10">
         <h2 className="text-center text-3xl font-semibold leading-tight text-black md:text-4xl">
-          Coach: een breed begrip
+          Doelgroep
         </h2>
-        <div className="grid w-full gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid w-full gap-6 md:grid-cols-2">
           {coachTypes.map((coachType) => (
             <article
               key={coachType.title}

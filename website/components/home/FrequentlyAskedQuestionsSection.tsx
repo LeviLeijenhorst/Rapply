@@ -7,7 +7,7 @@ const questions = [
   {
     question: "Wat is CoachScribe?",
     answer:
-      "CoachScribe is een AI-ondersteunde tool voor coaches om gesprekken eenvoudig op te nemen, automatisch te laten samenvatten en overzichtelijke verslagen te maken. Het helpt je om minder tijd kwijt te zijn aan administratie, terwijl je wel grip houdt op inhoud, nuance en context.",
+      "CoachScribe is een AI-ondersteunde tool voor coaches om gesprekken eenvoudig op te nemen, automatisch te laten samenvatten en overzichtelijke, bruikbare rapportages te maken. Het helpt je om minder tijd kwijt te zijn aan administratie, terwijl je wel grip houdt op de inhoud, nuance en context van al je sessies.",
   },
   {
     question: "Is CoachScribe veilig?",
@@ -22,7 +22,7 @@ const questions = [
   {
     question: "Voor wie is CoachScribe bedoeld?",
     answer:
-      "CoachScribe is bedoeld voor coaches en begeleiders die werken met gesprekken en daar gestructureerde, heldere verslagen van willen maken. Denk aan coaches in het onderwijs, zorg, loopbaanbegeleiding en persoonlijke ontwikkeling.",
+      "CoachScribe is specifiek ontwikkeld voor loopbaan- en re-integratieprofessionals die werken met meerdere clienten en trajecten. Het helpt je om sessies gestructureerd vast te leggen, voortgang bij te houden en verslaglegging richting opdrachtgevers of UWV eenvoudiger te maken.",
   },
   {
     question: "Is CoachScribe een vervanging voor een menselijke coach?",
@@ -32,7 +32,7 @@ const questions = [
   {
     question: "Kan ik niet gewoon ChatGPT gebruiken?",
     answer:
-      "Nee. ChatGPT is een algemene AI en beschikt niet over de functionaliteit voor sessie opname, gestructureerde verslaglegging of AVG-proof beheer van cliëntgegevens, waardoor het niet geschikt is voor dit soort toepassingen. Daarnaast is CoachScribe ontworpen speciaal voor coaches en kan het dus een stuk gerichter te werk gaan.",
+      "Nee. ChatGPT is een algemene AI en beschikt niet over de functionaliteit voor sessie opname, gestructureerde verslaglegging of AVG-proof beheer van clientgegevens, waardoor het niet geschikt is voor dit soort toepassingen. Daarnaast is CoachScribe ontworpen speciaal voor coaches en kan het dus een stuk gerichter te werk gaan.",
   },
 ];
 

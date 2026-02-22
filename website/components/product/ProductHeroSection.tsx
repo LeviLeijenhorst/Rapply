@@ -1,4 +1,4 @@
-import Image from "next/image";
+﻿import Image from "next/image";
 import Button from "@/components/Button";
 import SectionContainer from "@/components/home/SectionContainer";
 import heroImage from "@/product/product-1.png";
@@ -14,17 +14,15 @@ export default function ProductHeroSection() {
               <span className="block">met onze features</span>
             </h1>
             <p className="max-w-xl text-[16px] font-medium text-black/70">
-              CoachScribe neemt het noteren van gesprekken en verslaggeving uit
-              handen. Jij behoudt de volledige controle, wij helpen je met de
-              details,
-              <br />
-              en het overzicht.
+              CoachScribe neemt het maken van notities tijdens gesprekken en de
+              verslaglegging uit handen. Op een manier die is afgestemd op de
+              werkwijze van loopbaan- en re-integratieprofessionals.
             </p>
           </div>
           <div className="mt-6">
             <Button
               label="Probeer het uit"
-              destination="/wachtlijst"
+              destination="https://app.coachscribe.nl"
               variant="primary"
               showArrow
               className="font-normal"
@@ -43,3 +41,4 @@ export default function ProductHeroSection() {
     </SectionContainer>
   );
 }
+

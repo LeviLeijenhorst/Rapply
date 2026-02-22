@@ -119,7 +119,7 @@ Belangrijke categorieën:
 - Cloud hosting en opslag (EU)
 - AI-verwerking binnen onze enterprise-inrichting
 - Authenticatie (Microsoft Entra)
-- Abonnementsbeheer en aankoopstatus (RevenueCat)
+- Abonnementsbeheer en aankoopstatus (Mollie)
 
 Een actuele lijst van subverwerkers is op aanvraag beschikbaar.
 

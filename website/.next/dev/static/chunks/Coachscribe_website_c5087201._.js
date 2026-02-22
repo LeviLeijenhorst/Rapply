@@ -128,27 +128,27 @@ var _s = __turbopack_context__.k.signature();
 const questions = [
     {
         question: "Voor welke coaches is CoachScribe geschikt?",
-        answer: "CoachScribe is geschikt voor alle professionals die gesprekken voeren met cliënten en daar gestructureerde verslagen van willen bijhouden. Het helpt coaches overzicht te houden, informatie veilig te bewaren en sneller terug te vinden wat belangrijk is uit sessies."
+        answer: "CoachScribe is specifiek ontwikkeld voor loopbaan- en re-integratiecoaches. Het helpt je om sessies gestructureerd vast te leggen, clientinformatie veilig te bewaren en snel terug te vinden wat belangrijk is zodat jij je kunt focussen op de begeleiding zelf."
     },
     {
-        question: "Kan CoachScribe worden gebruikt door loopbaancoaches?",
-        answer: "Ja. Loopbaancoaches kunnen CoachScribe gebruiken om gesprekken met cliënten vast te leggen, verslagen te maken en belangrijke inzichten overzichtelijk bij te houden. Dit maakt het makkelijker om trajecten te volgen en opvolging te plannen."
+        question: "Kan CoachScribe worden gebruikt voor re-integratietrajecten?",
+        answer: "Ja. CoachScribe ondersteunt re-integratiecoaches bij het vastleggen van gesprekken en het bijhouden van voortgang per client. Of je nu werkt aan een eerste of tweede spoor traject, CoachScribe helpt je om overzicht te bewaren en verslaglegging efficient te houden."
     },
     {
-        question: "Kan ik CoachScribe gebruiken als zelfstandig coach of alleen in een organisatie?",
-        answer: "CoachScribe is geschikt voor zowel zelfstandige coaches als coaches die in een organisatie werken."
+        question: "Ondersteunt CoachScribe verslaglegging voor UWV of werkgevers?",
+        answer: "CoachScribe helpt je om sessieverslagen gestructureerd bij te houden. De gegenereerde verslagen kun je gebruiken als basis voor rapportages richting UWV, werkgevers of opdrachtgevers. Jij bepaalt altijd wat je deelt en wat je bewaart."
     },
     {
-        question: "Is er een minimum aantal cliënten of sessies nodig om te beginnen?",
-        answer: "Nee. Je kunt CoachScribe vanaf het eerste gesprek gebruiken, ongeacht het aantal cliënten of sessies. Het systeem werkt direct, waardoor je meteen overzicht krijgt en efficiënt notities en verslagen kunt bijhouden."
+        question: "Is CoachScribe geschikt als ik werk met meerdere opdrachtgevers tegelijk?",
+        answer: "Ja. CoachScribe is ontworpen voor coaches die meerdere clienten en trajecten tegelijk begeleiden. Je houdt per client een overzichtelijk dossier bij, ongeacht voor welke opdrachtgever of organisatie je werkt."
     },
     {
-        question: "Kunnen onderwijscoaches of begeleiders CoachScribe gebruiken?",
-        answer: "Ja. CoachScribe kan worden ingezet door onderwijscoaches, mentoren en begeleiders om gesprekken met studenten of leerlingen gestructureerd vast te leggen. Het biedt een veilig overzicht van sessies en maakt het eenvoudiger om belangrijke informatie terug te vinden en te gebruiken voor begeleiding."
+        question: "Kan ik CoachScribe gebruiken als zelfstandig loopbaancoach?",
+        answer: "Ja. CoachScribe is geschikt voor zowel zelfstandige coaches als coaches die in dienst zijn van een organisatie of re-integratiebureau. Je kunt direct starten, zonder minimum aantal clienten of sessies."
     },
     {
-        question: "Is CoachScribe geschikt voor nieuwe coaches zonder veel ervaring?",
-        answer: "Ja. CoachScribe ondersteunt zowel ervaren als nieuwe coaches door structuur en overzicht te bieden bij sessies en verslaglegging. Het helpt nieuwe coaches om gespreksinformatie efficiënt te beheren en sneller vertrouwd te raken met het bijhouden van professionele verslagen."
+        question: "Hoe zit het met de privacy van mijn clienten?",
+        answer: "Privacy staat bij CoachScribe op de eerste plaats. Alle gegevens worden versleuteld opgeslagen en verwerkt binnen de Europese Unie, in lijn met de AVG. Jouw data wordt nooit gebruikt om AI-modellen te trainen, en jij bepaalt zelf wat je bewaart of verwijdert."
     }
 ];
 function CoachesFrequentlyAskedQuestionsSection() {
@@ -166,7 +166,7 @@ function CoachesFrequentlyAskedQuestionsSection() {
                     children: "Veel gestelde vragen"
                 }, void 0, false, {
                     fileName: "[project]/Coachscribe/website/components/coaches/CoachesFrequentlyAskedQuestionsSection.tsx",
-                    lineNumber: 46,
+                    lineNumber: 45,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -188,7 +188,7 @@ function CoachesFrequentlyAskedQuestionsSection() {
                                             children: questionItem.question
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/coaches/CoachesFrequentlyAskedQuestionsSection.tsx",
-                                            lineNumber: 70,
+                                            lineNumber: 69,
                                             columnNumber: 19
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -209,7 +209,7 @@ function CoachesFrequentlyAskedQuestionsSection() {
                                                         strokeLinejoin: "round"
                                                     }, void 0, false, {
                                                         fileName: "[project]/Coachscribe/website/components/coaches/CoachesFrequentlyAskedQuestionsSection.tsx",
-                                                        lineNumber: 86,
+                                                        lineNumber: 85,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -220,24 +220,24 @@ function CoachesFrequentlyAskedQuestionsSection() {
                                                         strokeLinejoin: "round"
                                                     }, void 0, false, {
                                                         fileName: "[project]/Coachscribe/website/components/coaches/CoachesFrequentlyAskedQuestionsSection.tsx",
-                                                        lineNumber: 93,
+                                                        lineNumber: 92,
                                                         columnNumber: 23
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/Coachscribe/website/components/coaches/CoachesFrequentlyAskedQuestionsSection.tsx",
-                                                lineNumber: 79,
+                                                lineNumber: 78,
                                                 columnNumber: 21
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/coaches/CoachesFrequentlyAskedQuestionsSection.tsx",
-                                            lineNumber: 73,
+                                            lineNumber: 72,
                                             columnNumber: 19
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/Coachscribe/website/components/coaches/CoachesFrequentlyAskedQuestionsSection.tsx",
-                                    lineNumber: 57,
+                                    lineNumber: 56,
                                     columnNumber: 17
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -248,35 +248,35 @@ function CoachesFrequentlyAskedQuestionsSection() {
                                         children: questionItem.answer
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/coaches/CoachesFrequentlyAskedQuestionsSection.tsx",
-                                        lineNumber: 107,
+                                        lineNumber: 106,
                                         columnNumber: 19
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/coaches/CoachesFrequentlyAskedQuestionsSection.tsx",
-                                    lineNumber: 103,
+                                    lineNumber: 102,
                                     columnNumber: 17
                                 }, this)
                             ]
                         }, questionItem.question, true, {
                             fileName: "[project]/Coachscribe/website/components/coaches/CoachesFrequentlyAskedQuestionsSection.tsx",
-                            lineNumber: 53,
+                            lineNumber: 52,
                             columnNumber: 15
                         }, this);
                     })
                 }, void 0, false, {
                     fileName: "[project]/Coachscribe/website/components/coaches/CoachesFrequentlyAskedQuestionsSection.tsx",
-                    lineNumber: 49,
+                    lineNumber: 48,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/Coachscribe/website/components/coaches/CoachesFrequentlyAskedQuestionsSection.tsx",
-            lineNumber: 45,
+            lineNumber: 44,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/Coachscribe/website/components/coaches/CoachesFrequentlyAskedQuestionsSection.tsx",
-        lineNumber: 44,
+        lineNumber: 43,
         columnNumber: 5
     }, this);
 }
@@ -395,7 +395,7 @@ const securityItems = [
     },
     {
         title: "Jouw data blijft van jou",
-        description: "Jouw data wordt niet gebruikt om publieke AI-modellen te trainen. Jij bepaalt wat je bewaart en kunt je gegevens verwijderen wanneer jij wilt.",
+        description: "Jouw data wordt niet gebruikt om AI-modellen te trainen. Jij bepaalt wat je bewaart en kunt je gegevens verwijderen wanneer jij wilt.",
         icon: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$home$2f$security$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$home$2f$security$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$client$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"]
     }
 ];

@@ -145,7 +145,7 @@ const navigationLinks = [
         destination: "/product"
     },
     {
-        label: "Coaches",
+        label: "Doelgroep",
         destination: "/coaches"
     },
     {
@@ -217,7 +217,7 @@ function NavigationBar() {
                             className: "hidden items-center gap-10 text-[16px] font-medium text-black xl:absolute xl:left-1/2 xl:flex xl:-translate-x-1/2",
                             children: navigationLinks.map((navigationLink)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
                                     href: navigationLink.destination,
-                                    className: `transition-colors hover:text-[#BD0265] ${isActiveDestination(navigationLink.destination) ? "font-bold text-[#BD0265]" : "font-medium text-black"}`,
+                                    className: `transition-colors hover:text-[#BD0265] ${isActiveDestination(navigationLink.destination) ? "font-medium text-[#BD0265]" : "font-medium text-black"}`,
                                     children: navigationLink.label
                                 }, navigationLink.label, false, {
                                     fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
@@ -244,7 +244,7 @@ function NavigationBar() {
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$Button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
                                     label: "Probeer het uit",
-                                    destination: "/wachtlijst",
+                                    destination: "https://app.coachscribe.nl",
                                     variant: "primary",
                                     className: "font-normal"
                                 }, void 0, false, {
@@ -418,7 +418,7 @@ function NavigationBar() {
                                 children: navigationLinks.map((navigationLink)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
                                         href: navigationLink.destination,
                                         onClick: ()=>setIsMobileMenuOpen(false),
-                                        className: `transition-colors hover:text-[#BD0265] ${isActiveDestination(navigationLink.destination) ? "font-bold text-[#BD0265]" : "font-normal text-black"}`,
+                                        className: `transition-colors hover:text-[#BD0265] ${isActiveDestination(navigationLink.destination) ? "font-normal text-[#BD0265]" : "font-normal text-black"}`,
                                         children: navigationLink.label
                                     }, navigationLink.label, false, {
                                         fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
@@ -454,7 +454,7 @@ function NavigationBar() {
                                         onClick: ()=>setIsMobileMenuOpen(false),
                                         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$Button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
                                             label: "Probeer het uit",
-                                            destination: "/wachtlijst",
+                                            destination: "https://app.coachscribe.nl",
                                             variant: "primary",
                                             className: "font-normal"
                                         }, void 0, false, {

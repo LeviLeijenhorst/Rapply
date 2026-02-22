@@ -167,24 +167,24 @@ function CoachesWorkflowSection() {
                                 className: "max-w-xl space-y-5 text-[16px] font-medium text-black/70",
                                 children: [
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                        children: "Elke coach heeft een eigen werkwijze. Daarom werkt CoachScribe met templates die zijn afgestemd op verschillende coachingsvormen, zoals loopbaan-, life-, budget- en studentencoaching."
+                                        children: "Elke coach heeft een eigen werkwijze. Daarom werkt CoachScribe met templates afgestemd op loopbaan- en re-integratiecoaching."
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/coaches/CoachesWorkflowSection.tsx",
                                         lineNumber: 15,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                        children: "Deze templates zijn ontwikkeld in samenwerking met coaches, zodat ze aansluiten op hoe gesprekken echt verlopen."
+                                        children: "De templates zijn ontwikkeld in samenwerking met coaches uit het werkveld, zodat ze aansluiten op hoe gesprekken echt verlopen en hoe rapportages worden samengesteld."
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/coaches/CoachesWorkflowSection.tsx",
-                                        lineNumber: 21,
+                                        lineNumber: 19,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                        children: "Mocht er niets tussen zitten? Geen probleem. Ontwerp gemakkelijk je eigen template die precies aansluit op jouw unieke manier van verslaglegging."
+                                        children: "Mocht er niets tussen zitten? Geen probleem. Ontwerp gemakkelijk je eigen template die precies aansluit op jouw unieke stijl."
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/coaches/CoachesWorkflowSection.tsx",
-                                        lineNumber: 25,
+                                        lineNumber: 24,
                                         columnNumber: 15
                                     }, this)
                                 ]
@@ -208,12 +208,12 @@ function CoachesWorkflowSection() {
                             priority: true
                         }, void 0, false, {
                             fileName: "[project]/Coachscribe/website/components/coaches/CoachesWorkflowSection.tsx",
-                            lineNumber: 33,
+                            lineNumber: 31,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/Coachscribe/website/components/coaches/CoachesWorkflowSection.tsx",
-                        lineNumber: 32,
+                        lineNumber: 30,
                         columnNumber: 11
                     }, this)
                 ]
@@ -722,7 +722,7 @@ function CoachesCtaSection() {
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                     className: "max-w-xl text-[16px] font-medium text-black/70",
-                                    children: "Ben jij een coach en ervaar je mentale druk door het bijhouden van sessies en cliënten? Ben je teveel tijd kwijt aan voorbereiding en naslagwerk? Wellicht dat wij jou kunnen helpen :)"
+                                    children: "Ben jij een loopbaan- of re-integratiecoach en ervaar je mentale druk door het bijhouden van sessies en clienten? Ben je te veel tijd kwijt aan voorbereiding en naslagwerk? Wellicht dat wij jou kunnen helpen."
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/coaches/CoachesCtaSection.tsx",
                                     lineNumber: 16,
@@ -743,12 +743,12 @@ function CoachesCtaSection() {
                                 className: "font-normal"
                             }, void 0, false, {
                                 fileName: "[project]/Coachscribe/website/components/coaches/CoachesCtaSection.tsx",
-                                lineNumber: 23,
+                                lineNumber: 24,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/Coachscribe/website/components/coaches/CoachesCtaSection.tsx",
-                            lineNumber: 22,
+                            lineNumber: 23,
                             columnNumber: 11
                         }, this)
                     ]
@@ -766,12 +766,12 @@ function CoachesCtaSection() {
                         priority: true
                     }, void 0, false, {
                         fileName: "[project]/Coachscribe/website/components/coaches/CoachesCtaSection.tsx",
-                        lineNumber: 32,
+                        lineNumber: 33,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/Coachscribe/website/components/coaches/CoachesCtaSection.tsx",
-                    lineNumber: 31,
+                    lineNumber: 32,
                     columnNumber: 9
                 }, this)
             ]

@@ -30,7 +30,7 @@ const securityItems = [
   {
     title: "Jouw data blijft van jou",
     description:
-      "Jouw data wordt niet gebruikt om publieke AI-modellen te trainen. Jij bepaalt wat je bewaart en kunt je gegevens verwijderen wanneer jij wilt.",
+      "Jouw data wordt niet gebruikt om AI-modellen te trainen. Jij bepaalt wat je bewaart en kunt je gegevens verwijderen wanneer jij wilt.",
     icon: securityIcon,
   },
 ];

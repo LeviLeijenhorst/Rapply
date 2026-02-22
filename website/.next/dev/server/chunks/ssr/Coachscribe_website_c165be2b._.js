@@ -174,7 +174,7 @@ const securityItems = [
     },
     {
         title: "Jouw data blijft van jou",
-        description: "Jouw data wordt niet gebruikt om publieke AI-modellen te trainen. Jij bepaalt wat je bewaart en kunt je gegevens verwijderen wanneer jij wilt.",
+        description: "Jouw data wordt niet gebruikt om AI-modellen te trainen. Jij bepaalt wat je bewaart en kunt je gegevens verwijderen wanneer jij wilt.",
         icon: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$home$2f$security$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$home$2f$security$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"]
     }
 ];
@@ -761,7 +761,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$co
 const questions = [
     {
         question: "Wat is CoachScribe?",
-        answer: "CoachScribe is een AI-ondersteunde tool voor coaches om gesprekken eenvoudig op te nemen, automatisch te laten samenvatten en overzichtelijke verslagen te maken. Het helpt je om minder tijd kwijt te zijn aan administratie, terwijl je wel grip houdt op inhoud, nuance en context."
+        answer: "CoachScribe is een AI-ondersteunde tool voor coaches om gesprekken eenvoudig op te nemen, automatisch te laten samenvatten en overzichtelijke, bruikbare rapportages te maken. Het helpt je om minder tijd kwijt te zijn aan administratie, terwijl je wel grip houdt op de inhoud, nuance en context van al je sessies."
     },
     {
         question: "Is CoachScribe veilig?",
@@ -773,7 +773,7 @@ const questions = [
     },
     {
         question: "Voor wie is CoachScribe bedoeld?",
-        answer: "CoachScribe is bedoeld voor coaches en begeleiders die werken met gesprekken en daar gestructureerde, heldere verslagen van willen maken. Denk aan coaches in het onderwijs, zorg, loopbaanbegeleiding en persoonlijke ontwikkeling."
+        answer: "CoachScribe is specifiek ontwikkeld voor loopbaan- en re-integratieprofessionals die werken met meerdere clienten en trajecten. Het helpt je om sessies gestructureerd vast te leggen, voortgang bij te houden en verslaglegging richting opdrachtgevers of UWV eenvoudiger te maken."
     },
     {
         question: "Is CoachScribe een vervanging voor een menselijke coach?",
@@ -781,7 +781,7 @@ const questions = [
     },
     {
         question: "Kan ik niet gewoon ChatGPT gebruiken?",
-        answer: "Nee. ChatGPT is een algemene AI en beschikt niet over de functionaliteit voor sessie opname, gestructureerde verslaglegging of AVG-proof beheer van cliëntgegevens, waardoor het niet geschikt is voor dit soort toepassingen. Daarnaast is CoachScribe ontworpen speciaal voor coaches en kan het dus een stuk gerichter te werk gaan."
+        answer: "Nee. ChatGPT is een algemene AI en beschikt niet over de functionaliteit voor sessie opname, gestructureerde verslaglegging of AVG-proof beheer van clientgegevens, waardoor het niet geschikt is voor dit soort toepassingen. Daarnaast is CoachScribe ontworpen speciaal voor coaches en kan het dus een stuk gerichter te werk gaan."
     }
 ];
 function FrequentlyAskedQuestionsSection() {

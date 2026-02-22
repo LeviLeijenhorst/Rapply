@@ -528,19 +528,19 @@ const calmIcon = /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d
 const impactItems = [
     {
         title: "Overzicht",
-        description: "Alle sessies en context komen samen op één plek, per client en per traject. Zo behoud je overzicht, ook wanneer je meerdere clienten en gesprekken tegelijk begeleidt.",
+        description: "Alle sessies en context komen samen op een plek, per client en per traject. Ideaal als je meerdere loopbaan- of re-integratietrajecten tegelijk hebt lopen.",
         image: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$product$2f$product$2d$3a$2e$jpg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$product$2f$product$2d$3a$2e$jpg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"],
         icon: searchIcon
     },
     {
         title: "Tijd",
-        description: "CoachScribe legt gesprekken automatisch vast in duidelijke verslagen, waardoor je een hoop tijd bespaart met de voorbereiding en verslaglegging.",
+        description: "CoachScribe legt gesprekken automatisch vast in duidelijke verslagen. Minder tijd naar administratie, meer tijd voor je clienten.",
         image: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$product$2f$product$2d$3b$2e$jpg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$product$2f$product$2d$3b$2e$jpg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"],
         icon: clockIcon
     },
     {
         title: "Kwaliteit",
-        description: "Alle context blijft bewaard, waardoor je coaching consistenter en scherper wordt. Je ziet sneller patronen en kunt gerichter begeleiden.",
+        description: "Alle context blijft bewaard, waardoor je begeleiding consistenter en scherper wordt. Je ziet sneller patronen in een traject en kunt gerichter sturen.",
         image: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$product$2f$product$2d$3c$2e$jpg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$product$2f$product$2d$3c$2e$jpg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"],
         icon: awardIcon
     },
@@ -552,7 +552,7 @@ const impactItems = [
     },
     {
         title: "Connectie",
-        description: "Wanneer je alle details van je coachee kent, voelt die zich vertrouwd en kan jij door afwezigheid van notities de connectie verdiepen.",
+        description: "Wanneer je alle details over je cliÃ«nt onthoudt, voelt die zich vertrouwd waardoor de connectie vergroot.",
         image: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$product$2f$coachscribe$2d$3e$2e$jpg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$product$2f$coachscribe$2d$3e$2e$jpg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"],
         icon: connectionIcon
     },
@@ -651,7 +651,7 @@ function ProductImpactSection() {
                     className: "mt-10",
                     children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$Button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
                         label: "Probeer het uit",
-                        destination: "/wachtlijst",
+                        destination: "https://app.coachscribe.nl",
                         variant: "primary",
                         showArrow: true,
                         className: "font-normal"
@@ -775,7 +775,7 @@ const securityItems = [
     },
     {
         title: "Jouw data blijft van jou",
-        description: "Jouw data wordt niet gebruikt om publieke AI-modellen te trainen. Jij bepaalt wat je bewaart en kunt je gegevens verwijderen wanneer jij wilt.",
+        description: "Jouw data wordt niet gebruikt om AI-modellen te trainen. Jij bepaalt wat je bewaart en kunt je gegevens verwijderen wanneer jij wilt.",
         icon: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$home$2f$security$2e$svg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$home$2f$security$2e$svg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$ssr$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"]
     }
 ];
@@ -1361,24 +1361,24 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$co
 ;
 const questions = [
     {
-        question: "Kan ik templates gebruiken voor mijn verslagen?",
-        answer: "Ja. Je kunt vooraf ingestelde templates gebruiken om snel gestructureerde verslagen te maken. Zo hoef je niet telkens vanaf nul te beginnen en houd je verslagen consistent en overzichtelijk. Zit er geen template tussen die bij jouw workflow past? Geen probleem, het is ook mogelijk om je eigen templates te maken."
-    },
-    {
         question: "Kan ik mijn huisstijl toevoegen aan verslagen?",
-        answer: "Ja. Je kunt je eigen logo en praktijk kleur toevoegen, zodat elk verslag direct herkenbaar is en professioneel oogt. Zo blijft de uitstraling consistent en duidelijk voor jou en je cliënten."
+        answer: "Ja. Je kunt je eigen logo en praktijk kleur toevoegen, zodat elk verslag direct herkenbaar is en professioneel oogt. Zo blijft de uitstraling consistent en duidelijk voor jou en je clienten."
     },
     {
         question: "Is er een app voor CoachScribe?",
         answer: "Binnenkort. Naar verwachting zal deze halverwege maart op de AppStore en PlayStore uit worden gebracht."
     },
     {
-        question: "Kan ik verslagen delen met cliënten?",
-        answer: "Ja. Je kunt verslagen eenvoudig delen met cliënten of collega’s, en ze worden gedeeld in jouw huisstijl met logo en praktijkkleur, zodat alles herkenbaar en professioneel blijft."
+        question: "Kan ik verslagen delen met clienten?",
+        answer: "Ja. Je kunt verslagen eenvoudig delen met clienten of collega's, en ze worden gedeeld in jouw huisstijl met logo en praktijkkleur, zodat alles herkenbaar en professioneel blijft."
     },
     {
-        question: "Kan ik zelf notities maken?",
-        answer: "Ja. Je kunt altijd zelf notities toevoegen bij een sessie, zodat belangrijke informatie niet verloren gaat en je later snel terug kunt vinden wat er besproken is."
+        question: "Kan ik verslagen delen met opdrachtgevers of werkgevers?",
+        answer: "Ja. Je kunt verslagen eenvoudig delen met clienten, opdrachtgevers of werkgevers, in jouw eigen huisstijl. Handig voor re-integratietrajecten waarbij meerdere partijen betrokken zijn."
+    },
+    {
+        question: "Kan ik templates gebruiken?",
+        answer: "Ja. Je kunt vooraf ingestelde templates gebruiken die zijn afgestemd op loopbaan- en re-integratieprofessionals. Zo hoef je niet telkens vanaf nul te beginnen en houd je verslagen consistent. Past er geen template bij jouw werkwijze? Dan maak je eenvoudig je eigen template."
     },
     {
         question: "Kan ik specifieke momenten in sessies terugluisteren?",
