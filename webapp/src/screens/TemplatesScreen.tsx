@@ -5,8 +5,6 @@ import { AnimatedMainContent } from '../components/AnimatedMainContent'
 import { AnimatedWidthContainer } from '../components/AnimatedWidthContainer'
 import { PlusIcon } from '../components/icons/PlusIcon'
 import { SearchIcon } from '../components/icons/SearchIcon'
-import { TemplateSavedIcon } from '../components/icons/TemplateSavedIcon'
-import { TemplatesIcon } from '../components/icons/TemplatesIcon'
 import { ConfirmTemplateDeleteModal } from '../components/templates/ConfirmTemplateDeleteModal'
 import { TemplateEditModal } from '../components/templates/TemplateEditModal'
 import { Text } from '../components/Text'
@@ -14,14 +12,13 @@ import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { colors } from '../theme/colors'
 import { typography } from '../theme/typography'
 import { webTransitionSmooth } from '../theme/webTransitions'
-import { TemplateNotSavedIcon } from '../components/icons/TemplateNotSavedIcon'
 
 type SavedFilterKey = 'all' | 'saved'
 
 // Renders the templates overview, filters, and create/edit/delete modal flows.
 export function TemplatesScreen() {
   const { width: windowWidth } = useWindowDimensions()
-  const { data, createTemplate, updateTemplate, deleteTemplate, toggleTemplateSaved } = useLocalAppData()
+  const { data, createTemplate, updateTemplate, deleteTemplate } = useLocalAppData()
   const [searchText, setSearchText] = useState('')
   const [activeSavedFilter, setActiveSavedFilter] = useState<SavedFilterKey>('all')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -120,20 +117,20 @@ export function TemplatesScreen() {
           </View>
         </View>
 
-        <View style={[styles.tabsRow, styles.tabsRowWeb]}>
+        {/* <View style={[styles.tabsRow, styles.tabsRowWeb]}>
           <TabButton
-            label="Alle templates"
+            label=""
             isSelected={activeSavedFilter === 'all'}
             icon={(color) => <TemplatesIcon color={color} size={18} />}
             onPress={() => setActiveSavedFilter('all')}
           />
           <TabButton
-            label="Opgeslagen"
+            label=""
             isSelected={activeSavedFilter === 'saved'}
             icon={(color) => <TemplateSavedIcon color={color} size={18} />}
             onPress={() => setActiveSavedFilter('saved')}
           />
-        </View>
+        </View> */}
       </View>
 
       <View style={styles.gridArea}>
@@ -149,9 +146,7 @@ export function TemplatesScreen() {
                   <TemplateCard
                     title={template.name}
                     description={template.description}
-                    isSaved={template.isSaved}
                     onPress={() => setEditingTemplateId(template.id)}
-                    onToggleSaved={() => toggleTemplateSaved(template.id)}
                   />
                 </View>
               ))}
@@ -213,64 +208,20 @@ export function TemplatesScreen() {
   )
 }
 
-type TabButtonProps = {
-  label: string
-  isSelected: boolean
-  icon: (color: string) => React.ReactNode
-  onPress: () => void
-}
-
-// Renders one template-filter tab button.
-function TabButton({ label, isSelected, icon, onPress }: TabButtonProps) {
-  const iconColor = isSelected ? '#FFFFFF' : colors.selected
-  const textColor = isSelected ? '#FFFFFF' : colors.selected
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ hovered }) => [
-        styles.tabButton,
-        isSelected ? styles.tabButtonSelected : styles.tabButtonUnselected,
-        hovered ? (isSelected ? styles.tabButtonSelectedHovered : styles.tabButtonHovered) : undefined,
-      ]}
-    >
-      <View style={styles.tabButtonContent}>
-        {icon(iconColor)}
-        <Text isSemibold style={[styles.tabButtonText, { color: textColor }]}>
-          {label}
-        </Text>
-      </View>
-    </Pressable>
-  )
-}
-
 type TemplateCardProps = {
   title: string
   description: string
-  isSaved: boolean
   onPress: () => void
-  onToggleSaved: () => void
 }
 
 // Renders one template preview card in the grid.
-function TemplateCard({ title, description, isSaved, onPress, onToggleSaved }: TemplateCardProps) {
+function TemplateCard({ title, description, onPress }: TemplateCardProps) {
   return (
     <Pressable onPress={onPress} style={({ hovered }) => [styles.templateCard, hovered ? styles.templateCardHovered : undefined]}>
       <View style={styles.templateCardContent}>
-        <View style={styles.templateCardHeader}>
-          <Text isBold style={styles.templateCardTitle}>
-            {title}
-          </Text>
-          <Pressable
-            onPress={(event) => {
-              ;(event as any)?.stopPropagation?.()
-              onToggleSaved()
-            }}
-            style={({ hovered }) => [styles.templateCardSaveButton, hovered ? styles.templateCardSaveButtonHovered : undefined]}
-          >
-            {isSaved ? <TemplateSavedIcon color={colors.selected} size={22} /> : <TemplateNotSavedIcon color={colors.textStrong} size={22} />}
-          </Pressable>
-        </View>
+        <Text isBold style={styles.templateCardTitle}>
+          {title}
+        </Text>
         <Text style={styles.templateCardDescription}>{description}</Text>
       </View>
     </Pressable>
@@ -430,11 +381,13 @@ const styles = StyleSheet.create({
   gridRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    width: '100%',
+    justifyContent: 'space-between',
     gap: 16,
   },
   gridItem: {
-    width: 320,
-    maxWidth: '100%',
+    width: '32%',
+    minWidth: 0,
     flexGrow: 0,
     flexShrink: 0,
   },
@@ -453,22 +406,6 @@ const styles = StyleSheet.create({
   templateCardContent: {
     width: '100%',
     gap: 8,
-  },
-  templateCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  templateCardSaveButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  templateCardSaveButtonHovered: {
-    backgroundColor: colors.hoverBackground,
   },
   templateCardTitle: {
     fontSize: 18,

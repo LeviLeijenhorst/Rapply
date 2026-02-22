@@ -12,6 +12,7 @@ export async function createTemplate(userId: string, template: Template): Promis
           sections_json = excluded.sections_json,
           is_saved = excluded.is_saved,
           updated_at_unix_ms = excluded.updated_at_unix_ms
+      where public.templates.user_id = excluded.user_id
     `,
     [
       template.id,

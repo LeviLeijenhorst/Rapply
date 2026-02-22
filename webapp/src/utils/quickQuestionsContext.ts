@@ -17,19 +17,19 @@ export function buildConversationTranscriptSystemMessages(params: {
   const writtenReport = normalizeText(params.writtenReportText)
   const sessionId = normalizeText(params.sessionId)
   const scopeHeader = sessionId
-    ? `[COACHSCRIBE_SESSION_SCOPE]\nSession-ID: ${sessionId}\nGebruik uitsluitend context uit deze sessie.`
-    : 'Gebruik uitsluitend context uit deze sessie.'
+    ? `[COACHSCRIBE_SESSION_SCOPE]\nSession-ID: ${sessionId}\nGebruik uitsluitend context uit dit verslag.`
+    : 'Gebruik uitsluitend context uit dit verslag.'
   const contextBlocks: string[] = []
   if (transcript) {
     contextBlocks.push(`Transcript van het gesprek:\n\n${transcript}`)
   }
   if (writtenReport) {
-    contextBlocks.push(`Geschreven verslag van deze sessie:\n\n${writtenReport}`)
+    contextBlocks.push(`Geschreven verslag van dit gesprek:\n\n${writtenReport}`)
   }
 
   const text = contextBlocks.length
-    ? `${scopeHeader}\n\nHier is de sessiecontext:\n\n${contextBlocks.join('\n\n')}\n\nGebruik uitsluitend deze context om de vragen te beantwoorden.`
-    : `${scopeHeader}\n\nEr is nog geen transcript of geschreven verslag beschikbaar voor deze sessie. Beantwoord vragen zo goed mogelijk op basis van wat de gebruiker typt.`
+    ? `${scopeHeader}\n\nHier is de verslagcontext:\n\n${contextBlocks.join('\n\n')}\n\nGebruik uitsluitend deze context om de vragen te beantwoorden.`
+    : `${scopeHeader}\n\nEr is nog geen transcript of geschreven verslag beschikbaar voor dit verslag. Beantwoord vragen zo goed mogelijk op basis van wat de gebruiker typt.`
 
   return [{ role: 'system', text }]
 }
@@ -71,7 +71,7 @@ export function buildCoacheeSummariesSystemMessages(params: {
     }
 
     included.push({
-      title: normalizeText(session.title) || 'Sessie',
+      title: normalizeText(session.title) || 'Verslag',
       dateLabel: formatDateLabel(session.createdAtUnixMs),
       summary: clippedSummary,
     })
@@ -124,7 +124,7 @@ export function buildCoacheeTranscriptsSystemMessages(params: {
     }
 
     included.push({
-      title: normalizeText(session.title) || 'Sessie',
+      title: normalizeText(session.title) || 'Verslag',
       dateLabel: formatDateLabel(session.createdAtUnixMs),
       transcript: clippedTranscript,
     })
@@ -173,7 +173,7 @@ export function buildCoacheeWrittenReportsSystemMessages(params: {
     }
 
     included.push({
-      title: normalizeText(session.title) || 'Sessie',
+      title: normalizeText(session.title) || 'Verslag',
       dateLabel: formatDateLabel(session.createdAtUnixMs),
       reportText: clippedReport,
     })

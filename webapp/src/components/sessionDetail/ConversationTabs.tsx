@@ -32,7 +32,7 @@ export function ConversationTabs({ activeTabKey, onSelectTab }: Props) {
           onPress={() => onSelectTab('notities')}
         />
         <TabButton
-          label="Volledige sessie"
+          label="Volledig gesprek"
           isSelected={activeTabKey === 'volledigeSessie'}
           icon={(color) => <VolledigeSessieIcon color={color} size={24} />}
           onPress={() => onSelectTab('volledigeSessie')}

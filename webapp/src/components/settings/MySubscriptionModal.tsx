@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { colors } from '../../theme/colors'
@@ -95,6 +95,7 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
       })),
     [pricingPlans],
   )
+  const selectedPlan = useMemo(() => plans.find((plan) => plan.id === selectedPlanId) ?? null, [plans, selectedPlanId])
 
   const handleSelectPlan = async (planId: string) => {
     try {
@@ -132,7 +133,9 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
 
       <View style={styles.body}>
         {isPricingLoading ? (
-          <Text style={styles.infoText}>Plannen laden...</Text>
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color={colors.selected} />
+          </View>
         ) : !canSeePricingPage ? (
           <Text style={styles.infoText}>Prijsinformatie is voor dit account niet zichtbaar.</Text>
         ) : plans.length === 0 ? (
@@ -166,12 +169,15 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                   </View>
                   <AppButton
                     label={
-                      selectedPlanId === plan.id
+                      checkoutLoadingPlanId === plan.id
+                        ? ''
+                        : selectedPlanId === plan.id
                         ? 'Huidig abonnement'
-                        : checkoutLoadingPlanId === plan.id
-                          ? 'Doorsturen...'
-                          : 'Kies en betaal'
+                        : selectedPlan && plan.monthlyPrice < selectedPlan.monthlyPrice
+                          ? 'Downgraden'
+                          : 'Upgraden'
                     }
+                    leading={checkoutLoadingPlanId === plan.id ? <ActivityIndicator size="small" color="#FFFFFF" /> : undefined}
                     onPress={() => {
                       if (selectedPlanId === plan.id || checkoutLoadingPlanId) return
                       void handleSelectPlan(plan.id)
@@ -241,6 +247,11 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     gap: 16,
+  },
+  loadingState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   infoText: {
     fontSize: 14,

@@ -66,7 +66,7 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
             </Text>
             {/* Welcome description */}
             <Text style={styles.welcomeParagraph}>
-              CoachScribe helpt coaches bij de verslaglegging van hun sessies en het bewaren van het overzicht.
+              CoachScribe helpt coaches bij de verslaglegging van hun verslagen en het bewaren van het overzicht.
             </Text>
             {/* Welcome description */}
             <Text style={styles.welcomeParagraph}>

@@ -1423,7 +1423,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
       const user = await requireAuthenticatedUser(req)
       const confirmTextRaw = typeof req.body?.confirmText === "string" ? req.body.confirmText.trim() : ""
       const confirmText = confirmTextRaw.toUpperCase()
-      if (confirmTextRaw && confirmText !== "VERWIJDEREN") {
+      if (!confirmTextRaw || confirmText !== "VERWIJDEREN") {
         sendError(res, 400, "Bevestigingstekst ongeldig")
         return
       }
@@ -1448,8 +1448,13 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
         return
       }
 
-      await deleteEncryptedUploadsByPrefix({ prefix: `${user.userId}/` })
       await execute(`delete from public.users where id = $1`, [user.userId])
+      try {
+        await deleteEncryptedUploadsByPrefix({ prefix: `${user.userId}/` })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        console.log("[account/delete] Blob cleanup failed", { userId: user.userId, message })
+      }
       res.status(200).json({ ok: true })
     }),
   )

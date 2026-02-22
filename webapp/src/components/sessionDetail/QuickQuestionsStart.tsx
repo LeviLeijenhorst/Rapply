@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, Pressable, StyleSheet, View } from 'react-native'
+import { Animated, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
 import { Text } from '../Text'
 import { colors } from '../../theme/colors'
 import { RotateLeftIcon } from '../icons/RotateLeftIcon'
+import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 
 type QuickQuestionOption = {
   id: string
@@ -18,13 +19,13 @@ type Props = {
 function buildOptions(coacheeName: string): QuickQuestionOption[] {
   void coacheeName
   return [
-    { id: 'plan', text: 'inspiratie voor een gespreksplan.' },
-    { id: 'todos-pdf', text: "een PDF met alle to-do's voor de volgende keer." },
-    { id: 'goals-pdf', text: 'een PDF met alle doelen die we hebben gesteld.' },
-    { id: 'last-reminder', text: 'een snelle reminder waar het vorige gesprek over ging.' },
-    { id: 'goals-list', text: 'alle doelen op een rijtje.' },
-    { id: 'help-request', text: 'de hulpvraag.' },
-    { id: 'feedback', text: 'feedback: hoe vind je dat ik het in het vorige gesprek heb gedaan?' },
+    { id: 'plan-van-aanpak', text: 'een concept plan van aanpak voor het re-integratietraject.' },
+    { id: 'belemmeringen', text: 'de belangrijkste belemmerende en bevorderende factoren voor werkhervatting.' },
+    { id: 'actielijst', text: 'een concrete actielijst met deadlines voor coach en cliënt.' },
+    { id: 'eerste-evaluatie', text: 'een opzet voor de eerstejaarsevaluatie op basis van dit gesprek.' },
+    { id: 'tweede-spoor', text: 'een samenvatting met focus op tweede spoor en arbeidsmogelijkheden.' },
+    { id: 'werkgever-terugkoppeling', text: 'een zakelijke terugkoppeling die geschikt is voor de werkgever.' },
+    { id: 'volgende-sessie', text: 'een voorstel voor agenda en doelen van het volgende gesprek.' },
   ]
 }
 
@@ -46,9 +47,12 @@ export function QuickQuestionsStart({ coacheeName, onSelectOption }: Props) {
   const baseOptions = useMemo(() => buildOptions(coacheeName), [coacheeName])
   const [optionsOrder, setOptionsOrder] = useState<QuickQuestionOption[]>(() => shuffleOptions(baseOptions))
   const [activeIndex, setActiveIndex] = useState(0)
+  const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false)
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null)
   const optionsOrderRef = useRef<QuickQuestionOption[]>(optionsOrder)
   const activeIndexRef = useRef(activeIndex)
   const visibleOptions = optionsOrder.length > 0 ? [optionsOrder[activeIndex % optionsOrder.length]] : []
+  const selectedOption = optionsOrder.find((option) => option.id === selectedOptionId) ?? null
 
   function animateOptions(onNext: () => void) {
     if (isAnimating) return
@@ -95,6 +99,17 @@ export function QuickQuestionsStart({ coacheeName, onSelectOption }: Props) {
     return () => clearInterval(intervalId)
   }, [optionsOrder.length, isAnimating])
 
+  useEffect(() => {
+    if (optionsOrder.length === 0) {
+      setSelectedOptionId(null)
+      return
+    }
+    setSelectedOptionId((previous) => {
+      if (previous && optionsOrder.some((option) => option.id === previous)) return previous
+      return optionsOrder[0].id
+    })
+  }, [optionsOrder])
+
   return (
     <View style={styles.container}>
       {/* Intro line */}
@@ -116,13 +131,81 @@ export function QuickQuestionsStart({ coacheeName, onSelectOption }: Props) {
         ))}
       </Animated.View>
 
-      <Pressable
-        onPress={refreshOptions}
-        style={({ hovered }) => [styles.refreshButton, hovered ? styles.refreshButtonHovered : undefined]}
-      >
-        {/* Refresh options */}
-        <RotateLeftIcon size={18} color={colors.textSecondary} />
-      </Pressable>
+      <View style={styles.actionsRow}>
+        <Pressable
+          onPress={refreshOptions}
+          style={({ hovered }) => [styles.circleButton, hovered ? styles.circleButtonHovered : undefined]}
+        >
+          {/* Refresh options */}
+          <RotateLeftIcon size={18} color={colors.textSecondary} />
+        </Pressable>
+        <Pressable
+          onPress={() => setIsOptionsModalVisible(true)}
+          style={({ hovered }) => [styles.circleButton, hovered ? styles.circleButtonHovered : undefined]}
+        >
+          {/* Open all options modal */}
+          <View style={styles.listIcon}>
+            <View style={styles.listIconLine} />
+            <View style={styles.listIconLine} />
+            <View style={styles.listIconLine} />
+          </View>
+        </Pressable>
+      </View>
+
+      <AnimatedOverlayModal visible={isOptionsModalVisible} onClose={() => setIsOptionsModalVisible(false)} contentContainerStyle={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text isSemibold style={styles.modalTitle}>
+              Ik wil...
+            </Text>
+          </View>
+          <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
+            {optionsOrder.map((option) => {
+              const isSelected = selectedOptionId === option.id
+              return (
+                <Pressable
+                  key={option.id}
+                  onPress={() => setSelectedOptionId(option.id)}
+                  style={({ hovered }) => [
+                    styles.modalOptionRow,
+                    isSelected ? styles.modalOptionRowSelected : undefined,
+                    hovered ? styles.modalOptionRowHovered : undefined,
+                  ]}
+                >
+                  <Text style={styles.modalOptionText}>{option.text}</Text>
+                </Pressable>
+              )
+            })}
+          </ScrollView>
+          <View style={styles.modalFooter}>
+            <Pressable
+              onPress={() => setIsOptionsModalVisible(false)}
+              style={({ hovered }) => [styles.modalFooterButton, hovered ? styles.modalFooterButtonHovered : undefined]}
+            >
+              <Text isBold style={styles.modalFooterButtonText}>
+                Annuleren
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                if (!selectedOption) return
+                onSelectOption(`Ik wil ${selectedOption.text}`)
+                setIsOptionsModalVisible(false)
+              }}
+              disabled={!selectedOption}
+              style={({ hovered }) => [
+                styles.modalFooterButtonPrimary,
+                hovered ? styles.modalFooterButtonPrimaryHovered : undefined,
+                !selectedOption ? styles.modalFooterButtonDisabled : undefined,
+              ]}
+            >
+              <Text isBold style={styles.modalFooterButtonPrimaryText}>
+                Selecteren
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </AnimatedOverlayModal>
     </View>
   )
 }
@@ -157,7 +240,13 @@ const styles = StyleSheet.create({
     color: colors.text,
     textAlign: 'center',
   },
-  refreshButton: {
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  circleButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -167,7 +256,106 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  refreshButtonHovered: {
+  circleButtonHovered: {
     backgroundColor: colors.hoverBackground,
+  },
+  listIcon: {
+    width: 14,
+    gap: 3,
+  },
+  listIconLine: {
+    width: '100%',
+    height: 1.5,
+    borderRadius: 999,
+    backgroundColor: colors.textSecondary,
+  },
+  modalContainer: {
+    width: 560,
+    maxWidth: '100%',
+  },
+  modalContent: {
+    width: '100%',
+    maxHeight: 640,
+    padding: 18,
+    gap: 14,
+  },
+  modalHeader: {
+    width: '100%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    lineHeight: 22,
+    color: colors.textStrong,
+  },
+  modalScroll: {
+    maxHeight: 420,
+  },
+  modalScrollContent: {
+    gap: 8,
+  },
+  modalOptionRow: {
+    width: '100%',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+  },
+  modalOptionRowHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  modalOptionRowSelected: {
+    borderColor: colors.selected,
+    backgroundColor: '#FFF2F8',
+  },
+  modalOptionText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.text,
+  },
+  modalFooter: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 10,
+  },
+  modalFooterButton: {
+    height: 40,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalFooterButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  modalFooterButtonText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#656565',
+  },
+  modalFooterButtonPrimary: {
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: colors.selected,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalFooterButtonPrimaryHovered: {
+    backgroundColor: '#A50058',
+  },
+  modalFooterButtonPrimaryText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#FFFFFF',
+  },
+  modalFooterButtonDisabled: {
+    opacity: 0.55,
   },
 })

@@ -12,11 +12,11 @@ Wij gebruiken Microsoft Entra voor inloggen. Daarbij verwerken wij:
 Unieke gebruikers-id (Entra user id).
 E-mailadres (als dit door Entra wordt meegegeven).
 Weergavenaam (display name, als dit door Entra wordt meegegeven).
-CoachScribe vraagt geen verplichte voor- en achternaam als profielveld. Wel kan een weergavenaam vanuit Entra worden verwerkt, en je kunt in de app zelf namen invoeren (bijvoorbeeld de naam van een coachee of een sessietitel).
+CoachScribe vraagt geen verplichte voor- en achternaam als profielveld. Wel kan een weergavenaam vanuit Entra worden verwerkt, en je kunt in de app zelf namen invoeren (bijvoorbeeld de naam van een cliënt of een verslagtitel).
 Gegevens die je in de app opslaat (inhoud)
 CoachScribe is bedoeld voor het vastleggen en verwerken van gesprekken. Daarom verwerken wij gegevens die je zelf toevoegt of laat genereren, zoals:
-Coachee-gegevens (bijvoorbeeld een naam die je zelf invult).
-Sessiegegevens (zoals titel, type sessie en tijdstempels).
+Cliëntgegevens (bijvoorbeeld een naam die je zelf invult).
+Verslaggegevens (zoals titel, type verslag en tijdstempels).
 Transcripties.
 Samenvattingen.
 Notities.
@@ -66,7 +66,7 @@ CoachScribe gebruikt geen geautomatiseerde besluitvorming of profilering die rec
 Bewaartermijnen
 Wij bewaren gegevens niet langer dan nodig. Concreet betekent dit:
 Accountgegevens: zolang je account actief is.
-Inhoud (transcripties, samenvattingen, notities, rapporten, sessiegegevens): totdat jij deze verwijdert of je account verwijdert.
+Inhoud (transcripties, samenvattingen, notities, rapporten, verslaggegevens): totdat jij deze verwijdert of je account verwijdert.
 Versleutelde audio-uploads voor transcriptie: tijdelijk en in principe alleen zolang dit nodig is om transcriptie uit te voeren; daarna wordt de upload verwijderd.
 Feedback- en supportberichten: zolang nodig om je vraag af te handelen en voor een redelijke periode daarna, zodat we opvolging kunnen doen.
 Bij verwijdering van je account worden de bijbehorende gegevens uit onze database verwijderd en worden bijbehorende uploads in onze opslag verwijderd, tenzij een wettelijke verplichting ons dwingt om bepaalde gegevens langer te bewaren.

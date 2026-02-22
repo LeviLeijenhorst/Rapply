@@ -113,7 +113,7 @@ export function SessieListItemCard({
         <View style={styles.coacheeColumn}>
           <CoacheeAvatarIcon color={colors.selected} size={24} />
           <Text numberOfLines={1} style={styles.coacheeName}>
-            {coacheeName ?? 'Coachee'}
+            {coacheeName ?? 'Cliënt'}
           </Text>
         </View>
       ) : null}

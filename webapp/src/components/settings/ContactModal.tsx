@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { ActivityIndicator, Image, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
@@ -22,7 +22,6 @@ export function ContactModal({ visible, onClose, onSubmitted }: Props) {
   const { width } = useWindowDimensions()
   const isStacked = width < 1100
   const inputWebStyle = useMemo(() => ({ outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any), [])
-  const contactImage = useMemo(() => require('../../../assets/over_ons-beiden.png'), [])
 
   function clearForm() {
     setName('')
@@ -108,7 +107,6 @@ export function ContactModal({ visible, onClose, onSubmitted }: Props) {
           <Text style={styles.description}>
             Heb je een vraag, wil je input geven of ben je benieuwd wat wij voor jou kunnen betekenen? Neem contact met ons op!
           </Text>
-          <Image source={contactImage} style={styles.image} resizeMode="cover" />
         </View>
 
         <View style={styles.formColumn}>
@@ -222,19 +220,13 @@ const styles = StyleSheet.create({
   leftColumn: {
     flex: 1,
     gap: 18,
+    justifyContent: 'center',
   },
   description: {
     maxWidth: 420,
     fontSize: 16,
     lineHeight: 24,
     color: 'rgba(255,255,255,0.9)',
-  },
-  image: {
-    width: '100%',
-    maxWidth: 420,
-    height: 220,
-    borderRadius: 16,
-    overflow: 'hidden',
   },
   formColumn: {
     flex: 1,

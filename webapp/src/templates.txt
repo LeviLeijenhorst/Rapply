@@ -1,0 +1,266 @@
+# Executive Summary
+
+In dit rapport presenteren we een geoptimaliseerde set rapportagesjablonen voor re-integratiecoaches en kleine re-integratiebureaus binnen de Wet verbetering poortwachter (WvP). Uit onze analyse blijkt dat de huidige sjablonen *structureel te generiek* zijn (ieder met dezelfde drie rubrieken “Situatie, Analyse, Advies”) en onvoldoende aansluiten bij wettelijke eisen en UWV-beoordelingspunten. De belangrijkste ontbrekende elementen zijn:
+
+- **Verschillende naamgeving en inhoud per fase:** bv. intakeverslag, voortgang, plan van aanpak, evaluaties, eindevaluatie.  
+- **Gegevens zoals datums, weeknummers en handtekeningen:** vereist voor tijdigheid en rechtsgeldigheid【2†L125-L133】【14†L18-L23】.  
+- **Werknemersparticipatie:** (beoordeling of opmerking) in plan van aanpak, eerstejaarsevaluatie e.d., zoals wettelijk omschreven【9†L37-L41】【14†L18-L23】.  
+- **Juridische volledigheid:** tijdig opgestelde probleemanalyse (week 6), plan van aanpak (wk 8) en evaluaties (o.a. wk 52, wk 91), met UWV-bewijsvoering (loonsanctie, WIA-toets) in het achterhoofd【2†L125-L133】【3†L17-L21】.  
+
+We hebben een lijst geprioriteerde sjablonen opgesteld met concrete structuur, richtlijnen en voorbeeldteksten, zodat coaches snel *UWV-proof* dossiers kunnen samenstellen. Hierbij zijn we uitgegaan van minimale aanpassingen in de gebruikersworkflow, maar maximale compliance. 
+
+**Belangrijkste uitkomsten:**
+
+- **Aanbevolen sjablonen (8 stuks):** Intakeverslag, Voortgangsgespreksverslag, Plan van Aanpak, Eerstejaarsevaluatie, Tweede Spoor Plan/Rapport, Eindevaluatie, (optioneel) Adviesrapport werkgever, (optioneel) Terugkoppeling cliënt. Elk sjabloon krijgt heldere secties en voorbeelden.  
+- **Ondertekening & deadlines:** Belangrijke documenten (Plan van Aanpak, Eerstejaarsevaluatie, Eindevaluatie) moeten door werkgever *én* werknemer worden ondertekend【2†L133-L135】【14†L18-L23】. Datum en weeknummer staan standaard op elk rapport.  
+- **Werknemersinzage:** PVA en evaluaties bevatten expliciete ruimte voor de mening van de werknemer【9†L37-L41】【14†L18-L23】.  
+- **UWV-critieke onderdelen:** Let met name op compleetheid van Plan van Aanpak, structurele voortgangsrapportage, en eerstejaars-/eindevaluatie in het dossier; deze worden door UWV beoordeeld【2†L125-L133】【6†L131-L139】.  
+- **Knelpunten in huidige sjablonen:** Allemaal identieke secties, gebrek aan ondertekening, geen expliciete datums/weeknummers. We bevelen hernoemingen en splitsingen aan (bv. “Voortgangsrapportage” opdelen in “Periodiek voortgangsrapport” en specifiek “Eerstejaars-/Tweede spoorverslag”).  
+
+Tot slot volgt een **checklist** om elke dossier-export UWV-proof te maken (laatste pagina). 
+
+---
+
+## Aanbevolen sjablonen (prioriteit)
+
+| Sjabloon                      | Doel                                                        |
+|------------------------------|-------------------------------------------------------------|
+| **Intakeverslag**            | Beginsituatie in kaart brengen, casusomschrijving en initiële afspraken met cliënt.  |
+| **Voortgangsgespreksverslag**| Periodiek verslag na elk voortgangsgesprek (6-wekelijkse frequentie). Legt afspraken en vorderingen vast. |
+| **Plan van Aanpak**          | Formeel document (uiterlijk week 8) met doelen, concrete acties, planningen en evaluatiemomenten【2†L125-L133】. |
+| **Eerstejaarsevaluatie**     | Evaluatie na 52 weken: beoordeling van het eerste jaar, besluitvorming (bv. tweede spoor) en vervolgplan【14†L18-L23】. |
+| **Tweede spoor plan/rapport**| Plan of voortgangsrapportage bij overgang naar tweede spoor; beschrijft arbeidsmarktoriëntatie, ondernomen acties en inspanningen. |
+| **Eindevaluatie**            | Laatste evaluatie (week ~91-104): samenvatting van alle inspanningen, resultaten en adviezen voor de WIA-aanvraag【15†L9-L17】. |
+| **Adviesrapport werkgever (opt.)** | Zakelijk advies aan werkgever over re-integratie (bv. inzet middelen, communicatie met UWV).  |
+| **Terugkoppelingsrapport cliënt (opt.)** | Informeel verslag of beknopte terugkoppeling aan de werknemer over voortgang en vervolgstappen.  |
+| **Arbeidsdeskundig rapport (indien van toepassing)** | Rapport van arbeidsdeskundige of uitgebreid functioneel onderzoek (in complexe casus vaak separaat, kan als bijlage). |
+
+*NB: De twee optionele sjablonen vullen (zo nodig) de informatiebehoefte aan, maar zijn niet altijd verplicht voor UWV.*
+
+---
+
+## 1. Intakeverslag
+
+**Doel:** Heldere beginsituatie vastleggen (werk, gezondheid, eerdere reintegratie), begeleidingsvraag definiëren en eerste afspraken maken. *Niet strikt verplicht door UWV, maar wel essentieel voor een gedegen dossier.*
+
+### Structuur
+
+- **Cliëntgegevens:** Naam, functie/afdeling, eerste ziektedag, contactgegevens werkgever/arbodienst.
+- **Probleemstelling:** Reden of context van verzuim (informeel, geen medische diagnose). Bijvoorbeeld: “Langdurig hoge werkdruk en klachten van … leidde tot verzuim sinds ….”
+- **Huidige situatie:** Beschrijving van huidige belastbaarheid (fysiek, mentaal, werkhervattingmogelijkheden). Bijvoorbeeld: “Cliënt kan momenteel parttime licht administratief werk verrichten, maar onvoldoende om fulltime te starten.”
+- **Eerdere inspanningen:** Overzicht eerdere interventies of behandelingen.
+- **Doelen en vraagstelling:** Wat wil de cliënt bereiken? Welke hulpvraag is gesteld? Bijvoorbeeld: “Cliënt wil binnen 3 maanden weer 2 dagen gaan werken in aangepaste functie.”
+- **Afspraken vervolgtraject:** Eerste acties die gepland worden (bv. aanpassing werk, oefentherapie, vervolgafspraak). Vermeld concrete datum of termijn.
+- **Ondertekening:** Ruimte voor parafen of handtekeningen van cliënt en begeleider (optioneel, om bewustzijn en betrokkenheid te bevestigen).
+
+**Voorbeeldtekst (niet in document, alleen ter illustratie):**  
+“*Tijdens de intake op 3 maart 2026 gaf de cliënt aan te willen terugkeren naar zijn functie als administratief medewerker binnen twee weken. Geconstateerd is dat er matige concentratie is en vermoeidheid. We spreken af dat de werknemer start met 2 dagen per week licht kantoortaken verrichtten vanaf 10 maart. Werkgever zal het werk aanpassen (verlaagde quotas), arbodienst volgt gezondheid. Volgend gesprek gepland op 24 maart. Cliënt en coach paraferen dit verslag.*”
+
+---
+
+## 2. Voortgangsgespreksverslag
+
+**Doel:** Per 6 weken (ongeveer) het verloop documenteren: wat is bereikt, wat ging goed/minder, en welke nieuwe afspraken er zijn.
+
+### Structuur
+
+- **Datum en weeknummer:** (Bijv. “Week 12 na ziektedag”).
+- **Deelnemers:** Wie waren er aanwezig (coördinator, cliënt, eventueel leidinggevende of iemand anders).
+- **Acties sinds vorig verslag:** Wat is er sinds de vorige bijeenkomst uitgevoerd? (Bijv. “Cliënt heeft sessie arbeidsdeskundige gehad” of “Werkgeversaanpassing: roosterwijziging doorgevoerd”).
+- **Resultaten en voortgang:** Wat is er bereikt? (Bijv. “Cliënt werkte 3 dagen volgens het aangepaste rooster. Concentratie verbeteren met fysiotherapie.”).
+- **Belemmeringen:** Eventuele nieuwe obstakels (belasting, privé, motivatie). (Bijv. “Nog steeds vermoeidheid in de ochtend, wat start vertraagt.”).
+- **Aanpassingen / Afspraken:** Wat gaan we hierop doen? Concrete acties met termijnen en verantwoordelijken. (Bijv. “Vanaf volgende week verhoogd naar 4 uur/dag. Casemanager plant extra contact over 3 weken.”).
+- **Evaluatie:** Kort oordeel of de gemaakte afspraken toereikend zijn en eventueel tussentijdse prognose (niet formeel noodzakelijk).
+- **Volgend gesprek:** Datum of termijn voor de volgende evaluatie (minimaal 6 weken later).
+- **Ondertekening:** Naam/handtekening van coach en cliënt (optioneel, voor bijhouden ondertekende dossiers).
+
+**Voorbeeldtekst (gekort):**  
+“*Datum: 12 april 2026 (week 14). Aanwezig: re-integratiecoach, cliënt. **Acties:** Cliënt heeft re-integratietraining gevolgd, werkt inmiddels 3 dagen. **Resultaten:** Werkdagen volbracht met weinig fysieke klachten. **Belemmering:** Cliënt voelt spanning in de middag. **Afspraken:** Verhoog werkuren volgende week naar 4 uur, cliënt bijtijds pauze inlassen; coach plant overleg met bedrijfsarts over ergonomische aanpassingen. **Volgend gesprek:** 24 mei 2026.*”
+
+---
+
+## 3. Plan van Aanpak (PVA)
+
+**Doel:** Wettelijk vereist document (uiterlijk week 8) waarin werkgever en werknemer samen concrete afspraken maken over de re-integratie. Werkt als een actieplan met doelen, maatregelen en evaluatiemomenten【2†L125-L133】【3†L17-L21】.
+
+### Structuur
+
+- **Algemeen:** Datum opstellen, datum eerste ziektedag, weeknummer (≤ 8). Naam werkgever, werknemer, arbodienst/coördinator.  
+- **Probleemanalyse (samenvatting):** Kort wat uit de Bedrijfsartsrapportage komt (functionele mogelijkheden). Niet medisch detail, maar: “Werknemer kan lichte administratieve taken verrichten, maximaal 4 uur per dag.”  
+- **Doelstelling:** Wat is het gezamenlijke re-integratiedoel? (bv. “Werknemer hervat passend werk binnen het eigen bedrijf.”)  
+- **Geplande activiteiten / acties:** Lijst met concrete aanpassingen of interventies. Bijvoorbeeld:  
+  - **Werkplek:** taken en uren (bv. “Overplaatsing naar andere afdeling met minder fysiek werk vanaf 1 mei.”)  
+  - **Hulpmiddelen:** (bv. “Verstrekken ergonomische stoel, flexibel rooster.”)  
+  - **Training/opleiding:** (bv. “Inschakelen logopedie bij spraakklachten; loopbaanadviesgesprek.”)  
+  - **Begeleiding:** (bv. “Wekelijkse coaching door re-integratiecoach.”)  
+- **Verantwoordelijkheden & deadlines:** Bij elke activiteit aangeven wie verantwoordelijk is (werkgever/werknemer/arbodienst) en wanneer deze plaatsvindt.  
+- **Evaluatiemomenten:** Data of frequentie (minimaal eens in de 6 weken) voor voortgangsgesprekken.  
+- **Handtekeningen:** Werkgever en werknemer paraferen of ondertekenen de PVA (juridisch noodzakelijk)【2†L133-L135】. Elk krijgt een kopie. (Raadpleeg arbodienst voor ondertekening, conform UWV-procedure).  
+- **Medische informatie:** Verwijs naar bedrijfsartsrapportage en vermeld korte notities uit de FML (functionele mogelijkhedenlijst) indien relevant. (Eigenlijk verzorgt arbodienst dit in bijlagen).  
+
+**Voorbeeldstructuur:**
+
+| Actie / Maatregel              | Startdatum | Verantwoordelijke | Doelstelling            |
+|--------------------------------|------------|-------------------|-------------------------|
+| Adaptatie takenpakket          | 1-mei-2026 | Werkgever         | Werknemer kan 4 uur/ dag werken zonder overbelasting |
+| Trainingsprogramma fitheid     | 3-mei-2026 | Werknemer         | Herstel conditionele belastbaarheid |
+| Coaching door re-integratiecoach| wekelijks  | Arbodienst/Re-integratiecoach | Plan uitstroom of aanpassing werk evalueren |
+
+Handtekening werkgever: ________  Ondertekening werknemer: ________
+
+---
+
+## 4. Eerstejaarsevaluatie
+
+**Doel:** Formele evaluatie na 52 weken ziekte. Gezamenlijk overzicht van het eerste jaar re-integratie-inspanningen, als bijlage in het re-integratieverslag voor WIA【6†L79-L87】【14†L18-L23】. Hierin beslist men of het eerste spoor succesvol is of dat tweede spoor nodig is.
+
+### Structuur
+
+- **Datum:** (ongeveer week 52).  
+- **Samenvatting inspanningen jaar 1:** Kort overzicht van alle verrichte maatregelen en uitkomsten. (Voor wie niet intensief meeleest, een bundel “alles samengevat”.)  
+- **Beoordeling PVA-afspraken:** Is bereikt wat in het PVA was afgesproken? Zo niet, waarom? (Bijv. “Doel eigen functie hervatten niet gehaald wegens X.”)  
+- **Nieuwe afspraken:** Wat gaan we de komende 52 weken doen? Eventueel een aangepast PVA of start tweede spoor. Beschrijf concrete acties.  
+- **Voorstel vervolgtraject:** Als geen perspectief eerste spoor: start tweede spoor met (vacatures, outplacementtraject etc.). Zo ja: hoe voortzetten binnen eigen werk.  
+- **Werkgeversverklaring:** (optioneel) In sommige gevallen een formele aparte terugkoppeling voor werkgever (niet wettelijk strikt vereist in deze sjabloon, kan samengevoegd).  
+- **Werknemersreactie:** Kort wat de werknemer van de uitkomsten vindt of toevoegingen heeft (bijv. “Werknemer geeft aan opgelucht te zijn met duidelijkheid.”). Wettelijk: “U beschrijft ook beiden wat u van de nieuwe afspraken vindt”【14†L4-L7】.  
+- **Ondertekening:** Beide partijen (werkgever en werknemer) tekenen dit verslag【14†L18-L23】. Kopie voor werknemer, kopie voor dossier.  
+
+**Voorbeeldtekst:**  
+“*Na 52 weken blijkt dat de werknemer structureel 12 uur per week kon werken volgens plan. De beoogde stap naar 2 werkdagen is niet gehaald wegens terugkerende klachten. We besluiten samen het eigen-bedrijfs spoor te beëindigen en inzetten op tweede spoor. De werknemer start orientatie naar passend extern werk met hulp van een arbeidsdeskundige. Werkgever en werknemer zijn akkoord met dit plan (ondertekening bijgevoegd).*”
+
+---
+
+## 5. Tweede spoor plan / voortgangsrapportage
+
+**Doel:** Documentatie van inspanningen indien eerste spoor niet haalbaar is. Soms wordt een apart **Tweede spoor-plan** opgesteld rond week 52, of komt dit in het intakeverslag tweede spoor. Daarna volgen reguliere voortgangsrapportages voor het tweede spoor (vaak in combinatie met voortgang eigen spoor).
+
+### Structuur (Tweede spoor-plan)
+
+- **Aanleiding:** Korte motivatie waarom tweede spoor (bv. “Eerste spoor mislukt vanwege structureel klachtenbeeld”).
+- **Onderzoeksfase:** (indien van toepassing) Bedrijfsartsen- of arbeidsdeskundigebevindingen omtrent mogelijkheden buiten eigen organisatie.  
+- **Oriëntatie-activiteiten:** Concrete acties van de werknemer op de arbeidsmarkt (bijv. sollicitaties, netwerken, arbeidsmarktoriëntatie). Geef aantallen en data (bv. “4 sollicitaties in sector X in april 2026”).  
+- **Ondersteuning:** Handelingen van werkgever/arbodienst (bv. “werkgever biedt outplacementbudget, re-integratiecoach ondersteunt bij solliciteren”).  
+- **Plan van aanpak 2e spoor:** Vergelijkbaar format als PVA, maar nu gericht op extern werk: doelen, acties, planning.  
+- **Afspraken:** Wie doet wat (werkgever, werknemer, re-integratiecoach, arbeidsdeskundige).  
+- **Evaluatiemoment:** Datum of termijn voor voortgangsbespreking volgend jaar.  
+- **Ondertekening:** Afspraken vastleggen met handtekening (vaak enkel coach en werknemer, eventueel werkgever).  
+
+### Structuur (Tweede spoor voortgangsrapportage)
+
+- **Datum en week:** en eventueel het WIA-trajectweek.
+- **Acties:** Welke bemiddeling/oriëntatie is ondernomen sinds vorig verslag? (sollicitaties, opleidingen, netwerkgesprekken).
+- **Resultaten:** Reacties, matches, plaatsingen, of redenen van afwijzing.
+- **Belemmeringen:** Zaken die sollicitaties verhinderen.
+- **Afspraken vervolg:** Nieuwe doelen, gepland aantal sollicitaties, etc.
+- **Sign-off:** Coach en werknemer.
+
+*Let op:* Zorg dat je per voortgangsgesprek altijd de datum en concrete cijfers (sollicitaties, matches) noteert. 
+
+---
+
+## 6. Eindevaluatie
+
+**Doel:** Eindrapport (week ~91-104) als onderdeel van het re-integratieverslag voor WIA【6†L79-L87】【15†L21-L25】. Beschrijft alle inspanningen en stand van zaken bij afloop traject.
+
+### Structuur
+
+- **Datum:** Week rond 91 (minstens 2 weken voor WIA-aanvraag)【15†L9-L17】.  
+- **Huidige situatie:** Werknemer is (nog) niet teruggekeerd in oude werk. Beschrijf huidige belastbaarheid en eventuele (beperkte) arbeidsparticipatie.  
+- **Samenvatting inspanningen:** Korte rekensom: welke acties zijn genomen (probleemanalyse, PVA, alle evaluaties, eventuele 2e spoor inspanningen).  
+- **Medisch/advies:** Noteer het laatste **actueel oordeel bedrijfsarts** (met FML-resultaten) over belastbaarheid. (Dit komt van arbodienst; alleen vermelden).  
+- **Evaluatie resultaten:** Komt de werknemer nog in aanmerking voor werken in de eigen organisatie? Zo ja, welke opties; zo nee, welke inspanningen op extern werk zijn gedaan.  
+- **Conclusie en advies:** Ofwel: “Werkgever heeft voldoende moeite gedaan” (leidend tot WIA), ofwel “Werknemer had passend werk kunnen doen”, etc. Indien relevant: direct advies over WIA-proces (loonsanctie voorkomen).  
+- **Werknemerstekeningen:** Werknemer ontvangt een kopie van het ingevulde en ondertekende formulier; beiden bewaren het【15†L21-L25】.  
+- **Ondertekening:** Werkgever en werknemer paraferen het verslag. 
+
+**Voorbeeldtekst:**  
+“*Tijdens de eindevaluatie (wk 91) is vastgesteld dat de werknemer na intensief tweede spoor geen passend werk heeft gevonden. Het loon is twee jaar betaald en alle re-integratieactiviteiten (10 sollicitaties, 5 netwerkgesprekken) zijn gedocumenteerd. Conform adviseur-bedrijfsarts (actueel oordeel) bestaat geen perspectief binnen dit bedrijf. Wij achten de re-integratie-inspanningen voldoende, waardoor werknemer toekomt voor WIA. Werkgever en werknemer tekenen voor akkoord. Werknemer heeft schriftelijk bevestigd het verslag te hebben ontvangen.*”
+
+---
+
+## 7. Overige sjablonen (indien van toepassing)
+
+- **Adviesrapport werkgever:** Zakelijk advies over re-integratiestrategie of casus (bv. inzet middelen, inschakelen extra ondersteuning). Niet wettelijk verplicht, maar kan intern waardevol zijn. Vul als **brief of memo** met duidelijke argumentatie.  
+- **Terugkoppelingsrapport werknemer:** Eenvoudige, cliëntgerichte samenvatting van voortgang (bijv. kort rapport of e-mail). Houd toon ondersteunend. Bijvoorbeeld “In deze brief licht ik toe wat we tot nu toe bereikt hebben en wat er nu gaat gebeuren.”  
+- **Arbeidsdeskundig rapport:** Wanneer ingeschakeld: feitelijk rapport van de arbeidsdeskundige (kan beschrijven wat werknemer nog kan, werkcontext, loonwaarde). Dit komt meestal los van dit systeem (via arbodienst), maar je kunt een samenvatting in dossier opnemen.  
+
+**Let op:** Deze “extra” sjablonen vallen buiten de WIA-verplichting, maar kunnen helpen in communicatie. Ons advies: focus eerst op de kern (Intake, Voortgang, PVA, EJ, 2e spoor, Eindevaluatie).
+
+---
+
+## Gaps en aanbevelingen
+
+- **Algemene tekortkoming:** Huidige sjablonen hebben alle drie dezelfde rubrieken (Situatie, Analyse, Advies) zonder afstemming op type verslag. Dit leidt tot onduidelijkheid in dossiers.  
+- **Missende tijdsinformatie:** Er staan geen standaardvelden voor datums of weeknummers. Elk rapport moet expliciet weeknummer bevatten voor UWV-timeline (wk 6, 8, 52, 91)【2†L125-L133】【6†L121-L129】.  
+- **Ondertekening:** Alleen formele WvP-docs mogen in huidige sjablonen (nu ontbreekt een handtekeningenveld). We voegen ondertekenregels toe bij Plan van Aanpak, Eerstejaars, Eindevaluatie (verplicht)【2†L133-L135】【14†L18-L23】.  
+- **Werknemer-veld:** In PVA en evaluaties ontbreekt ruimte voor de mening van de werknemer. Dat integreren we volgens de wettelijke eis【9†L37-L41】【14†L4-L7】.  
+- **Herbenoeming/ splitsing:** We bevelen splitsing aan van “Voortgangsrapportage” in *Periodiek Voortgangsgesprekverslag* versus *Tweede Spoor verslag*, en het herschrijven van “Plan van aanpak” naar duidelijkere subsecties.  
+- **Verwijdering:** Het huidige “Adviesrapport” en “Terugkoppeling” kunnen vervallen of optioneel blijven, want de hierboven genoemde kerndocumenten volstaan meestal voor UWV.  
+
+---
+
+## AI-prompt per sjabloon
+
+Voor gebruik in de webapp geven we korte promptvoorbeelden. Gebruik steeds eenduidige opdrachten.
+
+- **Intakeverslag:**  
+  _“Van het volgende gesprek met een cliënt (start van het traject) maak je een intakeverslag. Gebruik de volgende secties: Cliëntgegevens, Huidige situatie en beperkingen, Probleemstelling, Doelstellingen, Afspraken. Schrijf objectief en concreet.”_
+
+- **Voortgangsgespreksverslag:**  
+  _“Schrijf op basis van het gesprek een voortgangsrapportage. Neem de datum, deelnemers, acties sinds vorig gesprek, behaalde resultaten, belemmeringen en concrete vervolgafspraken op.”_
+
+- **Plan van Aanpak:**  
+  _“Gebruik de probleemanalyse en het gesprek om een Plan van Aanpak te maken (max. 1 pagina). Voeg secties toe: Doelen, Concrete acties (met startdatum en verantwoordelijke), Evaluatiemomenten, Ondertekening.”_
+
+- **Eerstejaarsevaluatie:**  
+  _“Maak een Eerstejaarsevaluatie. Zet kort de afgelopen re-integratie-inspanningen op een rij, geef eventuele nieuwe afspraken en een voorstel voor tweede spoor. Beschrijf wat werkgever en werknemer van de afspraken vinden en sluit af met ondertekening.”_
+
+- **Tweede spoor plan:**  
+  _“Stel een plan voor tweede spoor op: motiveer waarom, benoem arbeidsmarktactiviteiten (sollicitaties, oriënterende gesprekken, scholing), en acties werkgever/arbodienst. Voeg deadlines toe.”_
+
+- **Eindevaluatie:**  
+  _“Vul de Eindevaluatie in: beschrijf actuele belastbaarheid, samenvatting van alle ondernomen acties (inclusief tweede spoor), conclusies (kan werknemer terug in bedrijf?), en adviezen voor WIA-aanvraag. Onderteken.”_
+
+- **Adviesrapport werkgever (opt.):**  
+  _“Schrijf een zakelijk adviesrapport aan de werkgever. Vat de situatie samen en doe aanbevelingen voor vervolgstappen in het re-integratietraject.”_
+
+- **Terugkoppelingsrapport cliënt (opt.):**  
+  _“Formuleer een beknopte terugkoppeling voor de werknemer, waarin je in begrijpelijke taal het gesprek en de afgesproken vervolgstappen beschrijft.”_
+
+---
+
+## UWV-export checklist (minimaal)
+
+- [ ] **Ondertekende PVA:** Op week ≤ 8 opgesteld, met handtekeningen van werkgever en werknemer【2†L125-L133】【19†L1-L4】.  
+- [ ] **Problematische situaties:** De probleemanalyse (bedrijfsarts, wk 6) beschikbaar en aansluitend verwerkt (zo nodig meetellen als bijlage).  
+- [ ] **Periodieke rapportages:** Ten minste eenmaal per 6 weken een verslag met datum, inhoud, acties. Voldoende overleg en documentatie.  
+- [ ] **Eerstejaarsevaluatie:** Rond week 52 door beide partijen ondertekend【14†L18-L23】. Inclusief besluit over (on)haalbaarheid eerste spoor.  
+- [ ] **Tweede spoor:** Indien ingezet, een plan of rapport met arbeidsoriëntatieactiviteiten, ondersteunende maatregelen en bewijsvoering (bijv. sollicitatieoverzichten).  
+- [ ] **Eindevaluatie:** 2 weken voor WIA-aanvraag ingevuld, gesigneerd【15†L21-L25】, onderdeel van reintegratieverslag.  
+- [ ] **Medische informatie:** Actueel oordeel/FML van bedrijfsarts in dossier (in principe via arbodienst).  
+- [ ] **Werknemersinspraak:** In PVA en evaluaties is terug te zien wat de werknemer over de afspraken zegt【9†L37-L41】【14†L4-L7】.  
+- [ ] **Data en consistentie:** Alle documenten hebben correcte datums of weeknummers en vormen een logisch chronologisch geheel.  
+- [ ] **Bewaarming:** Werkgever en werknemer hebben gekopieerd gekregen, arbeidsdeskundige indien ingezet (volgens Wet Poortwachter)【6†L132-L141】.  
+
+Met deze rapportagestructuur en checklist voldoen coaches aan de UWV-vereisten en minimaliseren ze het risico op een loonsanctie. Door vaste templates en invoervelden te gebruiken, kan de webapp het verslagvormingsproces sterk versnellen zonder de juridische nauwkeurigheid op te offeren.
+
+---
+
+## Tijdlijn (mijlpalen re-integratie)
+
+```mermaid
+gantt
+    dateFormat  X
+    axisFormat  %W
+    title Re-integratie-mijlpalen volgens WvP
+    section Mijlpalen (weken)
+    Probleemanalyse door bedrijfsarts      :milestone, pa, 6, 0d
+    Plan van Aanpak (wk8)                  :milestone, pva, 8, 0d
+    Voortgangsgesprekken (elke 6 weken)   :active, vs, 14, 160d
+    Eerstejaarsevaluatie (wk52)            :milestone, ej, 52, 0d
+    Besluit tweede spoor (na wk52)         :milestone, ts, 52, 0d
+    Eindevaluatie (wk ~91)                :milestone, ev, 91, 0d
+```
+
+**Toelichting:** Na de eerste controle (probleemanalyse, week 6) volgt het PVA (week 8)【2†L125-L133】. Vervolgens vinden periodiek voortgangsgesprekken plaats (idealiter elke 6 weken【9†L37-L41】). Rond week 52 wordt de eerstejaarsevaluatie ingevuld en ondertekend【14†L18-L23】; hier wordt het tweede spoor ingezet of juist niet. Rond week 91 (of uiterlijk 104) vindt de eindevaluatie plaats【6†L121-L129】【15†L9-L17】. Elke template sluit aan op deze mijlpalen.
+

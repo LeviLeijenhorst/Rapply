@@ -625,24 +625,24 @@ export function AppShell({ onLogout }: Props) {
     if (selectedSessieId) {
       const session = data.sessions.find((item) => item.id === selectedSessieId)
       if (!session) return []
-      const sessionTitle = session.title ?? 'Sessie'
+      const sessionTitle = session.title ?? 'Verslag'
       const coacheeName = getCoacheeDisplayName(data.coachees, session.coacheeId)
       if (sessionOriginRoute?.kind === 'coachee' && session.coacheeId) {
         return [
-          { label: 'Coachees', onPress: () => navigateTo({ kind: 'coachees' }) },
+          { label: 'Cliënten', onPress: () => navigateTo({ kind: 'coachees' }) },
           { label: coacheeName, onPress: () => navigateTo({ kind: 'coachee', coacheeId: sessionOriginRoute.coacheeId }) },
           { label: sessionTitle, onPress: () => navigateTo({ kind: 'sessie', sessieId: selectedSessieId }) },
         ]
       }
       return [
-        { label: 'Sessies', onPress: () => navigateTo({ kind: 'sessies' }) },
+        { label: 'Verslagen', onPress: () => navigateTo({ kind: 'sessies' }) },
         { label: sessionTitle, onPress: () => navigateTo({ kind: 'sessie', sessieId: selectedSessieId }) },
       ]
     }
     if (selectedSidebarItemKey === 'coachees' && selectedCoacheeId) {
-      const coacheeName = data.coachees.find((item) => item.id === selectedCoacheeId)?.name ?? 'Coachee'
+      const coacheeName = data.coachees.find((item) => item.id === selectedCoacheeId)?.name ?? 'Cliënt'
       return [
-        { label: 'Coachees', onPress: () => navigateTo({ kind: 'coachees' }) },
+        { label: 'Cliënten', onPress: () => navigateTo({ kind: 'coachees' }) },
         { label: coacheeName, onPress: () => navigateTo({ kind: 'coachee', coacheeId: selectedCoacheeId }) },
       ]
     }
@@ -724,12 +724,12 @@ export function AppShell({ onLogout }: Props) {
       if (!selectedSessie) {
         return (
           <EmptyPageMessage
-            message="Deze sessie bestaat niet meer."
+            message="Dit verslag bestaat niet meer."
             onGoHome={() => navigateTo({ kind: 'sessies' })}
           />
         )
       }
-      const sessieTitle = selectedSessie.title ?? 'Sessie'
+      const sessieTitle = selectedSessie.title ?? 'Verslag'
       const coacheeName = getCoacheeDisplayName(data.coachees, selectedSessie.coacheeId)
       const dateLabel = new Date(selectedSessie.createdAtUnixMs).toLocaleDateString('nl-NL')
       return (
@@ -761,7 +761,7 @@ export function AppShell({ onLogout }: Props) {
         if (!selectedCoachee) {
           return (
             <EmptyPageMessage
-              message="Deze coachee bestaat niet meer."
+              message="Deze cliënt bestaat niet meer."
               onGoHome={() => navigateTo({ kind: 'coachees' })}
             />
           )

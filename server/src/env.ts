@@ -88,6 +88,7 @@ export const env = {
   unlimitedTranscriptionEmails: normalizeEmailList(optionalString("UNLIMITED_TRANSCRIPTION_EMAILS")),
   fixedTranscriptionEmails: normalizeEmailList(optionalString("FIXED_TRANSCRIPTION_EMAILS")),
   fixedTranscriptionTotalMinutes: optionalNumber("FIXED_TRANSCRIPTION_TOTAL_MINUTES") ?? 0,
+  defaultFreeTranscriptionMinutes: optionalNumber("DEFAULT_FREE_TRANSCRIPTION_MINUTES") ?? 120,
   testTranscriptionEmails: normalizeEmailList(optionalString("TEST_TRANSCRIPTION_EMAILS")),
   testTranscriptionTotalHours: optionalNumber("TEST_TRANSCRIPTION_TOTAL_HOURS") ?? 80,
   adminFeedbackEmails: normalizeEmailList(optionalString("ADMIN_FEEDBACK_EMAILS")),
@@ -99,4 +100,5 @@ export const env = {
   ovhKmsClientCertPath: optionalString("OVH_KMS_CLIENT_CERT_PATH") || "",
   ovhKmsClientKeyPath: optionalString("OVH_KMS_CLIENT_KEY_PATH") || "",
   ovhKmsCaPath: optionalString("OVH_KMS_CA_PATH") || "",
+  templateDefaultsCutoverIso: optionalString("TEMPLATE_DEFAULTS_CUTOVER_ISO"),
 }

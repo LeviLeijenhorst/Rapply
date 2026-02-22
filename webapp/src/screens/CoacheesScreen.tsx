@@ -101,15 +101,15 @@ export function CoacheesScreen({ onSelectCoachee }: Props) {
       <View style={styles.headerRow}>
         {isCompactHeader ? null : (
           <Text isSemibold style={styles.headerTitle}>
-            Coachees
+            Cliënten
           </Text>
         )}
         {/* Header actions */}
         <View style={[styles.headerActions, isCompactHeader ? styles.headerActionsCompact : undefined]}>
           {isCompactHeader ? (
-            <Text isSemibold style={styles.headerTitle}>
-              Coachees
-            </Text>
+              <Text isSemibold style={styles.headerTitle}>
+                Cliënten
+              </Text>
           ) : null}
           <AnimatedWidthContainer width={isSearchExpanded ? expandedSearchWidth : 138} style={styles.searchWidthContainer}>
             {isSearchExpanded ? (
@@ -120,7 +120,7 @@ export function CoacheesScreen({ onSelectCoachee }: Props) {
                   ref={searchInputRef}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  placeholder="Zoek coachee..."
+                  placeholder="Zoek cliënt..."
                   placeholderTextColor="#656565"
                   onBlur={() => {
                     setIsSearchOpen(false)
@@ -153,7 +153,7 @@ export function CoacheesScreen({ onSelectCoachee }: Props) {
             {/* Add label */}
             <PlusIcon color="#FFFFFF" size={22} />
             <Text numberOfLines={1} style={styles.addButtonText}>
-              Nieuwe coachee
+              Nieuwe cliënt
             </Text>
           </Pressable>
         </View>
@@ -173,7 +173,7 @@ export function CoacheesScreen({ onSelectCoachee }: Props) {
           <View key={item.id} style={styles.listItem}>
             <CoacheeCard
               name={item.name}
-              detailLabel={`${coacheeSessionCounts.get(item.id) ?? 0} sessies`}
+              detailLabel={`${coacheeSessionCounts.get(item.id) ?? 0} verslagen`}
               onPress={() => {
                 onSelectCoachee(item.id)
               }}
@@ -213,8 +213,8 @@ export function CoacheesScreen({ onSelectCoachee }: Props) {
         ) : null}
         {coachees.length === 0 ? (
           <View style={styles.emptySessionsContainer}>
-            {/* Empty coachees message */}
-            <Text style={styles.emptySessionsText}>Nog geen coachees.</Text>
+            {/* Empty clients message */}
+            <Text style={styles.emptySessionsText}>Nog geen cliënten.</Text>
           </View>
         ) : null}
       </ScrollView>

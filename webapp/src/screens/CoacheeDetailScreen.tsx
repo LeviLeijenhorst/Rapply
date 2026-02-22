@@ -61,7 +61,7 @@ function formatDurationLabel(durationSeconds: number | null): string {
 export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPressCreateSession }: Props) {
   const { data, deleteSession } = useLocalAppData()
   const coachee = data.coachees.find((c) => c.id === coacheeId)
-  const coacheeName = coachee?.name ?? 'Coachee'
+  const coacheeName = coachee?.name ?? 'Cliënt'
 
   const sessions = useMemo<SessionListItem[]>(() => {
     return data.sessions
@@ -273,10 +273,10 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
                 style={({ hovered }) => [styles.newSessionButton, webTransitionSmooth, hovered ? styles.newSessionButtonHovered : undefined]}
                 onPress={onPressCreateSession}
               >
-                {/* New session button */}
+                {/* New report button */}
                 <PlusIcon color="#FFFFFF" size={22} />
                 <Text numberOfLines={1} style={styles.newSessionButtonText}>
-                  Nieuwe sessie
+                  Nieuw verslag
                 </Text>
               </Pressable>
             </View>
@@ -288,12 +288,12 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
               <View style={styles.sessionsTab}>
                 {sessions.length === 0 ? (
                   <View style={styles.emptySessionsContainer}>
-                    {/* Empty sessions message */}
-                    <Text style={styles.emptySessionsText}>Deze coachee heeft nog geen sessies.</Text>
+                    {/* Empty reports message */}
+                    <Text style={styles.emptySessionsText}>Deze cliënt heeft nog geen verslagen.</Text>
                   </View>
                 ) : (
                   <>
-                    {/* Sessions search */}
+                    {/* Reports search */}
                     <Pressable
                       onPress={() => searchInputRef.current?.focus()}
                       style={({ hovered }) => [styles.searchInputContainer, hovered ? styles.searchInputContainerHovered : undefined]}
@@ -305,13 +305,13 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
                         ref={searchInputRef}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
-                        placeholder="Zoek sessie..."
+                        placeholder="Zoek verslag..."
                         placeholderTextColor="#656565"
                         style={[styles.searchInput, searchInputWebStyle]}
                       />
                     </Pressable>
 
-                    {/* Sessions list */}
+                    {/* Reports list */}
                     <ScrollView style={styles.sessionsScroll} contentContainerStyle={styles.sessionsScrollContent} showsVerticalScrollIndicator={false}>
                       {filteredSessions.map((item) => {
                         return (

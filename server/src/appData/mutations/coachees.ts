@@ -11,6 +11,7 @@ export async function createCoachee(userId: string, coachee: Coachee): Promise<v
       set name = excluded.name,
           updated_at_unix_ms = excluded.updated_at_unix_ms,
           is_archived = excluded.is_archived
+      where public.coachees.user_id = excluded.user_id
     `,
     [coachee.id, userId, coachee.name, coachee.createdAtUnixMs, coachee.updatedAtUnixMs, coachee.isArchived],
   )

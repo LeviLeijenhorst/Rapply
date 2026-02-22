@@ -13,7 +13,6 @@ import { webTransitionSmooth, webTransitionSlow } from '../../theme/webTransitio
 import { Text } from '../Text'
 import { MicrophoneSmallIcon } from '../icons/MicrophoneSmallIcon'
 import { ChevronDownIcon } from '../icons/ChevronDownIcon'
-import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
 import { ModalCloseIcon } from '../icons/ModalCloseIcon'
 import { MinimizeIcon } from '../icons/MinimizeIcon'
 import { PauseIcon } from '../icons/PauseIcon'
@@ -60,7 +59,7 @@ function formatTimeLabel(totalSeconds: number) {
 }
 
 function buildDefaultSessionTitle(existingTitles: string[]) {
-  const numberedUntitledSessionPattern = /^Sessie #(\d+) \(naamloos\)$/
+  const numberedUntitledSessionPattern = /^Verslag #(\d+) \(naamloos\)$/
   let maxSessionNumber = 0
 
   existingTitles.forEach((title) => {
@@ -71,7 +70,7 @@ function buildDefaultSessionTitle(existingTitles: string[]) {
     maxSessionNumber = Math.max(maxSessionNumber, sessionNumber)
   })
 
-  return `Sessie #${maxSessionNumber + 1} (naamloos)`
+  return `Verslag #${maxSessionNumber + 1} (naamloos)`
 }
 
 const knownAudioMimeByExtension: Record<string, string> = {
@@ -225,7 +224,7 @@ export function NewSessionModal({
   const { height: windowHeight, width: windowWidth } = useWindowDimensions()
   const templates = data.templates ?? []
   const defaultTemplateId = useMemo(() => {
-    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'standaard samenvatting')
+    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'intakeverslag')
     return (standardTemplate ?? templates[0])?.id ?? null
   }, [templates])
   const selectedTemplate = useMemo(() => templates.find((template) => template.id === selectedTemplateId) ?? null, [selectedTemplateId, templates])
@@ -497,7 +496,7 @@ export function NewSessionModal({
 
   const title =
     step === 'select'
-      ? 'Nieuwe sessie'
+      ? 'Nieuw verslag'
         : step === 'consent'
         ? 'Toestemming voor opname bevestigen'
         : step === 'upload'
@@ -1113,26 +1112,6 @@ export function NewSessionModal({
               <Text style={styles.headerMetaText}>Jan 22 2026, 19:28</Text>
             ) : null}
 
-            <Pressable
-              onPress={(event) => {
-                event.stopPropagation?.()
-                requestClose()
-              }}
-              style={({ hovered, pressed }) => [
-                styles.iconButton,
-                webTransitionSmooth,
-                hovered ? styles.iconButtonHovered : undefined,
-                pressed ? styles.iconButtonPressed : undefined,
-              ]}
-            >
-              {/* Close */}
-              {({ pressed }) => (
-                <>
-                  {pressed && <View style={styles.iconButtonOverlay} />}
-                  <ModalCloseDarkIcon />
-                </>
-              )}
-            </Pressable>
           </View>
         </View>
 
@@ -1324,7 +1303,7 @@ export function NewSessionModal({
                   ref={sessionTitleInputRef}
                   value={sessionTitle}
                   onChangeText={setSessionTitle}
-                  placeholder="Sessie naam..."
+                  placeholder="Verslagnaam..."
                   placeholderTextColor="#656565"
                   style={[styles.sessionTitleInput, ({ outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any)]}
                 />
@@ -1391,9 +1370,9 @@ export function NewSessionModal({
                           hovered ? styles.coacheeItemAddHovered : undefined,
                         ]}
                       >
-                        {/* Add coachee */}
+                        {/* Add client */}
                         <ProfileCircleIcon />
-                        <Text style={styles.coacheeItemAddText}>+ Nieuwe coachee</Text>
+                        <Text style={styles.coacheeItemAddText}>+ Nieuwe cliënt</Text>
                       </Pressable>
                     </ScrollView>
                   </AnimatedDropdownPanel>
@@ -1461,7 +1440,7 @@ export function NewSessionModal({
                   <MicrophoneSmallIcon color={colors.textStrong} size={28} />
                 </View>
                 <Text isBold style={[styles.consentTitle, isCompactConsent ? styles.consentTitleCompact : undefined]}>
-                  Ik heb expliciete toestemming van mijn coachee
+                  Ik heb expliciete toestemming van mijn cliënt
                 </Text>
                 <Text style={[styles.consentDescription, isCompactConsent ? styles.consentDescriptionCompact : undefined]}>
                   Door verder te gaan bevestig je dat alle deelnemers vooraf zijn geinformeerd over de opname en vrijwillig toestemming hebben gegeven.
@@ -1638,7 +1617,7 @@ export function NewSessionModal({
               >
                 {/* Continue */}
                 <Text isBold style={styles.footerButtonPrimaryText}>
-                  {step === 'recorded' ? 'Sessie aanmaken' : 'Doorgaan'}
+                  {step === 'recorded' ? 'Verslag aanmaken' : 'Doorgaan'}
                 </Text>
               </Pressable>
             </View>

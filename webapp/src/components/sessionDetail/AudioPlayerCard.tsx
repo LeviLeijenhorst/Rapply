@@ -22,6 +22,7 @@ type Props = {
   audioUrlOverride?: string | null
   isEncrypting?: boolean
   onCurrentSecondsChange?: (seconds: number) => void
+  onDurationSecondsChange?: (seconds: number) => void
   onDownloadAudio?: () => void
   onDeleteAudio?: () => void
   isDownloadAudioBusy?: boolean
@@ -41,6 +42,7 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
     audioUrlOverride = null,
     isEncrypting = false,
     onCurrentSecondsChange,
+    onDurationSecondsChange,
     onDownloadAudio,
     onDeleteAudio,
     isDownloadAudioBusy = false,
@@ -54,6 +56,7 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
   const e2ee = useE2ee()
 
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const audioUrlRef = useRef<string | null>(null)
   const [currentSeconds, setCurrentSeconds] = useState(0)
   const [durationSeconds, setDurationSeconds] = useState(audioDurationSeconds ?? 0)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -68,8 +71,13 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
   const pendingResumeAfterSeekRef = useRef(false)
   const seekResumePlaybackRef = useRef<boolean | null>(null)
   const previousAudioUrlOverrideRef = useRef<string | null>(null)
+  const loadRequestIdRef = useRef(0)
   const menuTriggerRef = useRef<any>(null)
   const menuPanelRef = useRef<any>(null)
+
+  useEffect(() => {
+    audioUrlRef.current = audioUrl
+  }, [audioUrl])
 
   function formatTimeLabel(seconds: number) {
     if (!Number.isFinite(seconds) || seconds <= 0) return '00:00'
@@ -136,6 +144,7 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
 
   useEffect(() => {
     if (audioUrlOverride) {
+      loadRequestIdRef.current += 1
       const isNewOverrideSource = previousAudioUrlOverrideRef.current !== audioUrlOverride
       previousAudioUrlOverrideRef.current = audioUrlOverride
       setIsBuffering(false)
@@ -148,7 +157,8 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
       return
     }
     previousAudioUrlOverrideRef.current = null
-    let isCancelled = false
+    const requestId = loadRequestIdRef.current + 1
+    loadRequestIdRef.current = requestId
 
     async function load() {
       setIsBuffering(false)
@@ -165,6 +175,7 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
       }
 
       let nextUrl: string | null = null
+      let didLoadSuccessfully = false
       try {
         setIsLoadingAudio(true)
         const result = await loadAudioBlobRemote(audioBlobId)
@@ -173,6 +184,7 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
         }
         const decrypted = await e2ee.decryptAudioBlobFromStorage(result.blob)
         nextUrl = URL.createObjectURL(decrypted.audioBlob)
+        didLoadSuccessfully = true
       } catch (error) {
         console.warn('[AudioPlayerCard] Blob load failed, trying stream fallback', error)
         try {
@@ -181,20 +193,26 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
             decryptChunk: (encryptedChunk) => e2ee.decryptAudioChunkFromStorage({ encryptedChunk }),
           })
           nextUrl = URL.createObjectURL(decrypted.audioBlob)
+          didLoadSuccessfully = true
         } catch (fallbackError) {
           console.error('[AudioPlayerCard] Failed to load audio via blob and stream', fallbackError)
+          setHasAudioError(true)
         }
       } finally {
-        if (isCancelled) {
+        if (requestId !== loadRequestIdRef.current) {
           if (nextUrl) URL.revokeObjectURL(nextUrl)
           return
         }
-        setAudioUrl((previous) => {
-          if (previous) URL.revokeObjectURL(previous)
-          return nextUrl
-        })
-        setCurrentSeconds(0)
-        onCurrentSecondsChange?.(0)
+        if (didLoadSuccessfully && nextUrl) {
+          setAudioUrl((previous) => {
+            if (previous) URL.revokeObjectURL(previous)
+            return nextUrl
+          })
+          setCurrentSeconds(0)
+          onCurrentSecondsChange?.(0)
+        } else if (nextUrl) {
+          URL.revokeObjectURL(nextUrl)
+        }
         setIsLoadingAudio(false)
       }
     }
@@ -202,13 +220,21 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
     void load()
 
     return () => {
-      isCancelled = true
-      setAudioUrl((previous) => {
-        if (previous) URL.revokeObjectURL(previous)
-        return null
-      })
+      if (loadRequestIdRef.current === requestId) {
+        loadRequestIdRef.current += 1
+      }
     }
   }, [audioBlobId, e2ee, audioUrlOverride, onCurrentSecondsChange])
+
+  useEffect(() => {
+    return () => {
+      const currentAudioUrl = audioUrlRef.current
+      if (currentAudioUrl) {
+        URL.revokeObjectURL(currentAudioUrl)
+        audioUrlRef.current = null
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -224,6 +250,7 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
     const onLoadedMetadata = () => {
       const duration = Number.isFinite(audio.duration) ? audio.duration : 0
       setDurationSeconds(duration)
+      onDurationSecondsChange?.(duration)
       setIsLoadingAudio(false)
       if (pendingSeekSecondsRef.current !== null) {
         audio.currentTime = pendingSeekSecondsRef.current
@@ -290,12 +317,14 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
       audio.removeEventListener('abort', onAbort)
       audio.removeEventListener('error', onError)
     }
-  }, [audioUrl, audioUrlOverride, onCurrentSecondsChange])
+  }, [audioUrl, audioUrlOverride, onCurrentSecondsChange, onDurationSecondsChange])
 
   useEffect(() => {
     if (!Number.isFinite(audioDurationSeconds || null) || audioDurationSeconds === null) return
-    setDurationSeconds(Math.max(0, audioDurationSeconds))
-  }, [audioDurationSeconds])
+    const nextDuration = Math.max(0, audioDurationSeconds)
+    setDurationSeconds(nextDuration)
+    onDurationSecondsChange?.(nextDuration)
+  }, [audioDurationSeconds, onDurationSecondsChange])
 
   useEffect(() => {
     if (!isActionsMenuOpen) return

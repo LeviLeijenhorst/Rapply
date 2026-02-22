@@ -36,7 +36,7 @@ export function SettingsMenu({
   onOpenPrivacy,
   showSubscriptionItem = false,
 }: Props) {
-  const menuIconColor = colors.textSecondary
+  const menuIconColor = colors.text
 
   const items = [
     {

@@ -80,7 +80,7 @@ export function ArchiefScreen() {
                   ref={searchInputRef}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  placeholder="Zoek coachee..."
+                  placeholder="Zoek cliënt..."
                   placeholderTextColor="#656565"
                   onBlur={() => setIsSearchOpen(false)}
                   style={[styles.searchInput, inputWebStyle]}
@@ -105,12 +105,12 @@ export function ArchiefScreen() {
       <View style={styles.list}>
         {archivedCoachees.length === 0 ? (
           <View style={styles.emptyStateContainer}>
-            <Text style={styles.emptyStateText}>Nog geen gearchiveerde coachees.</Text>
+            <Text style={styles.emptyStateText}>Nog geen gearchiveerde cliënten.</Text>
           </View>
         ) : null}
         {archivedCoachees.length > 0 && filteredItems.length === 0 ? (
           <View style={styles.emptyStateContainer}>
-            <Text style={styles.emptyStateText}>Geen coachees gevonden in het archief.</Text>
+            <Text style={styles.emptyStateText}>Geen cliënten gevonden in het archief.</Text>
           </View>
         ) : null}
         {filteredItems.map((item) => (

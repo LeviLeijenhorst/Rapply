@@ -18,7 +18,7 @@ export function ConfirmSessieDeleteModal({ visible, sessieTitle, onClose, onConf
 
   const description = sessieTitle
     ? `Weet je zeker dat je ${sessieTitle} wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`
-    : 'Weet je zeker dat je deze sessie wilt verwijderen? Dit kan niet ongedaan worden gemaakt.'
+    : 'Weet je zeker dat je dit verslag wilt verwijderen? Dit kan niet ongedaan worden gemaakt.'
 
   return (
     <AnimatedOverlayModal visible={visible} onClose={onClose} contentContainerStyle={styles.container}>
@@ -26,7 +26,7 @@ export function ConfirmSessieDeleteModal({ visible, sessieTitle, onClose, onConf
       <View style={styles.header}>
         {/* Header title */}
         <Text isBold style={styles.headerTitle}>
-          Sessie verwijderen
+          Verslag verwijderen
         </Text>
         <Pressable onPress={onClose} style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}>
           {/* Close */}

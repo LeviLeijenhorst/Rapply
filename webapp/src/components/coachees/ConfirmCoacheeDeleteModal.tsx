@@ -18,7 +18,7 @@ export function ConfirmCoacheeDeleteModal({ visible, coacheeName, onClose, onCon
 
   const description = coacheeName
     ? `Weet je zeker dat je ${coacheeName} wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`
-    : 'Weet je zeker dat je deze coachee wilt verwijderen? Dit kan niet ongedaan worden gemaakt.'
+    : 'Weet je zeker dat je deze cliënt wilt verwijderen? Dit kan niet ongedaan worden gemaakt.'
 
   return (
     <AnimatedOverlayModal visible={visible} onClose={onClose} contentContainerStyle={styles.container}>
@@ -26,7 +26,7 @@ export function ConfirmCoacheeDeleteModal({ visible, coacheeName, onClose, onCon
       <View style={styles.header}>
         {/* Header title */}
         <Text isBold style={styles.headerTitle}>
-          Coachee verwijderen
+          Cliënt verwijderen
         </Text>
         <Pressable onPress={onClose} style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}>
           {/* Close */}

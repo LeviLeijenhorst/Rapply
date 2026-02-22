@@ -112,6 +112,8 @@ export function registerBillingRoutes(app: Express, params: RegisterBillingRoute
       const purchasedSecondsFromRevenueCat = useMollie ? 0 : derivePurchasedSecondsFromRevenueCatSubscriber(subscriber)
       const manualPricing = await readManualPricingContextForUser(user.userId)
       const useManualCycle = useMollie || manualPricing.includedSecondsPerCycle > 0 || manualPricing.planId != null || manualPricing.customMonthlyPrice != null
+      const hasDashboardMinutesConfigured = manualPricing.planId != null || manualPricing.includedSecondsPerCycle > 0
+      const freeSecondsOverride = hasDashboardMinutesConfigured ? 0 : null
 
       if (!useMollie) {
         await execute(`update public.billing_users set purchased_seconds = $1, updated_at = now() where user_id = $2`, [purchasedSecondsFromRevenueCat, user.userId])
@@ -123,6 +125,7 @@ export function registerBillingRoutes(app: Express, params: RegisterBillingRoute
         cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : planState.cycleStartMs,
         cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : planState.cycleEndMs,
         includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
+        freeSecondsOverride,
       })
       const billingStatus = applyEmailBillingOverrides(billingStatusRaw, user.email)
 
@@ -153,12 +156,15 @@ export function registerBillingRoutes(app: Express, params: RegisterBillingRoute
       const planState = useMollie ? { planKey: null, cycleStartMs: null, cycleEndMs: null } : derivePlanStateFromRevenueCatSubscriber(subscriber)
       const manualPricing = await readManualPricingContextForUser(user.userId)
       const useManualCycle = useMollie || manualPricing.includedSecondsPerCycle > 0 || manualPricing.planId != null || manualPricing.customMonthlyPrice != null
+      const hasDashboardMinutesConfigured = manualPricing.planId != null || manualPricing.includedSecondsPerCycle > 0
+      const freeSecondsOverride = hasDashboardMinutesConfigured ? 0 : null
       const billingStatusRaw = await readBillingStatus({
         userId: user.userId,
         planKey: useManualCycle ? null : planState.planKey,
         cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : planState.cycleStartMs,
         cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : planState.cycleEndMs,
         includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
+        freeSecondsOverride,
       })
       const billingStatus = applyEmailBillingOverrides(billingStatusRaw, user.email)
 

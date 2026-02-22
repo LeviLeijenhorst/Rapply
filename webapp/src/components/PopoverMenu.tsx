@@ -105,7 +105,7 @@ export function PopoverMenu({ visible, anchorPoint, placement, width, estimatedH
           style={[styles.menu, { width, left, top, opacity, transform: [{ translateY }] } as any]}
         >
           {items.map((item, index) => (
-            <View key={item.key} style={styles.rowContainer}>
+            <View key={item.key} style={[styles.rowContainer, index < items.length - 1 ? styles.rowContainerWithDivider : undefined]}>
               <Pressable
                 onPress={() => {
                   item.onPress()
@@ -131,7 +131,6 @@ export function PopoverMenu({ visible, anchorPoint, placement, width, estimatedH
                   </View>
                 ) : null}
               </Pressable>
-              {index < items.length - 1 ? <View style={styles.divider} /> : null}
             </View>
           ))}
         </Animated.View>
@@ -158,6 +157,10 @@ const styles = StyleSheet.create({
   },
   rowContainer: {
     width: '100%',
+  },
+  rowContainerWithDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   row: {
     height: 44,
@@ -189,7 +192,7 @@ const styles = StyleSheet.create({
   rowText: {
     fontSize: 14,
     lineHeight: 18,
-    color: colors.textSecondary,
+    color: colors.text,
     flex: 1,
   },
   rowTextDanger: {
@@ -220,12 +223,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     color: colors.selected,
-  },
-  divider: {
-    width: '100%',
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: 4,
   },
 })
 

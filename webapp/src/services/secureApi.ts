@@ -6,10 +6,10 @@ type SecureApiOptions = {
   signal?: AbortSignal
 }
 
-const DEFAULT_SECURE_API_TIMEOUT_MS = 30_000
+const DEFAULT_SECURE_API_TIMEOUT_MS = 45_000
 const COLD_START_RETRY_DELAY_MS = 1200
-const MAX_RETRY_ATTEMPTS = 2
-const WARMUP_TIMEOUT_MS = 12_000
+const MAX_RETRY_ATTEMPTS = 3
+const WARMUP_TIMEOUT_MS = 20_000
 const COLD_START_STATUS_CODES = new Set([502, 503, 504])
 let hasAttemptedServerWarmup = false
 
@@ -129,14 +129,14 @@ export async function fetchSecureApi(endpoint: string, init: RequestInit, option
   }
 
   if (lastTimeoutError) {
-    throw new Error('De server is mogelijk net aan het opstarten. Probeer het over enkele seconden opnieuw.')
+    throw new Error('Er is iets misgegaan. Probeer het opnieuw.')
   }
 
   console.error('[secureApi] Network error', {
     url: requestUrl,
     message: lastNetworkError instanceof Error ? lastNetworkError.message : String(lastNetworkError),
   })
-  throw new Error('Kon geen verbinding maken met de server. Probeer opnieuw; als dit de eerste aanvraag is kan de server nog opstarten.')
+  throw new Error('Er is iets misgegaan. Probeer het opnieuw.')
 }
 
 export async function callSecureApi<T>(endpoint: string, body: unknown, options?: SecureApiOptions): Promise<T> {

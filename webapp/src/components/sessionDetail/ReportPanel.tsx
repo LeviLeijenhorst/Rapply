@@ -7,6 +7,7 @@ import { StandaardVerslagIcon } from '../icons/StandaardVerslagIcon'
 import { CopyIcon } from '../icons/CopyIcon'
 import { CopiedIcon } from '../icons/CopiedIcon'
 import { EditSmallIcon } from '../icons/EditSmallIcon'
+import { SharePdfIcon } from '../icons/SharePdfIcon'
 import { VerslagGenererenIcon } from '../icons/VerslagGenererenIcon'
 import { VerslagSchrijvenIcon } from '../icons/VerslagSchrijvenIcon'
 import { toUserFriendlyTranscriptionError } from '../../utils/transcriptionError'
@@ -23,6 +24,7 @@ type Props = {
   onRetryTranscription?: () => void
   onEditSummary?: () => void
   onCancelGeneration?: () => void
+  onShareSummary?: () => void
 }
 
 function renderInlineSegments(segments: RichTextInlineSegment[], textStyle: any) {
@@ -52,6 +54,7 @@ export function ReportPanel({
   onRetryTranscription,
   onEditSummary,
   onCancelGeneration,
+  onShareSummary,
 }: Props) {
   const [showCopyNotification, setShowCopyNotification] = useState(false)
 
@@ -91,11 +94,38 @@ export function ReportPanel({
         ) : (
           <View />
         )}
-        {showEditSummaryButton ? (
-          <Pressable onPress={onEditSummary} style={({ hovered }) => [styles.editButton, hovered ? styles.editButtonHovered : undefined]}>
-            {({ hovered }) => <EditSmallIcon color={hovered ? colors.selected : colors.textSecondary} size={17} />}
+        <View style={styles.toolbarActions}>
+          {showEditSummaryButton ? (
+            <Pressable onPress={onEditSummary} style={({ hovered }) => [styles.editButton, hovered ? styles.editButtonHovered : undefined]}>
+              {({ hovered }) => <EditSmallIcon color={hovered ? colors.selected : colors.textSecondary} size={17} />}
+            </Pressable>
+          ) : null}
+          {onShareSummary ? (
+            <Pressable
+              onPress={onShareSummary}
+              disabled={!hasSummary}
+              style={({ hovered }) => [
+                styles.actionButton,
+                !hasSummary ? styles.actionButtonDisabled : undefined,
+                hovered ? styles.actionButtonHovered : undefined,
+              ]}
+            >
+              <SharePdfIcon color="#8E8480" size={18} />
+            </Pressable>
+          ) : null}
+          <Pressable
+            onPress={() => {
+              if (typeof navigator === 'undefined') return
+              navigator.clipboard?.writeText(reportCopyText).then(() => {
+                setShowCopyNotification(true)
+                setTimeout(() => setShowCopyNotification(false), 3000)
+              })
+            }}
+            style={({ hovered }) => [styles.actionButton, hovered ? styles.actionButtonHovered : undefined]}
+          >
+            {showCopyNotification ? <CopiedIcon size={18} /> : <CopyIcon color="#8E8480" size={18} />}
           </Pressable>
-        ) : null}
+        </View>
       </View>
 
       <View style={styles.reportContent} id="report-panel-content">
@@ -213,21 +243,6 @@ export function ReportPanel({
             </View>
           </View>
         )}
-
-        <View style={styles.actionsRow}>
-          <Pressable
-            onPress={() => {
-              if (typeof navigator === 'undefined') return
-              navigator.clipboard?.writeText(reportCopyText).then(() => {
-                setShowCopyNotification(true)
-                setTimeout(() => setShowCopyNotification(false), 3000)
-              })
-            }}
-            style={({ hovered }) => [styles.actionButton, hovered ? styles.actionButtonHovered : undefined]}
-          >
-            {showCopyNotification ? <CopiedIcon size={18} /> : <CopyIcon color="#8E8480" size={18} />}
-          </Pressable>
-        </View>
       </View>
     </View>
   )
@@ -243,6 +258,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  toolbarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   templateButton: {
     height: 40,
@@ -351,13 +371,6 @@ const styles = StyleSheet.create({
     fontSize: richTextSharedFormatting.editorFontSize,
     lineHeight: richTextSharedFormatting.editorLineHeight,
     color: colors.textSecondary,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
-    position: 'relative',
   },
   actionButton: {
     width: 32,

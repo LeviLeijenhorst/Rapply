@@ -30,10 +30,33 @@ function readSqlFile(filePath: string): string {
   return sql
 }
 
+function readDatabaseHostOrEmpty(databaseUrl: string): string {
+  try {
+    return String(new URL(databaseUrl).hostname || "").trim().toLowerCase()
+  } catch {
+    return ""
+  }
+}
+
+function isLocalDatabaseHost(host: string): boolean {
+  return host === "localhost" || host === "127.0.0.1" || host === "::1"
+}
+
 // Recreates the full database schema from migration files in a deterministic order.
 async function main() {
   const databaseUrl = requireString("DATABASE_URL")
   const databaseSsl = String(process.env.DATABASE_SSL || "").trim() === "1"
+  const runtimeEnvironment = String(process.env.NODE_ENV || "").trim().toLowerCase()
+  const allowProductionReset = String(process.env.ALLOW_PRODUCTION_DB_RESET || "").trim() === "YES_I_UNDERSTAND"
+  const allowNonLocalReset = String(process.env.ALLOW_NON_LOCAL_DB_RESET || "").trim() === "YES_I_UNDERSTAND"
+  const databaseHost = readDatabaseHostOrEmpty(databaseUrl)
+
+  if (runtimeEnvironment === "production" && !allowProductionReset) {
+    throw new Error("Refusing to run init-db in production. Set ALLOW_PRODUCTION_DB_RESET=YES_I_UNDERSTAND to override.")
+  }
+  if (!isLocalDatabaseHost(databaseHost) && !allowNonLocalReset) {
+    throw new Error(`Refusing to reset non-local database host: ${databaseHost || "unknown"}. Set ALLOW_NON_LOCAL_DB_RESET=YES_I_UNDERSTAND to override.`)
+  }
 
   const pool = new Pool({
     connectionString: databaseUrl,

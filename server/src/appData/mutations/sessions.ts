@@ -22,6 +22,8 @@ export async function createSession(userId: string, session: Session): Promise<v
           transcription_status = excluded.transcription_status,
           transcription_error = excluded.transcription_error,
           updated_at_unix_ms = excluded.updated_at_unix_ms
+      where public.coachee_sessions.user_id = excluded.user_id
+        and excluded.updated_at_unix_ms >= public.coachee_sessions.updated_at_unix_ms
     `,
     [
       session.id,

@@ -35,7 +35,10 @@ export async function getEncryptedUploadSize(params: { blobName: string }): Prom
 // Intent: deleteEncryptedUploadsByPrefix
 export async function deleteEncryptedUploadsByPrefix(params: { prefix: string }): Promise<void> {
   const container = getTranscriptionUploadsContainerClient()
-  const prefix = params.prefix.replace(/^\/+/, "")
+  const prefix = String(params.prefix || "").trim().replace(/^\/+/, "")
+  if (!prefix || !prefix.endsWith("/")) {
+    throw new Error("Invalid deletion prefix")
+  }
   for await (const item of container.listBlobsFlat({ prefix })) {
     const name = String(item?.name || "").trim()
     if (!name) continue

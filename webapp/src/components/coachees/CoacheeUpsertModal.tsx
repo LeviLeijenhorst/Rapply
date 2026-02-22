@@ -4,7 +4,6 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { colors } from '../../theme/colors'
 import { Text } from '../Text'
-import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
 import { EditActionIcon } from '../icons/EditActionIcon'
 import { MijnAccountIcon } from '../icons/MijnAccountIcon'
 import { focusAndSelectAll } from '../../utils/textInput'
@@ -35,12 +34,8 @@ export function CoacheeUpsertModal({ visible, mode, initialName, onClose, onSave
   if (!visible) return null
 
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
-  const title = mode === 'create' ? 'Coachee toevoegen' : 'Coachee bewerken'
+  const title = mode === 'create' ? 'Cliënt toevoegen' : 'Cliënt bewerken'
   const primaryLabel = mode === 'create' ? 'Toevoegen' : 'Opslaan'
-  const handleTopRightClose = (event?: { stopPropagation?: () => void }) => {
-    event?.stopPropagation?.()
-    onClose()
-  }
 
   return (
     <AnimatedOverlayModal visible={visible} onClose={onClose} contentContainerStyle={styles.container}>
@@ -57,22 +52,6 @@ export function CoacheeUpsertModal({ visible, mode, initialName, onClose, onSave
           </Text>
         </View>
 
-        <Pressable
-          onPress={handleTopRightClose}
-          style={({ hovered, pressed }) => [
-            styles.iconButton,
-            hovered ? styles.iconButtonHovered : undefined,
-            pressed ? styles.iconButtonPressed : undefined,
-          ]}
-        >
-          {/* Close */}
-          {({ pressed }) => (
-            <>
-              {pressed && <View style={styles.iconButtonOverlay} />}
-              <ModalCloseDarkIcon />
-            </>
-          )}
-        </Pressable>
       </View>
 
       {/* Modal body */}
@@ -159,23 +138,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 22,
     color: colors.textStrong,
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  iconButtonHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  iconButtonPressed: {},
-  iconButtonOverlay: {
-    ...( { position: 'absolute', inset: 0 } as any ),
-    backgroundColor: 'rgba(190, 1, 101, 0.08)',
   },
   body: {
     width: '100%',

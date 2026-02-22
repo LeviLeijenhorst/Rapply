@@ -79,9 +79,10 @@ export async function chargeSecondsIdempotent(params: {
   cycleStartMs: number | null
   cycleEndMs: number | null
   includedSecondsOverride?: number | null
+  freeSecondsOverride?: number | null
   nonExpiringTotalSecondsOverride?: number
 }): Promise<ChargeResult> {
-  const { userId, operationId, secondsToCharge, planKey, cycleStartMs, cycleEndMs, includedSecondsOverride, nonExpiringTotalSecondsOverride } = params
+  const { userId, operationId, secondsToCharge, planKey, cycleStartMs, cycleEndMs, includedSecondsOverride, freeSecondsOverride, nonExpiringTotalSecondsOverride } = params
 
   const seconds = clampNonNegative(secondsToCharge)
   if (seconds <= 0) {
@@ -105,6 +106,9 @@ export async function chargeSecondsIdempotent(params: {
   const includedSeconds = Number.isFinite(includedSecondsOverride) && Number(includedSecondsOverride) >= 0
     ? Math.floor(Number(includedSecondsOverride))
     : getIncludedSecondsForPlanKey(planKey)
+  const effectiveFreeSeconds = Number.isFinite(freeSecondsOverride) && Number(freeSecondsOverride) >= 0
+    ? Math.floor(Number(freeSecondsOverride))
+    : freeSeconds
   const cycleKey = buildCycleKey(cycleStartMs, cycleEndMs)
   await ensureBillingUsersCompatibility()
 
@@ -124,7 +128,7 @@ export async function chargeSecondsIdempotent(params: {
   const currentCycleUsedSeconds = cycleKey ? clampNonNegative(cycleUsedSecondsByKey[cycleKey] ?? 0) : 0
 
   const cycleRemainingSeconds = cycleKey ? Math.max(0, includedSeconds - currentCycleUsedSeconds) : 0
-  let nonExpiringTotalSeconds = freeSeconds + purchasedSeconds + adminGrantedSeconds
+  let nonExpiringTotalSeconds = effectiveFreeSeconds + purchasedSeconds + adminGrantedSeconds
   if (typeof nonExpiringTotalSecondsOverride === "number" && Number.isFinite(nonExpiringTotalSecondsOverride) && nonExpiringTotalSecondsOverride > 0) {
     nonExpiringTotalSeconds = Math.floor(nonExpiringTotalSecondsOverride)
   }

@@ -72,6 +72,16 @@ export function toUserFriendlyTranscriptionError(rawMessage: string | null | und
   if (isNoSpeechDetectedMessage(decoded)) {
     return 'Er is geen spraak gedetecteerd in deze opname.'
   }
+  if (lowered.includes('not enough seconds remaining for transcription')) {
+    const remainingMatch = decoded.match(/remaining\s+(\d+)s/i)
+    if (remainingMatch?.[1]) {
+      const remainingSeconds = Number.parseInt(remainingMatch[1], 10)
+      if (Number.isFinite(remainingSeconds)) {
+        return `Niet genoeg seconden over voor transcriptie (nog ${remainingSeconds}s).`
+      }
+    }
+    return 'Niet genoeg seconden over voor transcriptie.'
+  }
 
   const cleaned = decoded.trim()
   if (hasTechnicalErrorCode(cleaned)) return fallback
@@ -80,5 +90,5 @@ export function toUserFriendlyTranscriptionError(rawMessage: string | null | und
 
 export function normalizeTranscriptionError(error: unknown): string {
   const rawMessage = error instanceof Error ? error.message : 'Onbekende fout'
-  return toUserFriendlyTranscriptionError(rawMessage, 'Er is een fout opgetreden bij het verwerken van de sessie.')
+  return toUserFriendlyTranscriptionError(rawMessage, 'Er is een fout opgetreden bij het verwerken van het verslag.')
 }

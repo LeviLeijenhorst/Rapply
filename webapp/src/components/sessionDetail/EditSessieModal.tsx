@@ -5,7 +5,6 @@ import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { AnimatedDropdownPanel } from '../AnimatedDropdownPanel'
 import { colors } from '../../theme/colors'
 import { Text } from '../Text'
-import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
 import { AanpassenIcon } from '../icons/AanpassenIcon'
 import { EditActionIcon } from '../icons/EditActionIcon'
 import { ChevronDownIcon } from '../icons/ChevronDownIcon'
@@ -190,16 +189,8 @@ export function EditSessieModal({
             </View>
             {/* Header title */}
             <Text isBold style={styles.headerTitle}>
-              Gesprek gegevens
+              Verslaggegevens
             </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={requestClose}
-            style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}
-          >
-            {/* Close */}
-            <ModalCloseDarkIcon />
           </Pressable>
         </View>
 
@@ -214,7 +205,7 @@ export function EditSessieModal({
               style={styles.dropdownDismissOverlay}
             />
           ) : null}
-          {/* Session title */}
+          {/* Report title */}
           <Pressable onPress={() => sessionTitleInputRef.current?.focus()} style={({ hovered }) => [styles.fieldRow, hovered ? styles.fieldRowHovered : undefined]}>
             <TextInput
               ref={(value) => {
@@ -222,7 +213,7 @@ export function EditSessieModal({
               }}
               value={sessionTitle}
               onChangeText={setSessionTitle}
-              placeholder="Sessie naam..."
+              placeholder="Verslagnaam..."
               placeholderTextColor="#656565"
               style={[styles.singleLineInput, inputWebStyle]}
             />
@@ -235,7 +226,7 @@ export function EditSessieModal({
             </Pressable>
           </Pressable>
 
-          {/* Coachee */}
+          {/* Client */}
           <View ref={coacheeMenuAreaRef} style={[styles.menuArea, isCoacheeMenuOpen ? styles.menuAreaRaised : undefined]}>
             <Pressable
               onPress={() => {
@@ -244,7 +235,7 @@ export function EditSessieModal({
               }}
               style={({ hovered }) => [styles.fieldRow, hovered ? styles.fieldRowHovered : undefined]}
             >
-              {/* Coachee dropdown */}
+              {/* Client dropdown */}
               <Text style={styles.dropdownText}>{coacheeName}</Text>
               <View style={styles.spacer} />
               <ChevronDownIcon color="#656565" size={18} />
@@ -267,7 +258,7 @@ export function EditSessieModal({
                         hovered ? styles.menuItemHovered : undefined,
                       ]}
                     >
-                      {/* Coachee list item */}
+                      {/* Client list item */}
                       <Text style={styles.menuItemText}>{name}</Text>
                     </Pressable>
                   )
@@ -286,58 +277,12 @@ export function EditSessieModal({
                     hovered ? styles.menuItemAddHovered : undefined,
                   ]}
                 >
-                  {/* Add coachee */}
-                  <Text style={styles.menuItemAddText}>+ Nieuwe coachee</Text>
+                  {/* Add client */}
+                  <Text style={styles.menuItemAddText}>+ Nieuwe cliënt</Text>
                 </Pressable>
               </ScrollView>
             </AnimatedDropdownPanel>
           </View>
-
-          {/* Template */}
-          {isTemplateChangeAllowed ? (
-            <View ref={templateMenuAreaRef} style={[styles.menuArea, isTemplateMenuOpen ? styles.menuAreaRaised : undefined]}>
-              <Pressable
-                onPress={() => {
-                  setIsTemplateMenuOpen((value) => !value)
-                  setIsCoacheeMenuOpen(false)
-                }}
-                style={({ hovered }) => [styles.fieldRow, hovered ? styles.fieldRowHovered : undefined]}
-              >
-                {/* Template dropdown */}
-                <Text style={styles.dropdownText}>{selectedTemplateLabel}</Text>
-                <View style={styles.spacer} />
-                <ChevronDownIcon color="#656565" size={18} />
-              </Pressable>
-
-              <AnimatedDropdownPanel visible={isTemplateMenuOpen} style={templateMenuPanelStyle}>
-                <ScrollView style={styles.menuScroll} contentContainerStyle={styles.menuScrollContent} showsVerticalScrollIndicator={false}>
-                  {templateOptions.map((template, index) => {
-                    const isFirst = index === 0
-                    const isLast = index === templateOptions.length - 1
-                    return (
-                      <Pressable
-                        key={template.key}
-                        onPress={() => {
-                          setTemplateKey(template.key)
-                          setTemplateLabel(template.label)
-                          setIsTemplateMenuOpen(false)
-                        }}
-                        style={({ hovered }) => [
-                          styles.menuItem,
-                          isFirst ? styles.menuItemTop : undefined,
-                          isLast ? styles.menuItemBottom : undefined,
-                          hovered ? styles.menuItemHovered : undefined,
-                        ]}
-                      >
-                        {/* Template list item */}
-                        <Text style={styles.menuItemText}>{template.label}</Text>
-                      </Pressable>
-                    )
-                  })}
-                </ScrollView>
-              </AnimatedDropdownPanel>
-            </View>
-          ) : null}
         </View>
 
         {/* Modal footer */}
@@ -434,16 +379,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 22,
     color: colors.textStrong,
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconButtonHovered: {
-    backgroundColor: colors.hoverBackground,
   },
   body: {
     width: '100%',

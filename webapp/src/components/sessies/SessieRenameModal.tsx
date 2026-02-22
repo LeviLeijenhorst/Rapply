@@ -45,7 +45,7 @@ export function SessieRenameModal({ visible, initialName, onClose, onSave }: Pro
           </View>
           {/* Header title */}
           <Text isBold style={styles.headerTitle}>
-            Sessie bewerken
+            Verslag bewerken
           </Text>
         </View>
 

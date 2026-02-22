@@ -82,35 +82,35 @@ export function TemplateEditModal({ visible, mode, template, onClose, onSave, on
       </View>
 
       <View style={styles.body}>
-        <View style={styles.formFields}>
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Naam</Text>
-            <View style={styles.textField}>
-              <TextInput
-                value={activeTemplate.name}
-                onChangeText={(name) => setActiveTemplate((previousTemplate) => ({ ...previousTemplate, name }))}
-                placeholder="Template naam..."
-                placeholderTextColor="#656565"
-                style={[styles.textFieldInput, inputWebStyle]}
-              />
-            </View>
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Beschrijving</Text>
-            <View style={styles.textField}>
-              <TextInput
-                value={activeTemplate.description}
-                onChangeText={(description) => setActiveTemplate((previousTemplate) => ({ ...previousTemplate, description }))}
-                placeholder="Korte beschrijving van deze template..."
-                placeholderTextColor="#656565"
-                style={[styles.textFieldInput, inputWebStyle]}
-              />
-            </View>
-          </View>
-        </View>
-
         <ScrollView showsVerticalScrollIndicator style={styles.sectionsScroll} contentContainerStyle={styles.sectionsScrollContent}>
+          <View style={styles.formFields}>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Naam</Text>
+              <View style={styles.textField}>
+                <TextInput
+                  value={activeTemplate.name}
+                  onChangeText={(name) => setActiveTemplate((previousTemplate) => ({ ...previousTemplate, name }))}
+                  placeholder="Template naam..."
+                  placeholderTextColor="#656565"
+                  style={[styles.textFieldInput, inputWebStyle]}
+                />
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Beschrijving</Text>
+              <View style={styles.textField}>
+                <TextInput
+                  value={activeTemplate.description}
+                  onChangeText={(description) => setActiveTemplate((previousTemplate) => ({ ...previousTemplate, description }))}
+                  placeholder="Korte beschrijving van deze template..."
+                  placeholderTextColor="#656565"
+                  style={[styles.textFieldInput, inputWebStyle]}
+                />
+              </View>
+            </View>
+          </View>
+
           {activeTemplate.sections.map((section, index) => (
             <Pressable
               key={section.id}

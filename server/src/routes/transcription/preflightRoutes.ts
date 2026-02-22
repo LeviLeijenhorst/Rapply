@@ -31,12 +31,15 @@ export function registerTranscriptionPreflightRoutes(app: Express, params: Regis
       const planState = useMollie ? { planKey: null, cycleStartMs: null, cycleEndMs: null } : derivePlanStateFromRevenueCatSubscriber(subscriber)
       const manualPricing = await readManualPricingContextForUser(user.userId)
       const useManualCycle = useMollie || manualPricing.includedSecondsPerCycle > 0 || manualPricing.planId != null || manualPricing.customMonthlyPrice != null
+      const hasDashboardMinutesConfigured = manualPricing.planId != null || manualPricing.includedSecondsPerCycle > 0
+      const freeSecondsOverride = hasDashboardMinutesConfigured ? 0 : null
       const statusRaw = await readBillingStatus({
         userId: user.userId,
         planKey: useManualCycle ? null : planState.planKey,
         cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : planState.cycleStartMs,
         cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : planState.cycleEndMs,
         includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
+        freeSecondsOverride,
       })
       const status = applyEmailBillingOverrides(statusRaw, user.email)
       const transcriptionProvider = resolveTranscriptionProvider()

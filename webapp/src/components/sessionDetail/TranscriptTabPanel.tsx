@@ -29,13 +29,21 @@ type ParsedTranscriptLine = {
   speakerKey: string
   messageText: string
   timeSeconds: number | null
+  resolvedTimeSeconds: number | null
 }
 
 function parseTranscriptLine(line: string, index: number): ParsedTranscriptLine {
-  const timeMatch = line.match(/\b(\d{1,2}):(\d{2})(?::(\d{2}))?(?:[.,]\d{1,3})?\b/)
-  const timeLabel = timeMatch ? timeMatch[0] : null
+  const leadingTimeMatch = line.match(/^\s*\[?\s*(\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?)\s*\]?\s*/)
+  const inlineTimeMatch = leadingTimeMatch ? null : line.match(/(\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?)/)
+  const timeLabel = leadingTimeMatch?.[1] ?? inlineTimeMatch?.[1] ?? null
   const timeSeconds = timeLabel ? parseTimeLabelToSeconds(timeLabel) : null
-  const lineWithoutTime = timeLabel ? line.replace(timeLabel, '').replace(/\[|\]/g, '').trim() : line.trim()
+  let lineWithoutTime = line.trim()
+  if (leadingTimeMatch) {
+    lineWithoutTime = line.slice(leadingTimeMatch[0].length).trim()
+  } else if (inlineTimeMatch && inlineTimeMatch.index !== undefined) {
+    const withoutInlineTime = `${line.slice(0, inlineTimeMatch.index)} ${line.slice(inlineTimeMatch.index + inlineTimeMatch[1].length)}`
+    lineWithoutTime = withoutInlineTime.replace(/\s{2,}/g, ' ').trim()
+  }
   const speakerSeparatorIndex = lineWithoutTime.indexOf(':')
   const speakerLabel = speakerSeparatorIndex >= 0 ? lineWithoutTime.slice(0, speakerSeparatorIndex).trim() : ''
   const messageText = speakerSeparatorIndex >= 0 ? lineWithoutTime.slice(speakerSeparatorIndex + 1).trim() : lineWithoutTime
@@ -44,7 +52,76 @@ function parseTranscriptLine(line: string, index: number): ParsedTranscriptLine 
     speakerKey: speakerLabel.toLowerCase(),
     messageText,
     timeSeconds,
+    resolvedTimeSeconds: null,
   }
+}
+
+function resolveTranscriptLineTimes(lines: ParsedTranscriptLine[], normalizedAudioDurationSeconds: number | null): ParsedTranscriptLine[] {
+  if (lines.length === 0) return []
+  const indexedTimeAnchors = lines
+    .map((line, index) => ({ index, timeSeconds: line.timeSeconds }))
+    .filter((item): item is { index: number; timeSeconds: number } => Number.isFinite(item.timeSeconds))
+
+  if (indexedTimeAnchors.length === 0) {
+    if (normalizedAudioDurationSeconds === null) return lines
+    if (lines.length === 1) return [{ ...lines[0], resolvedTimeSeconds: 0 }]
+    return lines.map((line, index) => ({
+      ...line,
+      resolvedTimeSeconds: (index / (lines.length - 1)) * normalizedAudioDurationSeconds,
+    }))
+  }
+
+  const fallbackPerLineSeconds =
+    normalizedAudioDurationSeconds !== null && lines.length > 1
+      ? normalizedAudioDurationSeconds / (lines.length - 1)
+      : 1
+
+  const resolved: ParsedTranscriptLine[] = []
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]
+    const ownTime = line.timeSeconds
+    let resolvedTimeSeconds = ownTime
+
+    if (resolvedTimeSeconds === null) {
+      const previousAnchor = [...indexedTimeAnchors].reverse().find((anchor) => anchor.index < index) ?? null
+      const nextAnchor = indexedTimeAnchors.find((anchor) => anchor.index > index) ?? null
+
+      if (previousAnchor && nextAnchor) {
+        const span = nextAnchor.index - previousAnchor.index
+        const progress = span > 0 ? (index - previousAnchor.index) / span : 0
+        resolvedTimeSeconds = previousAnchor.timeSeconds + (nextAnchor.timeSeconds - previousAnchor.timeSeconds) * progress
+      } else if (previousAnchor && normalizedAudioDurationSeconds !== null && lines.length > 1) {
+        const remainingLineCount = lines.length - 1 - previousAnchor.index
+        const remainingDuration = Math.max(0, normalizedAudioDurationSeconds - previousAnchor.timeSeconds)
+        const perLine = remainingLineCount > 0 ? remainingDuration / remainingLineCount : 0
+        resolvedTimeSeconds = previousAnchor.timeSeconds + perLine * (index - previousAnchor.index)
+      } else if (nextAnchor) {
+        const startTime = 0
+        const span = nextAnchor.index
+        const progress = span > 0 ? index / span : 0
+        resolvedTimeSeconds = startTime + (nextAnchor.timeSeconds - startTime) * progress
+      } else if (previousAnchor) {
+        resolvedTimeSeconds = previousAnchor.timeSeconds + (index - previousAnchor.index) * fallbackPerLineSeconds
+      }
+    }
+
+    if (resolvedTimeSeconds === null) {
+      resolved.push(line)
+      continue
+    }
+    const previousResolved = index > 0 ? resolved[index - 1].resolvedTimeSeconds : null
+    const minAllowed = Number.isFinite(previousResolved) ? (previousResolved as number) + 0.001 : 0
+    resolved.push({ ...line, resolvedTimeSeconds: Math.max(minAllowed, resolvedTimeSeconds) })
+  }
+
+  return resolved.map((line, index, resolvedLines) => {
+    if (line.resolvedTimeSeconds === null) return line
+    const maxDuration = normalizedAudioDurationSeconds
+    if (maxDuration === null) return line
+    if (index === resolvedLines.length - 1) return { ...line, resolvedTimeSeconds: Math.min(line.resolvedTimeSeconds, maxDuration) }
+    return { ...line, resolvedTimeSeconds: Math.min(line.resolvedTimeSeconds, maxDuration) }
+  })
 }
 
 const INITIAL_VISIBLE_LINE_COUNT = 140
@@ -79,18 +156,13 @@ export function TranscriptTabPanel({
     transcript && searchValue.trim() ? transcript.split('\n').filter((line) => line.toLowerCase().includes(searchValue.trim().toLowerCase())) : transcript?.split('\n') || []
 
   const parsedTranscriptLines = filteredTranscript.map((line, index) => parseTranscriptLine(line, index))
-  let latestKnownTimeSeconds: number | null = null
-  const parsedTranscriptLinesWithFallback = parsedTranscriptLines.map((line) => {
-    if (line.timeSeconds !== null) {
-      latestKnownTimeSeconds = line.timeSeconds
-      return line
-    }
-    if (latestKnownTimeSeconds === null) return line
-    return { ...line, timeSeconds: latestKnownTimeSeconds }
-  })
-  const firstSpeakerKey = parsedTranscriptLinesWithFallback.find((line) => line.speakerKey)?.speakerKey ?? ''
-  const hasSearch = searchValue.trim().length > 0
   const normalizedAudioDurationSeconds = Number.isFinite(audioDurationSeconds) && Number(audioDurationSeconds) > 0 ? Number(audioDurationSeconds) : null
+  const parsedTranscriptLinesWithResolvedTimes = useMemo(
+    () => resolveTranscriptLineTimes(parsedTranscriptLines, normalizedAudioDurationSeconds),
+    [parsedTranscriptLines, normalizedAudioDurationSeconds],
+  )
+  const firstSpeakerKey = parsedTranscriptLinesWithResolvedTimes.find((line) => line.speakerKey)?.speakerKey ?? ''
+  const hasSearch = searchValue.trim().length > 0
   const shouldShowSpeakerSplitColors = useTintColors && normalizedAudioDurationSeconds !== null
   const activeLineBorderColor = useTintColors && highlightTintColor ? highlightTintColor : colors.border
   const activeLineBackgroundColor = useTintColors && highlightTintColor ? `${highlightTintColor}22` : colors.hoverBackground
@@ -100,23 +172,16 @@ export function TranscriptTabPanel({
   }, [transcript, searchValue])
 
   const visibleTranscriptLines = useMemo(() => {
-    if (hasSearch) return parsedTranscriptLinesWithFallback
-    return parsedTranscriptLinesWithFallback.slice(0, visibleLineCount)
-  }, [hasSearch, parsedTranscriptLinesWithFallback, visibleLineCount])
-
-  const resolveSeekSecondsForLine = (line: ParsedTranscriptLine, index: number, totalCount: number) => {
-    if (line.timeSeconds !== null) return line.timeSeconds
-    if (normalizedAudioDurationSeconds === null) return null
-    if (totalCount <= 1) return 0
-    return (index / (totalCount - 1)) * normalizedAudioDurationSeconds
-  }
+    if (hasSearch) return parsedTranscriptLinesWithResolvedTimes
+    return parsedTranscriptLinesWithResolvedTimes.slice(0, visibleLineCount)
+  }, [hasSearch, parsedTranscriptLinesWithResolvedTimes, visibleLineCount])
 
   const activeLineId = useMemo(() => {
     if (!Number.isFinite(currentAudioSeconds) || currentAudioSeconds === undefined) return null
-    const timeline = parsedTranscriptLinesWithFallback
+    const timeline = parsedTranscriptLinesWithResolvedTimes
       .map((line, index) => ({
         id: line.id,
-        timeSeconds: resolveSeekSecondsForLine(line, index, parsedTranscriptLinesWithFallback.length),
+        timeSeconds: line.resolvedTimeSeconds,
       }))
       .filter((item): item is { id: string; timeSeconds: number } => item.timeSeconds !== null)
 
@@ -130,7 +195,7 @@ export function TranscriptTabPanel({
       if (currentAudioSeconds >= current.timeSeconds && currentAudioSeconds < next.timeSeconds) return current.id
     }
     return null
-  }, [currentAudioSeconds, normalizedAudioDurationSeconds, parsedTranscriptLinesWithFallback])
+  }, [currentAudioSeconds, parsedTranscriptLinesWithResolvedTimes])
 
   return (
     <View style={[styles.container, shouldFillAvailableHeight ? styles.containerFill : styles.containerAuto]}>
@@ -152,11 +217,11 @@ export function TranscriptTabPanel({
         showsVerticalScrollIndicator
         onScroll={(event) => {
           if (hasSearch) return
-          if (visibleLineCount >= parsedTranscriptLinesWithFallback.length) return
+          if (visibleLineCount >= parsedTranscriptLinesWithResolvedTimes.length) return
           const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent
           const distanceToBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height)
           if (distanceToBottom > 320) return
-          setVisibleLineCount((previous) => Math.min(parsedTranscriptLinesWithFallback.length, previous + VISIBLE_LINE_CHUNK_SIZE))
+          setVisibleLineCount((previous) => Math.min(parsedTranscriptLinesWithResolvedTimes.length, previous + VISIBLE_LINE_CHUNK_SIZE))
         }}
         scrollEventThrottle={32}
       >
@@ -199,18 +264,29 @@ export function TranscriptTabPanel({
           parsedTranscriptLines.length > 0 ? (
             visibleTranscriptLines.map((line, index) => {
               const isFirstSpeaker = firstSpeakerKey ? line.speakerKey === firstSpeakerKey : true
-              const absoluteIndex = parsedTranscriptLinesWithFallback.findIndex((item) => item.id === line.id)
-              const seekSeconds = resolveSeekSecondsForLine(
-                line,
-                absoluteIndex >= 0 ? absoluteIndex : index,
-                parsedTranscriptLinesWithFallback.length,
-              )
+              const absoluteIndex = parsedTranscriptLinesWithResolvedTimes.findIndex((item) => item.id === line.id)
+              const resolvedLine = absoluteIndex >= 0 ? parsedTranscriptLinesWithResolvedTimes[absoluteIndex] : line
+              const seekSeconds = resolvedLine.resolvedTimeSeconds
+              const nextLineResolvedSeconds =
+                absoluteIndex >= 0 ? parsedTranscriptLinesWithResolvedTimes[absoluteIndex + 1]?.resolvedTimeSeconds ?? null : null
               const isSeekEnabled = !!onSeekToSeconds && seekSeconds !== null
               const isActiveLine = activeLineId === line.id
               return (
                 <Pressable
                   key={line.id}
-                  onPress={isSeekEnabled ? () => onSeekToSeconds?.(seekSeconds as number) : undefined}
+                  onPress={
+                    isSeekEnabled
+                      ? () => {
+                          const baseSeekSeconds = seekSeconds as number
+                          const maxSeekSeconds =
+                            nextLineResolvedSeconds !== null
+                              ? Math.max(baseSeekSeconds, nextLineResolvedSeconds - 0.05)
+                              : normalizedAudioDurationSeconds ?? baseSeekSeconds + 0.05
+                          const seekTarget = Math.min(maxSeekSeconds, baseSeekSeconds + 0.05)
+                          onSeekToSeconds?.(seekTarget)
+                        }
+                      : undefined
+                  }
                   style={({ hovered }) => [
                     styles.row,
                     styles.messageRow,

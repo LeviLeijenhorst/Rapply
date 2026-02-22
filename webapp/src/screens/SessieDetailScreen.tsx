@@ -116,6 +116,7 @@ export function SessieDetailScreen({
   const [pendingPreviewAudioUrl, setPendingPreviewAudioUrl] = useState<string | null>(null)
   const [pendingPreviewShouldSaveAudio, setPendingPreviewShouldSaveAudio] = useState<boolean | null>(null)
   const [currentAudioSeconds, setCurrentAudioSeconds] = useState(0)
+  const [currentAudioDurationSeconds, setCurrentAudioDurationSeconds] = useState<number | null>(session?.audioDurationSeconds ?? null)
   const [isSummaryEditorOpen, setIsSummaryEditorOpen] = useState(false)
   const [forcedTranscriptionStatus, setForcedTranscriptionStatus] = useState<'transcribing' | 'generating' | null>(null)
   const [isPdfEditorOpen, setIsPdfEditorOpen] = useState(false)
@@ -129,7 +130,7 @@ export function SessieDetailScreen({
   const templates = data.templates ?? []
   const practiceTintColor = data.practiceSettings.tintColor || colors.selected
   const defaultTemplateId = useMemo(() => {
-    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'standaard samenvatting')
+    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'intakeverslag')
     return (standardTemplate ?? templates[0])?.id ?? null
   }, [templates])
   const selectedTemplate = useMemo(() => templates.find((template) => template.id === selectedTemplateId) ?? null, [selectedTemplateId, templates])
@@ -233,6 +234,10 @@ export function SessieDetailScreen({
   useEffect(() => {
     setWrittenReportDraft(writtenReportText)
   }, [writtenReportText, sessionId])
+
+  useEffect(() => {
+    setCurrentAudioDurationSeconds(session?.audioDurationSeconds ?? null)
+  }, [session?.audioDurationSeconds, sessionId])
 
   useEffect(() => {
     if (!newlyCreatedCoacheeName) return
@@ -390,7 +395,7 @@ export function SessieDetailScreen({
     const systemMessage: LocalChatMessage = {
       role: 'system',
       text:
-      'Deze chatbot bevindt zich onder het kopje "Snelle vragen" binnen CoachScribe. Coaches gebruiken deze chat om korte, gerichte vragen te stellen over deze sessie op basis van de sessiecontext (zoals transcript en/of geschreven verslag). Gebruik alleen informatie uit deze sessie en uit de vraag van de gebruiker. Je antwoorden zijn altijd duidelijk en beknopt. Geef geen lange uitleg, herhaal de vraag niet en voeg geen meta-uitleg toe. Gebruik geen emoji\'s. Gebruik nooit labels zoals "speaker_3" en gebruik geen andere termen voor sprekers dan "coach" of "coachee". Maak nooit nieuwe actiepunten. Noem alleen actiepunten die expliciet in de sessiecontext of in de vraag van de gebruiker staan. Als er geen expliciete actiepunten zijn, zeg dat duidelijk en voeg niets nieuws toe. Wanneer je verwijst naar een specifiek moment in het transcript, gebruik dan de notatie [[timestamp=MM:SS|zichtbare tekst]]. MM:SS is het tijdstip in het transcript en de tekst na de | is de klikbare tekst zoals die in de zin wordt weergegeven. Verwerk deze verwijzing vloeiend in de zin en gebruik dit actief wanneer dat helpt om het antwoord concreet en controleerbaar te maken. Als het antwoord geschikt is om als PDF te downloaden, zet dan alleen de gewenste inhoud tussen deze twee regels. Gebruik exact deze regels op een eigen regel: ' +
+      'Deze chatbot bevindt zich onder het kopje "Snelle vragen" binnen CoachScribe. Loopbaan- en re-integratiecoaches gebruiken deze chat om korte, gerichte vragen te stellen over dit verslag op basis van de verslagcontext (zoals transcript en/of geschreven verslag). Gebruik alleen informatie uit dit verslag en uit de vraag van de gebruiker. Formuleer altijd in formeel en zakelijk Nederlands en spreek de gebruiker aan met "u". Uw antwoorden zijn duidelijk en beknopt. Geef geen lange uitleg, herhaal de vraag niet en voeg geen meta-uitleg toe. Gebruik geen emoji\'s. Gebruik nooit labels zoals "speaker_3" en gebruik geen andere termen voor sprekers dan "coach" of "cliënt". Maak nooit nieuwe actiepunten. Noem alleen actiepunten die expliciet in de verslagcontext of in de vraag van de gebruiker staan. Als er geen expliciete actiepunten zijn, zeg dat duidelijk en voeg niets nieuws toe. Wanneer u verwijst naar een specifiek moment in het transcript, gebruik dan de notatie [[timestamp=MM:SS|zichtbare tekst]]. MM:SS is het tijdstip in het transcript en de tekst na de | is de klikbare tekst zoals die in de zin wordt weergegeven. Verwerk deze verwijzing vloeiend in de zin en gebruik dit actief wanneer dat helpt om het antwoord concreet en controleerbaar te maken. Als het antwoord geschikt is om als PDF te downloaden, zet dan alleen de gewenste inhoud tussen deze twee regels. Gebruik exact deze regels op een eigen regel: ' +
       `${pdfStartToken} en ${pdfEndToken}. ` +
       'Plaats geen andere tekst tussen die regels dan de inhoud die in de PDF hoort. Zet alle overige uitleg buiten die blokken.',
     }
@@ -890,6 +895,7 @@ export function SessieDetailScreen({
                     audioDurationSeconds={session?.audioDurationSeconds ?? null}
                     audioUrlOverride={pendingPreviewAudioUrl}
                     onCurrentSecondsChange={setCurrentAudioSeconds}
+                    onDurationSecondsChange={setCurrentAudioDurationSeconds}
                     onDownloadAudio={() => {
                       void handleDownloadSavedAudio()
                     }}
@@ -914,6 +920,7 @@ export function SessieDetailScreen({
                     transcriptionStatus={effectiveTranscriptionStatus}
                     transcriptionError={session?.transcriptionError ?? null}
                     onEditSummary={() => setIsSummaryEditorOpen(true)}
+                    onShareSummary={() => handleRequestPdfEdit({ text: session?.summary ?? '', title: editableSessionTitle })}
                     onRetryTranscription={() => (selectedTemplateId ? generateReportForTemplate(selectedTemplateId) : null)}
                     onCancelGeneration={handleCancelGeneration}
                   />
@@ -1015,7 +1022,7 @@ export function SessieDetailScreen({
                       currentAudioSeconds={currentAudioSeconds}
                       highlightTintColor={practiceTintColor}
                       useTintColors={shouldUseTranscriptTint}
-                      audioDurationSeconds={session?.audioDurationSeconds ?? null}
+                      audioDurationSeconds={currentAudioDurationSeconds ?? session?.audioDurationSeconds ?? null}
                     />
                   ) : null}
                 </AnimatedMainContent>
@@ -1200,6 +1207,7 @@ export function SessieDetailScreen({
                       audioDurationSeconds={session?.audioDurationSeconds ?? null}
                       audioUrlOverride={pendingPreviewAudioUrl}
                       onCurrentSecondsChange={setCurrentAudioSeconds}
+                      onDurationSecondsChange={setCurrentAudioDurationSeconds}
                       onDownloadAudio={() => {
                         void handleDownloadSavedAudio()
                       }}
@@ -1224,6 +1232,7 @@ export function SessieDetailScreen({
                     transcriptionStatus={effectiveTranscriptionStatus}
                     transcriptionError={session?.transcriptionError ?? null}
                     onEditSummary={() => setIsSummaryEditorOpen(true)}
+                    onShareSummary={() => handleRequestPdfEdit({ text: session?.summary ?? '', title: editableSessionTitle })}
                     onRetryTranscription={() => (selectedTemplateId ? generateReportForTemplate(selectedTemplateId) : null)}
                     onCancelGeneration={handleCancelGeneration}
                   />
@@ -1324,7 +1333,7 @@ export function SessieDetailScreen({
                       currentAudioSeconds={currentAudioSeconds}
                       highlightTintColor={practiceTintColor}
                       useTintColors={shouldUseTranscriptTint}
-                      audioDurationSeconds={session?.audioDurationSeconds ?? null}
+                      audioDurationSeconds={currentAudioDurationSeconds ?? session?.audioDurationSeconds ?? null}
                     />
                   ) : null}
                 </AnimatedMainContent>
@@ -1410,8 +1419,8 @@ export function SessieDetailScreen({
         initialValue={pdfEditorDraft}
         saveLabel="Exporteer PDF"
         onClose={() => setIsPdfEditorOpen(false)}
-        onSave={(value) => {
-          void exportMessageToPdf(value, pdfEditorTitle, {
+        onSave={async (value) => {
+          await exportMessageToPdf(value, pdfEditorTitle, {
             practiceName: data.practiceSettings.practiceName,
             website: data.practiceSettings.website,
             tintColor: data.practiceSettings.tintColor,
@@ -1558,9 +1567,9 @@ export function SessieDetailScreen({
                   hovered ? styles.coacheeMenuRowAddHovered : undefined,
                 ]}
               >
-                {/* Add coachee */}
+                {/* Add client */}
                 <Text isSemibold style={styles.coacheeMenuRowAddText}>
-                  + Nieuwe coachee
+                  + Nieuwe cliënt
                 </Text>
               </Pressable>
             </ScrollView>
@@ -1969,4 +1978,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 })
-

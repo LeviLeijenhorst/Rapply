@@ -44,7 +44,7 @@ export function EditCoacheeModal({ visible, initialName, onClose, onSave, onArch
             </View>
             {/* Header title */}
             <Text isBold style={styles.headerTitle}>
-              Coachee bewerken
+              Cliënt bewerken
             </Text>
           </View>
 

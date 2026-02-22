@@ -1,6 +1,9 @@
+import { env } from "../env"
+
 export type PlanKey = "basis" | "professioneel" | "fulltime" | "praktijk"
 
-export const freeSeconds = 0
+const normalizedDefaultFreeMinutes = Math.max(0, Math.floor(Number(env.defaultFreeTranscriptionMinutes) || 0))
+export const freeSeconds = normalizedDefaultFreeMinutes * 60
 
 export const extraTranscriptionProductId = "extra_transcription_1h"
 export const extraTranscriptionSecondsPerPurchase = 3600

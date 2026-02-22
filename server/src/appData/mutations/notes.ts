@@ -11,6 +11,7 @@ export async function createNote(userId: string, note: Note): Promise<void> {
       set title = excluded.title,
           text = excluded.text,
           updated_at_unix_ms = excluded.updated_at_unix_ms
+      where public.session_notes.user_id = excluded.user_id
     `,
     [note.id, userId, note.sessionId, note.title ?? "", note.text, note.createdAtUnixMs, note.updatedAtUnixMs],
   )
@@ -36,4 +37,3 @@ export async function updateNote(
 export async function deleteNote(userId: string, id: string): Promise<void> {
   await execute(`delete from public.session_notes where user_id = $1 and id = $2`, [userId, id])
 }
-

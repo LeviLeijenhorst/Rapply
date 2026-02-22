@@ -69,14 +69,18 @@ export async function readBillingStatus(params: {
   cycleStartMs: number | null
   cycleEndMs: number | null
   includedSecondsOverride?: number | null
+  freeSecondsOverride?: number | null
 }): Promise<BillingStatus> {
-  const { userId, planKey, cycleStartMs, cycleEndMs, includedSecondsOverride } = params
+  const { userId, planKey, cycleStartMs, cycleEndMs, includedSecondsOverride, freeSecondsOverride } = params
 
   await ensureBillingUsersCompatibility()
 
   const includedSeconds = Number.isFinite(includedSecondsOverride) && Number(includedSecondsOverride) >= 0
     ? Math.floor(Number(includedSecondsOverride))
     : getIncludedSecondsForPlanKey(planKey)
+  const effectiveFreeSeconds = Number.isFinite(freeSecondsOverride) && Number(freeSecondsOverride) >= 0
+    ? Math.floor(Number(freeSecondsOverride))
+    : freeSeconds
   const cycleKey = buildCycleKey(cycleStartMs, cycleEndMs)
 
   const row = await queryOne<{
@@ -99,7 +103,7 @@ export async function readBillingStatus(params: {
   const cycleUsedSecondsByKey = (row?.cycle_used_seconds_by_key ?? {}) as Record<string, number>
   const cycleUsedSeconds = cycleKey ? clampNonNegative(cycleUsedSecondsByKey[cycleKey] ?? 0) : 0
 
-  const nonExpiringTotalSeconds = freeSeconds + purchasedSeconds + adminGrantedSeconds
+  const nonExpiringTotalSeconds = effectiveFreeSeconds + purchasedSeconds + adminGrantedSeconds
   const nonExpiringRemainingSeconds = Math.max(0, nonExpiringTotalSeconds - nonExpiringUsedSeconds)
 
   const cycleRemainingSeconds = Math.max(0, includedSeconds - cycleUsedSeconds)
@@ -108,7 +112,7 @@ export async function readBillingStatus(params: {
   return {
     planKey,
     cycleKey,
-    freeSeconds,
+    freeSeconds: effectiveFreeSeconds,
     purchasedSeconds,
     adminGrantedSeconds,
     includedSeconds,

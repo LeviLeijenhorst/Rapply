@@ -73,6 +73,8 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
         const planState = useMollie ? { planKey: null, cycleStartMs: null, cycleEndMs: null } : derivePlanStateFromRevenueCatSubscriber(subscriber)
         const manualPricing = await readManualPricingContextForUser(user.userId)
         const useManualCycle = useMollie || manualPricing.includedSecondsPerCycle > 0 || manualPricing.planId != null || manualPricing.customMonthlyPrice != null
+        const hasDashboardMinutesConfigured = manualPricing.planId != null || manualPricing.includedSecondsPerCycle > 0
+        const freeSecondsOverride = hasDashboardMinutesConfigured ? 0 : null
         const nonExpiringTotalSecondsOverride = getNonExpiringTotalSecondsOverrideForEmail(user.email)
 
         let charge: { secondsCharged: number; remainingSecondsAfter: number }
@@ -85,6 +87,7 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
             cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : planState.cycleStartMs,
             cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : planState.cycleEndMs,
             includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
+            freeSecondsOverride,
             nonExpiringTotalSecondsOverride,
           })
         } catch (error: any) {
@@ -98,6 +101,7 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
             cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : planState.cycleStartMs,
             cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : planState.cycleEndMs,
             includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
+            freeSecondsOverride,
           })
           const status = applyEmailBillingOverrides(statusRaw, user.email)
           sendError(res, 402, `Not enough seconds remaining. Needed ${secondsToCharge}s, remaining ${status.remainingSeconds}s.`)

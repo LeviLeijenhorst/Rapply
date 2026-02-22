@@ -4,7 +4,6 @@ import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 import { colors } from '../theme/colors'
 import { CoacheesIcon } from './icons/CoacheesIcon'
 import { FeedbackIcon } from './icons/FeedbackIcon'
-import { MijnPraktijkIcon } from './icons/MijnPraktijkIcon'
 import { PlusIcon } from './icons/PlusIcon'
 import { SessiesIcon } from './icons/SessiesIcon'
 import { SettingsIcon } from './icons/SettingsIcon'
@@ -70,15 +69,15 @@ export function Sidebar({
             hovered ? styles.createSessionButtonHovered : undefined,
           ]}
         >
-          {/* Nieuwe sessie button */}
+          {/* Nieuw verslag button */}
           <View style={[styles.createSessionButtonContent, isCompact ? styles.createSessionButtonContentCompact : undefined]}>
             <PlusIcon color="#FFFFFF" size={22} />
-            {/* Nieuwe sessie button label */}
+            {/* Nieuw verslag button label */}
             <Text
               numberOfLines={1}
               style={[styles.createSessionButtonText, isCompact ? styles.createSessionButtonTextCompact : undefined]}
             >
-              {isCompact ? '' : 'Nieuwe sessie'}
+              {isCompact ? '' : 'Nieuw verslag'}
             </Text>
           </View>
         </Pressable>
@@ -86,14 +85,14 @@ export function Sidebar({
         {/* Sidebar menu items */}
         <View style={styles.menuItems}>
           <SidebarItem
-            label="Coachees"
+            label="Cliënten"
             isSelected={selectedSidebarItemKey === 'coachees'}
             onPress={() => onSelectSidebarItem('coachees')}
             icon={<CoacheesIcon color={selectedSidebarItemKey === 'coachees' ? selectedColor : unselectedColor} size={24} />}
             isCompact={isCompact}
           />
           <SidebarItem
-            label="Sessies"
+            label="Verslagen"
             isSelected={selectedSidebarItemKey === 'sessies'}
             onPress={() => onSelectSidebarItem('sessies')}
             icon={<SessiesIcon color={selectedSidebarItemKey === 'sessies' ? selectedColor : unselectedColor} size={24} />}
@@ -106,13 +105,13 @@ export function Sidebar({
             icon={<TemplatesIcon color={selectedSidebarItemKey === 'templates' ? selectedColor : unselectedColor} size={24} />}
             isCompact={isCompact}
           />
-          <SidebarItem
+          {/* <SidebarItem
             label="Mijn praktijk"
             isSelected={selectedSidebarItemKey === 'mijnPraktijk'}
             onPress={() => onSelectSidebarItem('mijnPraktijk')}
             icon={<MijnPraktijkIcon color={selectedSidebarItemKey === 'mijnPraktijk' ? selectedColor : unselectedColor} size={24} />}
             isCompact={isCompact}
-          />
+          /> */}
           {selectedSidebarItemKey === 'archief' ? (
             <SidebarItem
               label="Archief"
@@ -155,21 +154,21 @@ export function Sidebar({
       {/* Sidebar bottom items */}
       <View style={styles.bottomSection}>
         <SidebarItem
-          label="Feedback"
-          isSelected={false}
-          onPress={(event) => {
-            onOpenFeedback(getMenuAnchorPoint(event))
-          }}
-          icon={<FeedbackIcon color={unselectedColor} size={24} />}
-          isCompact={isCompact}
-        />
-        <SidebarItem
           label="Instellingen"
           isSelected={isSettingsSelected}
           onPress={(event) => {
             onOpenSettingsMenu(getMenuAnchorPoint(event))
           }}
           icon={<SettingsIcon color={settingsColor} size={24} />}
+          isCompact={isCompact}
+        />
+        <SidebarItem
+          label="Feedback"
+          isSelected={false}
+          onPress={(event) => {
+            onOpenFeedback(getMenuAnchorPoint(event))
+          }}
+          icon={<FeedbackIcon color={unselectedColor} size={24} />}
           isCompact={isCompact}
         />
       </View>
@@ -246,4 +245,3 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 })
-

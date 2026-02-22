@@ -95,14 +95,14 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
   const pendingDeleteSessionTitle = pendingDeleteSessionId ? data.sessions.find((item) => item.id === pendingDeleteSessionId)?.title : null
   const headerTabsRow = (
     <View style={[styles.tabsRow, isCompactHeader ? styles.tabsRowCompact : undefined]}>
-      <TabButton
-        label="Alle sessies"
+        <TabButton
+        label="Alle verslagen"
         isSelected={activeTabKey === 'alleSessies'}
         icon={(color) => <ArchiveIcon color={color} size={18} />}
         onPress={() => setActiveTabKey('alleSessies')}
       />
       <TabButton
-        label="Losse sessies"
+        label="Losse verslagen"
         isSelected={activeTabKey === 'losseSessies'}
         icon={(color) => <StandaardVerslagIcon color={color} size={18} />}
         onPress={() => setActiveTabKey('losseSessies')}
@@ -120,7 +120,7 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
               ref={searchInputRef}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Zoek sessie..."
+              placeholder="Zoek verslag..."
               placeholderTextColor="#656565"
               onBlur={() => setIsSearchOpen(false)}
               style={[styles.searchInput, searchInputWebStyle]}
@@ -143,7 +143,7 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
         {/* Add label */}
         <PlusIcon color="#FFFFFF" size={22} />
         <Text numberOfLines={1} style={styles.addButtonText}>
-          Nieuwe sessie
+          Nieuw verslag
         </Text>
       </Pressable>
     </View>
@@ -211,8 +211,8 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
         >
           {filteredSessies.length === 0 ? (
             <View style={styles.emptySessionsContainer}>
-              {/* Empty sessions message */}
-              <Text style={styles.emptySessionsText}>Nog geen sessies.</Text>
+              {/* Empty reports message */}
+              <Text style={styles.emptySessionsText}>Nog geen verslagen.</Text>
             </View>
           ) : null}
           {paginatedSessies.map((item) => {
@@ -240,30 +240,29 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
               </View>
             )
           })}
+          {filteredSessies.length > pageSize ? (
+            <View style={styles.paginationRow}>
+              <Pressable
+                onPress={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                style={({ hovered }) => [styles.paginationButton, page <= 1 ? styles.paginationButtonDisabled : undefined, hovered && page > 1 ? styles.paginationButtonHovered : undefined]}
+              >
+                <Text style={[styles.paginationButtonText, page <= 1 ? styles.paginationButtonTextDisabled : undefined]}>Vorige</Text>
+              </Pressable>
+              <Text style={styles.paginationInfo}>
+                Pagina {page} van {totalPages}
+              </Text>
+              <Pressable
+                onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                style={({ hovered }) => [styles.paginationButton, page >= totalPages ? styles.paginationButtonDisabled : undefined, hovered && page < totalPages ? styles.paginationButtonHovered : undefined]}
+              >
+                <Text style={[styles.paginationButtonText, page >= totalPages ? styles.paginationButtonTextDisabled : undefined]}>Volgende</Text>
+              </Pressable>
+            </View>
+          ) : null}
         </ScrollView>
       </AnimatedMainContent>
-
-      {filteredSessies.length > pageSize ? (
-        <View style={styles.paginationRow}>
-          <Pressable
-            onPress={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page <= 1}
-            style={({ hovered }) => [styles.paginationButton, page <= 1 ? styles.paginationButtonDisabled : undefined, hovered && page > 1 ? styles.paginationButtonHovered : undefined]}
-          >
-            <Text style={[styles.paginationButtonText, page <= 1 ? styles.paginationButtonTextDisabled : undefined]}>Vorige</Text>
-          </Pressable>
-          <Text style={styles.paginationInfo}>
-            Pagina {page} van {totalPages}
-          </Text>
-          <Pressable
-            onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page >= totalPages}
-            style={({ hovered }) => [styles.paginationButton, page >= totalPages ? styles.paginationButtonDisabled : undefined, hovered && page < totalPages ? styles.paginationButtonHovered : undefined]}
-          >
-            <Text style={[styles.paginationButtonText, page >= totalPages ? styles.paginationButtonTextDisabled : undefined]}>Volgende</Text>
-          </Pressable>
-        </View>
-      ) : null}
 
       <PopoverMenu
         visible={isMenuVisible}

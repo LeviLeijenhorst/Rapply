@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { ActivityIndicator, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
@@ -14,7 +14,7 @@ type Props = {
   title: string
   initialValue: string
   onClose: () => void
-  onSave: (value: string) => void
+  onSave: (value: string) => void | Promise<void>
   saveLabel?: string
 }
 
@@ -37,6 +37,7 @@ const toolbarButtons: readonly ToolbarButtonConfig[] = [
 export function RichTextEditorModal({ visible, title, initialValue, onClose, onSave, saveLabel = 'Opslaan' }: Props) {
   const [htmlDraft, setHtmlDraft] = useState('')
   const [plainDraft, setPlainDraft] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
   const [toolbarState, setToolbarState] = useState<ToolbarState>(defaultToolbarState)
   const inputRef = useRef<TextInput | null>(null)
   const editorRef = useRef<HTMLDivElement | null>(null)
@@ -359,13 +360,19 @@ export function RichTextEditorModal({ visible, title, initialValue, onClose, onS
     refreshToolbarState()
   }
 
-  function handleSave() {
-    if (isWeb) {
-      const html = editorRef.current?.innerHTML || htmlDraft
-      onSave(richTextHtmlToMarkdown(html))
-      return
+  async function handleSave() {
+    if (isSaving) return
+    setIsSaving(true)
+    try {
+      if (isWeb) {
+        const html = editorRef.current?.innerHTML || htmlDraft
+        await Promise.resolve(onSave(richTextHtmlToMarkdown(html)))
+        return
+      }
+      await Promise.resolve(onSave(plainDraft.trim()))
+    } finally {
+      setIsSaving(false)
     }
-    onSave(plainDraft.trim())
   }
 
   if (!visible) return null
@@ -376,7 +383,7 @@ export function RichTextEditorModal({ visible, title, initialValue, onClose, onS
         <Text isBold style={styles.title}>
           {title}
         </Text>
-        <Pressable onPress={onClose} style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}>
+        <Pressable disabled={isSaving} onPress={onClose} style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}>
           <ModalCloseDarkIcon size={34} />
         </Pressable>
       </View>
@@ -434,14 +441,25 @@ export function RichTextEditorModal({ visible, title, initialValue, onClose, onS
       </View>
 
       <View style={styles.footer}>
-        <Pressable onPress={onClose} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]}>
+        <Pressable
+          disabled={isSaving}
+          onPress={onClose}
+          style={({ hovered }) => [styles.secondaryButton, isSaving ? styles.buttonDisabled : undefined, hovered ? styles.secondaryButtonHovered : undefined]}
+        >
           <Text isBold style={styles.secondaryButtonText}>
             Annuleren
           </Text>
         </Pressable>
-        <Pressable onPress={handleSave} style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined]}>
+        <Pressable
+          disabled={isSaving}
+          onPress={() => {
+            void handleSave()
+          }}
+          style={({ hovered }) => [styles.primaryButton, isSaving ? styles.buttonDisabled : undefined, hovered ? styles.primaryButtonHovered : undefined]}
+        >
+          {isSaving ? <ActivityIndicator size="small" color="#FFFFFF" /> : null}
           <Text isBold style={styles.primaryButtonText}>
-            {saveLabel}
+            {isSaving ? `${saveLabel}...` : saveLabel}
           </Text>
         </Pressable>
       </View>
@@ -692,6 +710,8 @@ const styles = StyleSheet.create({
     minWidth: 140,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
   },
   primaryButtonHovered: {
     backgroundColor: '#A50058',
@@ -700,5 +720,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: '#FFFFFF',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
 })

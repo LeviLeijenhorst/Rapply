@@ -16,11 +16,11 @@ type Props = {
 }
 
 const tabAutocompleteSuggestions = [
-  'Maak een korte samenvatting van deze sessie.',
-  'Welke actiepunten volgen uit deze sessie?',
-  'Welke doelen zijn besproken in deze sessie?',
+  'Maak een korte samenvatting van dit verslag.',
+  'Welke actiepunten volgen uit dit verslag?',
+  'Welke doelen zijn besproken in dit verslag?',
   'Vat dit samen in bullet points.',
-  'Geef mij 3 verdiepende vragen voor de volgende sessie.',
+  'Geef mij 3 verdiepende vragen voor het volgende verslag.',
 ]
 const SEND_BUTTON_SIZE = 44
 

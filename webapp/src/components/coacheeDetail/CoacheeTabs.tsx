@@ -20,7 +20,7 @@ export function CoacheeTabs({ activeTabKey, onSelectTab }: Props) {
       {/* Tabs */}
       <View style={[styles.row, styles.rowWeb]}>
         <TabButton
-          label="Sessies"
+          label="Verslagen"
           isSelected={activeTabKey === 'sessies'}
           icon={(color) => <SessiesIcon color={color} size={24} />}
           onPress={() => onSelectTab('sessies')}
