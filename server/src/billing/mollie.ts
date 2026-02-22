@@ -367,7 +367,7 @@ async function applyPlanForUser(params: { userId: string; planId: string | null 
     `
     update public.users
     set plan_id = $1,
-        custom_monthly_price = case when $1 is null then custom_monthly_price else null end,
+        custom_monthly_price = case when $1::uuid is null then custom_monthly_price else null end,
         updated_at = now()
     where id = $2
     `,
