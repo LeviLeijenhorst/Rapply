@@ -82,6 +82,7 @@ export const env = {
   azureOpenAiSummaryDeployment: optionalString("AZURE_OPENAI_SUMMARY_DEPLOYMENT") || "",
   azureSpeechKey: optionalString("AZURE_SPEECH_KEY") || "",
   azureSpeechRegion: optionalString("AZURE_SPEECH_REGION") || "",
+  defaultTranscriptionMode: optionalString("DEFAULT_TRANSCRIPTION_MODE") || "azure-fast-batch",
   corsAllowedOrigins: optionalString("CORS_ALLOWED_ORIGINS"),
   rateLimitWindowMs: Number(optionalString("RATE_LIMIT_WINDOW_MS") || "60000"),
   rateLimitMaxRequests: Number(optionalString("RATE_LIMIT_MAX_REQUESTS") || "120"),

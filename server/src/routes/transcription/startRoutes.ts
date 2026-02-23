@@ -15,7 +15,7 @@ import {
   markOperationFailed,
   readDurationSeconds,
   readStartRequest,
-  resolveTranscriptionProvider,
+  resolveTranscriptionProviderWithRuntimeMode,
   runTranscription,
 } from "./helpers"
 import type { RegisterTranscriptionRoutesParams, TranscriptionProvider } from "./types"
@@ -52,7 +52,7 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
           mimeType,
           encryptedSizeBytes: uploadBytes,
         })
-        selectedProvider = resolveTranscriptionProvider()
+        selectedProvider = await resolveTranscriptionProviderWithRuntimeMode()
         const maxAudioDurationSeconds = getProviderMaxAudioDurationSeconds(selectedProvider)
         if (typeof maxAudioDurationSeconds === "number" && durationSeconds > maxAudioDurationSeconds) {
           sendError(

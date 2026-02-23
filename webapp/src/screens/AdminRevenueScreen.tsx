@@ -50,6 +50,8 @@ type FeedbackItem = {
   createdAt: string
 }
 type FeedbackListResponse = { items: FeedbackItem[] }
+type TranscriptionMode = 'azure-fast-batch' | 'azure-realtime-live'
+type TranscriptionModeResponse = { mode?: string; updatedAt?: string | null; updatedBy?: string | null }
 
 type UserFormState = {
   planId: string | null
@@ -106,15 +108,23 @@ export function AdminRevenueScreen() {
   const [allowlistStatusMessage, setAllowlistStatusMessage] = useState<string | null>(null)
   const [allowlistEmailInput, setAllowlistEmailInput] = useState('')
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>('azure-fast-batch')
+  const [transcriptionModeUpdatedAt, setTranscriptionModeUpdatedAt] = useState<string | null>(null)
+  const [isTranscriptionModeBusy, setIsTranscriptionModeBusy] = useState(false)
+
+  function normalizeTranscriptionMode(value: unknown): TranscriptionMode {
+    return String(value || '').trim().toLowerCase() === 'azure-realtime-live' ? 'azure-realtime-live' : 'azure-fast-batch'
+  }
 
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true)
       setErrorMessage(null)
-      const [plansResponse, usersResponse, feedbackResponse] = await Promise.all([
+      const [plansResponse, usersResponse, feedbackResponse, transcriptionModeResponse] = await Promise.all([
         callSecureApi<PlanListResponse>('/admin/plans/list', {}),
         callSecureApi<UserListResponse>('/admin/users/list', {}),
         callSecureApi<FeedbackListResponse>('/admin/feedback/list', { limit: 200 }),
+        callSecureApi<TranscriptionModeResponse>('/admin/transcription/mode/get', {}),
       ])
       const nextPlans = Array.isArray(plansResponse.items) ? plansResponse.items : []
       const nextUsers = Array.isArray(usersResponse.items) ? usersResponse.items : []
@@ -122,6 +132,8 @@ export function AdminRevenueScreen() {
       setPlans(nextPlans)
       setUsers(nextUsers)
       setFeedbackItems(nextFeedbackItems)
+      setTranscriptionMode(normalizeTranscriptionMode(transcriptionModeResponse?.mode))
+      setTranscriptionModeUpdatedAt(transcriptionModeResponse?.updatedAt ?? null)
       setSelectedUserId((current) => {
         if (current && nextUsers.some((user) => user.userId === current)) return current
         return nextUsers[0]?.userId ?? null
@@ -131,6 +143,8 @@ export function AdminRevenueScreen() {
       setPlans([])
       setUsers([])
       setFeedbackItems([])
+      setTranscriptionMode('azure-fast-batch')
+      setTranscriptionModeUpdatedAt(null)
       setSelectedUserId(null)
       setSelectedUserForm(null)
     } finally {
@@ -161,6 +175,21 @@ export function AdminRevenueScreen() {
     void loadData()
     void loadAllowlist()
   }, [loadAllowlist, loadData])
+
+  const saveTranscriptionMode = useCallback(async (mode: TranscriptionMode) => {
+    try {
+      setIsTranscriptionModeBusy(true)
+      setStatusMessage(null)
+      const response = await callSecureApi<TranscriptionModeResponse>('/admin/transcription/mode/set', { mode })
+      setTranscriptionMode(normalizeTranscriptionMode(response?.mode))
+      setTranscriptionModeUpdatedAt(response?.updatedAt ?? null)
+      setStatusMessage(`Transcriptiemodus opgeslagen: ${mode === 'azure-realtime-live' ? 'Realtime tijdens opname' : 'Batch na opname'}`)
+    } catch (error) {
+      setStatusMessage(parseError(error))
+    } finally {
+      setIsTranscriptionModeBusy(false)
+    }
+  }, [])
 
   const addAllowlistEmail = useCallback(async () => {
     const trimmedEmail = allowlistEmailInput.trim().toLowerCase()
@@ -415,6 +444,44 @@ export function AdminRevenueScreen() {
               ))}
             </View>
           )}
+        </View>
+
+        <View style={styles.card}>
+          <Text isSemibold style={styles.cardTitle}>Transcriptiemodus</Text>
+          <Text style={styles.cardSubtitle}>Kies tussen batch na opname of realtime tijdens opname met sprekerlabels.</Text>
+          <View style={styles.toggleRow}>
+            <Pressable
+              onPress={() => void saveTranscriptionMode('azure-fast-batch')}
+              style={({ hovered }) => [
+                styles.accountTypeButton,
+                transcriptionMode === 'azure-fast-batch' ? styles.accountTypeButtonSelected : undefined,
+                hovered ? styles.secondaryButtonHovered : undefined,
+                isTranscriptionModeBusy ? styles.buttonDisabled : undefined,
+              ]}
+              disabled={isTranscriptionModeBusy}
+            >
+              <Text isBold style={transcriptionMode === 'azure-fast-batch' ? styles.accountTypeButtonTextSelected : styles.accountTypeButtonText}>
+                Batch na opname
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => void saveTranscriptionMode('azure-realtime-live')}
+              style={({ hovered }) => [
+                styles.accountTypeButton,
+                transcriptionMode === 'azure-realtime-live' ? styles.accountTypeButtonSelected : undefined,
+                hovered ? styles.secondaryButtonHovered : undefined,
+                isTranscriptionModeBusy ? styles.buttonDisabled : undefined,
+              ]}
+              disabled={isTranscriptionModeBusy}
+            >
+              <Text isBold style={transcriptionMode === 'azure-realtime-live' ? styles.accountTypeButtonTextSelected : styles.accountTypeButtonText}>
+                Realtime tijdens opname
+              </Text>
+            </Pressable>
+          </View>
+          {transcriptionModeUpdatedAt ? (
+            <Text style={styles.cardSubtitle}>Laatst aangepast: {formatDateTime(transcriptionModeUpdatedAt)}</Text>
+          ) : null}
         </View>
 
         <View style={styles.card}>

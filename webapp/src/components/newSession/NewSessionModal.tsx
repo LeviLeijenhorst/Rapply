@@ -30,6 +30,12 @@ import { setPendingPreviewAudio } from '../../audio/pendingPreviewStore'
 import { processSessionAudio } from '../../audio/processSessionAudio'
 import { AnimatedMainContent } from '../AnimatedMainContent'
 import { fetchBillingStatus, type BillingStatus } from '../../services/billing'
+import {
+  fetchTranscriptionRuntimeConfig,
+  startRealtimeTranscriber,
+  type RealtimeTranscriberSession,
+  type TranscriptionMode,
+} from '../../services/realtimeTranscription'
 
 type Step = 'select' | 'consent' | 'upload' | 'recording' | 'recorded'
 type OptionKey = 'gesprek' | 'verslag' | 'upload' | 'schrijven'
@@ -170,6 +176,13 @@ function formatDurationLabel(totalSeconds: number) {
   return `${hoursLabel}:${minutesLabel}:${secondsLabel}`
 }
 
+function createOperationId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `op_${Date.now()}_${Math.floor(Math.random() * 1_000_000_000)}`
+}
+
 export function NewSessionModal({
   visible,
   onClose,
@@ -221,6 +234,12 @@ export function NewSessionModal({
     requiredSeconds: number
     kind: 'recording' | 'upload'
   } | null>(null)
+  const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>('azure-fast-batch')
+  const [isRealtimeTranscriberStarting, setIsRealtimeTranscriberStarting] = useState(false)
+  const [liveTranscriptText, setLiveTranscriptText] = useState('')
+  const [liveTranscriptError, setLiveTranscriptError] = useState<string | null>(null)
+  const liveTranscriberRef = useRef<RealtimeTranscriberSession | null>(null)
+  const realtimeOperationIdRef = useRef<string | null>(null)
   const { height: windowHeight, width: windowWidth } = useWindowDimensions()
   const templates = data.templates ?? []
   const defaultTemplateId = useMemo(() => {
@@ -247,6 +266,10 @@ export function NewSessionModal({
 
   useEffect(() => {
     if (!visible) return
+    if (liveTranscriberRef.current) {
+      void liveTranscriberRef.current.stop()
+      liveTranscriberRef.current = null
+    }
     recorder.reset()
     setStep('select')
     setSelectedOption(null)
@@ -262,6 +285,11 @@ export function NewSessionModal({
     setAudioDurationSeconds(null)
     setShouldSaveAudio(true)
     setAudioForTranscription(null)
+    setTranscriptionMode('azure-fast-batch')
+    setIsRealtimeTranscriberStarting(false)
+    setLiveTranscriptText('')
+    setLiveTranscriptError(null)
+    realtimeOperationIdRef.current = null
     setIsInsufficientMinutesWarningVisible(false)
     setInsufficientMinutesContext(null)
     setIsMinimized(false)
@@ -334,6 +362,31 @@ export function NewSessionModal({
     if (selectedTemplateId && templates.some((template) => template.id === selectedTemplateId)) return
     setSelectedTemplateId(defaultTemplateId)
   }, [defaultTemplateId, selectedTemplateId, templates])
+
+  useEffect(() => {
+    if (!visible) return
+    let isCancelled = false
+    void (async () => {
+      try {
+        const runtimeConfig = await fetchTranscriptionRuntimeConfig()
+        if (isCancelled) return
+        setTranscriptionMode(runtimeConfig.mode)
+      } catch (error) {
+        if (isCancelled) return
+        console.warn('[NewSessionModal] Failed to load transcription runtime config', error)
+        setTranscriptionMode('azure-fast-batch')
+      }
+    })()
+    return () => {
+      isCancelled = true
+    }
+  }, [visible])
+
+  useEffect(() => {
+    return () => {
+      void stopLiveTranscriber()
+    }
+  }, [])
 
 
   useEffect(() => {
@@ -466,6 +519,7 @@ export function NewSessionModal({
 
   const [waveBarCount, setWaveBarCount] = useState(64)
   const bars = useMemo(() => Array.from({ length: waveBarCount }, (_, index) => index), [waveBarCount])
+  const isRealtimeModeActive = transcriptionMode === 'azure-realtime-live'
   const liveWaveHeights = useLiveAudioWaveformBars({
     mediaStream: recorder.mediaStream,
     barCount: waveBarCount,
@@ -770,6 +824,14 @@ export function NewSessionModal({
     }
   }
 
+  async function stopLiveTranscriber() {
+    const activeTranscriber = liveTranscriberRef.current
+    if (!activeTranscriber) return
+    liveTranscriberRef.current = null
+    setIsRealtimeTranscriberStarting(false)
+    await activeTranscriber.stop().catch(() => undefined)
+  }
+
   async function createAndOpenSessionInternal(
     values: { kind: 'recording' | 'upload' },
     options?: {
@@ -812,6 +874,10 @@ export function NewSessionModal({
     }
 
     const nextAudioForTranscription = resolvedAudioForTranscription
+    const realtimeChargeOperationId = isRealtimeModeActive ? (realtimeOperationIdRef.current || createOperationId()) : null
+    if (isRealtimeModeActive && realtimeChargeOperationId) {
+      realtimeOperationIdRef.current = realtimeChargeOperationId
+    }
     onOpenSession(createdSessionId)
     handleClose()
 
@@ -820,6 +886,14 @@ export function NewSessionModal({
       audioBlob: nextAudioForTranscription.blob,
       mimeType: nextAudioForTranscription.mimeType,
       shouldSaveAudio: effectiveShouldSaveAudio,
+      transcriptOverride: isRealtimeModeActive ? liveTranscriptText.trim() : null,
+      realtimeCharge:
+        isRealtimeModeActive
+          ? {
+              operationId: String(realtimeChargeOperationId || ''),
+              durationSeconds: Math.max(1, Math.ceil(nextAudioDurationSeconds || 0)),
+            }
+          : null,
       summaryTemplate,
       initialAudioBlobId: null,
       e2ee,
@@ -827,6 +901,7 @@ export function NewSessionModal({
     }).catch((error) => {
       console.error('[NewSessionModal] Session audio processing failed', { sessionId: createdSessionId, error })
     })
+    realtimeOperationIdRef.current = null
     return true
   }
 
@@ -867,9 +942,14 @@ export function NewSessionModal({
     if (step !== 'recording') return
     if (hasAutoStartedRecordingRef.current) return
     if (recorder.status !== 'idle') return
+    if (isRealtimeModeActive) {
+      realtimeOperationIdRef.current = createOperationId()
+      setLiveTranscriptText('')
+      setLiveTranscriptError(null)
+    }
     hasAutoStartedRecordingRef.current = true
     recorder.start()
-  }, [recorder, step, visible])
+  }, [isRealtimeModeActive, recorder, step, visible])
 
   useEffect(() => {
     if (!visible) return
@@ -879,8 +959,66 @@ export function NewSessionModal({
     recorder.stop()
   }, [recorder, recorder.elapsedSeconds, recorder.status, step, visible])
 
+  useEffect(() => {
+    const shouldRunRealtime =
+      visible &&
+      step === 'recording' &&
+      recorder.status === 'recording' &&
+      isRealtimeModeActive
+
+    if (!shouldRunRealtime) {
+      void stopLiveTranscriber()
+      return
+    }
+    if (liveTranscriberRef.current || isRealtimeTranscriberStarting) return
+
+    let cancelled = false
+    setIsRealtimeTranscriberStarting(true)
+    setLiveTranscriptError(null)
+
+    void startRealtimeTranscriber({
+      languageCode: 'nl',
+      onFinalSegment: (segment) => {
+        if (cancelled) return
+        const line = `${segment.speaker}: ${segment.text}`.trim()
+        if (!line) return
+        setLiveTranscriptText((prev) => (prev ? `${prev}\n${line}` : line))
+      },
+      onError: (message) => {
+        if (cancelled) return
+        setLiveTranscriptError(message)
+      },
+    })
+      .then((session) => {
+        if (cancelled) {
+          void session.stop()
+          return
+        }
+        liveTranscriberRef.current = session
+      })
+      .catch((error) => {
+        if (cancelled) return
+        setLiveTranscriptError(error instanceof Error ? error.message : String(error || 'Realtime transcriptie is mislukt.'))
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsRealtimeTranscriberStarting(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+      void stopLiveTranscriber()
+    }
+  }, [isRealtimeModeActive, recorder.status, step, visible])
+
   function retryRecordingAfterError() {
     recorder.reset()
+    if (isRealtimeModeActive) {
+      realtimeOperationIdRef.current = createOperationId()
+      setLiveTranscriptText('')
+      setLiveTranscriptError(null)
+    }
     hasAutoStartedRecordingRef.current = true
     hasAutoSubmittedRecordingRef.current = false
     recorder.start()
@@ -1216,6 +1354,23 @@ export function NewSessionModal({
               <Text isSemibold style={styles.timerText}>
                 {formatTimeLabel(displayedRecordingElapsedSeconds)}
               </Text>
+
+              {isRealtimeModeActive ? (
+                <View style={styles.realtimeStatusCard}>
+                  <Text isSemibold style={styles.realtimeStatusTitle}>
+                    Realtime transcriptie met sprekers
+                  </Text>
+                  <Text style={styles.realtimeStatusText}>
+                    {isRealtimeTranscriberStarting
+                      ? 'Verbinden met Azure Speech...'
+                      : liveTranscriptError
+                        ? liveTranscriptError
+                        : liveTranscriptText
+                          ? liveTranscriptText.split('\n').slice(-3).join('\n')
+                          : 'Luistert naar de opname...'}
+                  </Text>
+                </View>
+              ) : null}
 
               {/* Recording controls */}
               <View style={styles.recordingControls}>
@@ -2103,6 +2258,27 @@ const styles = StyleSheet.create({
   timerText: {
     fontSize: 44,
     lineHeight: 48,
+    color: colors.textStrong,
+  },
+  realtimeStatusCard: {
+    width: '100%',
+    maxWidth: 760,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  realtimeStatusTitle: {
+    fontSize: 13,
+    lineHeight: 17,
+    color: colors.textSecondary,
+  },
+  realtimeStatusText: {
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.textStrong,
   },
   recordingControls: {

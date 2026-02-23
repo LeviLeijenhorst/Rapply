@@ -1,5 +1,6 @@
 import { execute } from "../../db"
 import { env } from "../../env"
+import { readTranscriptionMode } from "../../transcription/mode"
 import { runAzureSpeechTranscriptionFromEncryptedUpload } from "../../transcription/azureSpeechTranscription"
 import { computeAudioDurationSecondsFromEncryptedUpload } from "../../transcription/duration"
 import { fetchEncryptedUploadStream } from "../../transcription/storage"
@@ -10,19 +11,30 @@ const AZURE_SPEECH_MAX_AUDIO_DURATION_SECONDS = 120 * 60
 
 // Chooses the configured transcription provider based on available secrets.
 export function resolveTranscriptionProvider(): TranscriptionProvider {
-  if (env.azureSpeechKey && env.azureSpeechRegion) return "azure-speech"
+  if (!(env.azureSpeechKey && env.azureSpeechRegion)) return "none"
+  return "azure-speech-fast"
+}
+
+// Chooses the configured provider while honoring runtime mode from admin settings.
+export async function resolveTranscriptionProviderWithRuntimeMode(): Promise<TranscriptionProvider> {
+  if (!(env.azureSpeechKey && env.azureSpeechRegion)) return "none"
+  const mode = await readTranscriptionMode()
+  if (mode === "azure-realtime-live") return "azure-speech-realtime"
+  if (mode === "azure-fast-batch") return "azure-speech-fast"
   return "none"
 }
 
 // Returns the max source-audio size in bytes for the selected provider.
 export function getProviderMaxAudioBytes(provider: TranscriptionProvider): number | null {
-  if (provider === "azure-speech") return AZURE_SPEECH_MAX_AUDIO_BYTES
+  if (provider === "azure-speech-fast") return AZURE_SPEECH_MAX_AUDIO_BYTES
+  if (provider === "azure-speech-realtime") return AZURE_SPEECH_MAX_AUDIO_BYTES
   return null
 }
 
 // Returns the max source-audio duration in seconds for the selected provider.
 export function getProviderMaxAudioDurationSeconds(provider: TranscriptionProvider): number | null {
-  if (provider === "azure-speech") return AZURE_SPEECH_MAX_AUDIO_DURATION_SECONDS
+  if (provider === "azure-speech-fast") return AZURE_SPEECH_MAX_AUDIO_DURATION_SECONDS
+  if (provider === "azure-speech-realtime") return AZURE_SPEECH_MAX_AUDIO_DURATION_SECONDS
   return null
 }
 
@@ -77,7 +89,7 @@ export async function runTranscription(params: {
   languageCode: string
 }): Promise<string> {
   const transcriptionStream = await fetchEncryptedUploadStream({ blobName: params.uploadPath })
-  if (params.provider === "azure-speech") {
+  if (params.provider === "azure-speech-fast" || params.provider === "azure-speech-realtime") {
     return await runAzureSpeechTranscriptionFromEncryptedUpload({
       encryptedStream: transcriptionStream,
       keyBase64: params.keyBase64,

@@ -1,4 +1,5 @@
 import { createAudioBlobRemote } from '../services/audioBlobs'
+import { chargeRealtimeTranscription } from '../services/realtimeTranscription'
 import { isTranscriptionCancelledError, transcribeAudio } from '../services/transcription'
 import { generateSummary } from '../services/summary'
 import {
@@ -39,6 +40,11 @@ export async function processSessionAudio(params: {
   audioBlob: Blob
   mimeType: string
   shouldSaveAudio?: boolean
+  transcriptOverride?: string | null
+  realtimeCharge?: {
+    operationId: string
+    durationSeconds: number
+  } | null
   summaryTemplate?: {
     name: string
     sections: { title: string; description: string }[]
@@ -47,7 +53,18 @@ export async function processSessionAudio(params: {
   e2ee: E2eeAudio
   updateSession: (sessionId: string, values: SessionUpdate) => void
 }): Promise<void> {
-  const { sessionId, audioBlob, mimeType, shouldSaveAudio = true, summaryTemplate, initialAudioBlobId, e2ee, updateSession } = params
+  const {
+    sessionId,
+    audioBlob,
+    mimeType,
+    shouldSaveAudio = true,
+    transcriptOverride,
+    realtimeCharge,
+    summaryTemplate,
+    initialAudioBlobId,
+    e2ee,
+    updateSession,
+  } = params
 
   if (activeProcessingSessionIds.has(sessionId)) {
     return
@@ -87,6 +104,40 @@ export async function processSessionAudio(params: {
       transcriptionStatus: 'transcribing',
       transcriptionError: null,
     })
+
+    const presetTranscript = String(transcriptOverride || '').trim()
+    if (presetTranscript) {
+      if (realtimeCharge?.operationId && Number.isFinite(realtimeCharge.durationSeconds) && realtimeCharge.durationSeconds > 0) {
+        await chargeRealtimeTranscription({
+          operationId: realtimeCharge.operationId,
+          durationSeconds: realtimeCharge.durationSeconds,
+        })
+      }
+
+      const summaryAbortController = new AbortController()
+      setSummaryAbortController(sessionId, runId, summaryAbortController)
+      updateSession(sessionId, {
+        transcript: presetTranscript,
+        transcriptionStatus: 'generating',
+        transcriptionError: null,
+      })
+      hasTranscriptResult = true
+      const generatedSummary = await generateSummary({
+        transcript: presetTranscript,
+        template: summaryTemplate,
+        signal: summaryAbortController.signal,
+      })
+      if (!isTranscriptionRunActive(sessionId, runId)) return
+      updateSession(sessionId, {
+        summary: generatedSummary,
+        transcriptionStatus: 'done',
+        transcriptionError: null,
+      })
+      await markPendingPreviewTranscriptionSucceeded(sessionId)
+      await clearPendingPreviewAudioIfEligible(sessionId)
+      finishTranscriptionRun(sessionId, runId)
+      return
+    }
 
     const transcriptionAbortController = new AbortController()
     setTranscriptionAbortController(sessionId, runId, transcriptionAbortController)

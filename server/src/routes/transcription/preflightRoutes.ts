@@ -10,7 +10,7 @@ import { createEncryptedUploadUrl } from "../../transcription/storage"
 import { createUploadToken } from "../../transcription/store"
 import { transcriptionUploadExpirationSeconds } from "../../transcription/uploadExpiration"
 import { applyEmailBillingOverrides } from "../billingOverrides"
-import { getProviderMaxAudioBytes, getProviderMaxAudioDurationSeconds, resolveTranscriptionProvider } from "./helpers"
+import { getProviderMaxAudioBytes, getProviderMaxAudioDurationSeconds, resolveTranscriptionProviderWithRuntimeMode } from "./helpers"
 import type { RegisterTranscriptionRoutesParams } from "./types"
 
 // Registers transcription preflight endpoint.
@@ -42,7 +42,7 @@ export function registerTranscriptionPreflightRoutes(app: Express, params: Regis
         freeSecondsOverride,
       })
       const status = applyEmailBillingOverrides(statusRaw, user.email)
-      const transcriptionProvider = resolveTranscriptionProvider()
+      const transcriptionProvider = await resolveTranscriptionProviderWithRuntimeMode()
       const requiresWav = false
       const maxAudioBytes = getProviderMaxAudioBytes(transcriptionProvider)
       const maxAudioDurationSeconds = getProviderMaxAudioDurationSeconds(transcriptionProvider)

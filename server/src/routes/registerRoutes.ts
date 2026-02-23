@@ -2,6 +2,7 @@ import type { Express, RequestHandler } from "express"
 import { authImplementationVersion } from "../auth"
 import { env } from "../env"
 import { registerAiRoutes } from "./aiRoutes"
+import { registerAdminTranscriptionRoutes } from "./adminTranscriptionRoutes"
 import { registerAppDataRoutes } from "./appDataRoutes"
 import { registerAuthRoutes } from "./authRoutes"
 import { registerBillingRoutes } from "./billingRoutes"
@@ -61,6 +62,7 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
   registerAppDataRoutes(app)
   registerAiRoutes(app, { rateLimitAi: params.rateLimitAi })
   registerFeedbackRoutes(app, { rateLimitAccount: params.rateLimitAccount })
+  registerAdminTranscriptionRoutes(app, { rateLimitAccount: params.rateLimitAccount })
   registerBillingRoutes(app, { rateLimitBilling: params.rateLimitBilling })
   registerTranscriptionRoutes(app, { rateLimitTranscription: params.rateLimitTranscription })
 }

@@ -4,7 +4,7 @@ export type RegisterTranscriptionRoutesParams = {
   rateLimitTranscription: RequestHandler
 }
 
-export type TranscriptionProvider = "azure-speech" | "none"
+export type TranscriptionProvider = "azure-speech-fast" | "azure-speech-realtime" | "none"
 
 export type StartRequest = {
   operationId: string
