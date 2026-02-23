@@ -1355,23 +1355,6 @@ export function NewSessionModal({
                 {formatTimeLabel(displayedRecordingElapsedSeconds)}
               </Text>
 
-              {isRealtimeModeActive ? (
-                <View style={styles.realtimeStatusCard}>
-                  <Text isSemibold style={styles.realtimeStatusTitle}>
-                    Realtime transcriptie met sprekers
-                  </Text>
-                  <Text style={styles.realtimeStatusText}>
-                    {isRealtimeTranscriberStarting
-                      ? 'Verbinden met Azure Speech...'
-                      : liveTranscriptError
-                        ? liveTranscriptError
-                        : liveTranscriptText
-                          ? liveTranscriptText.split('\n').slice(-3).join('\n')
-                          : 'Luistert naar de opname...'}
-                  </Text>
-                </View>
-              ) : null}
-
               {/* Recording controls */}
               <View style={styles.recordingControls}>
                 <Pressable
@@ -2258,27 +2241,6 @@ const styles = StyleSheet.create({
   timerText: {
     fontSize: 44,
     lineHeight: 48,
-    color: colors.textStrong,
-  },
-  realtimeStatusCard: {
-    width: '100%',
-    maxWidth: 760,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 6,
-  },
-  realtimeStatusTitle: {
-    fontSize: 13,
-    lineHeight: 17,
-    color: colors.textSecondary,
-  },
-  realtimeStatusText: {
-    fontSize: 14,
-    lineHeight: 20,
     color: colors.textStrong,
   },
   recordingControls: {
