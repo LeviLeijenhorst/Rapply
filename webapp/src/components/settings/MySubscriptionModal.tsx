@@ -7,6 +7,11 @@ import { Text } from '../Text'
 import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
 import { MijnAbonnementIcon } from '../icons/MijnAbonnementIcon'
 import { HoursPerMonthIcon } from '../icons/HoursPerMonthIcon'
+import { VerslagGenererenIcon } from '../icons/VerslagGenererenIcon'
+import { CalendarCircleIcon } from '../icons/CalendarCircleIcon'
+import { StandaardVerslagIcon } from '../icons/StandaardVerslagIcon'
+import { CoacheesIcon } from '../icons/CoacheesIcon'
+import { SecuritySafeIcon } from '../icons/SecuritySafeIcon'
 import { callSecureApi } from '../../services/secureApi'
 import { AppButton } from '../AppButton'
 import { cancelMollieSubscription, createMollieCheckout } from '../../services/billing'
@@ -37,12 +42,9 @@ function formatEuroPrice(value: number): string {
   return new Intl.NumberFormat('nl-NL', {
     style: 'currency',
     currency: 'EUR',
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value)
-}
-
-function getReportsFromMinutes(minutesPerMonth: number): number {
-  return Math.max(0, Math.floor(minutesPerMonth / 60))
 }
 
 export function MySubscriptionModal({ visible, onClose }: Props) {
@@ -107,15 +109,8 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
     }
   }, [visible])
 
-  const plans = useMemo(
-    () =>
-      pricingPlans.map((plan) => ({
-        ...plan,
-        reportsPerMonth: getReportsFromMinutes(plan.minutesPerMonth),
-      })),
-    [pricingPlans],
-  )
-  const selectedPlan = useMemo(() => plans.find((plan) => plan.id === selectedPlanId) ?? null, [plans, selectedPlanId])
+  const plans = useMemo(() => pricingPlans, [pricingPlans])
+  const primaryPlan = plans[0] ?? null
 
   const handleSelectPlan = async (planId: string) => {
     try {
@@ -179,7 +174,7 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
           </View>
         ) : !canSeePricingPage ? (
           <Text style={styles.infoText}>Prijsinformatie is voor dit account niet zichtbaar.</Text>
-        ) : plans.length === 0 ? (
+        ) : !primaryPlan ? (
           <Text style={styles.infoText}>Er zijn nog geen abonnementen beschikbaar.</Text>
         ) : (
           <>
@@ -200,7 +195,7 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                     isDisabled={isCancelBusy}
                   />
                   <AppButton
-                    label={isCancelBusy ? '' : 'Opzeggen'}
+                    label="Opzeggen"
                     leading={isCancelBusy ? <ActivityIndicator size="small" color="#FFFFFF" /> : undefined}
                     onPress={() => {
                       if (isCancelBusy) return
@@ -214,56 +209,71 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
             ) : (
               <>
                 <View style={styles.plansRow}>
-                  {plans.map((plan) => (
-                    <View key={plan.id} style={[styles.planCard, selectedPlanId === plan.id ? styles.planCardSelected : undefined]}>
-                      <Text isSemibold style={styles.planTitle}>{plan.name}</Text>
-                      <View style={styles.priceRow}>
-                        <Text isBold style={styles.priceText}>{formatEuroPrice(plan.monthlyPrice)}</Text>
-                        <Text style={styles.priceSuffix}>/maand</Text>
-                      </View>
-                      <View style={styles.featuresColumn}>
-                        <View style={styles.featureRow}>
-                          <HoursPerMonthIcon size={24} />
-                          <Text style={styles.featureText}>{plan.reportsPerMonth} gespreksverslagen</Text>
-                        </View>
-                        <View style={styles.featureRow}>
-                          <HoursPerMonthIcon size={24} />
-                          <Text style={styles.featureText}>{plan.minutesPerMonth} minuten per maand</Text>
-                        </View>
-                      </View>
-                      <AppButton
-                        label={
-                          checkoutLoadingPlanId === plan.id
-                            ? ''
-                            : selectedPlanId === plan.id
-                            ? 'Huidig abonnement'
-                            : selectedPlan && plan.monthlyPrice < selectedPlan.monthlyPrice
-                              ? 'Downgraden'
-                              : 'Upgraden'
-                        }
-                        leading={checkoutLoadingPlanId === plan.id ? <ActivityIndicator size="small" color="#FFFFFF" /> : undefined}
-                        onPress={() => {
-                          if (selectedPlanId === plan.id || checkoutLoadingPlanId) return
-                          void handleSelectPlan(plan.id)
-                        }}
-                        variant={selectedPlanId === plan.id ? 'neutral' : 'filled'}
-                        isDisabled={selectedPlanId === plan.id || !!checkoutLoadingPlanId}
-                      />
+                  <View style={styles.planInfoCard}>
+                    <Text isSemibold style={styles.planInfoTitle}>Voor professionals die hun rapportages serieus nemen</Text>
+                    <Text style={styles.planInfoText}>Als loopbaan- of re-integratieprofessional besteed je wekelijks uren aan verslaglegging. Niet omdat het bijzaak is, maar omdat goede rapportages bepalend zijn voor je trajecten.</Text>
+                    <Text style={styles.planInfoText}>CoachScribe zet je gesprekken veilig om in heldere, professioneel opgebouwde rapportages. In een fractie van de tijd.</Text>
+                    <Text style={styles.planInfoText}>Zo lever je consistente kwaliteit, werk je gestructureerd en houd je tijd over voor het echte werk.</Text>
+                    <Text style={styles.planInfoText}>Heb je nog vragen? Stuur ons dan een mailtje op contact@coachscribe.nl.</Text>
+                  </View>
+                  <View style={[styles.planCard, styles.planCardWide, selectedPlanId === primaryPlan.id ? styles.planCardSelected : undefined]}>
+                    <Text isSemibold style={styles.planTitle}>{primaryPlan.name}</Text>
+                    <View style={styles.priceRow}>
+                      <Text isBold style={styles.priceText}>{formatEuroPrice(primaryPlan.monthlyPrice)}</Text>
+                      <Text style={styles.priceSuffix}>/maand</Text>
                     </View>
-                  ))}
+                    <View style={styles.featuresColumn}>
+                      <View style={styles.featureRow}>
+                        <VerslagGenererenIcon size={22} color={colors.selected} />
+                        <Text style={styles.featureText}>20 gespreksverslagen</Text>
+                      </View>
+                      <View style={styles.featureRow}>
+                        <HoursPerMonthIcon size={24} />
+                        <Text style={styles.featureText}>1200 transcriptieminuten per maand</Text>
+                      </View>
+                      <View style={styles.featureRow}>
+                        <CalendarCircleIcon size={24} color={colors.selected} />
+                        <Text style={styles.featureText}>± 6–10 uur tijdsbesparing per maand</Text>
+                      </View>
+                      <View style={styles.featureRow}>
+                        <StandaardVerslagIcon color={colors.selected} size={20} />
+                        <Text style={styles.featureText}>Automatisch opgebouwde, consistente rapportages</Text>
+                      </View>
+                      <View style={styles.featureRow}>
+                        <SecuritySafeIcon color={colors.selected} size={22} />
+                        <Text style={styles.featureText}>Veilige opslag binnen de EU</Text>
+                      </View>
+                      <View style={styles.featureRow}>
+                        <CoacheesIcon color={colors.selected} size={22} />
+                        <Text style={styles.featureText}>Per cliënt één overzicht met audio, transcript en rapport</Text>
+                      </View>
+                    </View>
+                    <AppButton
+                      label={checkoutLoadingPlanId === primaryPlan.id ? '' : selectedPlanId === primaryPlan.id ? 'geabonneerd' : 'Abonneren'}
+                      leading={checkoutLoadingPlanId === primaryPlan.id ? <ActivityIndicator size="small" color="#FFFFFF" /> : undefined}
+                      onPress={() => {
+                        if (selectedPlanId === primaryPlan.id || checkoutLoadingPlanId) return
+                        void handleSelectPlan(primaryPlan.id)
+                      }}
+                      variant={selectedPlanId === primaryPlan.id ? 'neutral' : 'filled'}
+                      isDisabled={selectedPlanId === primaryPlan.id || !!checkoutLoadingPlanId}
+                    />
+                  </View>
                 </View>
               </>
             )}
-            <View style={styles.footerRow}>
-              <Text style={styles.footnoteText}>Gespreksverslagen worden berekend op basis van 60 minuten per gesprek.</Text>
-              {!isCancelViewOpen ? (
+            {!isCancelViewOpen ? (
+              <View style={styles.footerRow}>
+                <Text style={styles.footnoteText}>Gespreksverslagen worden berekend op basis van 60 minuten per gesprek.</Text>
+                {!selectedPlanId ? (
                 <Pressable onPress={() => setIsCancelViewOpen(true)} style={({ hovered }) => [styles.cancelLinkWrap, hovered ? styles.cancelLinkWrapHovered : undefined]}>
                   <Text style={styles.cancelLinkText}>opzeggen</Text>
                 </Pressable>
-              ) : (
-                <View />
-              )}
-            </View>
+                ) : (
+                  <View />
+                )}
+              </View>
+            ) : null}
           </>
         )}
       </View>
@@ -343,6 +353,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
     flex: 1,
+    alignItems: 'stretch',
+  },
+  planInfoCard: {
+    flex: 1,
+    borderRadius: 16,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 24,
+    gap: 10,
+  },
+  planInfoTitle: {
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.textStrong,
+  },
+  planInfoText: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.textStrong,
   },
   planCard: {
     flex: 1,
@@ -352,6 +382,11 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: 24,
     gap: 16,
+  },
+  planCardWide: {
+    flex: 2,
+    alignSelf: 'stretch',
+    marginLeft: 'auto',
   },
   planCardSelected: {
     borderColor: colors.selected,

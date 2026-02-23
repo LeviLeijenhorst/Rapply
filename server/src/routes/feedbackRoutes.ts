@@ -1,6 +1,8 @@
 import crypto from "crypto"
 import type { Express, RequestHandler } from "express"
 import { requireAuthenticatedUser } from "../auth"
+import { readManualPricingContextForUser } from "../billing/manualPricing"
+import { buildCycleKey } from "../billing/cycleMath"
 import { cancelMollieSubscriptionForUser, isMollieConfigured, syncMollieSubscriptionForUser, syncRecentMolliePaymentsForUser } from "../billing/mollie"
 import { ensureBillingUser, readBillingStatus } from "../billing/store"
 import { isAdminEmail, normalizeEmail } from "../admin"
@@ -23,10 +25,9 @@ let ensureManualPricingSchemaPromise: Promise<void> | null = null
 let ensureManagedPlansPromise: Promise<void> | null = null
 
 const managedPlanDefaults: Array<{ name: string; monthlyPrice: number; minutesPerMonth: number; description: string | null }> = [
-  { name: "Plan 1", monthlyPrice: 0, minutesPerMonth: 1200, description: null },
-  { name: "Plan 2", monthlyPrice: 0, minutesPerMonth: 3000, description: null },
-  { name: "Plan 3", monthlyPrice: 0, minutesPerMonth: 6000, description: null },
+  { name: "Abonnement", monthlyPrice: 38.5, minutesPerMonth: 1200, description: null },
 ]
+const MANAGED_PLAN_COUNT = managedPlanDefaults.length
 
 async function ensureContactSubmissionsTable(): Promise<void> {
   if (!ensureContactSubmissionsTablePromise) {
@@ -252,19 +253,24 @@ async function ensureManagedPlans(): Promise<void> {
         `,
         [],
       )
-      const managedIds = rows.slice(0, 3).map((row) => row.id)
-      const extraIds = rows.slice(3).map((row) => row.id)
+      const managedIds = rows.slice(0, MANAGED_PLAN_COUNT).map((row) => row.id)
+      const extraIds = rows.slice(MANAGED_PLAN_COUNT).map((row) => row.id)
 
       for (let index = 0; index < managedIds.length; index += 1) {
+        const defaults = managedPlanDefaults[index]
         await execute(
           `
           update public.plans
           set display_order = $1,
+              name = $2,
+              description = $3,
+              monthly_price = $4,
+              minutes_per_month = $5,
               is_active = true,
               updated_at = now()
-          where id = $2
+          where id = $6
           `,
-          [index, managedIds[index]],
+          [index, defaults.name, defaults.description, defaults.monthlyPrice, defaults.minutesPerMonth, managedIds[index]],
         )
       }
 
@@ -664,7 +670,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
         select id, name, description, monthly_price, minutes_per_month, is_active, display_order
         from public.plans
         order by display_order asc, created_at asc
-        limit 3
+        limit ${MANAGED_PLAN_COUNT}
         `,
         [],
       )
@@ -722,12 +728,12 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
           select id
           from public.plans
           order by display_order asc, created_at asc
-          limit 3
+          limit ${MANAGED_PLAN_COUNT}
           `,
           [],
         )
         if (!managedPlanIds.some((row) => row.id === planIdRaw)) {
-          sendError(res, 400, "Only the 3 managed plans can be updated")
+          sendError(res, 400, `Only the ${MANAGED_PLAN_COUNT} managed plan(s) can be updated`)
           return
         }
 
@@ -751,7 +757,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
           ],
         )
       } else {
-        sendError(res, 400, "Creating additional plans is disabled. Exactly 3 managed plans are supported.")
+        sendError(res, 400, `Creating additional plans is disabled. Exactly ${MANAGED_PLAN_COUNT} managed plan(s) are supported.`)
         return
       }
 
@@ -770,7 +776,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
         sendError(res, 403, "Forbidden")
         return
       }
-      sendError(res, 400, "Plan reorder is disabled. Use the 3 managed plans.")
+      sendError(res, 400, `Plan reorder is disabled. Use the ${MANAGED_PLAN_COUNT} managed plan(s).`)
     }),
   )
 
@@ -785,7 +791,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
         sendError(res, 403, "Forbidden")
         return
       }
-      sendError(res, 400, "Plan activation is disabled. The 3 managed plans are always active.")
+      sendError(res, 400, `Plan activation is disabled. The ${MANAGED_PLAN_COUNT} managed plan(s) are always active.`)
     }),
   )
 
@@ -977,7 +983,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
           from public.plans
           where id = $1
           order by display_order asc, created_at asc
-          limit 3
+          limit ${MANAGED_PLAN_COUNT}
           `,
           [planId],
         )
@@ -1048,7 +1054,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
         select id, name, description, monthly_price, minutes_per_month, display_order
         from public.plans
         order by display_order asc, created_at asc
-        limit 3
+        limit ${MANAGED_PLAN_COUNT}
         `,
         [],
       )
@@ -1365,14 +1371,26 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
       }
 
       await ensureBillingUser(resolvedUser.id)
+      const manualPricing = await readManualPricingContextForUser(resolvedUser.id)
+      const cycleKey = buildCycleKey(manualPricing.cycleStartMs, manualPricing.cycleEndMs)
+      if (!cycleKey) {
+        sendError(res, 400, "Cannot determine current billing cycle")
+        return
+      }
+
       await execute(
         `
         update public.billing_users
-        set admin_granted_seconds = admin_granted_seconds + $1,
+        set cycle_granted_seconds_by_key = jsonb_set(
+              coalesce(cycle_granted_seconds_by_key, '{}'::jsonb),
+              array[$2::text],
+              to_jsonb(coalesce((coalesce(cycle_granted_seconds_by_key, '{}'::jsonb)->>$2)::integer, 0) + $1),
+              true
+            ),
             updated_at = now()
-        where user_id = $2
+        where user_id = $3
         `,
-        [grantedSeconds, resolvedUser.id],
+        [grantedSeconds, cycleKey, resolvedUser.id],
       )
       await execute(
         `
@@ -1391,8 +1409,10 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
       const billingStatus = await readBillingStatus({
         userId: resolvedUser.id,
         planKey: null,
-        cycleStartMs: null,
-        cycleEndMs: null,
+        cycleStartMs: manualPricing.cycleStartMs,
+        cycleEndMs: manualPricing.cycleEndMs,
+        includedSecondsOverride: manualPricing.includedSecondsPerCycle,
+        freeSecondsOverride: manualPricing.includedSecondsPerCycle > 0 || manualPricing.planId != null ? 0 : null,
       })
 
       res.status(200).json({

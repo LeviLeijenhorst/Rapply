@@ -1,11 +1,14 @@
 import { callSecureApi } from './secureApi'
 
 const TRANSCRIPTION_PREFLIGHT_TIMEOUT_MS = 30_000
-const TRANSCRIPTION_UPLOAD_TIMEOUT_MS = 45 * 60_000
-const TRANSCRIPTION_START_TIMEOUT_MS = 3 * 60 * 60_000
-const TRANSCRIPTION_OPERATION_TIMEOUT_MS = 4 * 60 * 60_000
+const TRANSCRIPTION_UPLOAD_BLOCK_TIMEOUT_MS = 10 * 60_000
+const TRANSCRIPTION_UPLOAD_COMMIT_TIMEOUT_MS = 10 * 60_000
+const TRANSCRIPTION_START_TIMEOUT_MS = 6 * 60 * 60_000
+const TRANSCRIPTION_OPERATION_TIMEOUT_MS = 8 * 60 * 60_000
 const TRANSCRIPTION_PREFLIGHT_MAX_RETRIES = 2
-const TRANSCRIPTION_UPLOAD_MAX_RETRIES = 2
+const TRANSCRIPTION_UPLOAD_MAX_RETRIES = 4
+const TRANSCRIPTION_UPLOAD_WHOLE_RETRIES = 1
+const TRANSCRIPTION_UPLOAD_CHUNK_BYTES = 4 * 1024 * 1024
 const AZURE_WAV_TARGET_SAMPLE_RATE = 16_000
 const ABORTED_REQUEST_ERROR = 'Request aborted'
 
@@ -56,6 +59,8 @@ function shouldRetryTranscriptionRequest(error: unknown): boolean {
     message.includes('failed to fetch') ||
     message.includes('network') ||
     message.includes('upload failed: 5') ||
+    message.includes('upload block failed: 5') ||
+    message.includes('upload commit failed: 5') ||
     message.includes('api error: 5') ||
     message.includes('api error: 429') ||
     message.includes(' api error: 408') ||
@@ -63,6 +68,23 @@ function shouldRetryTranscriptionRequest(error: unknown): boolean {
     message.includes('temporarily unavailable') ||
     message.includes('timeout')
   )
+}
+
+function buildAzureBlobUrlWithParams(baseUrl: string, params: Record<string, string>): string {
+  const url = new URL(baseUrl)
+  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value))
+  return url.toString()
+}
+
+function toAzureBlockId(blockIndex: number): string {
+  const plain = `block-${String(blockIndex).padStart(8, '0')}`
+  return btoa(plain)
+}
+
+function buildAzureBlockListXml(blockIds: string[]): string {
+  const escapedBlockIds = blockIds.map((id) => id.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'))
+  const lines = escapedBlockIds.map((id) => `<Latest>${id}</Latest>`).join('')
+  return `<?xml version="1.0" encoding="utf-8"?><BlockList>${lines}</BlockList>`
 }
 
 async function sleepWithAbort(ms: number, signal?: AbortSignal): Promise<void> {
@@ -127,6 +149,83 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, tim
     if (init.signal) {
       init.signal.removeEventListener('abort', onExternalAbort)
     }
+  }
+}
+
+async function uploadEncryptedBlobInBlocks(params: {
+  uploadUrl: string
+  encryptedBlob: Blob
+  signal?: AbortSignal
+}): Promise<void> {
+  const { uploadUrl, encryptedBlob, signal } = params
+  const totalBytes = encryptedBlob.size
+  if (totalBytes <= 0) {
+    throw new Error('Upload failed: encrypted audio is empty')
+  }
+
+  const chunkBytes = Math.max(256 * 1024, TRANSCRIPTION_UPLOAD_CHUNK_BYTES)
+  const blockCount = Math.max(1, Math.ceil(totalBytes / chunkBytes))
+  const blockIds: string[] = []
+
+  for (let blockIndex = 0; blockIndex < blockCount; blockIndex += 1) {
+    const blockId = toAzureBlockId(blockIndex)
+    blockIds.push(blockId)
+    const start = blockIndex * chunkBytes
+    const end = Math.min(totalBytes, start + chunkBytes)
+    const chunk = encryptedBlob.slice(start, end)
+    const blockUrl = buildAzureBlobUrlWithParams(uploadUrl, { comp: 'block', blockid: blockId })
+
+    let uploaded = false
+    for (let attempt = 0; attempt <= TRANSCRIPTION_UPLOAD_MAX_RETRIES; attempt += 1) {
+      try {
+        const response = await fetchWithTimeout(
+          blockUrl,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/octet-stream',
+            },
+            body: chunk,
+            signal,
+          },
+          TRANSCRIPTION_UPLOAD_BLOCK_TIMEOUT_MS,
+        )
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => '')
+          throw new Error(`Upload block failed: ${response.status} ${errorText}`)
+        }
+        uploaded = true
+        break
+      } catch (error) {
+        if (isRequestAbortedError(error) || signal?.aborted) throw error
+        if (attempt >= TRANSCRIPTION_UPLOAD_MAX_RETRIES || !shouldRetryTranscriptionRequest(error)) throw error
+        await sleepWithAbort(400 * (attempt + 1), signal)
+      }
+    }
+
+    if (!uploaded) {
+      throw new Error(`Upload block failed at index ${blockIndex}`)
+    }
+  }
+
+  const blockListUrl = buildAzureBlobUrlWithParams(uploadUrl, { comp: 'blocklist' })
+  const blockListXml = buildAzureBlockListXml(blockIds)
+  const commitResponse = await fetchWithTimeout(
+    blockListUrl,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/xml; charset=utf-8',
+      },
+      body: blockListXml,
+      signal,
+    },
+    TRANSCRIPTION_UPLOAD_COMMIT_TIMEOUT_MS,
+  )
+
+  if (!commitResponse.ok) {
+    const errorText = await commitResponse.text().catch(() => '')
+    throw new Error(`Upload commit failed: ${commitResponse.status} ${errorText}`)
   }
 }
 
@@ -428,29 +527,21 @@ export async function transcribeAudio(params: {
         const operationId = String(preflight.operationId || '').trim()
         const uploadToken = String(preflight.uploadToken || '').trim()
         const uploadUrl = String(preflight.uploadUrl || '').trim()
-        const uploadHeaders = preflight.uploadHeaders || {}
-
         if (!operationId || !uploadToken || !uploadUrl) {
           throw new Error('Transcription preflight failed')
         }
         progress?.onOperationPrepared?.(operationId)
 
-        let uploadResponse: Response | null = null
-        for (let attempt = 0; attempt <= TRANSCRIPTION_UPLOAD_MAX_RETRIES; attempt += 1) {
+        const uploadStartedAt = Date.now()
+        let uploadCompleted = false
+        for (let attempt = 0; attempt <= TRANSCRIPTION_UPLOAD_WHOLE_RETRIES; attempt += 1) {
           try {
-            uploadResponse = await fetchWithTimeout(
+            await uploadEncryptedBlobInBlocks({
               uploadUrl,
-              {
-                method: 'PUT',
-                headers: {
-                  ...uploadHeaders,
-                  'Content-Type': 'application/octet-stream',
-                },
-                body: encryptedBlob,
-                signal,
-              },
-              TRANSCRIPTION_UPLOAD_TIMEOUT_MS,
-            )
+              encryptedBlob,
+              signal,
+            })
+            uploadCompleted = true
             break
           } catch (error) {
             if (isRequestAbortedError(error) || signal?.aborted) throw error
@@ -458,16 +549,10 @@ export async function transcribeAudio(params: {
             await sleepWithAbort(500 * (attempt + 1), signal)
           }
         }
-        if (!uploadResponse) {
+        if (!uploadCompleted) {
           throw new Error('Upload failed')
         }
-
-        console.log('[transcription] upload response', { status: uploadResponse.status })
-
-        if (!uploadResponse.ok) {
-          const errorText = await uploadResponse.text()
-          throw new Error(`Upload failed: ${uploadResponse.status} ${errorText}`)
-        }
+        console.log('[transcription] upload response', { status: 201, elapsedMs: Date.now() - uploadStartedAt, bytes: encryptedBlob.size })
 
         const result = (await callSecureApi(
           '/transcription/start',

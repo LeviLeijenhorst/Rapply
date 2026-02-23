@@ -24,7 +24,8 @@ export async function ensureBillingUsersCompatibility(): Promise<void> {
     ensureBillingUsersCompatibilityPromise = execute(
       `
       alter table public.billing_users
-      add column if not exists admin_granted_seconds integer not null default 0;
+      add column if not exists admin_granted_seconds integer not null default 0,
+      add column if not exists cycle_granted_seconds_by_key jsonb not null default '{}'::jsonb;
 
       do $$
       begin
@@ -88,9 +89,10 @@ export async function readBillingStatus(params: {
     admin_granted_seconds: number
     non_expiring_used_seconds: number
     cycle_used_seconds_by_key: any
+    cycle_granted_seconds_by_key: any
   }>(
     `
-    select purchased_seconds, admin_granted_seconds, non_expiring_used_seconds, cycle_used_seconds_by_key
+    select purchased_seconds, admin_granted_seconds, non_expiring_used_seconds, cycle_used_seconds_by_key, cycle_granted_seconds_by_key
     from public.billing_users
     where user_id = $1
     `,
@@ -101,12 +103,15 @@ export async function readBillingStatus(params: {
   const adminGrantedSeconds = clampNonNegative(row?.admin_granted_seconds ?? 0)
   const nonExpiringUsedSeconds = clampNonNegative(row?.non_expiring_used_seconds ?? 0)
   const cycleUsedSecondsByKey = (row?.cycle_used_seconds_by_key ?? {}) as Record<string, number>
+  const cycleGrantedSecondsByKey = (row?.cycle_granted_seconds_by_key ?? {}) as Record<string, number>
+  const cycleGrantedSeconds = cycleKey ? clampNonNegative(cycleGrantedSecondsByKey[cycleKey] ?? 0) : 0
   const cycleUsedSeconds = cycleKey ? clampNonNegative(cycleUsedSecondsByKey[cycleKey] ?? 0) : 0
 
   const nonExpiringTotalSeconds = effectiveFreeSeconds + purchasedSeconds + adminGrantedSeconds
   const nonExpiringRemainingSeconds = Math.max(0, nonExpiringTotalSeconds - nonExpiringUsedSeconds)
 
-  const cycleRemainingSeconds = Math.max(0, includedSeconds - cycleUsedSeconds)
+  const cycleIncludedSeconds = includedSeconds + cycleGrantedSeconds
+  const cycleRemainingSeconds = Math.max(0, cycleIncludedSeconds - cycleUsedSeconds)
   const remainingSeconds = cycleRemainingSeconds + nonExpiringRemainingSeconds
 
   return {
@@ -115,7 +120,7 @@ export async function readBillingStatus(params: {
     freeSeconds: effectiveFreeSeconds,
     purchasedSeconds,
     adminGrantedSeconds,
-    includedSeconds,
+    includedSeconds: cycleIncludedSeconds,
     cycleUsedSeconds,
     cycleRemainingSeconds,
     nonExpiringTotalSeconds,

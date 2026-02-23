@@ -1,1 +1,1 @@
-export const transcriptionUploadExpirationSeconds = 2 * 60 * 60
+export const transcriptionUploadExpirationSeconds = 8 * 60 * 60

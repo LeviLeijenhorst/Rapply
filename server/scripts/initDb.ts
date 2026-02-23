@@ -47,6 +47,7 @@ async function main() {
   const databaseUrl = requireString("DATABASE_URL")
   const databaseSsl = String(process.env.DATABASE_SSL || "").trim() === "1"
   const runtimeEnvironment = String(process.env.NODE_ENV || "").trim().toLowerCase()
+  const allowDbReset = String(process.env.ALLOW_DB_RESET || "").trim() === "1"
   const allowProductionReset = String(process.env.ALLOW_PRODUCTION_DB_RESET || "").trim() === "YES_I_UNDERSTAND"
   const allowNonLocalReset = String(process.env.ALLOW_NON_LOCAL_DB_RESET || "").trim() === "YES_I_UNDERSTAND"
   const databaseHost = readDatabaseHostOrEmpty(databaseUrl)
@@ -54,8 +55,11 @@ async function main() {
   if (runtimeEnvironment === "production" && !allowProductionReset) {
     throw new Error("Refusing to run init-db in production. Set ALLOW_PRODUCTION_DB_RESET=YES_I_UNDERSTAND to override.")
   }
-  if (!isLocalDatabaseHost(databaseHost) && !allowNonLocalReset) {
-    throw new Error(`Refusing to reset non-local database host: ${databaseHost || "unknown"}. Set ALLOW_NON_LOCAL_DB_RESET=YES_I_UNDERSTAND to override.`)
+  if (!isLocalDatabaseHost(databaseHost) && !allowDbReset && !allowNonLocalReset) {
+    throw new Error(
+      `Refusing to reset non-local database host: ${databaseHost || "unknown"}. ` +
+        "Set ALLOW_DB_RESET=1 to override.",
+    )
   }
 
   const pool = new Pool({

@@ -114,7 +114,7 @@ export async function chargeSecondsIdempotent(params: {
 
   const billingRow = await queryOne<any>(
     `
-    select purchased_seconds, admin_granted_seconds, non_expiring_used_seconds, cycle_used_seconds_by_key
+    select purchased_seconds, admin_granted_seconds, non_expiring_used_seconds, cycle_used_seconds_by_key, cycle_granted_seconds_by_key
     from public.billing_users
     where user_id = $1
     `,
@@ -125,9 +125,12 @@ export async function chargeSecondsIdempotent(params: {
   const adminGrantedSeconds = clampNonNegative(billingRow?.admin_granted_seconds ?? 0)
   const nonExpiringUsedSeconds = clampNonNegative(billingRow?.non_expiring_used_seconds ?? 0)
   const cycleUsedSecondsByKey = (billingRow?.cycle_used_seconds_by_key ?? {}) as Record<string, number>
+  const cycleGrantedSecondsByKey = (billingRow?.cycle_granted_seconds_by_key ?? {}) as Record<string, number>
+  const cycleGrantedSeconds = cycleKey ? clampNonNegative(cycleGrantedSecondsByKey[cycleKey] ?? 0) : 0
   const currentCycleUsedSeconds = cycleKey ? clampNonNegative(cycleUsedSecondsByKey[cycleKey] ?? 0) : 0
 
-  const cycleRemainingSeconds = cycleKey ? Math.max(0, includedSeconds - currentCycleUsedSeconds) : 0
+  const cycleIncludedSeconds = includedSeconds + cycleGrantedSeconds
+  const cycleRemainingSeconds = cycleKey ? Math.max(0, cycleIncludedSeconds - currentCycleUsedSeconds) : 0
   let nonExpiringTotalSeconds = effectiveFreeSeconds + purchasedSeconds + adminGrantedSeconds
   if (typeof nonExpiringTotalSecondsOverride === "number" && Number.isFinite(nonExpiringTotalSecondsOverride) && nonExpiringTotalSecondsOverride > 0) {
     nonExpiringTotalSeconds = Math.floor(nonExpiringTotalSecondsOverride)

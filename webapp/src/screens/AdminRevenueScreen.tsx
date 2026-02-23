@@ -419,7 +419,7 @@ export function AdminRevenueScreen() {
 
         <View style={styles.card}>
           <Text isSemibold style={styles.cardTitle}>Plannen</Text>
-          <Text style={styles.cardSubtitle}>Er zijn altijd precies 3 beheerde plannen. Je kunt alleen deze drie aanpassen.</Text>
+          <Text style={styles.cardSubtitle}>Er is 1 beheerd plan. Je kunt alleen dit plan aanpassen.</Text>
 
           {plans.map((plan) => (
             <View key={plan.id} style={styles.planRow}>
