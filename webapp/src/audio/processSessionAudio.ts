@@ -32,6 +32,7 @@ type E2eeAudio = {
 }
 
 const activeProcessingSessionIds = new Set<string>()
+const AUDIO_BLOB_SAVE_TIMEOUT_MS = 2 * 60 * 60_000
 
 export async function processSessionAudio(params: {
   sessionId: string
@@ -64,7 +65,11 @@ export async function processSessionAudio(params: {
 
       await setPendingPreviewProcessingState({ sessionId, processingState: 'uploading', errorMessage: null })
       const storageMimeType = e2ee.shouldStoreAudioAsOctetStream ? 'application/octet-stream' : mimeType
-      const createdAudio = await createAudioBlobRemote({ audioBlob: encryptedBlob, mimeType: storageMimeType })
+      const createdAudio = await createAudioBlobRemote({
+        audioBlob: encryptedBlob,
+        mimeType: storageMimeType,
+        timeoutMs: AUDIO_BLOB_SAVE_TIMEOUT_MS,
+      })
       const nextId = String(createdAudio.audioBlobId || '').trim()
       if (!nextId) {
         throw new Error('Geen audio id teruggekregen van de server.')

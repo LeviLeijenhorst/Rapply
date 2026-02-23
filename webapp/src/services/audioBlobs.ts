@@ -1,13 +1,23 @@
-﻿import { fetchSecureApi } from './secureApi'
+import { fetchSecureApi } from './secureApi'
 
-export async function createAudioBlobRemote(params: { audioBlob: Blob; mimeType: string }): Promise<{ audioBlobId: string }> {
-  const response = await fetchSecureApi('/audio-blobs', {
-    method: 'POST',
-    headers: {
-      'Content-Type': params.mimeType || 'application/octet-stream',
+export async function createAudioBlobRemote(params: {
+  audioBlob: Blob
+  mimeType: string
+  timeoutMs?: number
+  signal?: AbortSignal
+}): Promise<{ audioBlobId: string }> {
+  const response = await fetchSecureApi(
+    '/audio-blobs',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': params.mimeType || 'application/octet-stream',
+      },
+      body: params.audioBlob,
+      signal: params.signal,
     },
-    body: params.audioBlob,
-  })
+    { timeoutMs: params.timeoutMs, signal: params.signal },
+  )
 
   return response.json()
 }

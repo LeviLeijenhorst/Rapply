@@ -79,6 +79,14 @@ function normalizeLanguage(value: string) {
   return trimmed
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function shouldRetrySpeechStatus(status: number): boolean {
+  return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500
+}
+
 // Intent: requestFastTranscription
 async function requestFastTranscription(params: {
   region: string
@@ -96,25 +104,52 @@ async function requestFastTranscription(params: {
       enabled: true,
     },
   }
-  const formData = new FormData()
-  const audioBytes = new Uint8Array(params.audioBuffer)
-  const audioBlob = new Blob([audioBytes], { type: params.contentType })
-  formData.append("audio", audioBlob, guessUploadFileName(params.contentType))
-  formData.append("definition", JSON.stringify(definition))
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Ocp-Apim-Subscription-Key": params.key,
-    },
-    body: formData,
-  })
-  const responseText = await response.text().catch(() => "")
-  if (!response.ok) {
-    throw new Error(
-      `Azure Speech fast transcription failed: status=${response.status}; response=${responseText || response.statusText}`,
-    )
+  const maxAttempts = 4
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const formData = new FormData()
+      const audioBytes = new Uint8Array(params.audioBuffer)
+      const audioBlob = new Blob([audioBytes], { type: params.contentType })
+      formData.append("audio", audioBlob, guessUploadFileName(params.contentType))
+      formData.append("definition", JSON.stringify(definition))
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Ocp-Apim-Subscription-Key": params.key,
+        },
+        body: formData,
+      })
+      const responseText = await response.text().catch(() => "")
+      if (!response.ok) {
+        const message = `Azure Speech fast transcription failed: status=${response.status}; response=${responseText || response.statusText}`
+        if (attempt < maxAttempts && shouldRetrySpeechStatus(response.status)) {
+          await sleep(500 * attempt)
+          continue
+        }
+        throw new Error(message)
+      }
+      return responseText ? JSON.parse(responseText) : null
+    } catch (error: any) {
+      const message = String(error?.message || error)
+      const normalizedMessage = message.toLowerCase()
+      const isTransientNetwork =
+        normalizedMessage.includes("fetch") ||
+        normalizedMessage.includes("network") ||
+        normalizedMessage.includes("timeout") ||
+        normalizedMessage.includes("econnreset") ||
+        normalizedMessage.includes("etimedout")
+      if (attempt < maxAttempts && isTransientNetwork) {
+        await sleep(500 * attempt)
+        continue
+      }
+      lastError = error instanceof Error ? error : new Error(message)
+      break
+    }
   }
-  return responseText ? JSON.parse(responseText) : null
+
+  throw lastError || new Error("Azure Speech fast transcription failed")
 }
 
 // Intent: extractTranscript
