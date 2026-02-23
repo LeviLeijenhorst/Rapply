@@ -132,6 +132,7 @@ export function SessieDetailScreen({
   const [isNoMinutesModalVisible, setIsNoMinutesModalVisible] = useState(false)
   const [requiredTranscriptionSeconds, setRequiredTranscriptionSeconds] = useState(0)
   const [remainingTranscriptionSeconds, setRemainingTranscriptionSeconds] = useState(0)
+  const hasDownloadableAudio = hasSavedAudio || Boolean(pendingPreviewAudioUrl)
 
   const coacheeButtonRef = useRef<any>(null)
   const templates = data.templates ?? []
@@ -612,17 +613,30 @@ export function SessieDetailScreen({
   }
 
   async function handleDownloadSavedAudio() {
-    const audioId = String(session?.audioBlobId || '').trim()
-    if (!audioId) return
     if (isDownloadingAudio) return
     setIsDownloadingAudio(true)
     try {
-      const decryptedAudio = await loadDecryptedSessionAudio(audioId)
+      const audioId = String(session?.audioBlobId || '').trim()
+      let downloadableAudio: { audioBlob: Blob; mimeType: string } | null = null
+      if (audioId) {
+        try {
+          downloadableAudio = await loadDecryptedSessionAudio(audioId)
+        } catch (downloadError) {
+          console.warn('[SessieDetailScreen] Saved audio download failed, trying pending preview fallback', { sessionId, error: downloadError })
+        }
+      }
+      if (!downloadableAudio) {
+        const pendingPreview = await getPendingPreviewAudioForTranscription(sessionId)
+        if (pendingPreview) {
+          downloadableAudio = { audioBlob: pendingPreview.blob, mimeType: pendingPreview.mimeType }
+        }
+      }
+      if (!downloadableAudio) return
       if (typeof window === 'undefined') return
-      const objectUrl = URL.createObjectURL(decryptedAudio.audioBlob)
+      const objectUrl = URL.createObjectURL(downloadableAudio.audioBlob)
       const anchor = document.createElement('a')
       anchor.href = objectUrl
-      anchor.download = buildSavedAudioDownloadFileName(decryptedAudio.mimeType)
+      anchor.download = buildSavedAudioDownloadFileName(downloadableAudio.mimeType)
       document.body.appendChild(anchor)
       anchor.click()
       document.body.removeChild(anchor)
@@ -937,7 +951,7 @@ export function SessieDetailScreen({
                       void handleDeleteSavedAudio()
                     }}
                     isDownloadAudioBusy={isDownloadingAudio}
-                    isDownloadAudioDisabled={!hasSavedAudio}
+                    isDownloadAudioDisabled={!hasDownloadableAudio}
                     isDeleteAudioBusy={isDeletingAudio}
                     isDeleteAudioDisabled={!hasSavedAudio || effectiveTranscriptionStatus === 'transcribing' || effectiveTranscriptionStatus === 'generating'}
                   />
@@ -1293,7 +1307,7 @@ export function SessieDetailScreen({
                         void handleDeleteSavedAudio()
                       }}
                       isDownloadAudioBusy={isDownloadingAudio}
-                      isDownloadAudioDisabled={!hasSavedAudio}
+                      isDownloadAudioDisabled={!hasDownloadableAudio}
                       isDeleteAudioBusy={isDeletingAudio}
                       isDeleteAudioDisabled={!hasSavedAudio || effectiveTranscriptionStatus === 'transcribing' || effectiveTranscriptionStatus === 'generating'}
                     />
