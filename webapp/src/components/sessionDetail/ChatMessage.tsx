@@ -617,7 +617,60 @@ export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, e
   return (
     <View style={styles.userRow}>
       <View style={styles.userBubble}>
-        <MessageText text={text} textStyle={styles.userText} />
+        <View style={styles.formattedLines}>
+          {parseRichTextMarkdown(text || '').map((line, lineIndex) => {
+            if (line.kind === 'empty') return <View key={`user-line-${lineIndex}`} style={styles.emptyLine} />
+            if (line.kind === 'divider') {
+              return (
+                <View key={`user-line-${lineIndex}`} style={styles.dividerRow}>
+                  <View style={styles.dividerLine} />
+                </View>
+              )
+            }
+            if (line.kind === 'headingTwo' || line.kind === 'headingThree') {
+              return (
+                <View key={`user-line-${lineIndex}`}>
+                  {renderInlineSegments({
+                    segments: line.segments,
+                    textStyle: styles.userText,
+                    boldStyle: styles.userTextBold,
+                  })}
+                </View>
+              )
+            }
+            if (line.kind === 'bullet') {
+              return (
+                <View key={`user-line-${lineIndex}`} style={styles.bulletRow}>
+                  <View style={styles.bulletDot} />
+                  <View style={styles.bulletText}>{renderInlineSegments({ segments: line.segments, textStyle: styles.userText })}</View>
+                </View>
+              )
+            }
+            if (line.kind === 'numbered') {
+              return (
+                <View key={`user-line-${lineIndex}`} style={styles.bulletRow}>
+                  <Text style={styles.numberedPrefix}>{`${line.number}.`}</Text>
+                  <View style={styles.bulletText}>{renderInlineSegments({ segments: line.segments, textStyle: styles.userText })}</View>
+                </View>
+              )
+            }
+            if (line.kind === 'quote') {
+              return (
+                <View key={`user-line-${lineIndex}`} style={styles.quoteRow}>
+                  {renderInlineSegments({
+                    segments: line.segments,
+                    textStyle: styles.userQuoteText,
+                  })}
+                </View>
+              )
+            }
+            return (
+              <View key={`user-line-${lineIndex}`}>
+                {renderInlineSegments({ segments: line.segments, textStyle: styles.userText })}
+              </View>
+            )
+          })}
+        </View>
       </View>
     </View>
   )
@@ -655,6 +708,8 @@ const styles = StyleSheet.create({
   userRow: { width: '100%', flexDirection: 'row', justifyContent: 'flex-end' },
   userBubble: { maxWidth: 520, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 12 },
   userText: { fontSize: 14, lineHeight: 20, color: colors.text },
+  userTextBold: { fontSize: 14, lineHeight: 20, color: colors.text },
+  userQuoteText: { fontSize: 14, lineHeight: 20, color: colors.textSecondary },
   transcriptMention: {
     textDecorationLine: 'underline',
     color: colors.text,

@@ -10,6 +10,7 @@ import { SettingsIcon } from './icons/SettingsIcon'
 import { TemplatesIcon } from './icons/TemplatesIcon'
 import { ArchiefMenuIcon } from './icons/ArchiefMenuIcon'
 import { ContactIcon } from './icons/ContactIcon'
+import { MijnAbonnementIcon } from './icons/MijnAbonnementIcon'
 import { SidebarItem } from './SidebarItem'
 import { Text } from './Text'
 
@@ -21,8 +22,11 @@ type Props = {
   selectedSidebarItemKey: SidebarItemKey
   isSettingsSelected: boolean
   isAdminUser?: boolean
+  showSubscribeItem?: boolean
   onSelectSidebarItem: (sidebarItemKey: SidebarItemKey) => void
   onPressCreateSession: () => void
+  onOpenContact: () => void
+  onOpenSubscription: () => void
   onOpenSettingsMenu: (anchorPoint: AnchorPoint) => void
 }
 
@@ -30,8 +34,11 @@ export function Sidebar({
   selectedSidebarItemKey,
   isSettingsSelected,
   isAdminUser = false,
+  showSubscribeItem = false,
   onSelectSidebarItem,
   onPressCreateSession,
+  onOpenContact,
+  onOpenSubscription,
   onOpenSettingsMenu,
 }: Props) {
   const { width } = useWindowDimensions()
@@ -103,6 +110,15 @@ export function Sidebar({
             icon={<TemplatesIcon color={selectedSidebarItemKey === 'templates' ? selectedColor : unselectedColor} size={24} />}
             isCompact={isCompact}
           />
+          {showSubscribeItem ? (
+            <SidebarItem
+              label="Abonneren"
+              isSelected={false}
+              onPress={onOpenSubscription}
+              icon={<MijnAbonnementIcon color={unselectedColor} />}
+              isCompact={isCompact}
+            />
+          ) : null}
           {/* <SidebarItem
             label="Mijn praktijk"
             isSelected={selectedSidebarItemKey === 'mijnPraktijk'}
@@ -151,6 +167,13 @@ export function Sidebar({
 
       {/* Sidebar bottom items */}
       <View style={styles.bottomSection}>
+        <SidebarItem
+          label="Contact"
+          isSelected={false}
+          onPress={onOpenContact}
+          icon={<ContactIcon color={unselectedColor} size={24} />}
+          isCompact={isCompact}
+        />
         <SidebarItem
           label="Instellingen"
           isSelected={isSettingsSelected}

@@ -26,6 +26,7 @@ type Props = {
   onEditSummary?: () => void
   onCancelGeneration?: () => void
   onShareSummary?: () => void
+  suppressErrorToast?: boolean
 }
 
 function renderInlineSegments(segments: RichTextInlineSegment[], textStyle: any) {
@@ -56,6 +57,7 @@ export function ReportPanel({
   onEditSummary,
   onCancelGeneration,
   onShareSummary,
+  suppressErrorToast = false,
 }: Props) {
   const [showCopyNotification, setShowCopyNotification] = useState(false)
   const { showErrorToast } = useToast()
@@ -77,9 +79,10 @@ export function ReportPanel({
 
   useEffect(() => {
     if (!hasError) return
+    if (suppressErrorToast) return
     if (isInsufficientMinutesError) return
     showErrorToast(reportErrorMessage, 'Er is een fout opgetreden bij het genereren van het verslag.')
-  }, [hasError, isInsufficientMinutesError, reportErrorMessage, showErrorToast])
+  }, [hasError, isInsufficientMinutesError, reportErrorMessage, showErrorToast, suppressErrorToast])
 
   return (
     <View style={styles.container}>
@@ -125,15 +128,21 @@ export function ReportPanel({
           ) : null}
           <Pressable
             onPress={() => {
+              if (!hasSummary) return
               if (typeof navigator === 'undefined') return
               navigator.clipboard?.writeText(reportCopyText).then(() => {
                 setShowCopyNotification(true)
                 setTimeout(() => setShowCopyNotification(false), 3000)
               })
             }}
-            style={({ hovered }) => [styles.actionButton, hovered ? styles.actionButtonHovered : undefined]}
+            disabled={!hasSummary}
+            style={({ hovered }) => [
+              styles.actionButton,
+              !hasSummary ? styles.actionButtonDisabled : undefined,
+              hovered ? styles.actionButtonHovered : undefined,
+            ]}
           >
-            {showCopyNotification ? <CopiedIcon size={18} /> : <CopyIcon color="#8E8480" size={18} />}
+            {showCopyNotification ? <CopiedIcon size={18} /> : <CopyIcon color={hasSummary ? '#8E8480' : '#BDB6B2'} size={18} />}
           </Pressable>
         </View>
       </View>

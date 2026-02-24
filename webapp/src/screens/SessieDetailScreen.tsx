@@ -1090,6 +1090,7 @@ export function SessieDetailScreen({
                       void generateReportForTemplate(templateId)
                     }}
                     onCancelGeneration={handleCancelGeneration}
+                    suppressErrorToast={isNoMinutesModalVisible}
                   />
                 </View>
               {/* Active tab content */}
@@ -1190,6 +1191,8 @@ export function SessieDetailScreen({
                       highlightTintColor={practiceTintColor}
                       useTintColors={shouldUseTranscriptTint}
                       audioDurationSeconds={currentAudioDurationSeconds ?? session?.audioDurationSeconds ?? null}
+                      showRetryButton={false}
+                      suppressErrorToast={isNoMinutesModalVisible}
                     />
                   ) : null}
                 </AnimatedMainContent>
@@ -1480,6 +1483,7 @@ export function SessieDetailScreen({
                       void generateReportForTemplate(templateId)
                     }}
                     onCancelGeneration={handleCancelGeneration}
+                    suppressErrorToast={isNoMinutesModalVisible}
                   />
                 </View>
               </ScrollView>
@@ -1579,6 +1583,8 @@ export function SessieDetailScreen({
                       highlightTintColor={practiceTintColor}
                       useTintColors={shouldUseTranscriptTint}
                       audioDurationSeconds={currentAudioDurationSeconds ?? session?.audioDurationSeconds ?? null}
+                      showRetryButton={false}
+                      suppressErrorToast={isNoMinutesModalVisible}
                     />
                   ) : null}
                 </AnimatedMainContent>

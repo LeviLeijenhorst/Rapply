@@ -320,6 +320,10 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                     <AppButton
                       label={checkoutLoadingPlanId === primaryPlan.id ? '' : selectedPlanId === primaryPlan.id ? 'geabonneerd' : 'Abonneren'}
                       leading={checkoutLoadingPlanId === primaryPlan.id ? <ActivityIndicator size="small" color="#FFFFFF" /> : undefined}
+                      style={[
+                        styles.subscribeButton,
+                        selectedPlanId === primaryPlan.id ? styles.subscribeButtonSubscribed : styles.subscribeButtonCta,
+                      ]}
                       onPress={() => {
                         if (selectedPlanId === primaryPlan.id || checkoutLoadingPlanId) return
                         void handleSelectPlan(primaryPlan.id)
@@ -497,8 +501,8 @@ const styles = StyleSheet.create({
   },
   textInput: {
     width: '100%',
-    fontSize: 26,
-    lineHeight: 30,
+    fontSize: 14,
+    lineHeight: 18,
     color: colors.textStrong,
   },
   roiCard: {
@@ -595,6 +599,18 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: '#656565',
     flexShrink: 1,
+  },
+  subscribeButton: {
+    marginTop: 'auto',
+    height: 46,
+    borderRadius: 14,
+  },
+  subscribeButtonCta: {
+    borderColor: '#8A004A',
+    ...( { backgroundColor: colors.selected } as any ),
+  },
+  subscribeButtonSubscribed: {
+    ...( { boxShadow: 'none' } as any ),
   },
   footnoteText: {
     fontSize: 12,

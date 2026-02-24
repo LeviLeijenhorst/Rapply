@@ -23,6 +23,8 @@ type Props = {
   highlightTintColor?: string
   useTintColors?: boolean
   audioDurationSeconds?: number | null
+  showRetryButton?: boolean
+  suppressErrorToast?: boolean
 }
 
 type ParsedTranscriptLine = {
@@ -142,6 +144,8 @@ export function TranscriptTabPanel({
   highlightTintColor,
   useTintColors = true,
   audioDurationSeconds,
+  showRetryButton = true,
+  suppressErrorToast = false,
 }: Props) {
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
   const [visibleLineCount, setVisibleLineCount] = useState(INITIAL_VISIBLE_LINE_COUNT)
@@ -177,9 +181,10 @@ export function TranscriptTabPanel({
 
   useEffect(() => {
     if (!hasError) return
+    if (suppressErrorToast) return
     if (isInsufficientMinutesError) return
     showErrorToast(transcriptErrorMessage, 'Er is een fout opgetreden bij het genereren van de transcriptie.')
-  }, [hasError, isInsufficientMinutesError, showErrorToast, transcriptErrorMessage])
+  }, [hasError, isInsufficientMinutesError, showErrorToast, transcriptErrorMessage, suppressErrorToast])
 
   const visibleTranscriptLines = useMemo(() => {
     if (hasSearch) return parsedTranscriptLinesWithResolvedTimes
@@ -255,7 +260,7 @@ export function TranscriptTabPanel({
           </View>
         ) : hasError ? (
           <View style={styles.errorContainer}>
-            {onRetryTranscription ? (
+            {showRetryButton && onRetryTranscription ? (
               <Pressable
                 onPress={onRetryTranscription}
                 style={({ hovered }) => [styles.retryButton, hovered ? styles.retryButtonHovered : undefined]}
@@ -323,7 +328,7 @@ export function TranscriptTabPanel({
         ) : (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>Geen transcriptie beschikbaar</Text>
-            {onRetryTranscription ? (
+            {showRetryButton && onRetryTranscription ? (
               <Pressable
                 onPress={onRetryTranscription}
                 style={({ hovered }) => [styles.retryButton, hovered ? styles.retryButtonHovered : undefined]}

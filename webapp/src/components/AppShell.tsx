@@ -165,6 +165,7 @@ export function AppShell({ onLogout }: Props) {
   const [isMyAccountModalOpen, setIsMyAccountModalOpen] = useState(false)
   const [isMySubscriptionModalOpen, setIsMySubscriptionModalOpen] = useState(false)
   const [canOpenSubscription, setCanOpenSubscription] = useState(false)
+  const [currentPlanId, setCurrentPlanId] = useState<string | null>(null)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
   const [isCoacheeModalOpen, setIsCoacheeModalOpen] = useState(false)
@@ -181,11 +182,15 @@ export function AppShell({ onLogout }: Props) {
       const response = await callSecureApi<{ planId?: string | null; canSeePricingPage?: boolean }>('/pricing/me-visibility', {})
       const canSeePricingPage = Boolean(response?.canSeePricingPage)
       setCanOpenSubscription(canSeePricingPage)
+      setCurrentPlanId(typeof response?.planId === 'string' ? response.planId : null)
     } catch (error) {
       console.warn('[pricing] failed to refresh subscription access; keeping pricing page available', error)
       setCanOpenSubscription(true)
+      setCurrentPlanId(null)
     }
   }, [])
+
+  const hasActiveSubscription = currentPlanId !== null
 
   useEffect(() => {
     let isCancelled = false
@@ -849,6 +854,7 @@ export function AppShell({ onLogout }: Props) {
               selectedSidebarItemKey={selectedSidebarItemKey}
               isSettingsSelected={isSettingsSelected}
               isAdminUser={isCurrentUserAdmin}
+              showSubscribeItem={!hasActiveSubscription}
               onSelectSidebarItem={(sidebarItemKey) => {
                 navigateTo(
                   sidebarItemKey === 'coachees'
@@ -870,6 +876,16 @@ export function AppShell({ onLogout }: Props) {
                 setIsSettingsMenuOpen(false)
               }}
               onPressCreateSession={() => openNewSessionModal(null)}
+              onOpenContact={() => {
+                setIsSettingsMenuOpen(false)
+                setSettingsMenuAnchorPoint(null)
+                setIsContactModalOpen(true)
+              }}
+              onOpenSubscription={() => {
+                setIsSettingsMenuOpen(false)
+                setSettingsMenuAnchorPoint(null)
+                setIsMySubscriptionModalOpen(true)
+              }}
               onOpenSettingsMenu={(anchorPoint) => {
                 setSettingsMenuAnchorPoint(anchorPoint)
                 setIsSettingsMenuOpen(true)
@@ -909,11 +925,6 @@ export function AppShell({ onLogout }: Props) {
               setIsSettingsMenuOpen(false)
               setSettingsMenuAnchorPoint(null)
               navigateTo({ kind: 'archief' })
-            }}
-            onOpenContact={() => {
-              setIsSettingsMenuOpen(false)
-              setSettingsMenuAnchorPoint(null)
-              setIsContactModalOpen(true)
             }}
             onOpenFeedback={() => {
               setIsSettingsMenuOpen(false)
@@ -996,7 +1007,13 @@ export function AppShell({ onLogout }: Props) {
             }}
           />
 
-          <MySubscriptionModal visible={isMySubscriptionModalOpen} onClose={() => setIsMySubscriptionModalOpen(false)} />
+          <MySubscriptionModal
+            visible={isMySubscriptionModalOpen}
+            onClose={() => {
+              setIsMySubscriptionModalOpen(false)
+              void refreshSubscriptionAccess()
+            }}
+          />
           <ShareCoachscribeModal
             visible={isShareModalOpen}
             onClose={() => setIsShareModalOpen(false)}

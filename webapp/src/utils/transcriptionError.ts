@@ -94,6 +94,13 @@ export function toUserFriendlyTranscriptionError(rawMessage: string | null | und
     }
     return 'Niet genoeg minuten over voor transcriptie.'
   }
+  if (lowered.includes('niet genoeg seconden over voor transcriptie')) {
+    const remainingSeconds = parseRemainingSeconds(decoded)
+    if (remainingSeconds !== null) {
+      return `Niet genoeg minuten over voor transcriptie (nog ${formatRemainingMinutesLabel(remainingSeconds)}).`
+    }
+    return 'Niet genoeg minuten over voor transcriptie.'
+  }
 
   const cleaned = decoded.trim()
   if (hasTechnicalErrorCode(cleaned)) return fallback

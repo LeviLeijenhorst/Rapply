@@ -79,11 +79,10 @@ export function ChatComposer({
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        {/* Chat composer */}
         <View style={[styles.inputContainer, { height: inputHeight }]}>
           <TextInput
-            ref={(value) => {
-              inputRef.current = value
+            ref={(nextValue) => {
+              inputRef.current = nextValue
             }}
             value={value}
             onChangeText={onChangeValue}
@@ -148,7 +147,6 @@ export function ChatComposer({
             hovered ? styles.sendButtonHovered : undefined,
           ]}
         >
-          {/* Send button */}
           <SendIcon size={24} />
         </Pressable>
       </View>
@@ -214,4 +212,3 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
 })
-

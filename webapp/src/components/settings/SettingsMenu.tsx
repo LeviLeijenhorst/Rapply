@@ -3,7 +3,6 @@ import React from 'react'
 import { PopoverMenu } from '../PopoverMenu'
 import { MijnAccountIcon } from '../icons/MijnAccountIcon'
 import { DeelCoachScribeIcon } from '../icons/DeelCoachScribeIcon'
-import { ContactIcon } from '../icons/ContactIcon'
 import { PrivacyIcon } from '../icons/PrivacyIcon'
 import { ArchiefMenuIcon } from '../icons/ArchiefMenuIcon'
 import { MijnAbonnementIcon } from '../icons/MijnAbonnementIcon'
@@ -19,7 +18,6 @@ type Props = {
   onOpenAccount: () => void
   onOpenSubscription: () => void
   onOpenArchive: () => void
-  onOpenContact: () => void
   onOpenFeedback: () => void
   onOpenShare: () => void
   onOpenPrivacy: () => void
@@ -33,7 +31,6 @@ export function SettingsMenu({
   onOpenAccount,
   onOpenSubscription,
   onOpenArchive,
-  onOpenContact,
   onOpenFeedback,
   onOpenShare,
   onOpenPrivacy,
@@ -73,12 +70,6 @@ export function SettingsMenu({
       label: 'Archief',
       icon: <ArchiefMenuIcon color={menuIconColor} />,
       onPress: onOpenArchive,
-    },
-    {
-      key: 'contact',
-      label: 'Contact',
-      icon: <ContactIcon color={menuIconColor} />,
-      onPress: onOpenContact,
     },
     {
       key: 'feedback',

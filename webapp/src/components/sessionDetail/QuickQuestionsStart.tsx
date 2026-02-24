@@ -154,35 +154,37 @@ export function QuickQuestionsStart({ coacheeName, onSelectOption }: Props) {
 
       <AnimatedOverlayModal visible={isOptionsModalVisible} onClose={() => setIsOptionsModalVisible(false)} contentContainerStyle={styles.modalContainer}>
         <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text isSemibold style={styles.modalTitle}>
-              Ik wil...
-            </Text>
+          <View style={styles.modalBody}>
+            <View style={styles.modalHeader}>
+              <Text isSemibold style={styles.modalTitle}>
+                Ik wil...
+              </Text>
+            </View>
+            <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
+              {optionsOrder.map((option) => {
+                const isSelected = selectedOptionId === option.id
+                return (
+                  <Pressable
+                    key={option.id}
+                    onPress={() => setSelectedOptionId(option.id)}
+                    style={({ hovered }) => [
+                      styles.modalOptionRow,
+                      isSelected ? styles.modalOptionRowSelected : undefined,
+                      hovered ? styles.modalOptionRowHovered : undefined,
+                    ]}
+                  >
+                    <Text style={styles.modalOptionText}>{option.text}</Text>
+                  </Pressable>
+                )
+              })}
+            </ScrollView>
           </View>
-          <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
-            {optionsOrder.map((option) => {
-              const isSelected = selectedOptionId === option.id
-              return (
-                <Pressable
-                  key={option.id}
-                  onPress={() => setSelectedOptionId(option.id)}
-                  style={({ hovered }) => [
-                    styles.modalOptionRow,
-                    isSelected ? styles.modalOptionRowSelected : undefined,
-                    hovered ? styles.modalOptionRowHovered : undefined,
-                  ]}
-                >
-                  <Text style={styles.modalOptionText}>{option.text}</Text>
-                </Pressable>
-              )
-            })}
-          </ScrollView>
           <View style={styles.modalFooter}>
             <Pressable
               onPress={() => setIsOptionsModalVisible(false)}
-              style={({ hovered }) => [styles.modalFooterButton, hovered ? styles.modalFooterButtonHovered : undefined]}
+              style={({ hovered }) => [styles.modalFooterSecondaryButton, hovered ? styles.modalFooterSecondaryButtonHovered : undefined]}
             >
-              <Text isBold style={styles.modalFooterButtonText}>
+              <Text isBold style={styles.modalFooterSecondaryButtonText}>
                 Annuleren
               </Text>
             </Pressable>
@@ -194,12 +196,12 @@ export function QuickQuestionsStart({ coacheeName, onSelectOption }: Props) {
               }}
               disabled={!selectedOption}
               style={({ hovered }) => [
-                styles.modalFooterButtonPrimary,
-                hovered ? styles.modalFooterButtonPrimaryHovered : undefined,
-                !selectedOption ? styles.modalFooterButtonDisabled : undefined,
+                styles.modalFooterPrimaryButton,
+                hovered ? styles.modalFooterPrimaryButtonHovered : undefined,
+                !selectedOption ? styles.modalFooterPrimaryButtonDisabled : undefined,
               ]}
             >
-              <Text isBold style={styles.modalFooterButtonPrimaryText}>
+              <Text isBold style={styles.modalFooterPrimaryButtonText}>
                 Selecteren
               </Text>
             </Pressable>
@@ -276,6 +278,10 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxHeight: 640,
+    overflow: 'hidden',
+  },
+  modalBody: {
+    width: '100%',
     padding: 18,
     gap: 14,
   },
@@ -318,44 +324,47 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: 10,
+    gap: 0,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  modalFooterButton: {
-    height: 40,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
+  modalFooterSecondaryButton: {
+    height: 48,
+    borderRadius: 0,
+    borderBottomLeftRadius: 16,
     backgroundColor: colors.surface,
-    padding: 12,
+    paddingHorizontal: 24,
+    minWidth: 140,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalFooterButtonHovered: {
+  modalFooterSecondaryButtonHovered: {
     backgroundColor: colors.hoverBackground,
   },
-  modalFooterButtonText: {
+  modalFooterSecondaryButtonText: {
     fontSize: 14,
     lineHeight: 18,
-    color: '#656565',
+    color: colors.textStrong,
   },
-  modalFooterButtonPrimary: {
-    height: 40,
-    borderRadius: 10,
+  modalFooterPrimaryButton: {
+    height: 48,
+    borderRadius: 0,
+    borderBottomRightRadius: 16,
     backgroundColor: colors.selected,
-    padding: 12,
+    paddingHorizontal: 24,
+    minWidth: 140,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalFooterButtonPrimaryHovered: {
+  modalFooterPrimaryButtonHovered: {
     backgroundColor: '#A50058',
   },
-  modalFooterButtonPrimaryText: {
+  modalFooterPrimaryButtonText: {
     fontSize: 14,
     lineHeight: 18,
     color: '#FFFFFF',
   },
-  modalFooterButtonDisabled: {
-    opacity: 0.55,
+  modalFooterPrimaryButtonDisabled: {
+    opacity: 0.5,
   },
 })
