@@ -122,6 +122,18 @@ Clientgerichte, begrijpelijke samenvatting van voortgang en afspraken.
 - Concrete vervolgstappen
 - Heldere, toegankelijke formulering`
 
+const arbeidsdeskundigDescription = `### Doel
+Legt arbeidsdeskundige bevindingen vast over belastbaarheid, passend werk en realistische re-integratieroutes.
+
+### Wanneer gebruik je dit?
+- Bij arbeidsdeskundig onderzoek of wanneer inzetbaarheid en passend werk onderbouwd moeten worden.
+
+### Wat bevat dit verslag?
+- Onderzoeksvraag en context
+- Analyse van belastbaarheid en mogelijkheden
+- Beoordeling passend werk en alternatieven
+- Conclusie en advies met vervolgstappen`
+
 // Intent: materializeTemplateBlueprints
 function materializeTemplateBlueprints(blueprints: TemplateBlueprint[]): Template[] {
   const now = Date.now()
@@ -199,7 +211,7 @@ const legacyTemplateBlueprints: TemplateBlueprint[] = [
   },
   {
     name: "Arbeidsdeskundig rapport",
-    description: "Rapportage vanuit arbeidsdeskundige analyse en belastbaarheid.",
+    description: arbeidsdeskundigDescription,
     sections: legacyGenericSections,
   },
 ]
@@ -309,7 +321,7 @@ const reintegrationTemplateBlueprints: TemplateBlueprint[] = [
   },
   {
     name: "Arbeidsdeskundig rapport",
-    description: "Arbeidsdeskundige bevindingen over belastbaarheid en passend werk.",
+    description: arbeidsdeskundigDescription,
     sections: [
       { title: "Onderzoeksvraag", description: "Doel en scope van het arbeidsdeskundig onderzoek." },
       { title: "Belastbaarheid en mogelijkheden", description: "Functionele mogelijkheden in relatie tot arbeid." },

@@ -109,6 +109,18 @@ Clientgerichte, begrijpelijke samenvatting van voortgang en afspraken.
 - Concrete vervolgstappen
 - Heldere, toegankelijke formulering`
 
+  const arbeidsdeskundigDescription = `### Doel
+Legt arbeidsdeskundige bevindingen vast over belastbaarheid, passend werk en realistische re-integratieroutes.
+
+### Wanneer gebruik je dit?
+- Bij arbeidsdeskundig onderzoek of wanneer inzetbaarheid en passend werk onderbouwd moeten worden.
+
+### Wat bevat dit verslag?
+- Onderzoeksvraag en context
+- Analyse van belastbaarheid en mogelijkheden
+- Beoordeling passend werk en alternatieven
+- Conclusie en advies met vervolgstappen`
+
   const normalized = name.trim().toLowerCase()
   if (normalized === "intakeverslag") return intakeDescription
   if (normalized === "voortgangsrapportage" || normalized === "voortgangsgespreksverslag") return progressDescription
@@ -119,6 +131,6 @@ Clientgerichte, begrijpelijke samenvatting van voortgang en afspraken.
   if (normalized === "adviesrapport aan werkgever" || normalized === "adviesrapport werkgever") return employerAdviceDescription
   if (normalized === "terugkoppelingsrapport voor werknemer" || normalized === "terugkoppelingsrapport client")
     return clientFeedbackDescription
-  if (normalized === "arbeidsdeskundig rapport") return "Rapportage vanuit arbeidsdeskundige analyse en belastbaarheid."
+  if (normalized === "arbeidsdeskundig rapport") return arbeidsdeskundigDescription
   return ""
 }

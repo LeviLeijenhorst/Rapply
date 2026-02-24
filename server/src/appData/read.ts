@@ -11,6 +11,22 @@ type TemplateRow = {
   updated_at_unix_ms: number
 }
 
+const legacyDefaultDescriptionByName: Record<string, string[]> = {
+  "arbeidsdeskundig rapport": [
+    "Rapportage vanuit arbeidsdeskundige analyse en belastbaarheid.",
+    "Arbeidsdeskundige bevindingen over belastbaarheid en passend werk.",
+  ],
+}
+
+function normalizeDefaultTemplateDescription(name: string, description: string, isDefault: boolean): string {
+  const trimmed = description.trim()
+  if (!isDefault || !trimmed) return trimmed
+  const normalizedName = name.trim().toLowerCase()
+  const legacyValues = legacyDefaultDescriptionByName[normalizedName] ?? []
+  if (!legacyValues.includes(trimmed)) return trimmed
+  return ""
+}
+
 // Normalizes the stored sections_json payload into one template domain object.
 function mapTemplateRow(row: TemplateRow): Template {
   const rawSectionsPayload = typeof row.sections_json === "string" ? JSON.parse(row.sections_json) : row.sections_json
@@ -21,7 +37,8 @@ function mapTemplateRow(row: TemplateRow): Template {
       : []
   const descriptionRaw = typeof (rawSectionsPayload as any)?.description === "string" ? ((rawSectionsPayload as any).description as string) : ""
   const isDefaultRaw = typeof (rawSectionsPayload as any)?.isDefault === "boolean" ? ((rawSectionsPayload as any).isDefault as boolean) : false
-  const description = descriptionRaw.trim() || getDefaultTemplateDescriptionByName(row.name)
+  const normalizedDescription = normalizeDefaultTemplateDescription(row.name, descriptionRaw, isDefaultRaw)
+  const description = normalizedDescription || getDefaultTemplateDescriptionByName(row.name)
   return {
     id: row.id,
     name: row.name,
