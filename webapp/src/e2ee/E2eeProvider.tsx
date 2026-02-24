@@ -29,6 +29,7 @@ import {
   e2eeUnlockServerManaged,
   type E2eeUserKeyMaterial,
 } from '../services/e2ee'
+import { useToast } from '../toast/ToastProvider'
 
 type E2eeContextValue = {
   encryptText: (value: string) => Promise<string>
@@ -128,6 +129,7 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
   const [isUnlockPassphraseVisible, setIsUnlockPassphraseVisible] = useState(false)
   const [pendingArkBytes, setPendingArkBytes] = useState<Uint8Array | null>(null)
   const [pendingMaterial, setPendingMaterial] = useState<E2eeUserKeyMaterial | null>(null)
+  const { showErrorToast } = useToast()
 
   useLayoutEffect(() => {
       if (!isAuthenticated) {
@@ -227,6 +229,12 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
       isActive = false
     }
   }, [isAuthenticated])
+
+  useEffect(() => {
+    if (!statusMessage) return
+    if (stage === 'loading' || stage === 'ready' || stage === 'unauthenticated') return
+    showErrorToast(statusMessage, 'Er ging iets mis met de beveiligingsinstellingen.')
+  }, [showErrorToast, stage, statusMessage])
 
   // Creates or updates passphrase wrapping and unlocks the account key in-memory.
   async function handleSetupPassphrase() {
@@ -529,7 +537,6 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
                 {isPassphraseConfirmVisible ? <EyeSlashIcon color="#656565" size={20} /> : <EyeIcon color="#656565" size={20} />}
               </Pressable>
             </View>
-            {statusMessage ? <Text style={styles.errorText}>{statusMessage}</Text> : null}
             <Pressable onPress={() => void handleSetupPassphrase()} style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined, isBusy ? styles.primaryButtonDisabled : undefined]} disabled={isBusy}>
               <View style={styles.primaryButtonContent}>
                 {isBusy ? <ActivityIndicator size="small" color="#FFFFFF" /> : null}
@@ -604,7 +611,6 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
                 {isUnlockPassphraseVisible ? <EyeSlashIcon color="#656565" size={20} /> : <EyeIcon color="#656565" size={20} />}
               </Pressable>
             </View>
-            {statusMessage ? <Text style={styles.errorText}>{statusMessage}</Text> : null}
             <Pressable onPress={() => void handleUnlockWithPassphrase()} style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined, isBusy ? styles.primaryButtonDisabled : undefined]} disabled={isBusy}>
               <View style={styles.primaryButtonContent}>
                 {isBusy ? <ActivityIndicator size="small" color="#FFFFFF" /> : null}
@@ -637,7 +643,6 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
               editable={!isBusy}
               style={styles.input}
             />
-            {statusMessage ? <Text style={styles.errorText}>{statusMessage}</Text> : null}
             <Pressable onPress={() => void handleRecoverWithRecoveryCode()} style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined, isBusy ? styles.primaryButtonDisabled : undefined]} disabled={isBusy}>
               <Text isBold style={styles.primaryButtonText}>Herstellen</Text>
             </Pressable>
@@ -792,11 +797,6 @@ const styles = StyleSheet.create({
   },
   inputIconButtonHovered: {
     backgroundColor: colors.hoverBackground,
-  },
-  errorText: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.selected,
   },
   primaryButton: {
     width: '100%',

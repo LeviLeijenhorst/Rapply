@@ -8,6 +8,8 @@ import { CoacheeAvatarIcon } from '../components/icons/CoacheeAvatarIcon'
 import { CalendarCircleIcon } from '../components/icons/CalendarCircleIcon'
 import { FullScreenOpenIcon } from '../components/icons/FullScreenOpenIcon'
 import { FullScreenCloseIcon } from '../components/icons/FullScreenCloseIcon'
+import { CopyIcon } from '../components/icons/CopyIcon'
+import { SharePdfIcon } from '../components/icons/SharePdfIcon'
 import { Text } from '../components/Text'
 import { colors } from '../theme/colors'
 import { ConversationTabs, ConversationTabKey } from '../components/sessionDetail/ConversationTabs'
@@ -168,6 +170,7 @@ export function SessieDetailScreen({
   const isCoacheeMenuVisible = isCoacheeMenuOpen
   const inputWebStyle = useMemo(() => ({ outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any), [])
   const isWrittenReportDirty = isWrittenSession && writtenReportDraft !== writtenReportText
+  const hasWrittenReportContent = isWrittenSession && writtenReportDraft.trim().length > 0
   const effectiveTranscriptionStatus = forcedTranscriptionStatus ?? (session?.transcriptionStatus ?? 'idle')
   const shouldShowQuickStart = chatMessages.length === 0
   const shouldShowClearChat = chatMessages.length > 0
@@ -388,6 +391,17 @@ export function SessieDetailScreen({
 
   function requestResetChat() {
     setIsClearChatModalVisible(true)
+  }
+
+  function handleCopyWrittenReport() {
+    if (typeof navigator === 'undefined') return
+    if (!hasWrittenReportContent) return
+    void navigator.clipboard?.writeText(writtenReportDraft)
+  }
+
+  function handleExportWrittenReport() {
+    if (!hasWrittenReportContent) return
+    handleRequestPdfEdit({ text: writtenReportDraft, title: editableSessionTitle })
   }
 
   function handleTranscriptMentionPress(seconds: number) {
@@ -674,6 +688,50 @@ export function SessieDetailScreen({
     return includedRemainingSeconds + nonExpiringRemainingSeconds
   }
 
+  function formatMinutesLabel(totalSeconds: number): string {
+    const minutes = Math.ceil(Math.max(0, Number(totalSeconds) || 0) / 60)
+    if (minutes <= 0) return 'minder dan 1 minuut'
+    if (minutes === 1) return '1 minuut'
+    return `${minutes} minuten`
+  }
+
+  function parseRemainingSecondsFromErrorMessage(message: string): number | null {
+    const match = String(message || '').match(/remaining\s+(\d+(?:[.,]\d+)?)\s*s/i)
+    if (!match?.[1]) return null
+    const parsed = Number.parseFloat(match[1].replace(',', '.'))
+    if (!Number.isFinite(parsed)) return null
+    return Math.max(0, Math.floor(parsed))
+  }
+
+  function isInsufficientMinutesError(error: unknown): boolean {
+    const rawMessage = String(error instanceof Error ? error.message : error || '')
+    const normalizedMessage = normalizeTranscriptionError(error)
+    const loweredRaw = rawMessage.toLowerCase()
+    const loweredNormalized = normalizedMessage.toLowerCase()
+    return (
+      loweredRaw.includes('not enough seconds remaining') ||
+      loweredRaw.includes('insufficient') ||
+      loweredNormalized.includes('niet genoeg minuten over voor transcriptie')
+    )
+  }
+
+  function restoreSessionAfterGenerationFailure() {
+    const previousSnapshot = generationSnapshotRef.current
+    if (previousSnapshot) {
+      updateSession(sessionId, {
+        transcript: previousSnapshot.transcript,
+        summary: previousSnapshot.summary,
+        transcriptionStatus: previousSnapshot.transcriptionStatus === 'error' ? 'idle' : previousSnapshot.transcriptionStatus,
+        transcriptionError: null,
+      })
+      return
+    }
+    updateSession(sessionId, {
+      transcriptionStatus: hasTranscript ? 'done' : 'idle',
+      transcriptionError: null,
+    })
+  }
+
   async function ensureSufficientTranscriptionMinutes(): Promise<boolean> {
     const requiredSeconds = Math.max(1, Math.ceil(currentAudioDurationSeconds ?? session?.audioDurationSeconds ?? 1))
     try {
@@ -693,12 +751,15 @@ export function SessieDetailScreen({
 
   async function retryTranscription() {
     if (session?.transcriptionStatus === 'transcribing' || session?.transcriptionStatus === 'generating') return
-    if (!(await ensureSufficientTranscriptionMinutes())) return
+    setForcedTranscriptionStatus('transcribing')
+    if (!(await ensureSufficientTranscriptionMinutes())) {
+      setForcedTranscriptionStatus(null)
+      return
+    }
 
     const runId = beginGenerationRun()
     const transcriptionAbortController = new AbortController()
     setTranscriptionAbortController(sessionId, runId, transcriptionAbortController)
-    setForcedTranscriptionStatus('transcribing')
 
     try {
       updateSession(sessionId, { transcriptionStatus: 'transcribing', transcriptionError: null, summary: null })
@@ -770,6 +831,17 @@ export function SessieDetailScreen({
       if (isTranscriptionCancelledError(error)) {
         return
       }
+      if (isInsufficientMinutesError(error)) {
+        const requiredSeconds = Math.max(1, Math.ceil(currentAudioDurationSeconds ?? session?.audioDurationSeconds ?? 1))
+        const rawMessage = String(error instanceof Error ? error.message : error || '')
+        const remainingSeconds = parseRemainingSecondsFromErrorMessage(rawMessage) ?? 0
+        setRequiredTranscriptionSeconds(requiredSeconds)
+        setRemainingTranscriptionSeconds(remainingSeconds)
+        setIsNoMinutesModalVisible(true)
+        restoreSessionAfterGenerationFailure()
+        clearGenerationTracking()
+        return
+      }
       console.error('[SessieDetailScreen] Transcription retry failed:', error)
       updateSession(sessionId, {
         transcriptionStatus: 'error',
@@ -782,7 +854,11 @@ export function SessieDetailScreen({
   async function generateReportForTemplate(templateId: string) {
     if (session?.transcriptionStatus === 'transcribing' || session?.transcriptionStatus === 'generating') return
     const existingTranscript = String(session?.transcript || '').trim()
-    if (!existingTranscript && !(await ensureSufficientTranscriptionMinutes())) return
+    setForcedTranscriptionStatus(existingTranscript ? 'generating' : 'transcribing')
+    if (!existingTranscript && !(await ensureSufficientTranscriptionMinutes())) {
+      setForcedTranscriptionStatus(null)
+      return
+    }
     const runId = beginGenerationRun()
     const template = templates.find((item) => item.id === templateId) ?? null
     const templateForSummary = template
@@ -862,6 +938,17 @@ export function SessieDetailScreen({
       if (isTranscriptionCancelledError(error)) {
         return
       }
+      if (isInsufficientMinutesError(error)) {
+        const requiredSeconds = Math.max(1, Math.ceil(currentAudioDurationSeconds ?? session?.audioDurationSeconds ?? 1))
+        const rawMessage = String(error instanceof Error ? error.message : error || '')
+        const remainingSeconds = parseRemainingSecondsFromErrorMessage(rawMessage) ?? 0
+        setRequiredTranscriptionSeconds(requiredSeconds)
+        setRemainingTranscriptionSeconds(remainingSeconds)
+        setIsNoMinutesModalVisible(true)
+        restoreSessionAfterGenerationFailure()
+        clearGenerationTracking()
+        return
+      }
       console.error('[SessieDetailScreen] Report generation failed', error)
       updateSession(sessionId, {
         transcriptionStatus: 'error',
@@ -892,6 +979,34 @@ export function SessieDetailScreen({
 
           <View style={styles.rightHeader}>
             <View style={styles.headerActionsMenuAnchor}>
+              {isWrittenSession ? (
+                <>
+                  <Pressable
+                    onPress={handleCopyWrittenReport}
+                    disabled={!hasWrittenReportContent}
+                    style={({ hovered }) => [
+                      styles.secondaryActionButton,
+                      styles.secondaryActionButtonIconOnly,
+                      !hasWrittenReportContent ? styles.audioActionButtonDisabled : undefined,
+                      hovered ? styles.secondaryActionButtonHovered : undefined,
+                    ]}
+                  >
+                    <CopyIcon color="#656565" size={18} />
+                  </Pressable>
+                  <Pressable
+                    onPress={handleExportWrittenReport}
+                    disabled={!hasWrittenReportContent}
+                    style={({ hovered }) => [
+                      styles.secondaryActionButton,
+                      styles.secondaryActionButtonIconOnly,
+                      !hasWrittenReportContent ? styles.audioActionButtonDisabled : undefined,
+                      hovered ? styles.secondaryActionButtonHovered : undefined,
+                    ]}
+                  >
+                    <SharePdfIcon color="#656565" size={18} />
+                  </Pressable>
+                </>
+              ) : null}
               {isWrittenSession ? (
                 <Pressable
                   onPress={() => {
@@ -969,7 +1084,11 @@ export function SessieDetailScreen({
                     transcriptionError={session?.transcriptionError ?? null}
                     onEditSummary={() => setIsSummaryEditorOpen(true)}
                     onShareSummary={() => handleRequestPdfEdit({ text: session?.summary ?? '', title: editableSessionTitle })}
-                    onRetryTranscription={() => (selectedTemplateId ? generateReportForTemplate(selectedTemplateId) : null)}
+                    onRetryTranscription={() => {
+                      const templateId = selectedTemplateId ?? defaultTemplateId
+                      if (!templateId) return
+                      void generateReportForTemplate(templateId)
+                    }}
                     onCancelGeneration={handleCancelGeneration}
                   />
                 </View>
@@ -1142,40 +1261,38 @@ export function SessieDetailScreen({
             <Text isBold style={styles.noMinutesModalTitle}>
               Onvoldoende minuten voor transcriptie
             </Text>
-            <Text style={styles.noMinutesModalText}>
-              U heeft {remainingTranscriptionSeconds}s over en dit verslag heeft ongeveer {requiredTranscriptionSeconds}s nodig. Bekijk uw abonnement om extra minuten te regelen.
-            </Text>
-            <View style={styles.noMinutesModalActions}>
-              <Pressable
-                onPress={() => setIsNoMinutesModalVisible(false)}
-                style={({ hovered }) => [
-                  styles.noMinutesActionButton,
-                  styles.noMinutesActionButtonSecondary,
-                  hovered ? styles.noMinutesActionButtonSecondaryHovered : undefined,
-                ]}
-              >
-                <Text isBold style={styles.noMinutesActionButtonSecondaryText}>
-                  Sluiten
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setIsNoMinutesModalVisible(false)
-                  onOpenMySubscription()
-                }}
-                style={({ hovered }) => [
-                  styles.noMinutesActionButton,
-                  styles.noMinutesActionButtonPrimary,
-                  hovered ? styles.noMinutesActionButtonPrimaryHovered : undefined,
-                ]}
-              >
-                <Text isBold style={styles.noMinutesActionButtonPrimaryText}>
-                  Mijn abonnement
-                </Text>
-              </Pressable>
-            </View>
+          <Text style={styles.noMinutesModalText}>
+            U heeft nog {formatMinutesLabel(remainingTranscriptionSeconds)} en dit verslag heeft ongeveer {formatMinutesLabel(requiredTranscriptionSeconds)} nodig. Bekijk uw abonnement om extra minuten te regelen.
+          </Text>
+        </View>
+        <View style={styles.noMinutesModalFooter}>
+            <Pressable
+              onPress={() => setIsNoMinutesModalVisible(false)}
+              style={({ hovered }) => [
+                styles.noMinutesFooterSecondaryButton,
+                hovered ? styles.noMinutesFooterSecondaryButtonHovered : undefined,
+              ]}
+            >
+              <Text isBold style={styles.noMinutesFooterSecondaryButtonText}>
+                Sluiten
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setIsNoMinutesModalVisible(false)
+                onOpenMySubscription()
+              }}
+              style={({ hovered }) => [
+                styles.noMinutesFooterPrimaryButton,
+                hovered ? styles.noMinutesFooterPrimaryButtonHovered : undefined,
+              ]}
+            >
+              <Text isBold style={styles.noMinutesFooterPrimaryButtonText}>
+                Mijn abonnement
+              </Text>
+            </Pressable>
           </View>
-        </AnimatedOverlayModal>
+      </AnimatedOverlayModal>
 
       </View>
     )
@@ -1232,6 +1349,34 @@ export function SessieDetailScreen({
 
         <View style={styles.rightHeader}>
           <View style={styles.headerActionsMenuAnchor}>
+            {isWrittenSession ? (
+              <>
+                <Pressable
+                  onPress={handleCopyWrittenReport}
+                  disabled={!hasWrittenReportContent}
+                  style={({ hovered }) => [
+                    styles.secondaryActionButton,
+                    styles.secondaryActionButtonIconOnly,
+                    !hasWrittenReportContent ? styles.audioActionButtonDisabled : undefined,
+                    hovered ? styles.secondaryActionButtonHovered : undefined,
+                  ]}
+                >
+                  <CopyIcon color="#656565" size={18} />
+                </Pressable>
+                <Pressable
+                  onPress={handleExportWrittenReport}
+                  disabled={!hasWrittenReportContent}
+                  style={({ hovered }) => [
+                    styles.secondaryActionButton,
+                    styles.secondaryActionButtonIconOnly,
+                    !hasWrittenReportContent ? styles.audioActionButtonDisabled : undefined,
+                    hovered ? styles.secondaryActionButtonHovered : undefined,
+                  ]}
+                >
+                  <SharePdfIcon color="#656565" size={18} />
+                </Pressable>
+              </>
+            ) : null}
             {isWrittenReportDirty ? (
               <Pressable
                 onPress={() => {
@@ -1325,7 +1470,11 @@ export function SessieDetailScreen({
                     transcriptionError={session?.transcriptionError ?? null}
                     onEditSummary={() => setIsSummaryEditorOpen(true)}
                     onShareSummary={() => handleRequestPdfEdit({ text: session?.summary ?? '', title: editableSessionTitle })}
-                    onRetryTranscription={() => (selectedTemplateId ? generateReportForTemplate(selectedTemplateId) : null)}
+                    onRetryTranscription={() => {
+                      const templateId = selectedTemplateId ?? defaultTemplateId
+                      if (!templateId) return
+                      void generateReportForTemplate(templateId)
+                    }}
                     onCancelGeneration={handleCancelGeneration}
                   />
                 </View>
@@ -1548,18 +1697,18 @@ export function SessieDetailScreen({
             Onvoldoende minuten voor transcriptie
           </Text>
           <Text style={styles.noMinutesModalText}>
-            U heeft {remainingTranscriptionSeconds}s over en dit verslag heeft ongeveer {requiredTranscriptionSeconds}s nodig. Bekijk uw abonnement om extra minuten te regelen.
+            U heeft nog {formatMinutesLabel(remainingTranscriptionSeconds)} en dit verslag heeft ongeveer {formatMinutesLabel(requiredTranscriptionSeconds)} nodig. Bekijk uw abonnement om extra minuten te regelen.
           </Text>
-          <View style={styles.noMinutesModalActions}>
+        </View>
+        <View style={styles.noMinutesModalFooter}>
             <Pressable
               onPress={() => setIsNoMinutesModalVisible(false)}
               style={({ hovered }) => [
-                styles.noMinutesActionButton,
-                styles.noMinutesActionButtonSecondary,
-                hovered ? styles.noMinutesActionButtonSecondaryHovered : undefined,
+                styles.noMinutesFooterSecondaryButton,
+                hovered ? styles.noMinutesFooterSecondaryButtonHovered : undefined,
               ]}
             >
-              <Text isBold style={styles.noMinutesActionButtonSecondaryText}>
+              <Text isBold style={styles.noMinutesFooterSecondaryButtonText}>
                 Sluiten
               </Text>
             </Pressable>
@@ -1569,17 +1718,15 @@ export function SessieDetailScreen({
                 onOpenMySubscription()
               }}
               style={({ hovered }) => [
-                styles.noMinutesActionButton,
-                styles.noMinutesActionButtonPrimary,
-                hovered ? styles.noMinutesActionButtonPrimaryHovered : undefined,
+                styles.noMinutesFooterPrimaryButton,
+                hovered ? styles.noMinutesFooterPrimaryButtonHovered : undefined,
               ]}
             >
-              <Text isBold style={styles.noMinutesActionButtonPrimaryText}>
+              <Text isBold style={styles.noMinutesFooterPrimaryButtonText}>
                 Mijn abonnement
               </Text>
             </Pressable>
           </View>
-        </View>
       </AnimatedOverlayModal>
 
       {isChatMaximizedRendered ? (
@@ -2127,39 +2274,51 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: colors.text,
   },
-  noMinutesModalActions: {
+  noMinutesModalFooter: {
+    width: '100%',
+    padding: 0,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 12,
+    gap: 0,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  noMinutesActionButton: {
-    height: 40,
-    borderRadius: 12,
-    paddingHorizontal: 12,
+  noMinutesFooterSecondaryButton: {
+    height: 48,
+    borderRadius: 0,
+    borderBottomLeftRadius: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    paddingHorizontal: 24,
+    paddingVertical: 0,
+    minWidth: 140,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  noMinutesActionButtonSecondary: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+  noMinutesFooterSecondaryButtonHovered: {
+    backgroundColor: colors.hoverBackground,
   },
-  noMinutesActionButtonSecondaryHovered: {
-    backgroundColor: 'rgba(0,0,0,0.06)',
-  },
-  noMinutesActionButtonSecondaryText: {
+  noMinutesFooterSecondaryButtonText: {
     fontSize: 14,
     lineHeight: 18,
     color: colors.textStrong,
   },
-  noMinutesActionButtonPrimary: {
+  noMinutesFooterPrimaryButton: {
+    height: 48,
+    borderRadius: 0,
+    borderBottomRightRadius: 16,
     backgroundColor: colors.selected,
+    paddingHorizontal: 24,
+    paddingVertical: 0,
+    minWidth: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  noMinutesActionButtonPrimaryHovered: {
+  noMinutesFooterPrimaryButtonHovered: {
     backgroundColor: '#A50058',
   },
-  noMinutesActionButtonPrimaryText: {
+  noMinutesFooterPrimaryButtonText: {
     fontSize: 14,
     lineHeight: 18,
     color: '#FFFFFF',

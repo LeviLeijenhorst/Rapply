@@ -23,7 +23,6 @@ import { MySubscriptionModal } from './settings/MySubscriptionModal'
 import { ShareCoachscribeModal } from './settings/ShareCoachscribeModal'
 import { ContactModal } from './settings/ContactModal'
 import { DeleteAccountConfirmModal } from './settings/DeleteAccountConfirmModal'
-import { DeleteAccountErrorModal } from './settings/DeleteAccountErrorModal'
 import { ArchiefScreen } from '../screens/ArchiefScreen'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { CoacheeUpsertModal } from './coachees/CoacheeUpsertModal'
@@ -40,7 +39,7 @@ import { AdminContactSubmissionsScreen } from '../screens/AdminContactSubmission
 import { AdminWachtlijstScreen } from '../screens/AdminWachtlijstScreen'
 import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
 import { EndToEndEncryptieScreen } from '../screens/EndToEndEncryptieScreen'
-import { BottomToast } from './BottomToast'
+import { useToast } from '../toast/ToastProvider'
 
 type AnchorPoint = { x: number; y: number }
 type OverlayScreenKey = 'archief'
@@ -172,9 +171,7 @@ export function AppShell({ onLogout }: Props) {
   const [previousRoute, setPreviousRoute] = useState<RouteState | null>(null)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [isDeleteAccountConfirmModalOpen, setIsDeleteAccountConfirmModalOpen] = useState(false)
-  const [deleteAccountErrorMessage, setDeleteAccountErrorMessage] = useState<string | null>(null)
-  const [toastMessage, setToastMessage] = useState('')
-  const [isToastVisible, setIsToastVisible] = useState(false)
+  const { showToast, showErrorToast } = useToast()
   const isCurrentUserAdmin = currentUserAccountType === 'admin'
 
   const refreshSubscriptionAccess = useCallback(async () => {
@@ -186,16 +183,6 @@ export function AppShell({ onLogout }: Props) {
       console.warn('[pricing] failed to refresh subscription access; keeping pricing page available', error)
       setCanOpenSubscription(true)
     }
-  }, [])
-
-  const showToast = useCallback((message: string) => {
-    setToastMessage(message)
-    setIsToastVisible(false)
-    if (typeof window !== 'undefined') {
-      window.requestAnimationFrame(() => setIsToastVisible(true))
-      return
-    }
-    setIsToastVisible(true)
   }, [])
 
   useEffect(() => {
@@ -300,12 +287,6 @@ export function AppShell({ onLogout }: Props) {
       isCancelled = true
     }
   }, [data.sessions, e2ee, isAppDataLoaded, updateSession])
-
-  useEffect(() => {
-    if (!isToastVisible) return
-    const timeout = setTimeout(() => setIsToastVisible(false), 2600)
-    return () => clearTimeout(timeout)
-  }, [isToastVisible])
 
   const applyRoute = useCallback(
     (route: RouteState) => {
@@ -665,11 +646,11 @@ export function AppShell({ onLogout }: Props) {
     } catch (error) {
       console.error('[AppShell] Account verwijderen mislukt', error)
       setIsDeleteAccountConfirmModalOpen(false)
-      setDeleteAccountErrorMessage(parseDeleteAccountErrorMessage(error))
+      showErrorToast(parseDeleteAccountErrorMessage(error), 'Verwijderen mislukt. Probeer het later opnieuw.')
     } finally {
       setIsDeletingAccount(false)
     }
-  }, [isDeletingAccount, onLogout])
+  }, [isDeletingAccount, onLogout, showErrorToast])
 
   const submitFeedback = useCallback(async (feedback: string) => {
     await callSecureApi<{ ok: true }>('/feedback', { message: feedback })
@@ -974,7 +955,6 @@ export function AppShell({ onLogout }: Props) {
             }}
             onDeleteAccount={() => {
               if (isDeletingAccount) return
-              setDeleteAccountErrorMessage(null)
               setIsDeleteAccountConfirmModalOpen(true)
             }}
             isDeleteAccountBusy={isDeletingAccount}
@@ -990,12 +970,6 @@ export function AppShell({ onLogout }: Props) {
             onConfirm={() => {
               void deleteAccount()
             }}
-          />
-
-          <DeleteAccountErrorModal
-            visible={Boolean(deleteAccountErrorMessage)}
-            message={deleteAccountErrorMessage || ''}
-            onClose={() => setDeleteAccountErrorMessage(null)}
           />
 
           <MySubscriptionModal visible={isMySubscriptionModalOpen} onClose={() => setIsMySubscriptionModalOpen(false)} />
@@ -1031,7 +1005,6 @@ export function AppShell({ onLogout }: Props) {
               setIsCoacheeModalOpen(false)
             }}
           />
-          <BottomToast visible={isToastVisible} message={toastMessage} />
       </>
     </View>
   )

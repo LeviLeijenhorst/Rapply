@@ -36,6 +36,7 @@ import {
   type RealtimeTranscriberSession,
   type TranscriptionMode,
 } from '../../services/realtimeTranscription'
+import { useToast } from '../../toast/ToastProvider'
 
 type Step = 'select' | 'consent' | 'upload' | 'recording' | 'recorded'
 type OptionKey = 'gesprek' | 'verslag' | 'upload' | 'schrijven'
@@ -51,10 +52,10 @@ type Props = {
   onNewlyCreatedCoacheeHandled: () => void
 }
 
-const maxRecordingSeconds = 1 * 60 * 60 + 59 * 60 + 59
+const maxRecordingSeconds = 1 * 60 * 60 + 54 * 60 + 59
 const recordingWarningLeadSeconds = 5 * 60
 const recordingWarningStartSeconds = maxRecordingSeconds - recordingWarningLeadSeconds
-const maxTranscriptionDurationSeconds = 120 * 60
+const maxTranscriptionDurationSeconds = 115 * 60
 
 function formatTimeLabel(totalSeconds: number) {
   const normalizedSeconds = Math.max(0, Math.floor(totalSeconds))
@@ -176,6 +177,13 @@ function formatDurationLabel(totalSeconds: number) {
   return `${hoursLabel}:${minutesLabel}:${secondsLabel}`
 }
 
+function formatMinutesLabel(totalSeconds: number): string {
+  const minutes = Math.ceil(Math.max(0, Number(totalSeconds) || 0) / 60)
+  if (minutes <= 0) return 'minder dan 1 minuut'
+  if (minutes === 1) return '1 minuut'
+  return `${minutes} minuten`
+}
+
 function createOperationId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
@@ -197,6 +205,7 @@ export function NewSessionModal({
   const { data, createSession, updateSession } = useLocalAppData()
   const e2ee = useE2ee()
   const recorder = useBrowserAudioRecorder()
+  const { showErrorToast } = useToast()
 
   const [isRendered, setIsRendered] = useState(visible)
   const [step, setStep] = useState<Step>('select')
@@ -263,6 +272,11 @@ export function NewSessionModal({
   const minimizeProgress = useRef(new Animated.Value(0)).current
   const [isMinimizeAnimating, setIsMinimizeAnimating] = useState(false)
   const [isRestoringFromMinimized, setIsRestoringFromMinimized] = useState(false)
+
+  useEffect(() => {
+    if (!recorder.errorMessage) return
+    showErrorToast(recorder.errorMessage, 'Opnemen is mislukt. Probeer het opnieuw.')
+  }, [recorder.errorMessage, showErrorToast])
 
   useEffect(() => {
     if (!visible) return
@@ -1399,12 +1413,6 @@ export function NewSessionModal({
                 </Pressable>
               </View>
 
-              {recorder.errorMessage ? (
-                <View style={styles.recordingErrorCard}>
-                  {/* Recording error */}
-                  <Text style={styles.recordingErrorText}>{recorder.errorMessage}</Text>
-                </View>
-              ) : null}
             </View>
             ) : null}
 
@@ -1816,46 +1824,44 @@ export function NewSessionModal({
             Onvoldoende minuten voor transcriptie
           </Text>
           <Text style={styles.insufficientMinutesModalText}>
-            Deze opname is {insufficientMinutesContext ? `${insufficientMinutesContext.requiredSeconds}s` : ''} en je hebt nog{' '}
-            {insufficientMinutesContext ? `${insufficientMinutesContext.remainingSeconds}s` : '0s'} over. Download je audio nu, of sla audio op
+            Deze opname duurt ongeveer {insufficientMinutesContext ? formatMinutesLabel(insufficientMinutesContext.requiredSeconds) : '0 minuten'} en je hebt nog{' '}
+            {insufficientMinutesContext ? formatMinutesLabel(insufficientMinutesContext.remainingSeconds) : '0 minuten'} over. Download je audio nu, of sla audio op
             voordat je doorgaat.
           </Text>
-          <View style={styles.insufficientMinutesActions}>
-            <Pressable
-              onPress={() => {
-                if (!insufficientMinutesContext) return
-                downloadCurrentAudio(insufficientMinutesContext.kind)
-              }}
-              style={({ hovered }) => [
-                styles.insufficientMinutesActionButton,
-                styles.insufficientMinutesActionButtonSecondary,
-                hovered ? styles.insufficientMinutesActionButtonSecondaryHovered : undefined,
-              ]}
-            >
-              <Text isBold style={styles.insufficientMinutesActionButtonSecondaryText}>
-                Audio downloaden
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                const context = insufficientMinutesContext
-                if (!context) return
-                setShouldSaveAudio(true)
-                setIsInsufficientMinutesWarningVisible(false)
-                setInsufficientMinutesContext(null)
-                void createAndOpenSessionInternal({ kind: context.kind }, { overrideShouldSaveAudio: true })
-              }}
-              style={({ hovered }) => [
-                styles.insufficientMinutesActionButton,
-                styles.insufficientMinutesActionButtonPrimary,
-                hovered ? styles.insufficientMinutesActionButtonPrimaryHovered : undefined,
-              ]}
-            >
-              <Text isBold style={styles.insufficientMinutesActionButtonPrimaryText}>
-                Audio opslaan en doorgaan
-              </Text>
-            </Pressable>
-          </View>
+        </View>
+        <View style={styles.insufficientMinutesFooter}>
+          <Pressable
+            onPress={() => {
+              if (!insufficientMinutesContext) return
+              downloadCurrentAudio(insufficientMinutesContext.kind)
+            }}
+            style={({ hovered }) => [
+              styles.insufficientMinutesFooterSecondaryButton,
+              hovered ? styles.insufficientMinutesFooterSecondaryButtonHovered : undefined,
+            ]}
+          >
+            <Text isBold style={styles.insufficientMinutesFooterSecondaryButtonText}>
+              Audio downloaden
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              const context = insufficientMinutesContext
+              if (!context) return
+              setShouldSaveAudio(true)
+              setIsInsufficientMinutesWarningVisible(false)
+              setInsufficientMinutesContext(null)
+              void createAndOpenSessionInternal({ kind: context.kind }, { overrideShouldSaveAudio: true })
+            }}
+            style={({ hovered }) => [
+              styles.insufficientMinutesFooterPrimaryButton,
+              hovered ? styles.insufficientMinutesFooterPrimaryButtonHovered : undefined,
+            ]}
+          >
+            <Text isBold style={styles.insufficientMinutesFooterPrimaryButtonText}>
+              Audio opslaan en doorgaan
+            </Text>
+          </Pressable>
         </View>
       </AnimatedOverlayModal>
     </View>
@@ -2249,19 +2255,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 24,
   },
-  recordingErrorCard: {
-    width: '100%',
-    borderRadius: 12,
-    backgroundColor: colors.hoverBackground,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-  },
-  recordingErrorText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-  },
   closeWarningContainer: {
     width: 520,
   },
@@ -2382,39 +2375,51 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: colors.text,
   },
-  insufficientMinutesActions: {
+  insufficientMinutesFooter: {
+    width: '100%',
+    padding: 0,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 12,
+    gap: 0,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  insufficientMinutesActionButton: {
-    height: 40,
-    borderRadius: 12,
-    paddingHorizontal: 12,
+  insufficientMinutesFooterSecondaryButton: {
+    height: 48,
+    borderRadius: 0,
+    borderBottomLeftRadius: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    paddingHorizontal: 24,
+    paddingVertical: 0,
+    minWidth: 180,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  insufficientMinutesActionButtonSecondary: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+  insufficientMinutesFooterSecondaryButtonHovered: {
+    backgroundColor: colors.hoverBackground,
   },
-  insufficientMinutesActionButtonSecondaryHovered: {
-    backgroundColor: 'rgba(0,0,0,0.06)',
-  },
-  insufficientMinutesActionButtonSecondaryText: {
+  insufficientMinutesFooterSecondaryButtonText: {
     fontSize: 14,
     lineHeight: 18,
     color: colors.textStrong,
   },
-  insufficientMinutesActionButtonPrimary: {
+  insufficientMinutesFooterPrimaryButton: {
+    height: 48,
+    borderRadius: 0,
+    borderBottomRightRadius: 16,
     backgroundColor: colors.selected,
+    paddingHorizontal: 24,
+    paddingVertical: 0,
+    minWidth: 180,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  insufficientMinutesActionButtonPrimaryHovered: {
+  insufficientMinutesFooterPrimaryButtonHovered: {
     backgroundColor: '#A50058',
   },
-  insufficientMinutesActionButtonPrimaryText: {
+  insufficientMinutesFooterPrimaryButtonText: {
     fontSize: 14,
     lineHeight: 18,
     color: '#FFFFFF',

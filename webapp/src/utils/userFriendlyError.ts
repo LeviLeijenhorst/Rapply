@@ -45,6 +45,31 @@ function hasRawErrorCode(message: string): boolean {
   return false
 }
 
+function hasTechnicalEnglishTerms(message: string): boolean {
+  const lowered = String(message || '').toLowerCase()
+  return (
+    lowered.includes('api') ||
+    lowered.includes('http') ||
+    lowered.includes('oauth') ||
+    lowered.includes('token') ||
+    lowered.includes('indexeddb') ||
+    lowered.includes('failed') ||
+    lowered.includes('missing ') ||
+    lowered.includes('invalid ') ||
+    lowered.includes('forbidden') ||
+    lowered.includes('unauthorized') ||
+    lowered.includes('not found')
+  )
+}
+
+export function sanitizeUserFacingErrorMessage(rawMessage: string, fallback: string): string {
+  const cleaned = String(rawMessage || '').trim()
+  if (!cleaned) return fallback
+  if (hasRawErrorCode(cleaned)) return fallback
+  if (hasTechnicalEnglishTerms(cleaned)) return fallback
+  return cleaned
+}
+
 export function toUserFriendlyErrorMessage(error: unknown, options: Options): string {
   const { fallback, forbiddenMessage } = options
   const rawMessage = extractMessage(error)
@@ -71,6 +96,5 @@ export function toUserFriendlyErrorMessage(error: unknown, options: Options): st
     return decodedPayload
   }
 
-  if (hasRawErrorCode(rawMessage)) return fallback
-  return rawMessage
+  return sanitizeUserFacingErrorMessage(rawMessage, fallback)
 }

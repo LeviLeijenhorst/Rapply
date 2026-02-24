@@ -55,6 +55,21 @@ function isNoSpeechDetectedMessage(message: string): boolean {
   )
 }
 
+function formatRemainingMinutesLabel(remainingSeconds: number): string {
+  const minutes = Math.ceil(Math.max(0, remainingSeconds) / 60)
+  if (minutes <= 0) return 'minder dan 1 minuut'
+  if (minutes === 1) return '1 minuut'
+  return `${minutes} minuten`
+}
+
+function parseRemainingSeconds(message: string): number | null {
+  const secondsMatch = String(message || '').match(/remaining\s+(\d+(?:[.,]\d+)?)\s*s/i)
+  if (!secondsMatch?.[1]) return null
+  const parsed = Number.parseFloat(secondsMatch[1].replace(',', '.'))
+  if (!Number.isFinite(parsed)) return null
+  return Math.max(0, Math.floor(parsed))
+}
+
 export function toUserFriendlyTranscriptionError(rawMessage: string | null | undefined, fallback: string): string {
   const decoded = decodePossibleJsonError(String(rawMessage || ''))
   const lowered = decoded.toLowerCase()
@@ -63,7 +78,7 @@ export function toUserFriendlyTranscriptionError(rawMessage: string | null | und
     return 'Audio bestand is te groot voor transcriptie.'
   }
   if (lowered.includes('audiolengthlimitexceeded') || lowered.includes('maximal audio length exceeded')) {
-    return 'Deze opname is te lang voor transcriptie. Gebruik een opname korter dan 120 minuten.'
+    return 'Deze opname is te lang voor transcriptie. Gebruik een opname korter dan 115 minuten.'
   }
 
   if (isContentFilterMessage(decoded)) {
@@ -72,15 +87,12 @@ export function toUserFriendlyTranscriptionError(rawMessage: string | null | und
   if (isNoSpeechDetectedMessage(decoded)) {
     return 'Er is geen spraak gedetecteerd in deze opname.'
   }
-  if (lowered.includes('not enough seconds remaining for transcription')) {
-    const remainingMatch = decoded.match(/remaining\s+(\d+)s/i)
-    if (remainingMatch?.[1]) {
-      const remainingSeconds = Number.parseInt(remainingMatch[1], 10)
-      if (Number.isFinite(remainingSeconds)) {
-        return `Niet genoeg seconden over voor transcriptie (nog ${remainingSeconds}s).`
-      }
+  if (lowered.includes('not enough seconds remaining')) {
+    const remainingSeconds = parseRemainingSeconds(decoded)
+    if (remainingSeconds !== null) {
+      return `Niet genoeg minuten over voor transcriptie (nog ${formatRemainingMinutesLabel(remainingSeconds)}).`
     }
-    return 'Niet genoeg seconden over voor transcriptie.'
+    return 'Niet genoeg minuten over voor transcriptie.'
   }
 
   const cleaned = decoded.trim()

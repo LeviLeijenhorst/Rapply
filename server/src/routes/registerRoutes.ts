@@ -2,6 +2,7 @@ import type { Express, RequestHandler } from "express"
 import { authImplementationVersion } from "../auth"
 import { env } from "../env"
 import { registerAiRoutes } from "./aiRoutes"
+import { registerAnalyticsRoutes } from "./analyticsRoutes"
 import { registerAdminTranscriptionRoutes } from "./adminTranscriptionRoutes"
 import { registerAppDataRoutes } from "./appDataRoutes"
 import { registerAuthRoutes } from "./authRoutes"
@@ -58,6 +59,7 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
   })
 
   registerAuthRoutes(app)
+  registerAnalyticsRoutes(app, { rateLimitAccount: params.rateLimitAccount })
   registerE2eeRoutes(app, { rateLimitAccount: params.rateLimitAccount })
   registerAppDataRoutes(app)
   registerAiRoutes(app, { rateLimitAi: params.rateLimitAi })

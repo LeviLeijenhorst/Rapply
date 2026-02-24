@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native'
 
 import { Text } from './Text'
 import { colors } from '../theme/colors'
+import { trackWebappError } from '../services/analytics'
 
 type Props = {
   children: React.ReactNode
@@ -33,6 +34,7 @@ export class AppErrorBoundary extends React.Component<Props, State> {
     const stack = error instanceof Error ? error.stack ?? null : null
     const componentStack = errorInfo.componentStack ?? null
     this.setState({ errorMessage: message, errorStack: stack, componentStack })
+    trackWebappError(error, { kind: 'react_error_boundary', componentStack }, { authenticated: true })
     console.error('AppErrorBoundary caught error', { message, stack, componentStack, error })
   }
 

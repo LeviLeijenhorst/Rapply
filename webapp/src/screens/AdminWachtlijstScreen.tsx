@@ -5,6 +5,7 @@ import { Text } from '../components/Text'
 import { callSecureApi } from '../services/secureApi'
 import { colors } from '../theme/colors'
 import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
+import { useToast } from '../toast/ToastProvider'
 
 type WachtlijstItem = {
   id: string
@@ -36,6 +37,7 @@ export function AdminWachtlijstScreen() {
   const [items, setItems] = useState<WachtlijstItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const { showErrorToast } = useToast()
 
   const loadWachtlijst = useCallback(async () => {
     try {
@@ -55,6 +57,11 @@ export function AdminWachtlijstScreen() {
     void loadWachtlijst()
   }, [loadWachtlijst])
 
+  useEffect(() => {
+    if (!errorMessage) return
+    showErrorToast(errorMessage, 'Wachtlijst ophalen mislukt.')
+  }, [errorMessage, showErrorToast])
+
   const headerText = useMemo(() => `Wachtlijst (${items.length})`, [items.length])
 
   return (
@@ -68,12 +75,6 @@ export function AdminWachtlijstScreen() {
           <Text isBold style={styles.refreshButtonText}>{isLoading ? 'Verversen...' : 'Verversen'}</Text>
         </Pressable>
       </View>
-
-      {errorMessage ? (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>{errorMessage}</Text>
-        </View>
-      ) : null}
 
       {isLoading ? (
         <View style={styles.loadingWrap}>
@@ -145,18 +146,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     lineHeight: 18,
-  },
-  errorBox: {
-    borderWidth: 1,
-    borderColor: '#B20000',
-    backgroundColor: '#FFF2F2',
-    borderRadius: 10,
-    padding: 12,
-  },
-  errorText: {
-    color: '#9F0000',
-    fontSize: 14,
-    lineHeight: 20,
   },
   loadingWrap: {
     flex: 1,

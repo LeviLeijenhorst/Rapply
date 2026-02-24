@@ -7,6 +7,7 @@ import { colors } from '../../theme/colors'
 import { SearchIcon } from '../icons/SearchIcon'
 import { parseTimeLabelToSeconds } from '../../utils/time'
 import { toUserFriendlyTranscriptionError } from '../../utils/transcriptionError'
+import { useToast } from '../../toast/ToastProvider'
 
 type Props = {
   searchValue: string
@@ -144,6 +145,7 @@ export function TranscriptTabPanel({
 }: Props) {
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
   const [visibleLineCount, setVisibleLineCount] = useState(INITIAL_VISIBLE_LINE_COUNT)
+  const { showErrorToast } = useToast()
 
   const hasTranscript = Boolean(transcript && transcript.trim())
   const isTranscribing = transcriptionStatus === 'transcribing'
@@ -151,6 +153,8 @@ export function TranscriptTabPanel({
   const isLoading = isTranscribing || (isGenerating && !hasTranscript)
   const hasError = transcriptionStatus === 'error'
   const hasContent = hasTranscript && !isLoading && !hasError
+  const transcriptErrorMessage = toUserFriendlyTranscriptionError(transcriptionError, 'Er is een fout opgetreden bij het genereren van de transcriptie.')
+  const isInsufficientMinutesError = transcriptErrorMessage.toLowerCase().includes('niet genoeg minuten over voor transcriptie')
 
   const filteredTranscript =
     transcript && searchValue.trim() ? transcript.split('\n').filter((line) => line.toLowerCase().includes(searchValue.trim().toLowerCase())) : transcript?.split('\n') || []
@@ -170,6 +174,12 @@ export function TranscriptTabPanel({
   useEffect(() => {
     setVisibleLineCount(INITIAL_VISIBLE_LINE_COUNT)
   }, [transcript, searchValue])
+
+  useEffect(() => {
+    if (!hasError) return
+    if (isInsufficientMinutesError) return
+    showErrorToast(transcriptErrorMessage, 'Er is een fout opgetreden bij het genereren van de transcriptie.')
+  }, [hasError, isInsufficientMinutesError, showErrorToast, transcriptErrorMessage])
 
   const visibleTranscriptLines = useMemo(() => {
     if (hasSearch) return parsedTranscriptLinesWithResolvedTimes
@@ -245,9 +255,6 @@ export function TranscriptTabPanel({
           </View>
         ) : hasError ? (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>
-              {toUserFriendlyTranscriptionError(transcriptionError, 'Er is een fout opgetreden bij het genereren van de transcriptie.')}
-            </Text>
             {onRetryTranscription ? (
               <Pressable
                 onPress={onRetryTranscription}
@@ -450,11 +457,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-  },
-  errorText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.selected,
   },
   retryButton: {
     height: 36,

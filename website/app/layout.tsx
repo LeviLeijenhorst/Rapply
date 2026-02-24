@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Catamaran } from "next/font/google";
+import WebsiteAnalyticsTracker from "@/components/WebsiteAnalyticsTracker";
 import "./globals.css";
 
 const catamaran = Catamaran({
@@ -19,7 +20,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${catamaran.variable} antialiased`}>{children}</body>
+      <body className={`${catamaran.variable} antialiased`}>
+        <WebsiteAnalyticsTracker />
+        {children}
+      </body>
     </html>
   );
 }

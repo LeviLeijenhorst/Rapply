@@ -5,6 +5,7 @@ import { Text } from '../components/Text'
 import { callSecureApi } from '../services/secureApi'
 import { colors } from '../theme/colors'
 import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
+import { useToast } from '../toast/ToastProvider'
 
 type Plan = {
   id: string
@@ -52,6 +53,39 @@ type FeedbackItem = {
 type FeedbackListResponse = { items: FeedbackItem[] }
 type TranscriptionMode = 'azure-fast-batch' | 'azure-realtime-live'
 type TranscriptionModeResponse = { mode?: string; updatedAt?: string | null; updatedBy?: string | null }
+type AnalyticsCounters = {
+  websiteVisits: number
+  websiteClicks: number
+  webappVisits: number
+  webappClicks: number
+  webappAiMessages: number
+  webappErrors: number
+}
+type AnalyticsUserMinutes = {
+  userId: string
+  email: string | null
+  displayName: string | null
+  totalMinutes: number
+}
+type AnalyticsEvent = {
+  id: string
+  app: 'website' | 'webapp'
+  type: 'visit' | 'click' | 'ai_message_sent' | 'error' | 'custom'
+  action: string | null
+  path: string | null
+  userId: string | null
+  accountEmail: string | null
+  anonymousId: string | null
+  sessionId: string | null
+  metadata: Record<string, unknown>
+  occurredAt: string
+}
+type AnalyticsOverviewResponse = {
+  windowDays: number
+  counters: AnalyticsCounters
+  perUserMinutes: AnalyticsUserMinutes[]
+  recentEvents: AnalyticsEvent[]
+}
 
 type UserFormState = {
   planId: string | null
@@ -111,6 +145,18 @@ export function AdminRevenueScreen() {
   const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>('azure-fast-batch')
   const [transcriptionModeUpdatedAt, setTranscriptionModeUpdatedAt] = useState<string | null>(null)
   const [isTranscriptionModeBusy, setIsTranscriptionModeBusy] = useState(false)
+  const [analyticsWindowDays, setAnalyticsWindowDays] = useState(30)
+  const [analyticsCounters, setAnalyticsCounters] = useState<AnalyticsCounters>({
+    websiteVisits: 0,
+    websiteClicks: 0,
+    webappVisits: 0,
+    webappClicks: 0,
+    webappAiMessages: 0,
+    webappErrors: 0,
+  })
+  const [analyticsUserMinutes, setAnalyticsUserMinutes] = useState<AnalyticsUserMinutes[]>([])
+  const [analyticsRecentEvents, setAnalyticsRecentEvents] = useState<AnalyticsEvent[]>([])
+  const { showErrorToast } = useToast()
 
   function normalizeTranscriptionMode(value: unknown): TranscriptionMode {
     return String(value || '').trim().toLowerCase() === 'azure-realtime-live' ? 'azure-realtime-live' : 'azure-fast-batch'
@@ -120,11 +166,12 @@ export function AdminRevenueScreen() {
     try {
       setIsLoading(true)
       setErrorMessage(null)
-      const [plansResponse, usersResponse, feedbackResponse, transcriptionModeResponse] = await Promise.all([
+      const [plansResponse, usersResponse, feedbackResponse, transcriptionModeResponse, analyticsResponse] = await Promise.all([
         callSecureApi<PlanListResponse>('/admin/plans/list', {}),
         callSecureApi<UserListResponse>('/admin/users/list', {}),
         callSecureApi<FeedbackListResponse>('/admin/feedback/list', { limit: 200 }),
         callSecureApi<TranscriptionModeResponse>('/admin/transcription/mode/get', {}),
+        callSecureApi<AnalyticsOverviewResponse>('/admin/analytics/overview', { days: 30 }),
       ])
       const nextPlans = Array.isArray(plansResponse.items) ? plansResponse.items : []
       const nextUsers = Array.isArray(usersResponse.items) ? usersResponse.items : []
@@ -134,6 +181,17 @@ export function AdminRevenueScreen() {
       setFeedbackItems(nextFeedbackItems)
       setTranscriptionMode(normalizeTranscriptionMode(transcriptionModeResponse?.mode))
       setTranscriptionModeUpdatedAt(transcriptionModeResponse?.updatedAt ?? null)
+      setAnalyticsWindowDays(Number(analyticsResponse?.windowDays || 30))
+      setAnalyticsCounters({
+        websiteVisits: Number(analyticsResponse?.counters?.websiteVisits || 0),
+        websiteClicks: Number(analyticsResponse?.counters?.websiteClicks || 0),
+        webappVisits: Number(analyticsResponse?.counters?.webappVisits || 0),
+        webappClicks: Number(analyticsResponse?.counters?.webappClicks || 0),
+        webappAiMessages: Number(analyticsResponse?.counters?.webappAiMessages || 0),
+        webappErrors: Number(analyticsResponse?.counters?.webappErrors || 0),
+      })
+      setAnalyticsUserMinutes(Array.isArray(analyticsResponse?.perUserMinutes) ? analyticsResponse.perUserMinutes : [])
+      setAnalyticsRecentEvents(Array.isArray(analyticsResponse?.recentEvents) ? analyticsResponse.recentEvents.slice(0, 80) : [])
       setSelectedUserId((current) => {
         if (current && nextUsers.some((user) => user.userId === current)) return current
         return nextUsers[0]?.userId ?? null
@@ -145,6 +203,17 @@ export function AdminRevenueScreen() {
       setFeedbackItems([])
       setTranscriptionMode('azure-fast-batch')
       setTranscriptionModeUpdatedAt(null)
+      setAnalyticsWindowDays(30)
+      setAnalyticsCounters({
+        websiteVisits: 0,
+        websiteClicks: 0,
+        webappVisits: 0,
+        webappClicks: 0,
+        webappAiMessages: 0,
+        webappErrors: 0,
+      })
+      setAnalyticsUserMinutes([])
+      setAnalyticsRecentEvents([])
       setSelectedUserId(null)
       setSelectedUserForm(null)
     } finally {
@@ -176,6 +245,16 @@ export function AdminRevenueScreen() {
     void loadAllowlist()
   }, [loadAllowlist, loadData])
 
+  useEffect(() => {
+    if (!errorMessage) return
+    showErrorToast(errorMessage, 'Admingegevens ophalen mislukt.')
+  }, [errorMessage, showErrorToast])
+
+  useEffect(() => {
+    if (!allowlistErrorMessage) return
+    showErrorToast(allowlistErrorMessage, 'Allowlist ophalen mislukt.')
+  }, [allowlistErrorMessage, showErrorToast])
+
   const saveTranscriptionMode = useCallback(async (mode: TranscriptionMode) => {
     try {
       setIsTranscriptionModeBusy(true)
@@ -185,11 +264,11 @@ export function AdminRevenueScreen() {
       setTranscriptionModeUpdatedAt(response?.updatedAt ?? null)
       setStatusMessage(`Transcriptiemodus opgeslagen: ${mode === 'azure-realtime-live' ? 'Realtime tijdens opname' : 'Batch na opname'}`)
     } catch (error) {
-      setStatusMessage(parseError(error))
+      showErrorToast(parseError(error), 'Instellingen opslaan mislukt.')
     } finally {
       setIsTranscriptionModeBusy(false)
     }
-  }, [])
+  }, [showErrorToast])
 
   const addAllowlistEmail = useCallback(async () => {
     const trimmedEmail = allowlistEmailInput.trim().toLowerCase()
@@ -211,16 +290,17 @@ export function AdminRevenueScreen() {
       setAllowlistStatusMessage('E-mailadres toegevoegd aan de allowlist.')
       await loadAllowlist()
     } catch (error) {
-      setAllowlistStatusMessage(
+      showErrorToast(
         toUserFriendlyErrorMessage(error, {
           fallback: 'Toevoegen mislukt.',
           forbiddenMessage: 'Geen toegang. Alleen contact@jnlsolutions.nl mag deze pagina openen.',
         }),
+        'Toevoegen mislukt.',
       )
     } finally {
       setIsAllowlistBusy(false)
     }
-  }, [allowlistEmailInput, loadAllowlist])
+  }, [allowlistEmailInput, loadAllowlist, showErrorToast])
 
   const removeAllowlistEmail = useCallback(
     async (email: string) => {
@@ -231,17 +311,18 @@ export function AdminRevenueScreen() {
         setAllowlistStatusMessage('E-mailadres verwijderd uit de allowlist.')
         await loadAllowlist()
       } catch (error) {
-        setAllowlistStatusMessage(
+        showErrorToast(
           toUserFriendlyErrorMessage(error, {
             fallback: 'Verwijderen mislukt.',
             forbiddenMessage: 'Geen toegang. Alleen contact@jnlsolutions.nl mag deze pagina openen.',
           }),
+          'Verwijderen mislukt.',
         )
       } finally {
         setIsAllowlistBusy(false)
       }
     },
-    [loadAllowlist],
+    [loadAllowlist, showErrorToast],
   )
 
   const selectedUser = useMemo(
@@ -290,11 +371,11 @@ export function AdminRevenueScreen() {
       setStatusMessage(`Plan opgeslagen: ${name}`)
       await loadData()
     } catch (error) {
-      setStatusMessage(parseError(error))
+      showErrorToast(parseError(error), 'Plan opslaan mislukt.')
     } finally {
       setIsBusy(false)
     }
-  }, [loadData])
+  }, [loadData, showErrorToast])
 
   const saveSelectedUser = useCallback(async () => {
     if (!selectedUser || !selectedUserForm) return
@@ -322,11 +403,11 @@ export function AdminRevenueScreen() {
       setStatusMessage(`Gebruiker opgeslagen: ${buildUserLabel(selectedUser)}`)
       await loadData()
     } catch (error) {
-      setStatusMessage(parseError(error))
+      showErrorToast(parseError(error), 'Gebruiker opslaan mislukt.')
     } finally {
       setIsBusy(false)
     }
-  }, [loadData, selectedUser, selectedUserForm])
+  }, [loadData, selectedUser, selectedUserForm, showErrorToast])
 
   function updatePlanValue(planId: string, patch: Partial<Plan>) {
     setPlans((prev) => prev.map((plan) => (plan.id === planId ? { ...plan, ...patch } : plan)))
@@ -344,10 +425,72 @@ export function AdminRevenueScreen() {
         </Pressable>
       </View>
 
-      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       {statusMessage ? <Text style={styles.statusText}>{statusMessage}</Text> : null}
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.card}>
+          <Text isSemibold style={styles.cardTitle}>Analytics</Text>
+          <Text style={styles.cardSubtitle}>In de laatste {analyticsWindowDays} dagen</Text>
+          <View style={styles.analyticsGrid}>
+            <View style={styles.analyticsMetricCard}>
+              <Text isSemibold style={styles.analyticsMetricValue}>{analyticsCounters.websiteVisits}</Text>
+              <Text style={styles.analyticsMetricLabel}>Website bezoeken</Text>
+            </View>
+            <View style={styles.analyticsMetricCard}>
+              <Text isSemibold style={styles.analyticsMetricValue}>{analyticsCounters.websiteClicks}</Text>
+              <Text style={styles.analyticsMetricLabel}>Website clicks</Text>
+            </View>
+            <View style={styles.analyticsMetricCard}>
+              <Text isSemibold style={styles.analyticsMetricValue}>{analyticsCounters.webappVisits}</Text>
+              <Text style={styles.analyticsMetricLabel}>Webapp bezoeken</Text>
+            </View>
+            <View style={styles.analyticsMetricCard}>
+              <Text isSemibold style={styles.analyticsMetricValue}>{analyticsCounters.webappClicks}</Text>
+              <Text style={styles.analyticsMetricLabel}>Webapp clicks</Text>
+            </View>
+            <View style={styles.analyticsMetricCard}>
+              <Text isSemibold style={styles.analyticsMetricValue}>{analyticsCounters.webappAiMessages}</Text>
+              <Text style={styles.analyticsMetricLabel}>AI-berichten verstuurd</Text>
+            </View>
+            <View style={styles.analyticsMetricCard}>
+              <Text isSemibold style={styles.analyticsMetricValue}>{analyticsCounters.webappErrors}</Text>
+              <Text style={styles.analyticsMetricLabel}>Webapp errors</Text>
+            </View>
+          </View>
+
+          <Text isSemibold style={styles.cardTitle}>Minuten per gebruiker</Text>
+          {analyticsUserMinutes.length === 0 ? (
+            <Text style={styles.cardSubtitle}>Nog geen minuten gevonden.</Text>
+          ) : (
+            <View style={styles.analyticsList}>
+              {analyticsUserMinutes.slice(0, 40).map((item) => (
+                <View key={item.userId} style={styles.analyticsListRow}>
+                  <Text style={styles.analyticsListLabel}>{item.displayName || item.email || item.userId}</Text>
+                  <Text style={styles.analyticsListValue}>{item.totalMinutes} min</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <Text isSemibold style={styles.cardTitle}>Recente analytics events</Text>
+          {analyticsRecentEvents.length === 0 ? (
+            <Text style={styles.cardSubtitle}>Nog geen events gevonden.</Text>
+          ) : (
+            <View style={styles.analyticsEventList}>
+              {analyticsRecentEvents.slice(0, 50).map((event) => (
+                <View key={event.id} style={styles.analyticsEventItem}>
+                  <View style={styles.feedbackMetaRow}>
+                    <Text isSemibold style={styles.feedbackMetaTitle}>{formatDateTime(event.occurredAt)}</Text>
+                    <Text style={styles.feedbackMetaMuted}>{event.accountEmail || event.userId || event.anonymousId || '-'}</Text>
+                  </View>
+                  <Text style={styles.feedbackMetaLine}>{event.app} | {event.type} | {event.action || '-'}</Text>
+                  <Text style={styles.feedbackMetaLine}>{event.path || '-'}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
         <View style={styles.card}>
           <View style={styles.feedbackHeaderRow}>
             <View>
@@ -418,7 +561,6 @@ export function AdminRevenueScreen() {
             </Pressable>
           </View>
 
-          {allowlistErrorMessage ? <Text style={styles.errorText}>{allowlistErrorMessage}</Text> : null}
           {allowlistStatusMessage ? <Text style={styles.statusText}>{allowlistStatusMessage}</Text> : null}
 
           {isAllowlistLoading ? (
@@ -644,11 +786,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 16,
   },
-  errorText: {
-    color: '#A80000',
-    fontSize: 13,
-    lineHeight: 17,
-  },
   statusText: {
     color: colors.textSecondary,
     fontSize: 13,
@@ -660,6 +797,67 @@ const styles = StyleSheet.create({
   scrollContent: {
     gap: 12,
     paddingBottom: 20,
+  },
+  analyticsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  analyticsMetricCard: {
+    minWidth: 180,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: colors.pageBackground,
+    gap: 2,
+  },
+  analyticsMetricValue: {
+    fontSize: 18,
+    lineHeight: 22,
+    color: colors.textStrong,
+  },
+  analyticsMetricLabel: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
+  },
+  analyticsList: {
+    gap: 6,
+  },
+  analyticsListRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: colors.pageBackground,
+  },
+  analyticsListLabel: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 17,
+    color: colors.textStrong,
+  },
+  analyticsListValue: {
+    fontSize: 13,
+    lineHeight: 17,
+    color: colors.textSecondary,
+  },
+  analyticsEventList: {
+    gap: 8,
+  },
+  analyticsEventItem: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: colors.pageBackground,
+    gap: 4,
   },
   allowlistHeaderRow: {
     flexDirection: 'row',

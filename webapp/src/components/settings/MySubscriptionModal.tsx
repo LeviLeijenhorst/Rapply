@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { colors } from '../../theme/colors'
@@ -15,6 +15,8 @@ import { SecuritySafeIcon } from '../icons/SecuritySafeIcon'
 import { callSecureApi } from '../../services/secureApi'
 import { AppButton } from '../AppButton'
 import { cancelMollieSubscription, createMollieCheckout } from '../../services/billing'
+import { toUserFriendlyErrorMessage } from '../../utils/userFriendlyError'
+import { useToast } from '../../toast/ToastProvider'
 
 type Props = {
   visible: boolean
@@ -53,18 +55,19 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [isPricingLoading, setIsPricingLoading] = useState(false)
   const [checkoutLoadingPlanId, setCheckoutLoadingPlanId] = useState<string | null>(null)
-  const [checkoutError, setCheckoutError] = useState<string | null>(null)
-  const [isCancelViewOpen, setIsCancelViewOpen] = useState(false)
   const [isCancelBusy, setIsCancelBusy] = useState(false)
-  const [cancelError, setCancelError] = useState<string | null>(null)
+  const [hoursSavedPerWeek, setHoursSavedPerWeek] = useState(4)
+  const [usedTimePercent, setUsedTimePercent] = useState(55)
+  const [averageSessionPrice, setAverageSessionPrice] = useState(150)
+  const { showErrorToast } = useToast()
+  const inputWebStyle = useMemo(() => ({ outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any), [])
+  const rangeInputWebStyle = useMemo(() => ({ cursor: 'pointer', accentColor: colors.selected } as any), [])
 
   useEffect(() => {
     if (!visible) return
     let isCancelled = false
     setCheckoutLoadingPlanId(null)
-    setIsCancelViewOpen(false)
     setIsCancelBusy(false)
-    setCancelError(null)
 
     const loadPricing = async () => {
       try {
@@ -111,10 +114,15 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
 
   const plans = useMemo(() => pricingPlans, [pricingPlans])
   const primaryPlan = plans[0] ?? null
+  const estimatedReportsPerMonth = primaryPlan ? Math.max(0, Math.floor(primaryPlan.minutesPerMonth / 60)) : 0
+  const savedHoursPerMonth = hoursSavedPerWeek * 4.33
+  const estimatedSessionsPerMonth = Math.max(0, savedHoursPerMonth * (usedTimePercent / 100))
+  const monthlyRevenue = Math.max(0, estimatedSessionsPerMonth * averageSessionPrice)
+  const monthlySubscriptionCost = primaryPlan?.monthlyPrice ?? 0
+  const monthlyNetProfit = monthlyRevenue - monthlySubscriptionCost
 
   const handleSelectPlan = async (planId: string) => {
     try {
-      setCheckoutError(null)
       setCheckoutLoadingPlanId(planId)
       const response = await createMollieCheckout(planId)
       if (response.requiresRedirect === false) {
@@ -131,21 +139,25 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
         window.location.assign(checkoutUrl)
       }
     } catch (error) {
-      setCheckoutError(error instanceof Error ? error.message : 'Betalen starten lukt nu niet. Probeer het opnieuw.')
+      showErrorToast(
+        toUserFriendlyErrorMessage(error, { fallback: 'Betalen starten lukt nu niet. Probeer het opnieuw.' }),
+        'Betalen starten lukt nu niet. Probeer het opnieuw.',
+      )
       setCheckoutLoadingPlanId(null)
     }
   }
 
   const handleCancelSubscription = async () => {
     try {
-      setCancelError(null)
       setIsCancelBusy(true)
       await cancelMollieSubscription()
       const visibilityResponse = await callSecureApi<PricingVisibilityResponse>('/pricing/me-visibility', {})
       setSelectedPlanId(typeof visibilityResponse.planId === 'string' ? visibilityResponse.planId : null)
-      setIsCancelViewOpen(false)
     } catch (error) {
-      setCancelError(error instanceof Error ? error.message : 'Opzeggen lukt nu niet. Probeer het opnieuw.')
+      showErrorToast(
+        toUserFriendlyErrorMessage(error, { fallback: 'Opzeggen lukt nu niet. Probeer het opnieuw.' }),
+        'Opzeggen lukt nu niet. Probeer het opnieuw.',
+      )
     } finally {
       setIsCancelBusy(false)
     }
@@ -178,45 +190,100 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
           <Text style={styles.infoText}>Er zijn nog geen abonnementen beschikbaar.</Text>
         ) : (
           <>
-            {checkoutError ? <Text style={styles.errorText}>{checkoutError}</Text> : null}
-            {isCancelViewOpen ? (
-              <View style={styles.cancelView}>
-                <Text isSemibold style={styles.cancelTitle}>Abonnement opzeggen</Text>
-                <Text style={styles.cancelText}>Weet je zeker dat je je abonnement wilt opzeggen? Je toegang blijft actief tot het einde van de huidige periode.</Text>
-                {cancelError ? <Text style={styles.errorText}>{cancelError}</Text> : null}
-                <View style={styles.cancelButtonsRow}>
-                  <AppButton
-                    label="Terug"
-                    onPress={() => {
-                      if (isCancelBusy) return
-                      setIsCancelViewOpen(false)
-                    }}
-                    variant="neutral"
-                    isDisabled={isCancelBusy}
-                  />
-                  <AppButton
-                    label="Opzeggen"
-                    leading={isCancelBusy ? <ActivityIndicator size="small" color="#FFFFFF" /> : undefined}
-                    onPress={() => {
-                      if (isCancelBusy) return
-                      void handleCancelSubscription()
-                    }}
-                    variant="filled"
-                    isDisabled={isCancelBusy}
-                  />
-                </View>
-              </View>
-            ) : (
-              <>
-                <View style={styles.plansRow}>
-                  <View style={styles.planInfoCard}>
-                    <Text isSemibold style={styles.planInfoTitle}>Voor professionals die hun rapportages serieus nemen</Text>
-                    <Text style={styles.planInfoText}>Als loopbaan- of re-integratieprofessional besteed je wekelijks uren aan verslaglegging. Niet omdat het bijzaak is, maar omdat goede rapportages bepalend zijn voor je trajecten.</Text>
-                    <Text style={styles.planInfoText}>CoachScribe zet je gesprekken veilig om in heldere, professioneel opgebouwde rapportages. In een fractie van de tijd.</Text>
-                    <Text style={styles.planInfoText}>Zo lever je consistente kwaliteit, werk je gestructureerd en houd je tijd over voor het echte werk.</Text>
-                    <Text style={styles.planInfoText}>Heb je nog vragen? Stuur ons dan een mailtje op contact@coachscribe.nl.</Text>
+            <>
+              <View style={styles.plansRow}>
+                  <View style={styles.calculatorCard}>
+                    <View style={styles.calculatorSection}>
+                      <View style={styles.fieldLabelRow}>
+                        <Text isSemibold style={styles.fieldTitle}>Tijdsbesparing per week (uren)</Text>
+                        <View style={styles.fieldValueBadge}>
+                          <Text style={styles.fieldValueBadgeText}>{hoursSavedPerWeek.toFixed(1).replace('.', ',')} uur</Text>
+                        </View>
+                      </View>
+                      <View style={styles.rangeWrap}>
+                        <input
+                          type="range"
+                          min={0.3}
+                          max={16}
+                          step={0.1}
+                          value={hoursSavedPerWeek}
+                          onChange={(event) => setHoursSavedPerWeek(Number(event.currentTarget.value))}
+                          style={{ ...(styles.rangeInput as any), ...rangeInputWebStyle }}
+                        />
+                      </View>
+                      <View style={styles.rangeLegendRow}>
+                        <Text style={styles.rangeLegendText}>0,3 uur</Text>
+                        <Text style={styles.rangeLegendText}>16 uur</Text>
+                      </View>
+                      <Text style={styles.calculatorHintText}>Schat hoeveel uren per week je vrijspeelt doordat verslaglegging sneller gaat.</Text>
+                    </View>
+
+                    <View style={styles.calculatorSection}>
+                      <View style={styles.fieldLabelRow}>
+                        <Text isSemibold style={styles.fieldTitle}>Percentage ingevulde tijd</Text>
+                        <View style={styles.fieldValueBadge}>
+                          <Text style={styles.fieldValueBadgeText}>{usedTimePercent}%</Text>
+                        </View>
+                      </View>
+                      <View style={styles.rangeWrap}>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={usedTimePercent}
+                          onChange={(event) => setUsedTimePercent(Number(event.currentTarget.value))}
+                          style={{ ...(styles.rangeInput as any), ...rangeInputWebStyle }}
+                        />
+                      </View>
+                      <View style={styles.rangeLegendRow}>
+                        <Text style={styles.rangeLegendText}>0%</Text>
+                        <Text style={styles.rangeLegendText}>100%</Text>
+                      </View>
+                      <Text style={styles.calculatorHintText}>Welk deel van je bespaarde tijd zet je om in extra sessies?</Text>
+                    </View>
+
+                    <View style={styles.calculatorSection}>
+                      <Text isSemibold style={styles.fieldTitle}>Gemiddelde prijs per sessie (EUR)</Text>
+                      <View style={styles.textInputWrap}>
+                        <TextInput
+                          value={String(averageSessionPrice)}
+                          onChangeText={(value) => {
+                            const digitsOnly = value.replace(/[^\d]/g, '')
+                            setAverageSessionPrice(digitsOnly ? Number(digitsOnly) : 0)
+                          }}
+                          keyboardType="numeric"
+                          style={[styles.textInput, inputWebStyle]}
+                          placeholder="150"
+                          placeholderTextColor={colors.textSecondary}
+                        />
+                      </View>
+                    </View>
                   </View>
-                  <View style={[styles.planCard, styles.planCardWide, selectedPlanId === primaryPlan.id ? styles.planCardSelected : undefined]}>
+
+                  <View style={styles.roiCard}>
+                    <View style={styles.roiRow}>
+                      <Text isSemibold style={styles.roiLabel}>Nieuwe sessies per maand</Text>
+                      <Text isSemibold style={styles.roiValue}>{estimatedSessionsPerMonth.toFixed(1).replace('.', ',')}</Text>
+                    </View>
+                    <View style={styles.roiRow}>
+                      <Text isSemibold style={styles.roiLabel}>Opbrengst per maand</Text>
+                      <Text isSemibold style={styles.roiValue}>{formatEuroPrice(monthlyRevenue)}</Text>
+                    </View>
+                    <View style={styles.roiRow}>
+                      <Text isSemibold style={styles.roiLabel}>Kosten CoachScribe</Text>
+                      <Text isSemibold style={styles.roiValue}>{formatEuroPrice(monthlySubscriptionCost)}</Text>
+                    </View>
+                    <View style={styles.roiDivider} />
+                    <Text isSemibold style={styles.roiNetLabel}>Netto opbrengst per maand</Text>
+                    <Text isBold style={styles.roiNetValue}>{formatEuroPrice(monthlyNetProfit)}</Text>
+                    <Text style={styles.roiNetHint}>
+                      Dit is je extra opbrengst{' '}
+                      <Text isBold style={styles.roiNetHint}>minus de kosten van CoachScribe.</Text>
+                    </Text>
+                  </View>
+
+                  <View style={[styles.planCard, selectedPlanId === primaryPlan.id ? styles.planCardSelected : undefined]}>
                     <Text isSemibold style={styles.planTitle}>{primaryPlan.name}</Text>
                     <View style={styles.priceRow}>
                       <Text isBold style={styles.priceText}>{formatEuroPrice(primaryPlan.monthlyPrice)}</Text>
@@ -225,15 +292,15 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                     <View style={styles.featuresColumn}>
                       <View style={styles.featureRow}>
                         <VerslagGenererenIcon size={22} color={colors.selected} />
-                        <Text style={styles.featureText}>20 gespreksverslagen</Text>
+                        <Text style={styles.featureText}>{`${estimatedReportsPerMonth} gespreksverslagen`}</Text>
                       </View>
                       <View style={styles.featureRow}>
                         <HoursPerMonthIcon size={24} />
-                        <Text style={styles.featureText}>1200 transcriptieminuten per maand</Text>
+                        <Text style={styles.featureText}>{`${primaryPlan.minutesPerMonth} transcriptieminuten per maand`}</Text>
                       </View>
                       <View style={styles.featureRow}>
                         <CalendarCircleIcon size={24} color={colors.selected} />
-                        <Text style={styles.featureText}>± 6–10 uur tijdsbesparing per maand</Text>
+                        <Text style={styles.featureText}>Uren tijdsbesparing per maand</Text>
                       </View>
                       <View style={styles.featureRow}>
                         <StandaardVerslagIcon color={colors.selected} size={20} />
@@ -245,7 +312,7 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                       </View>
                       <View style={styles.featureRow}>
                         <CoacheesIcon color={colors.selected} size={22} />
-                        <Text style={styles.featureText}>Per cliënt één overzicht met audio, transcript en rapport</Text>
+                        <Text style={styles.featureText}>Alle informatie over al je cliënten op één plek</Text>
                       </View>
                     </View>
                     <AppButton
@@ -259,21 +326,28 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                       isDisabled={selectedPlanId === primaryPlan.id || !!checkoutLoadingPlanId}
                     />
                   </View>
-                </View>
-              </>
-            )}
-            {!isCancelViewOpen ? (
+              </View>
               <View style={styles.footerRow}>
                 <Text style={styles.footnoteText}>Gespreksverslagen worden berekend op basis van 60 minuten per gesprek.</Text>
-                {!selectedPlanId ? (
-                <Pressable onPress={() => setIsCancelViewOpen(true)} style={({ hovered }) => [styles.cancelLinkWrap, hovered ? styles.cancelLinkWrapHovered : undefined]}>
-                  <Text style={styles.cancelLinkText}>opzeggen</Text>
+                {selectedPlanId ? (
+                <Pressable
+                  onPress={() => {
+                    if (isCancelBusy) return
+                    if (typeof window !== 'undefined') {
+                      const confirmed = window.confirm('Weet je zeker dat je je abonnement wilt opzeggen? Je toegang blijft actief tot het einde van de huidige periode.')
+                      if (!confirmed) return
+                    }
+                    void handleCancelSubscription()
+                  }}
+                  style={({ hovered }) => [styles.cancelLinkWrap, hovered ? styles.cancelLinkWrapHovered : undefined]}
+                >
+                  <Text style={styles.cancelLinkText}>{isCancelBusy ? 'bezig...' : 'opzeggen'}</Text>
                 </Pressable>
                 ) : (
                   <View />
                 )}
               </View>
-            ) : null}
+            </>
           </>
         )}
       </View>
@@ -283,8 +357,8 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    width: 1180,
-    maxWidth: '90vw',
+    width: 1360,
+    maxWidth: '96vw',
     ...( { height: 'min(680px, 90vh)' } as any ),
     backgroundColor: colors.surface,
     borderRadius: 16,
@@ -343,50 +417,143 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: colors.textSecondary,
   },
-  errorText: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: '#B42318',
-  },
   plansRow: {
     width: '100%',
     flexDirection: 'row',
     gap: 16,
     flex: 1,
     alignItems: 'stretch',
+    flexWrap: 'wrap',
   },
-  planInfoCard: {
+  calculatorCard: {
     flex: 1,
+    minWidth: 320,
     borderRadius: 16,
     backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: colors.border,
     padding: 24,
-    gap: 10,
+    gap: 20,
   },
-  planInfoTitle: {
-    fontSize: 18,
+  calculatorSection: {
+    gap: 8,
+  },
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  fieldTitle: {
+    fontSize: 20,
     lineHeight: 24,
     color: colors.textStrong,
   },
-  planInfoText: {
+  fieldValueBadge: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  fieldValueBadgeText: {
     fontSize: 14,
-    lineHeight: 22,
+    lineHeight: 18,
     color: colors.textStrong,
+  },
+  rangeWrap: {
+    width: '100%',
+  },
+  rangeInput: {
+    width: '100%',
+  },
+  rangeLegendRow: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  rangeLegendText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textSecondary,
+  },
+  calculatorHintText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+  },
+  textInputWrap: {
+    width: '100%',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  textInput: {
+    width: '100%',
+    fontSize: 26,
+    lineHeight: 30,
+    color: colors.textStrong,
+  },
+  roiCard: {
+    flex: 1,
+    minWidth: 320,
+    borderRadius: 16,
+    backgroundColor: colors.selected,
+    padding: 24,
+    gap: 14,
+  },
+  roiRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  roiLabel: {
+    fontSize: 18,
+    lineHeight: 24,
+    color: '#FFFFFF',
+    flex: 1,
+  },
+  roiValue: {
+    fontSize: 22,
+    lineHeight: 28,
+    color: '#FFFFFF',
+  },
+  roiDivider: {
+    width: '100%',
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+    marginVertical: 2,
+  },
+  roiNetLabel: {
+    fontSize: 26,
+    lineHeight: 30,
+    color: '#FFFFFF',
+  },
+  roiNetValue: {
+    fontSize: 42,
+    lineHeight: 46,
+    color: '#FFFFFF',
+  },
+  roiNetHint: {
+    fontSize: 20,
+    lineHeight: 24,
+    color: 'rgba(255,255,255,0.9)',
   },
   planCard: {
     flex: 1,
+    minWidth: 320,
     borderRadius: 16,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 24,
     gap: 16,
-  },
-  planCardWide: {
-    flex: 2,
-    alignSelf: 'stretch',
-    marginLeft: 'auto',
   },
   planCardSelected: {
     borderColor: colors.selected,
@@ -454,28 +621,5 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: colors.textSecondary,
     textDecorationLine: 'underline',
-  },
-  cancelView: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-    gap: 16,
-    paddingHorizontal: 8,
-    paddingTop: 4,
-  },
-  cancelTitle: {
-    fontSize: 20,
-    lineHeight: 24,
-    color: colors.textStrong,
-  },
-  cancelText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textSecondary,
-  },
-  cancelButtonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
   },
 })

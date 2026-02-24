@@ -25,7 +25,7 @@ let ensureManualPricingSchemaPromise: Promise<void> | null = null
 let ensureManagedPlansPromise: Promise<void> | null = null
 
 const managedPlanDefaults: Array<{ name: string; monthlyPrice: number; minutesPerMonth: number; description: string | null }> = [
-  { name: "Abonnement", monthlyPrice: 38.5, minutesPerMonth: 1200, description: null },
+  { name: "Abonnement", monthlyPrice: 119, minutesPerMonth: 3000, description: null },
 ]
 const MANAGED_PLAN_COUNT = managedPlanDefaults.length
 

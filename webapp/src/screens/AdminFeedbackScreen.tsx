@@ -5,6 +5,7 @@ import { callSecureApi } from '../services/secureApi'
 import { colors } from '../theme/colors'
 import { Text } from '../components/Text'
 import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
+import { useToast } from '../toast/ToastProvider'
 
 type FeedbackItem = {
   id: string
@@ -67,6 +68,7 @@ export function AdminFeedbackScreen() {
   const [grantMinutesInput, setGrantMinutesInput] = useState('')
   const [isGrantBusy, setIsGrantBusy] = useState(false)
   const [grantStatusMessage, setGrantStatusMessage] = useState<string | null>(null)
+  const { showErrorToast } = useToast()
 
   const loadFeedback = useCallback(async () => {
     try {
@@ -185,6 +187,16 @@ export function AdminFeedbackScreen() {
     void loadAllowlist()
   }, [loadAllowlist, loadFeedback])
 
+  useEffect(() => {
+    if (!errorMessage) return
+    showErrorToast(errorMessage, 'Feedback ophalen mislukt.')
+  }, [errorMessage, showErrorToast])
+
+  useEffect(() => {
+    if (!allowlistErrorMessage) return
+    showErrorToast(allowlistErrorMessage, 'Allowlist ophalen mislukt.')
+  }, [allowlistErrorMessage, showErrorToast])
+
   const headerText = useMemo(() => `Feedback (${items.length})`, [items.length])
   const allowlistHeaderText = useMemo(() => `Allowlist (${allowlistItems.length})`, [allowlistItems.length])
 
@@ -199,12 +211,6 @@ export function AdminFeedbackScreen() {
           <Text isBold style={styles.refreshButtonText}>{isLoading ? 'Verversen...' : 'Verversen'}</Text>
         </Pressable>
       </View>
-
-      {errorMessage ? (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>{errorMessage}</Text>
-        </View>
-      ) : null}
 
       <View style={styles.allowlistCard}>
         <View style={styles.allowlistHeaderRow}>
@@ -240,7 +246,6 @@ export function AdminFeedbackScreen() {
           </Pressable>
         </View>
 
-        {allowlistErrorMessage ? <Text style={styles.allowlistErrorText}>{allowlistErrorMessage}</Text> : null}
         {allowlistStatusMessage ? <Text style={styles.allowlistStatusText}>{allowlistStatusMessage}</Text> : null}
 
         {isAllowlistLoading ? (
@@ -374,18 +379,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
   },
-  errorBox: {
-    borderWidth: 1,
-    borderColor: '#B20000',
-    backgroundColor: '#FFF2F2',
-    borderRadius: 10,
-    padding: 12,
-  },
-  errorText: {
-    color: '#9F0000',
-    fontSize: 14,
-    lineHeight: 20,
-  },
   allowlistCard: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -464,11 +457,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     lineHeight: 16,
-  },
-  allowlistErrorText: {
-    color: '#9F0000',
-    fontSize: 13,
-    lineHeight: 18,
   },
   allowlistStatusText: {
     color: colors.textSecondary,

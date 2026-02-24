@@ -116,11 +116,15 @@ export function AuthFlow({ onAuthenticated }: Props) {
     }
 
     if (isAllowlistBlocked) {
-      return <AllowlistLaunchScreen />
+      return (
+        <View style={styles.allowlistCenteredContainer}>
+          <AllowlistLaunchScreen />
+        </View>
+      )
     }
 
     if (routePathname === '/auth/callback') {
-      return <AuthLoadingScreen message={authError ?? 'Bezig met inloggen...'} />
+      return <AuthLoadingScreen message="Bezig met inloggen..." />
     }
 
     if (routePathname === '/inloggen' || routePathname === '/registreren') {
@@ -153,7 +157,7 @@ export function AuthFlow({ onAuthenticated }: Props) {
   return (
     <AuthScreenLayout>
       {/* Authentication flow */}
-      {isProcessingCallback ? <AuthLoadingScreen message={authError ?? 'Bezig met inloggen...'} /> : renderRoute(pathname)}
+      {isProcessingCallback ? <AuthLoadingScreen message="Bezig met inloggen..." /> : renderRoute(pathname)}
     </AuthScreenLayout>
   )
 }
@@ -176,5 +180,11 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: colors.textStrong,
     textAlign: 'center',
+  },
+  allowlistCenteredContainer: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 })

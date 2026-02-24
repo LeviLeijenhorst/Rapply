@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 
 import { AuthCard } from '../components/AuthCard'
 import { CoachscribeLogo } from '../../components/CoachscribeLogo'
 import { Text } from '../../components/Text'
 import { colors } from '../../theme/colors'
+import { useToast } from '../../toast/ToastProvider'
 
 type Props = {
   mode: 'inloggen' | 'registreren'
@@ -17,6 +18,12 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
   const isCompact = width < 980
   const illustrationSource = require('../../../assets/authhumans.png')
   const [isStartingLogin, setIsStartingLogin] = useState(false)
+  const { showErrorToast } = useToast()
+
+  useEffect(() => {
+    if (!errorMessage) return
+    showErrorToast(errorMessage, 'Inloggen mislukt. Probeer het opnieuw.')
+  }, [errorMessage, showErrorToast])
 
   async function startLogin() {
     if (isStartingLogin) return
@@ -33,7 +40,7 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
     } catch (error) {
       setIsStartingLogin(false)
       console.error('Entra sign in failed:', error)
-      alert('Inloggen mislukt. Probeer het opnieuw.')
+      showErrorToast(error instanceof Error ? error.message : String(error || ''), 'Inloggen mislukt. Probeer het opnieuw.')
     }
   }
 
@@ -90,7 +97,6 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
                 </Text>
               )}
             </Pressable>
-            {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
           </View>
         </View>
       </View>
@@ -192,11 +198,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: colors.selected,
-  },
-  errorText: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: '#FFE5E5',
   },
 })
 

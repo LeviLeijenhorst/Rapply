@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native'
 import { useE2ee } from '../e2ee/E2eeProvider'
 import { colors } from '../theme/colors'
 import { Text } from '../components/Text'
+import { useToast } from '../toast/ToastProvider'
 
 type Props = {
   onBack: () => void
@@ -11,17 +12,16 @@ type Props = {
 
 export function EndToEndEncryptieScreen({ onBack }: Props) {
   const e2ee = useE2ee()
-  const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [isBusy, setIsBusy] = useState(false)
+  const { showErrorToast } = useToast()
 
   function startSetup() {
     if (isBusy) return
-    setStatusMessage(null)
     setIsBusy(true)
     try {
       e2ee.beginSetup()
     } catch {
-      setStatusMessage('Het openen van het instelscherm is mislukt. Probeer het opnieuw.')
+      showErrorToast('Het openen van het instelscherm is mislukt. Probeer het opnieuw.')
     } finally {
       setIsBusy(false)
     }
@@ -48,7 +48,6 @@ export function EndToEndEncryptieScreen({ onBack }: Props) {
             </Text>
           </Pressable>
         )}
-        {statusMessage ? <Text style={styles.errorText}>{statusMessage}</Text> : null}
         <Pressable onPress={onBack} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]}>
           <Text isBold style={styles.secondaryButtonText}>Terug</Text>
         </Pressable>
@@ -87,11 +86,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: '#1F7A33',
-  },
-  errorText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.selected,
   },
   primaryButton: {
     height: 48,

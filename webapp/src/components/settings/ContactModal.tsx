@@ -5,6 +5,7 @@ import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
 import { Text } from '../Text'
 import { callSecureApi } from '../../services/secureApi'
+import { useToast } from '../../toast/ToastProvider'
 
 type Props = {
   visible: boolean
@@ -17,8 +18,8 @@ export function ContactModal({ visible, onClose, onSubmitted }: Props) {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [message, setMessage] = useState('')
-  const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { showErrorToast } = useToast()
   const { width } = useWindowDimensions()
   const isStacked = width < 1100
   const inputWebStyle = useMemo(() => ({ outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any), [])
@@ -32,7 +33,6 @@ export function ContactModal({ visible, onClose, onSubmitted }: Props) {
 
   function closeModal() {
     if (isSubmitting) return
-    setStatusMessage(null)
     clearForm()
     onClose()
   }
@@ -43,13 +43,13 @@ export function ContactModal({ visible, onClose, onSubmitted }: Props) {
     const trimmedMessage = message.trim()
 
     if (!trimmedName || !trimmedEmail || !trimmedMessage) {
-      setStatusMessage('Vul alsjeblieft je naam, e-mailadres en bericht in.')
+      showErrorToast('Vul alsjeblieft je naam, e-mailadres en bericht in.')
       return null
     }
 
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailPattern.test(trimmedEmail)) {
-      setStatusMessage('Gebruik alsjeblieft een geldig e-mailadres.')
+      showErrorToast('Gebruik alsjeblieft een geldig e-mailadres.')
       return null
     }
 
@@ -65,7 +65,6 @@ export function ContactModal({ visible, onClose, onSubmitted }: Props) {
     if (isSubmitting) return
     const validated = validateForm()
     if (!validated) return
-    setStatusMessage(null)
     setIsSubmitting(true)
     void callSecureApi<{ ok: true }>('/contact/submission', {
       name: validated.name,
@@ -79,7 +78,7 @@ export function ContactModal({ visible, onClose, onSubmitted }: Props) {
         onSubmitted?.()
       })
       .catch(() => {
-        setStatusMessage('Versturen mislukt. Probeer het alsjeblieft opnieuw.')
+        showErrorToast('Versturen mislukt. Probeer het alsjeblieft opnieuw.')
       })
       .finally(() => {
         setIsSubmitting(false)
@@ -172,7 +171,6 @@ export function ContactModal({ visible, onClose, onSubmitted }: Props) {
               )}
             </Pressable>
           </View>
-          {statusMessage ? <Text style={styles.statusText}>{statusMessage}</Text> : null}
         </View>
       </View>
     </AnimatedOverlayModal>
@@ -293,11 +291,6 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: 16,
     lineHeight: 20,
-    color: '#FFFFFF',
-  },
-  statusText: {
-    fontSize: 14,
-    lineHeight: 18,
     color: '#FFFFFF',
   },
 })

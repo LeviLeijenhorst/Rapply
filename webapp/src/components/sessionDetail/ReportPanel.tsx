@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
 import { Text } from '../Text'
 import { colors } from '../../theme/colors'
@@ -12,6 +12,7 @@ import { VerslagGenererenIcon } from '../icons/VerslagGenererenIcon'
 import { VerslagSchrijvenIcon } from '../icons/VerslagSchrijvenIcon'
 import { toUserFriendlyTranscriptionError } from '../../utils/transcriptionError'
 import { parseRichTextMarkdown, RichTextInlineSegment, richTextSharedFormatting } from '../../utils/richTextFormatting'
+import { useToast } from '../../toast/ToastProvider'
 
 type Props = {
   templateLabel: string
@@ -57,6 +58,7 @@ export function ReportPanel({
   onShareSummary,
 }: Props) {
   const [showCopyNotification, setShowCopyNotification] = useState(false)
+  const { showErrorToast } = useToast()
 
   const hasSummary = Boolean(summary && summary.trim())
   const isTranscribing = transcriptionStatus === 'transcribing'
@@ -70,6 +72,14 @@ export function ReportPanel({
   const showEditSummaryButton = !shouldShowLoading && !!onEditSummary
 
   const summaryLines = parseRichTextMarkdown(summary || '')
+  const reportErrorMessage = toUserFriendlyTranscriptionError(transcriptionError, 'Er is een fout opgetreden bij het genereren van het verslag.')
+  const isInsufficientMinutesError = reportErrorMessage.toLowerCase().includes('niet genoeg minuten over voor transcriptie')
+
+  useEffect(() => {
+    if (!hasError) return
+    if (isInsufficientMinutesError) return
+    showErrorToast(reportErrorMessage, 'Er is een fout opgetreden bij het genereren van het verslag.')
+  }, [hasError, isInsufficientMinutesError, reportErrorMessage, showErrorToast])
 
   return (
     <View style={styles.container}>
@@ -148,27 +158,25 @@ export function ReportPanel({
           </View>
         ) : hasError ? (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>
-              {toUserFriendlyTranscriptionError(transcriptionError, 'Er is een fout opgetreden bij het genereren van het verslag.')}
-            </Text>
             <View style={styles.errorActions}>
               {onRetryTranscription ? (
                 <Pressable
                   onPress={onRetryTranscription}
-                  style={({ hovered }) => [styles.retryButton, hovered ? styles.retryButtonHovered : undefined]}
+                  style={({ hovered }) => [styles.emptyActionButton, hovered ? styles.emptyActionButtonHovered : undefined]}
                 >
-                  {/* Retry report */}
-                  <Text isBold style={styles.retryButtonText}>
-                    Opnieuw proberen
+                  <VerslagGenererenIcon size={24} color={colors.selected} />
+                  <Text isBold style={styles.emptyActionText}>
+                    Verslag genereren
                   </Text>
                 </Pressable>
               ) : null}
               {onEditSummary ? (
                 <Pressable
                   onPress={onEditSummary}
-                  style={({ hovered }) => [styles.retryButton, hovered ? styles.retryButtonHovered : undefined]}
+                  style={({ hovered }) => [styles.emptyActionButton, hovered ? styles.emptyActionButtonHovered : undefined]}
                 >
-                  <Text isBold style={styles.retryButtonText}>
+                  <VerslagSchrijvenIcon size={24} color={colors.selected} />
+                  <Text isBold style={styles.emptyActionText}>
                     Verslag schrijven
                   </Text>
                 </Pressable>
@@ -176,45 +184,47 @@ export function ReportPanel({
             </View>
           </View>
         ) : hasSummary ? (
-          <View style={styles.summaryContent}>
-            {summaryLines.map((line, index) => {
-              if (line.kind === 'empty') return <View key={`empty-${index}`} style={styles.emptyRow} />
-              if (line.kind === 'divider') {
-                return (
-                  <View key={`divider-${index}`} style={styles.dividerRow}>
-                    <View style={styles.dividerLine} />
-                  </View>
-                )
-              }
-              if (line.kind === 'headingTwo' || line.kind === 'headingThree') {
-                return <View key={`heading-${index}`}>{renderInlineSegments(line.segments, styles.sectionTitle)}</View>
-              }
-              if (line.kind === 'bullet') {
-                return (
-                  <View key={`bullet-${index}`} style={styles.bulletRow}>
-                    <View style={styles.bulletSymbol} />
-                    <View style={styles.bulletTextContainer}>{renderInlineSegments(line.segments, styles.bulletText)}</View>
-                  </View>
-                )
-              }
-              if (line.kind === 'numbered') {
-                return (
-                  <View key={`numbered-${index}`} style={styles.bulletRow}>
-                    <Text style={styles.bulletNumber}>{`${line.number}.`}</Text>
-                    <View style={styles.bulletTextContainer}>{renderInlineSegments(line.segments, styles.bulletText)}</View>
-                  </View>
-                )
-              }
-              if (line.kind === 'quote') {
-                return (
-                  <View key={`quote-${index}`} style={styles.quoteRow}>
-                    {renderInlineSegments(line.segments, styles.quoteText)}
-                  </View>
-                )
-              }
-              return <View key={`paragraph-${index}`}>{renderInlineSegments(line.segments, styles.paragraph)}</View>
-            })}
-          </View>
+          <ScrollView style={styles.summaryScroll} contentContainerStyle={styles.summaryContent} showsVerticalScrollIndicator>
+            <View style={styles.summaryInner}>
+              {summaryLines.map((line, index) => {
+                if (line.kind === 'empty') return <View key={`empty-${index}`} style={styles.emptyRow} />
+                if (line.kind === 'divider') {
+                  return (
+                    <View key={`divider-${index}`} style={styles.dividerRow}>
+                      <View style={styles.dividerLine} />
+                    </View>
+                  )
+                }
+                if (line.kind === 'headingTwo' || line.kind === 'headingThree') {
+                  return <View key={`heading-${index}`}>{renderInlineSegments(line.segments, styles.sectionTitle)}</View>
+                }
+                if (line.kind === 'bullet') {
+                  return (
+                    <View key={`bullet-${index}`} style={styles.bulletRow}>
+                      <View style={styles.bulletSymbol} />
+                      <View style={styles.bulletTextContainer}>{renderInlineSegments(line.segments, styles.bulletText)}</View>
+                    </View>
+                  )
+                }
+                if (line.kind === 'numbered') {
+                  return (
+                    <View key={`numbered-${index}`} style={styles.bulletRow}>
+                      <Text style={styles.bulletNumber}>{`${line.number}.`}</Text>
+                      <View style={styles.bulletTextContainer}>{renderInlineSegments(line.segments, styles.bulletText)}</View>
+                    </View>
+                  )
+                }
+                if (line.kind === 'quote') {
+                  return (
+                    <View key={`quote-${index}`} style={styles.quoteRow}>
+                      {renderInlineSegments(line.segments, styles.quoteText)}
+                    </View>
+                  )
+                }
+                return <View key={`paragraph-${index}`}>{renderInlineSegments(line.segments, styles.paragraph)}</View>
+              })}
+            </View>
+          </ScrollView>
         ) : (
           <View style={styles.emptyContainer}>
             <View style={styles.emptyActions}>
@@ -304,7 +314,15 @@ const styles = StyleSheet.create({
   },
   summaryContent: {
     width: '100%',
+    paddingRight: 4,
+  },
+  summaryInner: {
+    width: '100%',
     gap: 8,
+  },
+  summaryScroll: {
+    width: '100%',
+    maxHeight: 420,
   },
   paragraph: {
     fontSize: richTextSharedFormatting.editorFontSize,
@@ -434,35 +452,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
-  errorText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.selected,
-  },
   errorActions: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     flexWrap: 'wrap',
     gap: 8,
-  },
-  retryButton: {
-    height: 36,
-    borderRadius: 12,
-    padding: 12,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  retryButtonHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  retryButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
   },
   emptyContainer: {
     width: '100%',

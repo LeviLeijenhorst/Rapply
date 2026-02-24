@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 
 import { AppShell } from './src/components/AppShell'
 import { AppErrorBoundary } from './src/components/AppErrorBoundary'
+import { WebappAnalyticsTracker } from './src/analytics/WebappAnalyticsTracker'
 import { AuthFlow } from './src/auth/AuthFlow'
 import { AuthLoadingScreen } from './src/auth/components/AuthLoadingScreen'
 import { AuthScreenLayout } from './src/auth/components/AuthScreenLayout'
@@ -13,6 +14,7 @@ import { navigate } from './src/auth/router/webRouter'
 import { E2eeProvider } from './src/e2ee/E2eeProvider'
 import { warmUpSecureApi } from './src/services/secureApi'
 import { ThemeProvider } from './src/theme/ThemeProvider'
+import { ToastProvider } from './src/toast/ToastProvider'
 
 export default function App() {
   const [areFontsLoaded] = useFonts({
@@ -52,42 +54,45 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <>
-        {/* App status bar */}
-        <StatusBar style="auto" />
-        {/* App shell */}
-        <E2eeProvider isAuthenticated={isAuthenticated}>
-          <LocalAppDataProvider isAuthenticated={isAuthenticated}>
-            {isLoggingOut ? (
-              <AuthScreenLayout>
-                <AuthLoadingScreen message="Bezig met uitloggen..." />
-              </AuthScreenLayout>
-            ) : isAuthenticated ? (
-              <AppErrorBoundary onReset={() => setIsAuthenticated(false)}>
-                <AppShell
-                  onLogout={() => {
-                    void (async () => {
-                      if (logoutTimeoutRef.current) {
-                        clearTimeout(logoutTimeoutRef.current)
-                      }
-                      setIsLoggingOut(true)
-                      setIsAuthenticated(false)
-                      navigate('/inloggen', { replace: true })
-                      try {
-                        await signOutFromEntra()
-                      } finally {
-                        logoutTimeoutRef.current = setTimeout(() => setIsLoggingOut(false), 300)
-                      }
-                    })()
-                  }}
-                />
-              </AppErrorBoundary>
-            ) : (
-              <AuthFlow onAuthenticated={() => setIsAuthenticated(true)} />
-            )}
-          </LocalAppDataProvider>
-        </E2eeProvider>
-      </>
+      <ToastProvider>
+        <>
+          {/* App status bar */}
+          <StatusBar style="auto" />
+          <WebappAnalyticsTracker isAuthenticated={isAuthenticated} />
+          {/* App shell */}
+          <E2eeProvider isAuthenticated={isAuthenticated}>
+            <LocalAppDataProvider isAuthenticated={isAuthenticated}>
+              {isLoggingOut ? (
+                <AuthScreenLayout>
+                  <AuthLoadingScreen message="Bezig met uitloggen..." />
+                </AuthScreenLayout>
+              ) : isAuthenticated ? (
+                <AppErrorBoundary onReset={() => setIsAuthenticated(false)}>
+                  <AppShell
+                    onLogout={() => {
+                      void (async () => {
+                        if (logoutTimeoutRef.current) {
+                          clearTimeout(logoutTimeoutRef.current)
+                        }
+                        setIsLoggingOut(true)
+                        setIsAuthenticated(false)
+                        navigate('/inloggen', { replace: true })
+                        try {
+                          await signOutFromEntra()
+                        } finally {
+                          logoutTimeoutRef.current = setTimeout(() => setIsLoggingOut(false), 300)
+                        }
+                      })()
+                    }}
+                  />
+                </AppErrorBoundary>
+              ) : (
+                <AuthFlow onAuthenticated={() => setIsAuthenticated(true)} />
+              )}
+            </LocalAppDataProvider>
+          </E2eeProvider>
+        </>
+      </ToastProvider>
     </ThemeProvider>
   )
 }

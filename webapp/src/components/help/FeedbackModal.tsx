@@ -6,6 +6,7 @@ import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { Text } from '../Text'
 import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
 import { toUserFriendlyErrorMessage } from '../../utils/userFriendlyError'
+import { useToast } from '../../toast/ToastProvider'
 
 type Props = {
   visible: boolean
@@ -16,13 +17,12 @@ type Props = {
 export function FeedbackModal({ visible, onClose, onContinue }: Props) {
   const [feedback, setFeedback] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  const { showErrorToast } = useToast()
 
   useEffect(() => {
     if (!visible) return
     setFeedback('')
     setIsSubmitting(false)
-    setSubmitError(null)
   }, [visible])
 
   const trimmedFeedback = feedback.trim()
@@ -32,12 +32,11 @@ export function FeedbackModal({ visible, onClose, onContinue }: Props) {
     if (isContinueDisabled) return
     try {
       setIsSubmitting(true)
-      setSubmitError(null)
       await onContinue?.(trimmedFeedback)
       onClose()
     } catch (error) {
       const message = toUserFriendlyErrorMessage(error, { fallback: 'Opslaan mislukt. Probeer het opnieuw.' })
-      setSubmitError(message)
+      showErrorToast(message, 'Opslaan mislukt. Probeer het opnieuw.')
     } finally {
       setIsSubmitting(false)
     }
@@ -74,8 +73,6 @@ export function FeedbackModal({ visible, onClose, onContinue }: Props) {
           placeholderTextColor={colors.textSecondary}
           textAlignVertical="top"
         />
-
-        {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
       </View>
 
       <View style={styles.footer}>
@@ -213,10 +210,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: '#FFFFFF',
-  },
-  errorText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#B20000',
   },
 })
