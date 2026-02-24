@@ -18,7 +18,7 @@ export async function createTemplate(userId: string, template: Template): Promis
       template.id,
       userId,
       template.name,
-      JSON.stringify({ description: template.description, sections: template.sections }),
+      JSON.stringify({ description: template.description, sections: template.sections, isDefault: template.isDefault }),
       template.isSaved,
       template.createdAtUnixMs,
       template.updatedAtUnixMs,
@@ -37,7 +37,14 @@ export async function updateTemplate(userId: string, template: Template): Promis
         updated_at_unix_ms = $4
     where user_id = $5 and id = $6
     `,
-    [template.name, JSON.stringify({ description: template.description, sections: template.sections }), template.isSaved, template.updatedAtUnixMs, userId, template.id],
+    [
+      template.name,
+      JSON.stringify({ description: template.description, sections: template.sections, isDefault: template.isDefault }),
+      template.isSaved,
+      template.updatedAtUnixMs,
+      userId,
+      template.id,
+    ],
   )
 }
 

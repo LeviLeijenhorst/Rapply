@@ -26,6 +26,7 @@ type Props = {
   visible: boolean
   mode: 'create' | 'edit'
   template?: TemplateEditModalTemplate
+  readOnly?: boolean
   onClose: () => void
   onSave: (template: TemplateEditModalTemplate) => void
   onDelete?: () => void
@@ -41,7 +42,7 @@ function createEmptyTemplate(): TemplateEditModalTemplate {
 }
 
 // Renders the template editor modal for create/edit, including section management.
-export function TemplateEditModal({ visible, mode, template, onClose, onSave, onDelete }: Props) {
+export function TemplateEditModal({ visible, mode, template, readOnly = false, onClose, onSave, onDelete }: Props) {
   const { width: windowWidth } = useWindowDimensions()
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
   const [activeTemplate, setActiveTemplate] = useState<TemplateEditModalTemplate>(() => createEmptyTemplate())
@@ -62,6 +63,7 @@ export function TemplateEditModal({ visible, mode, template, onClose, onSave, on
 
   if (!visible) return null
 
+  const isReadOnly = mode === 'edit' && readOnly
   const title = mode === 'edit' ? activeTemplate.name : 'Template maken'
   const primaryButtonLabel = mode === 'edit' ? 'Opslaan' : 'Toevoegen'
 
@@ -83,31 +85,55 @@ export function TemplateEditModal({ visible, mode, template, onClose, onSave, on
 
       <View style={styles.body}>
         <ScrollView showsVerticalScrollIndicator style={styles.sectionsScroll} contentContainerStyle={styles.sectionsScrollContent}>
+          {isReadOnly ? (
+            <View style={styles.readOnlyBanner}>
+              <Text isSemibold style={styles.readOnlyBannerTitle}>
+                Standaard template
+              </Text>
+              <Text style={styles.readOnlyBannerText}>
+                Deze template is onderdeel van CoachScribe en staat vast om kwaliteit en consistentie te waarborgen. Je kunt hem wel gebruiken in je sessies, maar niet wijzigen of verwijderen.
+              </Text>
+            </View>
+          ) : null}
           <View style={styles.formFields}>
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Naam</Text>
-              <View style={styles.textField}>
-                <TextInput
-                  value={activeTemplate.name}
-                  onChangeText={(name) => setActiveTemplate((previousTemplate) => ({ ...previousTemplate, name }))}
-                  placeholder="Template naam..."
-                  placeholderTextColor="#656565"
-                  style={[styles.textFieldInput, inputWebStyle]}
-                />
-              </View>
+              {isReadOnly ? (
+                <View style={styles.readOnlyField}>
+                  <Text style={styles.readOnlyFieldText}>{activeTemplate.name}</Text>
+                </View>
+              ) : (
+                <View style={styles.textField}>
+                  <TextInput
+                    value={activeTemplate.name}
+                    onChangeText={(name) => setActiveTemplate((previousTemplate) => ({ ...previousTemplate, name }))}
+                    placeholder="Template naam..."
+                    placeholderTextColor="#656565"
+                    editable={!isReadOnly}
+                    style={[styles.textFieldInput, inputWebStyle]}
+                  />
+                </View>
+              )}
             </View>
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Beschrijving</Text>
-              <View style={styles.textField}>
-                <TextInput
-                  value={activeTemplate.description}
-                  onChangeText={(description) => setActiveTemplate((previousTemplate) => ({ ...previousTemplate, description }))}
-                  placeholder="Korte beschrijving van deze template..."
-                  placeholderTextColor="#656565"
-                  style={[styles.textFieldInput, inputWebStyle]}
-                />
-              </View>
+              {isReadOnly ? (
+                <View style={styles.readOnlyField}>
+                  <Text style={styles.readOnlyFieldText}>{activeTemplate.description}</Text>
+                </View>
+              ) : (
+                <View style={styles.textField}>
+                  <TextInput
+                    value={activeTemplate.description}
+                    onChangeText={(description) => setActiveTemplate((previousTemplate) => ({ ...previousTemplate, description }))}
+                    placeholder="Korte beschrijving van deze template..."
+                    placeholderTextColor="#656565"
+                    editable={!isReadOnly}
+                    style={[styles.textFieldInput, inputWebStyle]}
+                  />
+                </View>
+              )}
             </View>
           </View>
 
@@ -118,61 +144,78 @@ export function TemplateEditModal({ visible, mode, template, onClose, onSave, on
               onHoverOut={() => setHoveredSectionId((current) => (current === section.id ? null : current))}
               style={styles.sectionCard}
             >
-              <Pressable
-                onHoverIn={() => setHoveredDeleteSectionId(section.id)}
-                onHoverOut={() => setHoveredDeleteSectionId((current) => (current === section.id ? null : current))}
-                onPress={() => setPendingDeleteSectionId(section.id)}
-                style={({ hovered }) => [
-                  styles.sectionDeleteButton,
-                  hoveredSectionId === section.id || hoveredDeleteSectionId === section.id ? styles.sectionDeleteButtonVisible : styles.sectionDeleteButtonHidden,
-                  hovered ? styles.sectionDeleteButtonHovered : undefined,
-                ]}
-              >
-                <TrashIcon color="#000000" size={16} />
-              </Pressable>
+              {isReadOnly ? null : (
+                <Pressable
+                  onHoverIn={() => setHoveredDeleteSectionId(section.id)}
+                  onHoverOut={() => setHoveredDeleteSectionId((current) => (current === section.id ? null : current))}
+                  onPress={() => setPendingDeleteSectionId(section.id)}
+                  style={({ hovered }) => [
+                    styles.sectionDeleteButton,
+                    hoveredSectionId === section.id || hoveredDeleteSectionId === section.id ? styles.sectionDeleteButtonVisible : styles.sectionDeleteButtonHidden,
+                    hovered ? styles.sectionDeleteButtonHovered : undefined,
+                  ]}
+                >
+                  <TrashIcon color="#000000" size={16} />
+                </Pressable>
+              )}
 
-              <TextInput
-                value={section.title}
-                onChangeText={(title) =>
-                  setActiveTemplate((previousTemplate) => ({
-                    ...previousTemplate,
-                    sections: previousTemplate.sections.map((item) => (item.id === section.id ? { ...item, title } : item)),
-                  }))
-                }
-                placeholder={`Onderdeel ${index + 1}...`}
-                placeholderTextColor="#656565"
-                style={[styles.sectionTitleInput, inputWebStyle]}
-              />
-              <View style={styles.sectionTextArea}>
-                <TextInput
-                  value={section.description}
-                  onChangeText={(description) =>
-                    setActiveTemplate((previousTemplate) => ({
-                      ...previousTemplate,
-                      sections: previousTemplate.sections.map((item) => (item.id === section.id ? { ...item, description } : item)),
-                    }))
-                  }
-                  placeholder="Typ hier een duidelijke beschrijving..."
-                  placeholderTextColor="#656565"
-                  multiline
-                  style={[styles.sectionDescriptionInput, inputWebStyle]}
-                />
-              </View>
+              {isReadOnly ? (
+                <>
+                  <Text style={styles.readOnlySectionTitle}>{section.title || `Onderdeel ${index + 1}`}</Text>
+                  <View style={styles.sectionTextArea}>
+                    <Text style={styles.readOnlySectionDescription}>{section.description}</Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <TextInput
+                    value={section.title}
+                    onChangeText={(title) =>
+                      setActiveTemplate((previousTemplate) => ({
+                        ...previousTemplate,
+                        sections: previousTemplate.sections.map((item) => (item.id === section.id ? { ...item, title } : item)),
+                      }))
+                    }
+                    placeholder={`Onderdeel ${index + 1}...`}
+                    placeholderTextColor="#656565"
+                    editable={!isReadOnly}
+                    style={[styles.sectionTitleInput, inputWebStyle]}
+                  />
+                  <View style={styles.sectionTextArea}>
+                    <TextInput
+                      value={section.description}
+                      onChangeText={(description) =>
+                        setActiveTemplate((previousTemplate) => ({
+                          ...previousTemplate,
+                          sections: previousTemplate.sections.map((item) => (item.id === section.id ? { ...item, description } : item)),
+                        }))
+                      }
+                      placeholder="Typ hier een duidelijke beschrijving..."
+                      placeholderTextColor="#656565"
+                      multiline
+                      editable={!isReadOnly}
+                      style={[styles.sectionDescriptionInput, inputWebStyle]}
+                    />
+                  </View>
+                </>
+              )}
             </Pressable>
           ))}
 
-          <Pressable
-            onPress={() =>
-              setActiveTemplate((previousTemplate) => ({
-                ...previousTemplate,
-                sections: [...previousTemplate.sections, { id: `section-${Date.now()}`, title: '', description: '' }],
-              }))
-            }
-            style={({ hovered }) => [styles.addSectionRow, hovered ? styles.addSectionRowHovered : undefined]}
-          >
-            <PlusIcon color={colors.textStrong} size={18} />
-            <Text style={styles.addSectionText}>Nieuw onderdeel</Text>
-          </Pressable>
+          {isReadOnly ? null : (
+            <Pressable
+              onPress={() =>
+                setActiveTemplate((previousTemplate) => ({
+                  ...previousTemplate,
+                  sections: [...previousTemplate.sections, { id: `section-${Date.now()}`, title: '', description: '' }],
+                }))
+              }
+              style={({ hovered }) => [styles.addSectionRow, hovered ? styles.addSectionRowHovered : undefined]}
+            >
+              <PlusIcon color={colors.textStrong} size={18} />
+              <Text style={styles.addSectionText}>Nieuw onderdeel</Text>
+            </Pressable>
+          )}
         </ScrollView>
       </View>
 
@@ -184,7 +227,7 @@ export function TemplateEditModal({ visible, mode, template, onClose, onSave, on
             isCompactFooter && mode !== 'edit' ? styles.footerLeftHidden : undefined,
           ]}
         >
-          {mode === 'edit' && onDelete ? (
+          {mode === 'edit' && onDelete && !isReadOnly ? (
             <Pressable
               onPress={onDelete}
               style={({ hovered }) => [styles.secondaryButton, isCompactFooter ? styles.footerButtonCompact : undefined, hovered ? styles.secondaryButtonHovered : undefined]}
@@ -201,35 +244,39 @@ export function TemplateEditModal({ visible, mode, template, onClose, onSave, on
             style={({ hovered }) => [styles.secondaryButton, isCompactFooter ? styles.footerButtonCompact : undefined, hovered ? styles.secondaryButtonHovered : undefined]}
           >
             <Text isBold style={styles.secondaryButtonText}>
-              Annuleren
+              {isReadOnly ? 'Sluiten' : 'Annuleren'}
             </Text>
           </Pressable>
-          <Pressable
-            onPress={() => onSave(activeTemplate)}
-            style={({ hovered }) => [styles.primaryButton, isCompactFooter ? styles.footerButtonCompact : undefined, hovered ? styles.primaryButtonHovered : undefined]}
-          >
-            <Text isBold style={styles.primaryButtonText}>
-              {primaryButtonLabel}
-            </Text>
-          </Pressable>
+          {isReadOnly ? null : (
+            <Pressable
+              onPress={() => onSave(activeTemplate)}
+              style={({ hovered }) => [styles.primaryButton, isCompactFooter ? styles.footerButtonCompact : undefined, hovered ? styles.primaryButtonHovered : undefined]}
+            >
+              <Text isBold style={styles.primaryButtonText}>
+                {primaryButtonLabel}
+              </Text>
+            </Pressable>
+          )}
         </View>
       </View>
-      <ConfirmDeleteDialog
-        visible={Boolean(pendingDeleteSectionId)}
-        title="Onderdeel verwijderen"
-        description="Weet je zeker dat je dit onderdeel wilt verwijderen? Dit kan niet ongedaan worden gemaakt."
-        confirmLabel="Verwijderen"
-        cancelLabel="Annuleren"
-        onClose={() => setPendingDeleteSectionId(null)}
-        onConfirm={() => {
-          if (!pendingDeleteSectionId) return
-          setActiveTemplate((previousTemplate) => ({
-            ...previousTemplate,
-            sections: previousTemplate.sections.filter((item) => item.id !== pendingDeleteSectionId),
-          }))
-          setPendingDeleteSectionId(null)
-        }}
-      />
+      {isReadOnly ? null : (
+        <ConfirmDeleteDialog
+          visible={Boolean(pendingDeleteSectionId)}
+          title="Onderdeel verwijderen"
+          description="Weet je zeker dat je dit onderdeel wilt verwijderen? Dit kan niet ongedaan worden gemaakt."
+          confirmLabel="Verwijderen"
+          cancelLabel="Annuleren"
+          onClose={() => setPendingDeleteSectionId(null)}
+          onConfirm={() => {
+            if (!pendingDeleteSectionId) return
+            setActiveTemplate((previousTemplate) => ({
+              ...previousTemplate,
+              sections: previousTemplate.sections.filter((item) => item.id !== pendingDeleteSectionId),
+            }))
+            setPendingDeleteSectionId(null)
+          }}
+        />
+      )}
     </AnimatedOverlayModal>
   )
 }
@@ -291,6 +338,25 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 12,
   },
+  readOnlyBanner: {
+    width: '100%',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#FFF7FB',
+    padding: 14,
+    gap: 8,
+  },
+  readOnlyBannerTitle: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+  },
+  readOnlyBannerText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+  },
   field: {
     width: '100%',
     gap: 8,
@@ -313,6 +379,22 @@ const styles = StyleSheet.create({
   textFieldInput: {
     width: '100%',
     padding: 0,
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+  },
+  readOnlyField: {
+    width: '100%',
+    minHeight: 44,
+    borderRadius: 12,
+    backgroundColor: colors.pageBackground,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    justifyContent: 'center',
+  },
+  readOnlyFieldText: {
     fontSize: 14,
     lineHeight: 18,
     color: colors.textStrong,
@@ -364,6 +446,11 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: colors.textStrong,
   },
+  readOnlySectionTitle: {
+    fontSize: 16,
+    lineHeight: 20,
+    color: colors.textStrong,
+  },
   sectionTextArea: {
     width: '100%',
     minHeight: 92,
@@ -381,6 +468,12 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: colors.textStrong,
     ...( { textAlignVertical: 'top' } as any ),
+  },
+  readOnlySectionDescription: {
+    padding: 16,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textStrong,
   },
   addSectionRow: {
     width: '100%',

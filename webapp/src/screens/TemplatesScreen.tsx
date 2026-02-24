@@ -5,6 +5,7 @@ import { AnimatedMainContent } from '../components/AnimatedMainContent'
 import { AnimatedWidthContainer } from '../components/AnimatedWidthContainer'
 import { PlusIcon } from '../components/icons/PlusIcon'
 import { SearchIcon } from '../components/icons/SearchIcon'
+import { CalendlyModal } from '../components/templates/CalendlyModal'
 import { ConfirmTemplateDeleteModal } from '../components/templates/ConfirmTemplateDeleteModal'
 import { TemplateEditModal } from '../components/templates/TemplateEditModal'
 import { Text } from '../components/Text'
@@ -24,6 +25,7 @@ export function TemplatesScreen() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
   const [pendingDeleteTemplateId, setPendingDeleteTemplateId] = useState<string | null>(null)
+  const [isCalendlyModalOpen, setIsCalendlyModalOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const searchInputRef = useRef<TextInput | null>(null)
 
@@ -33,6 +35,7 @@ export function TemplatesScreen() {
   const isCompactHeader = windowWidth <= 820
   const compactSearchExpandedWidth = Math.min(240, Math.max(140, windowWidth - 380))
   const expandedSearchWidth = isCompactHeader ? compactSearchExpandedWidth : 315
+  const calendlyUrl = process.env.EXPO_PUBLIC_CALENDLY_URL || 'https://calendly.com'
 
   const editingTemplate = useMemo(() => {
     if (!editingTemplateId) return null
@@ -114,6 +117,14 @@ export function TemplatesScreen() {
                 Template maken
               </Text>
             </Pressable>
+            {/* <Pressable
+              style={({ hovered }) => [styles.bookCallButton, webTransitionSmooth, hovered ? styles.bookCallButtonHovered : undefined]}
+              onPress={() => setIsCalendlyModalOpen(true)}
+            >
+              <Text numberOfLines={1} style={styles.bookCallButtonText}>
+                Laat ons een template maken
+              </Text>
+            </Pressable> */}
           </View>
         </View>
 
@@ -168,6 +179,7 @@ export function TemplatesScreen() {
       <TemplateEditModal
         visible={editingTemplateId !== null}
         mode="edit"
+        readOnly={Boolean(editingTemplate?.isDefault)}
         template={
           editingTemplate
             ? {
@@ -178,10 +190,14 @@ export function TemplatesScreen() {
             : undefined
         }
         onClose={() => setEditingTemplateId(null)}
-        onDelete={() => {
-          if (!editingTemplateId) return
-          setPendingDeleteTemplateId(editingTemplateId)
-        }}
+        onDelete={
+          editingTemplate?.isDefault
+            ? undefined
+            : () => {
+                if (!editingTemplateId) return
+                setPendingDeleteTemplateId(editingTemplateId)
+              }
+        }
         onSave={(template) => {
           if (!editingTemplateId) return
           updateTemplate(editingTemplateId, {
@@ -192,6 +208,7 @@ export function TemplatesScreen() {
           setEditingTemplateId(null)
         }}
       />
+      <CalendlyModal visible={isCalendlyModalOpen} onClose={() => setIsCalendlyModalOpen(false)} calendlyUrl={calendlyUrl} />
 
       <ConfirmTemplateDeleteModal
         visible={Boolean(pendingDeleteTemplateId)}
@@ -313,6 +330,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: '#FFFFFF',
+    ...( { transform: [{ translateY: 1 }] } as any ),
+  },
+  bookCallButton: {
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookCallButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  bookCallButtonText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
     ...( { transform: [{ translateY: 1 }] } as any ),
   },
   tabsRow: {

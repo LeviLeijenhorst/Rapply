@@ -1435,7 +1435,11 @@ export function SessieDetailScreen({
                 </View>
               </View>
             ) : (
-              <ScrollView style={styles.leftScroll} contentContainerStyle={styles.leftScrollContent} showsVerticalScrollIndicator={false}>
+              <ScrollView
+                style={[styles.leftScroll, styles.leftScrollGapAligned]}
+                contentContainerStyle={styles.leftScrollContent}
+                showsVerticalScrollIndicator
+              >
                 {hasSavedAudio || pendingPreviewAudioUrl ? (
                   <View style={styles.audioCardSection}>
                     <AudioPlayerCard
@@ -2045,12 +2049,17 @@ const styles = StyleSheet.create({
   leftColumn: {
     flex: 1,
     position: 'relative',
+    minHeight: 0,
   },
   rightColumn: {
     flex: 1,
   },
   leftScroll: {
     flex: 1,
+    ...( { overflowY: 'auto', scrollbarWidth: 'auto', scrollbarGutter: 'stable', scrollbarColor: `${colors.border} ${colors.pageBackground}` } as any ),
+  },
+  leftScrollGapAligned: {
+    ...( { marginRight: -14, paddingRight: 14 } as any ),
   },
   leftScrollContent: {
     gap: 16,

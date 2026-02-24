@@ -21,6 +21,7 @@ function materializeTemplateBlueprints(blueprints: TemplateBlueprint[]): Templat
     name: blueprint.name,
     description: blueprint.description,
     isSaved: false,
+    isDefault: true,
     createdAtUnixMs: now,
     updatedAtUnixMs: now,
     sections: blueprint.sections.map((section) => ({

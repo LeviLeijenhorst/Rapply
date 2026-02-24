@@ -17,6 +17,7 @@ import { AppButton } from '../AppButton'
 import { cancelMollieSubscription, createMollieCheckout } from '../../services/billing'
 import { toUserFriendlyErrorMessage } from '../../utils/userFriendlyError'
 import { useToast } from '../../toast/ToastProvider'
+import { requestSubscriptionReturnResumeIfDraftAvailable } from '../newSession/subscriptionReturnDraftStore'
 
 type Props = {
   visible: boolean
@@ -136,6 +137,7 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
         throw new Error('Geen checkout URL ontvangen')
       }
       if (typeof window !== 'undefined') {
+        requestSubscriptionReturnResumeIfDraftAvailable()
         window.location.assign(checkoutUrl)
       }
     } catch (error) {

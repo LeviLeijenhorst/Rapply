@@ -49,6 +49,7 @@ function normalizeLocalAppData(data: LocalAppData): LocalAppData {
       ? data.templates.map((template) => ({
           ...template,
           description: typeof (template as any).description === 'string' ? (template as any).description : '',
+          isDefault: typeof (template as any).isDefault === 'boolean' ? (template as any).isDefault : false,
         }))
       : fallback.templates,
     practiceSettings: data.practiceSettings

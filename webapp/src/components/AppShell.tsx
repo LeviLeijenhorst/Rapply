@@ -40,6 +40,7 @@ import { AdminWachtlijstScreen } from '../screens/AdminWachtlijstScreen'
 import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
 import { EndToEndEncryptieScreen } from '../screens/EndToEndEncryptieScreen'
 import { useToast } from '../toast/ToastProvider'
+import { consumeSubscriptionReturnResumeRequest } from './newSession/subscriptionReturnDraftStore'
 
 type AnchorPoint = { x: number; y: number }
 type OverlayScreenKey = 'archief'
@@ -171,6 +172,7 @@ export function AppShell({ onLogout }: Props) {
   const [previousRoute, setPreviousRoute] = useState<RouteState | null>(null)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [isDeleteAccountConfirmModalOpen, setIsDeleteAccountConfirmModalOpen] = useState(false)
+  const [restoreNewSessionDraftFromSubscriptionReturn, setRestoreNewSessionDraftFromSubscriptionReturn] = useState(false)
   const { showToast, showErrorToast } = useToast()
   const isCurrentUserAdmin = currentUserAccountType === 'admin'
 
@@ -287,6 +289,21 @@ export function AppShell({ onLogout }: Props) {
       isCancelled = true
     }
   }, [data.sessions, e2ee, isAppDataLoaded, updateSession])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const tryRestoreNewSessionDraft = () => {
+      const shouldRestore = consumeSubscriptionReturnResumeRequest()
+      if (!shouldRestore) return
+      setRestoreNewSessionDraftFromSubscriptionReturn(true)
+      setIsNewSessionModalOpen(true)
+    }
+
+    tryRestoreNewSessionDraft()
+    window.addEventListener('pageshow', tryRestoreNewSessionDraft)
+    return () => window.removeEventListener('pageshow', tryRestoreNewSessionDraft)
+  }, [])
 
   const applyRoute = useCallback(
     (route: RouteState) => {
@@ -853,10 +870,6 @@ export function AppShell({ onLogout }: Props) {
                 setIsSettingsMenuOpen(false)
               }}
               onPressCreateSession={() => openNewSessionModal(null)}
-              onOpenFeedback={() => {
-                setIsFeedbackModalOpen(true)
-                setIsSettingsMenuOpen(false)
-              }}
               onOpenSettingsMenu={(anchorPoint) => {
                 setSettingsMenuAnchorPoint(anchorPoint)
                 setIsSettingsMenuOpen(true)
@@ -902,6 +915,11 @@ export function AppShell({ onLogout }: Props) {
               setSettingsMenuAnchorPoint(null)
               setIsContactModalOpen(true)
             }}
+            onOpenFeedback={() => {
+              setIsSettingsMenuOpen(false)
+              setSettingsMenuAnchorPoint(null)
+              setIsFeedbackModalOpen(true)
+            }}
             onOpenShare={() => {
               setIsSettingsMenuOpen(false)
               setSettingsMenuAnchorPoint(null)
@@ -922,10 +940,16 @@ export function AppShell({ onLogout }: Props) {
           <NewSessionModal
             visible={isNewSessionModalOpen}
             initialCoacheeId={newSessionCoacheeId}
+            restoreDraftFromSubscriptionReturn={restoreNewSessionDraftFromSubscriptionReturn}
+            onRestoreDraftHandled={() => setRestoreNewSessionDraftFromSubscriptionReturn(false)}
             onClose={() => {
               setIsNewSessionModalOpen(false)
               setNewlyCreatedCoacheeId(null)
               setNewSessionCoacheeId(null)
+            }}
+            onOpenMySubscription={() => {
+              if (!canOpenSubscription) return
+              setIsMySubscriptionModalOpen(true)
             }}
             onOpenNewCoachee={openNewCoacheeModal}
             newlyCreatedCoacheeId={newlyCreatedCoacheeId}

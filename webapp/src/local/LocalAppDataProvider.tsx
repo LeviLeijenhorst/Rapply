@@ -578,6 +578,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           description: trimmedDescription,
           sections: values.sections,
           isSaved: false,
+          isDefault: false,
           createdAtUnixMs: now,
           updatedAtUnixMs: now,
         }
@@ -591,6 +592,8 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         return template.id
       },
       updateTemplate: (templateId, values) => {
+        const currentTemplate = data.templates.find((item) => item.id === templateId)
+        if (currentTemplate?.isDefault) return
         const updatedAtUnixMs = Date.now()
         setData((previous) => ({
           ...previous,
@@ -622,6 +625,8 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           .catch((error: unknown) => console.error('[LocalAppDataProvider] Remote update failed', error))
       },
       deleteTemplate: (templateId) => {
+        const currentTemplate = data.templates.find((item) => item.id === templateId)
+        if (currentTemplate?.isDefault) return
         setData((previous) => deleteTemplate(previous, templateId))
         runRemoteAction(deleteTemplateRemote(templateId))
       },

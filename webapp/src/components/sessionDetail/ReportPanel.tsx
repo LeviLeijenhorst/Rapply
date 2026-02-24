@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
 
 import { Text } from '../Text'
 import { colors } from '../../theme/colors'
@@ -184,7 +184,7 @@ export function ReportPanel({
             </View>
           </View>
         ) : hasSummary ? (
-          <ScrollView style={styles.summaryScroll} contentContainerStyle={styles.summaryContent} showsVerticalScrollIndicator>
+          <View style={styles.summaryContent}>
             <View style={styles.summaryInner}>
               {summaryLines.map((line, index) => {
                 if (line.kind === 'empty') return <View key={`empty-${index}`} style={styles.emptyRow} />
@@ -224,7 +224,7 @@ export function ReportPanel({
                 return <View key={`paragraph-${index}`}>{renderInlineSegments(line.segments, styles.paragraph)}</View>
               })}
             </View>
-          </ScrollView>
+          </View>
         ) : (
           <View style={styles.emptyContainer}>
             <View style={styles.emptyActions}>
@@ -319,10 +319,6 @@ const styles = StyleSheet.create({
   summaryInner: {
     width: '100%',
     gap: 8,
-  },
-  summaryScroll: {
-    width: '100%',
-    maxHeight: 420,
   },
   paragraph: {
     fontSize: richTextSharedFormatting.editorFontSize,

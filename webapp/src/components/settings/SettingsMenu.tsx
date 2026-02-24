@@ -7,6 +7,7 @@ import { ContactIcon } from '../icons/ContactIcon'
 import { PrivacyIcon } from '../icons/PrivacyIcon'
 import { ArchiefMenuIcon } from '../icons/ArchiefMenuIcon'
 import { MijnAbonnementIcon } from '../icons/MijnAbonnementIcon'
+import { FeedbackIcon } from '../icons/FeedbackIcon'
 import { colors } from '../../theme/colors'
 
 type AnchorPoint = { x: number; y: number }
@@ -19,6 +20,7 @@ type Props = {
   onOpenSubscription: () => void
   onOpenArchive: () => void
   onOpenContact: () => void
+  onOpenFeedback: () => void
   onOpenShare: () => void
   onOpenPrivacy: () => void
   showSubscriptionItem?: boolean
@@ -32,6 +34,7 @@ export function SettingsMenu({
   onOpenSubscription,
   onOpenArchive,
   onOpenContact,
+  onOpenFeedback,
   onOpenShare,
   onOpenPrivacy,
   showSubscriptionItem = false,
@@ -76,6 +79,12 @@ export function SettingsMenu({
       label: 'Contact',
       icon: <ContactIcon color={menuIconColor} />,
       onPress: onOpenContact,
+    },
+    {
+      key: 'feedback',
+      label: 'Feedback',
+      icon: <FeedbackIcon color={menuIconColor} />,
+      onPress: onOpenFeedback,
     },
     {
       key: 'share',

@@ -20,6 +20,7 @@ function mapTemplateRow(row: TemplateRow): Template {
       ? (((rawSectionsPayload as any).sections as TemplateSection[]) ?? [])
       : []
   const descriptionRaw = typeof (rawSectionsPayload as any)?.description === "string" ? ((rawSectionsPayload as any).description as string) : ""
+  const isDefaultRaw = typeof (rawSectionsPayload as any)?.isDefault === "boolean" ? ((rawSectionsPayload as any).isDefault as boolean) : false
   const description = descriptionRaw.trim() || getDefaultTemplateDescriptionByName(row.name)
   return {
     id: row.id,
@@ -27,6 +28,7 @@ function mapTemplateRow(row: TemplateRow): Template {
     description,
     sections,
     isSaved: row.is_saved,
+    isDefault: isDefaultRaw,
     createdAtUnixMs: Number(row.created_at_unix_ms),
     updatedAtUnixMs: Number(row.updated_at_unix_ms),
   }
@@ -175,4 +177,3 @@ export async function readAppData(userId: string): Promise<AppData> {
     },
   }
 }
-

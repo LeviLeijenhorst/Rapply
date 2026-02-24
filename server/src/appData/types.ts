@@ -51,6 +51,7 @@ export type Template = {
   description: string
   sections: TemplateSection[]
   isSaved: boolean
+  isDefault: boolean
   createdAtUnixMs: number
   updatedAtUnixMs: number
 }
@@ -71,4 +72,3 @@ export type AppData = {
   templates: Template[]
   practiceSettings: PracticeSettings
 }
-

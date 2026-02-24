@@ -98,8 +98,8 @@ export function readTemplate(value: unknown): Template {
     description: readOptionalText(payload.description, true) ?? "",
     sections: payload.sections.map((section: unknown, index: number) => readTemplateSection(section, index)),
     isSaved: typeof payload.isSaved === "boolean" ? payload.isSaved : false,
+    isDefault: typeof payload.isDefault === "boolean" ? payload.isDefault : false,
     createdAtUnixMs,
     updatedAtUnixMs,
   }
 }
-

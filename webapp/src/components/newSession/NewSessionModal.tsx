@@ -30,6 +30,7 @@ import { setPendingPreviewAudio } from '../../audio/pendingPreviewStore'
 import { processSessionAudio } from '../../audio/processSessionAudio'
 import { AnimatedMainContent } from '../AnimatedMainContent'
 import { fetchBillingStatus, type BillingStatus } from '../../services/billing'
+import { clearSubscriptionReturnDraft, readAndClearSubscriptionReturnDraft, saveSubscriptionReturnDraft } from './subscriptionReturnDraftStore'
 import {
   fetchTranscriptionRuntimeConfig,
   startRealtimeTranscriber,
@@ -44,6 +45,9 @@ type OptionKey = 'gesprek' | 'verslag' | 'upload' | 'schrijven'
 type Props = {
   visible: boolean
   onClose: () => void
+  onOpenMySubscription: () => void
+  restoreDraftFromSubscriptionReturn?: boolean
+  onRestoreDraftHandled?: () => void
   onStartWrittenReport: () => void
   onOpenSession: (sessionId: string) => void
   onOpenNewCoachee: () => void
@@ -194,6 +198,9 @@ function createOperationId(): string {
 export function NewSessionModal({
   visible,
   onClose,
+  onOpenMySubscription,
+  restoreDraftFromSubscriptionReturn = false,
+  onRestoreDraftHandled,
   onStartWrittenReport,
   onOpenSession,
   onOpenNewCoachee,
@@ -316,6 +323,43 @@ export function NewSessionModal({
     hasAutoStartedRecordingRef.current = false
     hasAutoSubmittedRecordingRef.current = false
   }, [visible])
+
+  useEffect(() => {
+    if (!visible) return
+    if (!restoreDraftFromSubscriptionReturn) return
+    let isCancelled = false
+
+    void (async () => {
+      try {
+        const draft = await readAndClearSubscriptionReturnDraft()
+        if (isCancelled) return
+        if (!draft) return
+
+        setSelectedOption(draft.selectedOption)
+        setSelectedCoacheeId(draft.selectedCoacheeId)
+        setSelectedTemplateId(draft.selectedTemplateId ?? defaultTemplateId)
+        setSessionTitle(String(draft.sessionTitle || '').trim() || buildDefaultSessionTitle(data.sessions.map((session) => session.title)))
+        setAudioDurationSeconds(draft.audioDurationSeconds)
+        setShouldSaveAudio(draft.shouldSaveAudio !== false)
+        setAudioForTranscription({ blob: draft.blob, mimeType: draft.mimeType || 'application/octet-stream' })
+        setAudioPreviewUrl(URL.createObjectURL(draft.blob))
+        setSelectedAudioFile(null)
+        setSelectedUploadFileDurationSeconds(null)
+        setUploadFileDurationWarning(null)
+        setStep('recorded')
+      } catch (error) {
+        console.error('[NewSessionModal] Failed to restore subscription return draft', error)
+      } finally {
+        if (!isCancelled) {
+          onRestoreDraftHandled?.()
+        }
+      }
+    })()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [data.sessions, defaultTemplateId, onRestoreDraftHandled, restoreDraftFromSubscriptionReturn, visible])
 
   function buildAudioDownloadFileName(kind: 'recording' | 'upload', mimeType: string) {
     const extension = normalizeFileExtensionFromMimeType(mimeType)
@@ -804,6 +848,7 @@ export function NewSessionModal({
     setAudioForTranscription(null)
     setIsMinimizedCloseWarningVisible(false)
     setIsRecordedCloseWarningVisible(false)
+    void clearSubscriptionReturnDraft()
     onClose()
   }
 
@@ -893,6 +938,7 @@ export function NewSessionModal({
       realtimeOperationIdRef.current = realtimeChargeOperationId
     }
     onOpenSession(createdSessionId)
+    void clearSubscriptionReturnDraft()
     handleClose()
 
     void processSessionAudio({
@@ -933,13 +979,11 @@ export function NewSessionModal({
       1,
       Math.ceil(values.kind === 'recording' ? (options?.recordingDurationSeconds ?? recorder.elapsedSeconds) : audioDurationSeconds || 0),
     )
-    if (!shouldSaveAudio) {
-      const remainingSeconds = await readRemainingSecondsBeforeStart()
-      if (remainingSeconds !== null && remainingSeconds < requiredSeconds) {
-        setInsufficientMinutesContext({ kind: values.kind, remainingSeconds, requiredSeconds })
-        setIsInsufficientMinutesWarningVisible(true)
-        return false
-      }
+    const remainingSeconds = await readRemainingSecondsBeforeStart()
+    if (remainingSeconds !== null && remainingSeconds < requiredSeconds) {
+      setInsufficientMinutesContext({ kind: values.kind, remainingSeconds, requiredSeconds })
+      setIsInsufficientMinutesWarningVisible(true)
+      return false
     }
     return createAndOpenSessionInternal(values, { ...options, audioForTranscription: resolvedAudioForTranscription })
   }
@@ -1815,7 +1859,6 @@ export function NewSessionModal({
         visible={isInsufficientMinutesWarningVisible}
         onClose={() => {
           setIsInsufficientMinutesWarningVisible(false)
-          setInsufficientMinutesContext(null)
         }}
         contentContainerStyle={styles.insufficientMinutesModalContainer}
       >
@@ -1825,8 +1868,7 @@ export function NewSessionModal({
           </Text>
           <Text style={styles.insufficientMinutesModalText}>
             Deze opname duurt ongeveer {insufficientMinutesContext ? formatMinutesLabel(insufficientMinutesContext.requiredSeconds) : '0 minuten'} en je hebt nog{' '}
-            {insufficientMinutesContext ? formatMinutesLabel(insufficientMinutesContext.remainingSeconds) : '0 minuten'} over. Download je audio nu, of sla audio op
-            voordat je doorgaat.
+            {insufficientMinutesContext ? formatMinutesLabel(insufficientMinutesContext.remainingSeconds) : '0 minuten'} over.
           </Text>
         </View>
         <View style={styles.insufficientMinutesFooter}>
@@ -1846,12 +1888,32 @@ export function NewSessionModal({
           </Pressable>
           <Pressable
             onPress={() => {
-              const context = insufficientMinutesContext
-              if (!context) return
-              setShouldSaveAudio(true)
-              setIsInsufficientMinutesWarningVisible(false)
-              setInsufficientMinutesContext(null)
-              void createAndOpenSessionInternal({ kind: context.kind }, { overrideShouldSaveAudio: true })
+              void (async () => {
+                const selectedOptionForRestore =
+                  selectedOption === 'gesprek' || selectedOption === 'verslag' || selectedOption === 'upload'
+                    ? selectedOption
+                    : insufficientMinutesContext?.kind === 'upload'
+                      ? 'upload'
+                      : 'verslag'
+                if (audioForTranscription) {
+                  try {
+                    await saveSubscriptionReturnDraft({
+                      selectedOption: selectedOptionForRestore,
+                      selectedCoacheeId,
+                      selectedTemplateId,
+                      sessionTitle,
+                      shouldSaveAudio,
+                      audioDurationSeconds,
+                      mimeType: audioForTranscription.mimeType,
+                      blob: audioForTranscription.blob,
+                    })
+                  } catch (error) {
+                    console.error('[NewSessionModal] Failed to persist subscription return draft', error)
+                  }
+                }
+                setIsInsufficientMinutesWarningVisible(false)
+                onOpenMySubscription()
+              })()
             }}
             style={({ hovered }) => [
               styles.insufficientMinutesFooterPrimaryButton,
@@ -1859,7 +1921,7 @@ export function NewSessionModal({
             ]}
           >
             <Text isBold style={styles.insufficientMinutesFooterPrimaryButtonText}>
-              Audio opslaan en doorgaan
+              Mijn abonnement
             </Text>
           </Pressable>
         </View>

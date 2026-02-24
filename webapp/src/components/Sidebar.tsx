@@ -23,7 +23,6 @@ type Props = {
   isAdminUser?: boolean
   onSelectSidebarItem: (sidebarItemKey: SidebarItemKey) => void
   onPressCreateSession: () => void
-  onOpenFeedback: (anchorPoint: AnchorPoint) => void
   onOpenSettingsMenu: (anchorPoint: AnchorPoint) => void
 }
 
@@ -33,7 +32,6 @@ export function Sidebar({
   isAdminUser = false,
   onSelectSidebarItem,
   onPressCreateSession,
-  onOpenFeedback,
   onOpenSettingsMenu,
 }: Props) {
   const { width } = useWindowDimensions()
@@ -160,15 +158,6 @@ export function Sidebar({
             onOpenSettingsMenu(getMenuAnchorPoint(event))
           }}
           icon={<SettingsIcon color={settingsColor} size={24} />}
-          isCompact={isCompact}
-        />
-        <SidebarItem
-          label="Feedback"
-          isSelected={false}
-          onPress={(event) => {
-            onOpenFeedback(getMenuAnchorPoint(event))
-          }}
-          icon={<FeedbackIcon color={unselectedColor} size={24} />}
           isCompact={isCompact}
         />
       </View>
