@@ -9,6 +9,7 @@ import { PlusIcon } from '../icons/PlusIcon'
 import { TemplateEditIcon } from '../icons/TemplateEditIcon'
 import { TrashIcon } from '../icons/TrashIcon'
 import { ConfirmDeleteDialog } from '../../foundation/ui/modals/ConfirmDeleteDialog'
+import { RichTextInlineSegment, parseRichTextMarkdown, richTextSharedFormatting } from '../../utils/richTextFormatting'
 
 export type TemplateEditModalSection = {
   id: string
@@ -32,6 +33,18 @@ type Props = {
   onDelete?: () => void
 }
 
+function renderInlineSegments(segments: RichTextInlineSegment[], textStyle: any) {
+  return (
+    <Text style={textStyle}>
+      {segments.map((segment, index) => (
+        <Text key={`${segment.text}-${index}`} isBold={segment.isBold} style={segment.isItalic ? styles.italicText : undefined}>
+          {segment.text}
+        </Text>
+      ))}
+    </Text>
+  )
+}
+
 // Creates the default template draft used when opening the create flow.
 function createEmptyTemplate(): TemplateEditModalTemplate {
   return {
@@ -50,6 +63,7 @@ export function TemplateEditModal({ visible, mode, template, readOnly = false, o
   const [hoveredDeleteSectionId, setHoveredDeleteSectionId] = useState<string | null>(null)
   const [pendingDeleteSectionId, setPendingDeleteSectionId] = useState<string | null>(null)
   const isCompactFooter = windowWidth <= 640
+  const readOnlyLines = parseRichTextMarkdown(activeTemplate.description || '')
 
   useEffect(() => {
     if (!visible) return
@@ -87,18 +101,30 @@ export function TemplateEditModal({ visible, mode, template, readOnly = false, o
         <ScrollView showsVerticalScrollIndicator style={styles.sectionsScroll} contentContainerStyle={styles.sectionsScrollContent}>
           {isReadOnly ? (
             <View style={styles.readOnlyContent}>
-              <Text style={styles.readOnlyDescriptionText}>
-                {activeTemplate.description || 'Geen beschrijving beschikbaar voor deze standaardtemplate.'}
-              </Text>
-              {activeTemplate.sections.length > 0 ? (
-                <View style={styles.readOnlySectionList}>
-                  {activeTemplate.sections.map((section, index) => (
-                    <Text key={section.id} style={styles.readOnlySectionBullet}>
-                      {`- ${section.title || `Onderdeel ${index + 1}`}`}
-                    </Text>
-                  ))}
-                </View>
-              ) : null}
+              {readOnlyLines.length === 0 ? <Text style={styles.readOnlyDescriptionText}>Geen beschrijving beschikbaar voor deze standaardtemplate.</Text> : null}
+              {readOnlyLines.map((line, index) => {
+                if (line.kind === 'empty') return <View key={`empty-${index}`} style={styles.readOnlyEmptyRow} />
+                if (line.kind === 'divider') return <View key={`divider-${index}`} style={styles.readOnlyDivider} />
+                if (line.kind === 'headingTwo' || line.kind === 'headingThree') return <View key={`heading-${index}`}>{renderInlineSegments(line.segments, styles.readOnlyHeading)}</View>
+                if (line.kind === 'bullet') {
+                  return (
+                    <View key={`bullet-${index}`} style={styles.readOnlyBulletRow}>
+                      <View style={styles.readOnlyBulletDot} />
+                      <View style={styles.readOnlyBulletTextContainer}>{renderInlineSegments(line.segments, styles.readOnlyBulletText)}</View>
+                    </View>
+                  )
+                }
+                if (line.kind === 'numbered') {
+                  return (
+                    <View key={`numbered-${index}`} style={styles.readOnlyBulletRow}>
+                      <Text style={styles.readOnlyBulletNumber}>{`${line.number}.`}</Text>
+                      <View style={styles.readOnlyBulletTextContainer}>{renderInlineSegments(line.segments, styles.readOnlyBulletText)}</View>
+                    </View>
+                  )
+                }
+                if (line.kind === 'quote') return <View key={`quote-${index}`} style={styles.readOnlyQuoteRow}>{renderInlineSegments(line.segments, styles.readOnlyQuoteText)}</View>
+                return <View key={`paragraph-${index}`}>{renderInlineSegments(line.segments, styles.readOnlyDescriptionText)}</View>
+              })}
             </View>
           ) : null}
           {isReadOnly ? null : (
@@ -322,21 +348,67 @@ const styles = StyleSheet.create({
   },
   readOnlyContent: {
     width: '100%',
-    gap: 12,
+    gap: 8,
   },
   readOnlyDescriptionText: {
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: richTextSharedFormatting.editorFontSize,
+    lineHeight: richTextSharedFormatting.editorLineHeight,
+    color: colors.text,
+  },
+  readOnlyHeading: {
+    fontSize: richTextSharedFormatting.headingFontSize,
+    lineHeight: richTextSharedFormatting.headingLineHeight,
+    fontWeight: richTextSharedFormatting.headingFontWeight,
+    color: colors.textStrong,
+  },
+  readOnlyBulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  readOnlyBulletDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: colors.text,
+    marginTop: 10,
+  },
+  readOnlyBulletTextContainer: {
+    flex: 1,
+  },
+  readOnlyBulletText: {
+    fontSize: richTextSharedFormatting.listFontSize,
+    lineHeight: richTextSharedFormatting.listLineHeight,
+    color: colors.text,
+  },
+  readOnlyBulletNumber: {
+    fontSize: richTextSharedFormatting.listFontSize,
+    lineHeight: richTextSharedFormatting.listLineHeight,
+    fontWeight: richTextSharedFormatting.listMarkerFontWeight,
+    color: colors.text,
+    minWidth: 20,
+  },
+  readOnlyQuoteRow: {
+    borderLeftWidth: 2,
+    borderLeftColor: colors.border,
+    paddingLeft: 10,
+  },
+  readOnlyQuoteText: {
+    fontSize: richTextSharedFormatting.editorFontSize,
+    lineHeight: richTextSharedFormatting.editorLineHeight,
     color: colors.textSecondary,
   },
-  readOnlySectionList: {
-    width: '100%',
-    gap: 6,
+  readOnlyEmptyRow: {
+    height: 8,
   },
-  readOnlySectionBullet: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textStrong,
+  readOnlyDivider: {
+    width: '100%',
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 8,
+  },
+  italicText: {
+    fontStyle: 'italic',
   },
   field: {
     width: '100%',

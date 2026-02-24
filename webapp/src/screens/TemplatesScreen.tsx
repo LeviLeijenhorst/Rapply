@@ -13,6 +13,7 @@ import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { colors } from '../theme/colors'
 import { typography } from '../theme/typography'
 import { webTransitionSmooth } from '../theme/webTransitions'
+import { parseRichTextMarkdown } from '../utils/richTextFormatting'
 
 type SavedFilterKey = 'all' | 'saved'
 
@@ -231,15 +232,29 @@ type TemplateCardProps = {
   onPress: () => void
 }
 
+function getTemplateDescriptionPreview(description: string): string {
+  const lines = parseRichTextMarkdown(description)
+  const plain = lines
+    .map((line) => ('text' in line ? line.text.trim() : ''))
+    .filter((line) => line.length > 0)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return plain || 'Geen beschrijving beschikbaar.'
+}
+
 // Renders one template preview card in the grid.
 function TemplateCard({ title, description, onPress }: TemplateCardProps) {
+  const preview = getTemplateDescriptionPreview(description)
   return (
     <Pressable onPress={onPress} style={({ hovered }) => [styles.templateCard, hovered ? styles.templateCardHovered : undefined]}>
       <View style={styles.templateCardContent}>
         <Text isBold style={styles.templateCardTitle}>
           {title}
         </Text>
-        <Text style={styles.templateCardDescription}>{description}</Text>
+        <Text numberOfLines={3} style={styles.templateCardDescription}>
+          {preview}
+        </Text>
       </View>
     </Pressable>
   )
