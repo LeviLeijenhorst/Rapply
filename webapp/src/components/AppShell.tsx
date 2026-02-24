@@ -1130,6 +1130,7 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
     padding: 24,
     ...( { overflow: 'auto' } as any ),
   },
