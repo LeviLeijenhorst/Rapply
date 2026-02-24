@@ -23,6 +23,7 @@ type Props = {
   isSettingsSelected: boolean
   isAdminUser?: boolean
   showSubscribeItem?: boolean
+  isCreateSessionDisabled?: boolean
   onSelectSidebarItem: (sidebarItemKey: SidebarItemKey) => void
   onPressCreateSession: () => void
   onOpenContact: () => void
@@ -35,6 +36,7 @@ export function Sidebar({
   isSettingsSelected,
   isAdminUser = false,
   showSubscribeItem = false,
+  isCreateSessionDisabled = false,
   onSelectSidebarItem,
   onPressCreateSession,
   onOpenContact,
@@ -67,11 +69,13 @@ export function Sidebar({
     <View style={[styles.container, isCompact ? styles.containerCompact : undefined]}>
       <View style={styles.topSection}>
         <Pressable
+          disabled={isCreateSessionDisabled}
           onPress={onPressCreateSession}
           style={({ hovered }) => [
             styles.createSessionButton,
             isCompact ? styles.createSessionButtonCompact : undefined,
-            hovered ? styles.createSessionButtonHovered : undefined,
+            isCreateSessionDisabled ? styles.createSessionButtonDisabled : undefined,
+            hovered && !isCreateSessionDisabled ? styles.createSessionButtonHovered : undefined,
           ]}
         >
           {/* Nieuw verslag button */}
@@ -224,6 +228,10 @@ const styles = StyleSheet.create({
   },
   createSessionButtonHovered: {
     backgroundColor: '#A50058',
+  },
+  createSessionButtonDisabled: {
+    backgroundColor: '#C6C6C6',
+    borderColor: '#C6C6C6',
   },
   createSessionButtonContent: {
     flexDirection: 'row',

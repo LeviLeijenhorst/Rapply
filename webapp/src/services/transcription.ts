@@ -29,7 +29,7 @@ function mapTranscriptionErrorMessage(rawMessage: string): string {
     (normalized.includes('combinedphrases') && normalized.includes('phrases'))
 
   if (indicatesNoSpeech) {
-    return 'Er is geen spraak gedetecteerd in deze opname. Probeer opnieuw en spreek duidelijk in de microfoon.'
+    return 'Er is geen spraak gedetecteerd in deze opname.'
   }
   if (normalized.includes('notreadableerror')) {
     return 'Het audiobestand kon niet worden gelezen. Sluit het bronbestand en probeer opnieuw.'

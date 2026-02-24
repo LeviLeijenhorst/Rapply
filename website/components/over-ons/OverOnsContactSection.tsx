@@ -38,12 +38,13 @@ export default function OverOnsContactSection({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState("Bericht verzonden! Je hoort snel van ons.");
   const [isToastVisible, setIsToastVisible] = useState(false);
+  const [isToastHovered, setIsToastHovered] = useState(false);
 
   useEffect(() => {
-    if (!isToastVisible) return;
+    if (!isToastVisible || isToastHovered) return;
     const timeout = window.setTimeout(() => setIsToastVisible(false), 2600);
     return () => window.clearTimeout(timeout);
-  }, [isToastVisible]);
+  }, [isToastHovered, isToastVisible]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -73,10 +74,12 @@ export default function OverOnsContactSection({
 
       setFormValues(initialFormValues);
       setToastMessage("Bericht verzonden! Je hoort snel van ons.");
+      setIsToastHovered(false);
       setIsToastVisible(false);
       window.requestAnimationFrame(() => setIsToastVisible(true));
     } catch {
       setToastMessage("Verzenden mislukt. Probeer het opnieuw.");
+      setIsToastHovered(false);
       setIsToastVisible(false);
       window.requestAnimationFrame(() => setIsToastVisible(true));
     } finally {
@@ -242,6 +245,8 @@ export default function OverOnsContactSection({
       <BottomToast
         isVisible={isToastVisible}
         message={toastMessage}
+        onMouseEnter={() => setIsToastHovered(true)}
+        onMouseLeave={() => setIsToastHovered(false)}
       />
     </SectionContainer>
   );

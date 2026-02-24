@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 
 import { AuthCard } from '../components/AuthCard'
 import { CoachscribeLogo } from '../../components/CoachscribeLogo'
@@ -14,11 +14,10 @@ type Props = {
 }
 
 export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
-  const { width } = useWindowDimensions()
-  const isCompact = width < 980
-  const illustrationSource = require('../../../assets/authhumans.png')
+  const { width, height } = useWindowDimensions()
   const [isStartingLogin, setIsStartingLogin] = useState(false)
   const { showErrorToast } = useToast()
+  const squareSize = Math.min(640, width - 140, height - 140)
 
   useEffect(() => {
     if (!errorMessage) return
@@ -45,59 +44,51 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
   }
 
   return (
-    <AuthCard>
-      {/* Welcome layout */}
-      <View style={[styles.layoutRow, isCompact ? styles.layoutColumn : undefined]}>
-        {/* Branding panel */}
-        <View style={styles.brandingPanel}>
-          {/* Brand header */}
-          <View style={styles.brandHeader}>
-            {/* Brand logo */}
-            <CoachscribeLogo />
-            {/* Brand tagline */}
-            <Text style={styles.brandTagline}>Focus op de mens</Text>
-          </View>
-          {/* Welcome illustration */}
-          <View style={styles.illustrationContainer}>
-            <Image source={illustrationSource} resizeMode="contain" style={[styles.illustrationImage, isCompact ? styles.illustrationImageCompact : undefined]} />
-          </View>
-        </View>
-
-        {/* Welcome panel */}
-        <View style={styles.welcomePanel}>
-          {/* Welcome content */}
-          <View style={styles.welcomeContent}>
+    <AuthCard style={[styles.squareCard, { width: squareSize, height: squareSize }]}>
+      {/* Welcome panel */}
+      <View style={styles.welcomePanel}>
+        {/* Welcome content */}
+        <View style={styles.welcomeContent}>
+          <View style={styles.topContent}>
+            {/* Brand header */}
+            <View style={styles.brandHeader}>
+              {/* Brand logo */}
+              <CoachscribeLogo />
+              {/* Brand tagline */}
+              <Text style={styles.brandTagline}>Focus op de mens</Text>
+            </View>
             {/* Welcome title */}
             <Text isBold style={styles.welcomeTitle}>
               Welkom
             </Text>
             {/* Welcome description */}
             <Text style={styles.welcomeParagraph}>
-              CoachScribe ondersteunt verzuimcoaches, casemanagers en jobcoaches bij heldere dossiervorming en het bewaren van overzicht.
+              CoachScribe ondersteunt <Text isBold style={styles.welcomeParagraphBold}>loopbaan- en re-integratieprofessionals</Text> bij heldere dossiervorming en het bewaren van overzicht.
             </Text>
             {/* Welcome description */}
             <Text style={styles.welcomeParagraph}>
               Gesprekken en afspraken worden veilig vastgelegd en gestructureerd, zodat jij meer tijd houdt voor de begeleiding van je client.
             </Text>
-            {/* Continue button */}
-            <Pressable
-              disabled={isStartingLogin}
-              onPress={startLogin}
-              style={({ hovered }) => [
-                styles.actionButton,
-                isStartingLogin ? styles.actionButtonDisabled : undefined,
-                !isStartingLogin && hovered ? styles.actionButtonHovered : undefined,
-              ]}
-            >
-              {isStartingLogin ? (
-                <ActivityIndicator size="small" color={colors.selected} />
-              ) : (
-                <Text isBold style={styles.actionButtonText}>
-                  Doorgaan
-                </Text>
-              )}
-            </Pressable>
           </View>
+          {/* Continue button */}
+          <Pressable
+            disabled={isStartingLogin}
+            onPress={startLogin}
+            style={({ hovered }) => [
+              styles.actionButton,
+              styles.actionButtonBottom,
+              isStartingLogin ? styles.actionButtonDisabled : undefined,
+              !isStartingLogin && hovered ? styles.actionButtonHovered : undefined,
+            ]}
+          >
+            {isStartingLogin ? (
+              <ActivityIndicator size="small" color={colors.selected} />
+            ) : (
+              <Text isBold style={styles.actionButtonText}>
+                Doorgaan
+              </Text>
+            )}
+          </Pressable>
         </View>
       </View>
     </AuthCard>
@@ -105,25 +96,11 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
 }
 
 const styles = StyleSheet.create({
-  layoutRow: {
-    width: '100%',
-    flexDirection: 'row',
-    minHeight: 560,
-  },
-  layoutColumn: {
-    flexDirection: 'column',
-    minHeight: 0,
-  },
-  brandingPanel: {
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 0,
-    minWidth: 0,
-    backgroundColor: '#FFFFFF',
-    padding: 48,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 24,
+  squareCard: {
+    maxWidth: '100%',
+    alignSelf: 'center',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
   },
   brandHeader: {
     width: '100%',
@@ -137,67 +114,67 @@ const styles = StyleSheet.create({
     color: '#1C0E0A',
     textAlign: 'center',
   },
-  illustrationContainer: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  illustrationImage: {
-    width: 420,
-    height: 320,
-  },
-  illustrationImageCompact: {
-    width: 300,
-    height: 220,
-  },
   welcomePanel: {
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 0,
-    minWidth: 0,
-    backgroundColor: colors.selected,
-    padding: 48,
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 48,
+    paddingTop: 48,
+    paddingBottom: 48,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   welcomeContent: {
+    flex: 1,
     width: '100%',
     alignItems: 'flex-start',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+  },
+  topContent: {
+    width: '100%',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
     gap: 24,
   },
   welcomeTitle: {
     fontSize: 44,
     lineHeight: 52,
-    color: '#FFFFFF',
+    color: '#1C0E0A',
     textAlign: 'left',
   },
   welcomeParagraph: {
     fontSize: 15,
     lineHeight: 22,
-    color: '#FFFFFF',
+    color: '#1C0E0A',
     textAlign: 'left',
+  },
+  welcomeParagraphBold: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#1C0E0A',
   },
   actionButton: {
     width: '100%',
     maxWidth: '100%',
     height: 48,
     borderRadius: 6,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.selected,
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionButtonHovered: {
-    backgroundColor: '#F6E6F0',
+    opacity: 0.9,
   },
   actionButtonDisabled: {
     opacity: 0.85,
   },
+  actionButtonBottom: {
+    marginTop: 'auto',
+  },
   actionButtonText: {
     fontSize: 14,
     lineHeight: 18,
-    color: colors.selected,
+    color: '#FFFFFF',
   },
 })
 

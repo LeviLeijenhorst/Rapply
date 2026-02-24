@@ -25,9 +25,11 @@ import {
   loadQuickQuestionsChatForCoachee,
   saveQuickQuestionsChatForCoachee,
 } from '../local/quickQuestionsChatStore'
-import { buildCoacheeSummariesSystemMessages, buildCoacheeWrittenReportsSystemMessages } from '../utils/quickQuestionsContext'
+import { buildCoacheeStructuredSystemMessages } from '../utils/quickQuestionsContext'
 import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDeleteModal'
 import { ConfirmChatClearModal } from '../components/sessionDetail/ConfirmChatClearModal'
+import { CoacheeUpsertModal } from '../components/coachees/CoacheeUpsertModal'
+import { getCoacheeUpsertValues, serializeCoacheeUpsertValues } from '../utils/coacheeProfile'
 
 type SessionListItem = {
   id: string
@@ -45,6 +47,7 @@ type Props = {
   onBack: () => void
   onSelectSession: (sessionId: string) => void
   onPressCreateSession: () => void
+  isCreateSessionDisabled?: boolean
 }
 
 function formatDurationLabel(durationSeconds: number | null): string {
@@ -58,8 +61,8 @@ function formatDurationLabel(durationSeconds: number | null): string {
   return hours > 0 ? `${hours}:${paddedMinutes}:${paddedSeconds}` : `${minutes}:${paddedSeconds}`
 }
 
-export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPressCreateSession }: Props) {
-  const { data, deleteSession } = useLocalAppData()
+export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPressCreateSession, isCreateSessionDisabled = false }: Props) {
+  const { data, deleteSession, updateCoachee } = useLocalAppData()
   const coachee = data.coachees.find((c) => c.id === coacheeId)
   const coacheeName = coachee?.name ?? 'Cliënt'
 
@@ -91,6 +94,7 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null)
   const [isClearChatModalVisible, setIsClearChatModalVisible] = useState(false)
+  const [isEditCoacheeModalOpen, setIsEditCoacheeModalOpen] = useState(false)
 
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const filteredSessions = sessions.filter((item) => item.title.toLowerCase().includes(normalizedQuery))
@@ -160,32 +164,27 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
     try {
       const coacheeSessions = data.sessions.filter((item) => item.coacheeId === coacheeId && item.kind !== 'notes')
       const writtenReportBySessionId = new Map(data.writtenReports.map((report) => [report.sessionId, report.text]))
-      const coacheeSummarySessions = coacheeSessions.map((item) => ({
+      const coacheeContextSessions = coacheeSessions.map((item) => ({
         title: item.title,
         createdAtUnixMs: item.createdAtUnixMs,
         summary: item.summary,
-      }))
-      const coacheeWrittenReportSessions = coacheeSessions.map((item) => ({
-        title: item.title,
-        createdAtUnixMs: item.createdAtUnixMs,
         reportText: item.kind === 'written' ? writtenReportBySessionId.get(item.id) ?? null : null,
+        reportDate: item.reportDate,
+        wvpWeekNumber: item.wvpWeekNumber,
+        reportFirstSickDay: item.reportFirstSickDay,
       }))
 
       const responseText = await completeChat({
         messages: [
-          ...buildCoacheeSummariesSystemMessages({
+          ...buildCoacheeStructuredSystemMessages({
             coacheeName,
-            sessions: coacheeSummarySessions,
-            maxTotalCharacters: 45000,
-            maxSummaryCharactersPerSession: 2500,
-            maxSessions: 80,
-          }),
-          ...buildCoacheeWrittenReportsSystemMessages({
-            coacheeName,
-            sessions: coacheeWrittenReportSessions,
-            maxTotalCharacters: 45000,
-            maxReportCharactersPerSession: 3500,
-            maxSessions: 80,
+            coacheeCreatedAtUnixMs: coachee?.createdAtUnixMs ?? null,
+            clientDetails: coachee?.clientDetails ?? '',
+            employerDetails: coachee?.employerDetails ?? '',
+            firstSickDay: coachee?.firstSickDay ?? '',
+            sessions: coacheeContextSessions,
+            maxTotalCharacters: 55000,
+            maxSessionCharacters: 3500,
           }),
           ...nextChatMessages.map<LocalChatMessage>((message) => ({
             role: message.role,
@@ -246,6 +245,11 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
             </Text>
           </Pressable>
         </View>
+        <Pressable onPress={() => setIsEditCoacheeModalOpen(true)} style={({ hovered }) => [styles.editCoacheeButton, hovered ? styles.editCoacheeButtonHovered : undefined]}>
+          <Text isBold style={styles.editCoacheeButtonText}>
+            Cliëntgegevens
+          </Text>
+        </Pressable>
       </View>
 
       {/* Detail content */}
@@ -270,7 +274,13 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
                 </Pressable>
               ) : null}
               <Pressable
-                style={({ hovered }) => [styles.newSessionButton, webTransitionSmooth, hovered ? styles.newSessionButtonHovered : undefined]}
+                disabled={isCreateSessionDisabled}
+                style={({ hovered }) => [
+                  styles.newSessionButton,
+                  webTransitionSmooth,
+                  isCreateSessionDisabled ? styles.newSessionButtonDisabled : undefined,
+                  hovered && !isCreateSessionDisabled ? styles.newSessionButtonHovered : undefined,
+                ]}
                 onPress={onPressCreateSession}
               >
                 {/* New report button */}
@@ -438,6 +448,19 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
           resetChat()
         }}
       />
+      <CoacheeUpsertModal
+        visible={isEditCoacheeModalOpen}
+        mode="edit"
+        initialValues={getCoacheeUpsertValues(coachee)}
+        onClose={() => setIsEditCoacheeModalOpen(false)}
+        onSave={(values) => {
+          if (!coachee) return
+          const serialized = serializeCoacheeUpsertValues(values)
+          if (!serialized.name.trim()) return
+          updateCoachee(coachee.id, serialized)
+          setIsEditCoacheeModalOpen(false)
+        }}
+      />
     </View>
   )
 }
@@ -473,6 +496,24 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     flexShrink: 1,
     maxWidth: '100%',
+  },
+  editCoacheeButton: {
+    height: 40,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  editCoacheeButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  editCoacheeButtonText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
   },
   backTitleButtonHovered: {
     backgroundColor: colors.hoverBackground,
@@ -562,6 +603,10 @@ const styles = StyleSheet.create({
   },
   newSessionButtonHovered: {
     backgroundColor: '#A50058',
+  },
+  newSessionButtonDisabled: {
+    backgroundColor: '#C6C6C6',
+    borderColor: '#C6C6C6',
   },
   newSessionButtonText: {
     fontSize: 14,

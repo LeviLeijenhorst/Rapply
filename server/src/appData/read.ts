@@ -56,12 +56,15 @@ export async function readAppData(userId: string): Promise<AppData> {
   const coachees = await queryMany<{
     id: string
     name: string
+    client_details: string
+    employer_details: string
+    first_sick_day: string
     created_at_unix_ms: number
     updated_at_unix_ms: number
     is_archived: boolean
   }>(
     `
-    select id, name, created_at_unix_ms, updated_at_unix_ms, is_archived
+    select id, name, coalesce(client_details, '') as client_details, coalesce(employer_details, '') as employer_details, coalesce(first_sick_day, '') as first_sick_day, created_at_unix_ms, updated_at_unix_ms, is_archived
     from public.coachees
     where user_id = $1
     order by created_at_unix_ms desc
@@ -79,13 +82,16 @@ export async function readAppData(userId: string): Promise<AppData> {
     upload_file_name: string | null
     transcript: string | null
     summary: string | null
+    report_date: string | null
+    wvp_week_number: string | null
+    report_first_sick_day: string | null
     transcription_status: "idle" | "transcribing" | "generating" | "done" | "error"
     transcription_error: string | null
     created_at_unix_ms: number
     updated_at_unix_ms: number
   }>(
     `
-    select id, coachee_id, title, kind, audio_blob_id, audio_duration_seconds, upload_file_name, transcript, summary, transcription_status, transcription_error, created_at_unix_ms, updated_at_unix_ms
+    select id, coachee_id, title, kind, audio_blob_id, audio_duration_seconds, upload_file_name, transcript, summary, report_date, wvp_week_number, report_first_sick_day, transcription_status, transcription_error, created_at_unix_ms, updated_at_unix_ms
     from public.coachee_sessions
     where user_id = $1
     order by created_at_unix_ms desc
@@ -152,6 +158,9 @@ export async function readAppData(userId: string): Promise<AppData> {
     coachees: coachees.map((row) => ({
       id: row.id,
       name: row.name,
+      clientDetails: row.client_details ?? "",
+      employerDetails: row.employer_details ?? "",
+      firstSickDay: row.first_sick_day ?? "",
       createdAtUnixMs: Number(row.created_at_unix_ms),
       updatedAtUnixMs: Number(row.updated_at_unix_ms),
       isArchived: row.is_archived,
@@ -166,6 +175,9 @@ export async function readAppData(userId: string): Promise<AppData> {
       uploadFileName: row.upload_file_name,
       transcript: row.transcript,
       summary: row.summary,
+      reportDate: row.report_date,
+      wvpWeekNumber: row.wvp_week_number,
+      reportFirstSickDay: row.report_first_sick_day,
       transcriptionStatus: row.transcription_status,
       transcriptionError: row.transcription_error,
       createdAtUnixMs: Number(row.created_at_unix_ms),

@@ -43,7 +43,6 @@ export default function PricingSection(props: PricingSectionProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(true);
   const [hoursSavedPerWeek, setHoursSavedPerWeek] = useState(4);
-  const [usedTimePercent, setUsedTimePercent] = useState(55);
   const [averageSessionPrice, setAverageSessionPrice] = useState(150);
 
   useEffect(() => {
@@ -128,10 +127,8 @@ export default function PricingSection(props: PricingSectionProps) {
     ? Math.max(0, Math.floor(primaryPlan.minutesPerMonth / 60))
     : 0;
   const savedHoursPerMonth = hoursSavedPerWeek * 4.33;
-  const estimatedSessionsPerMonth = Math.max(
-    0,
-    savedHoursPerMonth * (usedTimePercent / 100),
-  );
+  const sessionDurationHours = 1;
+  const estimatedSessionsPerMonth = Math.max(0, savedHoursPerMonth / sessionDurationHours);
   const monthlyRevenue = Math.max(0, estimatedSessionsPerMonth * averageSessionPrice);
   const monthlySubscriptionCost = primaryPlan?.monthlyPrice ?? 0;
   const monthlyNetProfit = monthlyRevenue - monthlySubscriptionCost;
@@ -186,34 +183,6 @@ export default function PricingSection(props: PricingSectionProps) {
                   <p className="text-[14px] leading-5 text-[rgba(38,52,63,0.6)]">
                     Schat hoeveel uren per week je vrijspeelt doordat
                     verslaglegging sneller gaat.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-[20px] font-semibold leading-6 text-[#1D0A00]">
-                      Percentage ingevulde tijd
-                    </p>
-                    <span className="rounded-lg border border-[#E0E0E0] bg-[#FEFEFE] px-3 py-2 text-[14px] leading-[18px] text-[#1D0A00]">
-                      {usedTimePercent}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={usedTimePercent}
-                    onChange={(event) => {
-                      setUsedTimePercent(Number(event.currentTarget.value));
-                    }}
-                    className="w-full cursor-pointer accent-[#BE0165]"
-                  />
-                  <div className="flex items-center justify-between text-[14px] leading-[18px] text-[rgba(38,52,63,0.6)]">
-                    <span>0%</span>
-                    <span>100%</span>
-                  </div>
-                  <p className="text-[14px] leading-5 text-[rgba(38,52,63,0.6)]">
-                    Welk deel van je bespaarde tijd zet je om in extra sessies?
                   </p>
                 </div>
                 <div className="space-y-2">

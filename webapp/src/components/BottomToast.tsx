@@ -1,21 +1,23 @@
 import React from 'react'
-import { StyleSheet, View } from 'react-native'
+import { Pressable, StyleSheet, View } from 'react-native'
 
 import { Text } from './Text'
 
 type Props = {
   visible: boolean
   message: string
+  onHoverStart?: () => void
+  onHoverEnd?: () => void
 }
 
-export function BottomToast({ visible, message }: Props) {
+export function BottomToast({ visible, message, onHoverStart, onHoverEnd }: Props) {
   return (
-    <View pointerEvents="none" style={[styles.container, visible ? styles.containerVisible : styles.containerHidden]}>
-      <View style={styles.toast}>
+    <View pointerEvents="box-none" style={[styles.container, visible ? styles.containerVisible : styles.containerHidden]}>
+      <Pressable onHoverIn={onHoverStart} onHoverOut={onHoverEnd} pointerEvents={visible ? 'auto' : 'none'} style={styles.toast}>
         <Text isBold style={styles.message}>
           {message}
         </Text>
-      </View>
+      </Pressable>
     </View>
   )
 }

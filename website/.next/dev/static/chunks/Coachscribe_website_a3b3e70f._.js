@@ -453,21 +453,23 @@ __turbopack_context__.s([
 var __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/Coachscribe/website/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
 "use client";
 ;
-function BottomToast({ isVisible, message }) {
+function BottomToast({ isVisible, message, onMouseEnter, onMouseLeave }) {
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
         className: `pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-6 transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isVisible ? "translate-y-0 opacity-100" : "translate-y-[calc(100%+8rem)] opacity-0"}`,
         "aria-live": "polite",
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-            className: "inline-flex h-12 items-center rounded-full bg-white px-6 text-center text-base font-bold text-[#1D0A00] shadow-[0_8px_20px_rgba(15,23,42,0.2)]",
+            className: "pointer-events-auto inline-flex h-12 items-center rounded-full bg-white px-6 text-center text-base font-bold text-[#1D0A00] shadow-[0_8px_20px_rgba(15,23,42,0.2)]",
+            onMouseEnter: onMouseEnter,
+            onMouseLeave: onMouseLeave,
             children: message
         }, void 0, false, {
             fileName: "[project]/Coachscribe/website/components/BottomToast.tsx",
-            lineNumber: 18,
+            lineNumber: 25,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/Coachscribe/website/components/BottomToast.tsx",
-        lineNumber: 10,
+        lineNumber: 17,
         columnNumber: 5
     }, this);
 }
@@ -563,9 +565,10 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
     const [isSubmitting, setIsSubmitting] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [toastMessage, setToastMessage] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])("Bericht verzonden! Je hoort snel van ons.");
     const [isToastVisible, setIsToastVisible] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [isToastHovered, setIsToastHovered] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "OverOnsContactSection.useEffect": ()=>{
-            if (!isToastVisible) return;
+            if (!isToastVisible || isToastHovered) return;
             const timeout = window.setTimeout({
                 "OverOnsContactSection.useEffect.timeout": ()=>setIsToastVisible(false)
             }["OverOnsContactSection.useEffect.timeout"], 2600);
@@ -574,6 +577,7 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
             })["OverOnsContactSection.useEffect"];
         }
     }["OverOnsContactSection.useEffect"], [
+        isToastHovered,
         isToastVisible
     ]);
     const handleSubmit = async (event)=>{
@@ -602,10 +606,12 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
             }
             setFormValues(initialFormValues);
             setToastMessage("Bericht verzonden! Je hoort snel van ons.");
+            setIsToastHovered(false);
             setIsToastVisible(false);
             window.requestAnimationFrame(()=>setIsToastVisible(true));
         } catch  {
             setToastMessage("Verzenden mislukt. Probeer het opnieuw.");
+            setIsToastHovered(false);
             setIsToastVisible(false);
             window.requestAnimationFrame(()=>setIsToastVisible(true));
         } finally{
@@ -642,7 +648,7 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                     children: "Kom in contact"
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 136,
+                                    lineNumber: 139,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -651,14 +657,14 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                         "Heb je een vraag, wil je input geven of ben je benieuwd wat wij",
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 141,
+                                            lineNumber: 144,
                                             columnNumber: 15
                                         }, this),
                                         "voor jou kunnen betekenen? Neem contact met ons op!"
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 139,
+                                    lineNumber: 142,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$image$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -667,13 +673,13 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                     className: "mt-6 h-auto w-full max-w-[320px] rounded-xl object-cover md:max-w-[380px] xl:max-w-[420px]"
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 144,
+                                    lineNumber: 147,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                            lineNumber: 135,
+                            lineNumber: 138,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("form", {
@@ -688,7 +694,7 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                             children: "Volledige naam*"
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 152,
+                                            lineNumber: 155,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -704,13 +710,13 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                             className: fieldClassName
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 153,
+                                            lineNumber: 156,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 151,
+                                    lineNumber: 154,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
@@ -721,7 +727,7 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                             children: "Email*"
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 169,
+                                            lineNumber: 172,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -737,13 +743,13 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                             className: fieldClassName
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 170,
+                                            lineNumber: 173,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 168,
+                                    lineNumber: 171,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
@@ -754,7 +760,7 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                             children: "Nummer (optioneel)"
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 186,
+                                            lineNumber: 189,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -769,13 +775,13 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                             className: fieldClassName
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 189,
+                                            lineNumber: 192,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 185,
+                                    lineNumber: 188,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
@@ -786,7 +792,7 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                             children: "Bericht*"
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 204,
+                                            lineNumber: 207,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("textarea", {
@@ -802,13 +808,13 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                             className: textAreaClassName
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 205,
+                                            lineNumber: 208,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 203,
+                                    lineNumber: 206,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -822,7 +828,7 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                             className: "h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white"
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                            lineNumber: 227,
+                                            lineNumber: 230,
                                             columnNumber: 19
                                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
                                             children: [
@@ -830,7 +836,7 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                                     children: "Verstuur"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                                    lineNumber: 233,
+                                                    lineNumber: 236,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -838,54 +844,56 @@ function OverOnsContactSection({ useRoundedContainer = true, useLightTheme = fal
                                                     children: "->"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                                    lineNumber: 234,
+                                                    lineNumber: 237,
                                                     columnNumber: 21
                                                 }, this)
                                             ]
                                         }, void 0, true)
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                        lineNumber: 221,
+                                        lineNumber: 224,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                                    lineNumber: 220,
+                                    lineNumber: 223,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                            lineNumber: 150,
+                            lineNumber: 153,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                    lineNumber: 134,
+                    lineNumber: 137,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                lineNumber: 116,
+                lineNumber: 119,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$BottomToast$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
                 isVisible: isToastVisible,
-                message: toastMessage
+                message: toastMessage,
+                onMouseEnter: ()=>setIsToastHovered(true),
+                onMouseLeave: ()=>setIsToastHovered(false)
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-                lineNumber: 242,
+                lineNumber: 245,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/Coachscribe/website/components/over-ons/OverOnsContactSection.tsx",
-        lineNumber: 112,
+        lineNumber: 115,
         columnNumber: 5
     }, this);
 }
-_s(OverOnsContactSection, "db++qIxtFHbfqioEFVKLHnSHlzQ=");
+_s(OverOnsContactSection, "mkNZS0c2+9j9BXxa+35Yy/iACuA=");
 _c = OverOnsContactSection;
 var _c;
 __turbopack_context__.k.register(_c, "OverOnsContactSection");

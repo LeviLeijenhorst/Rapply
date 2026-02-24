@@ -26,8 +26,8 @@ export default function VeiligheidHeroSection() {
               className="font-normal"
             />
             <Button
-              label="Verwerkersovereenkomst aanvragen"
-              destination="/contact"
+              label="Verwerkersovereenkomst genereren"
+              destination="/verwerkersovereenkomst"
               variant="secondary"
               className="font-normal"
             />

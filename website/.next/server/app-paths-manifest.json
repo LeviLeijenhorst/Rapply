@@ -4,6 +4,7 @@
   "/(site)/gebruikersovereenkomst/page": "app/(site)/gebruikersovereenkomst/page.js",
   "/(site)/over-ons/page": "app/(site)/over-ons/page.js",
   "/(site)/page": "app/(site)/page.js",
+  "/(site)/pricing/page": "app/(site)/pricing/page.js",
   "/(site)/privacybeleid/page": "app/(site)/privacybeleid/page.js",
   "/(site)/product/page": "app/(site)/product/page.js",
   "/(site)/toestemming-vragen/page": "app/(site)/toestemming-vragen/page.js",

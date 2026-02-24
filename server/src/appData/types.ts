@@ -1,6 +1,9 @@
 export type Coachee = {
   id: string
   name: string
+  clientDetails: string
+  employerDetails: string
+  firstSickDay: string
   createdAtUnixMs: number
   updatedAtUnixMs: number
   isArchived: boolean
@@ -18,6 +21,9 @@ export type Session = {
   uploadFileName: string | null
   transcript: string | null
   summary: string | null
+  reportDate: string | null
+  wvpWeekNumber: string | null
+  reportFirstSickDay: string | null
   transcriptionStatus: "idle" | "transcribing" | "generating" | "done" | "error"
   transcriptionError: string | null
   createdAtUnixMs: number

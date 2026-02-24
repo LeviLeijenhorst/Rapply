@@ -1,15 +1,16 @@
 import React from 'react'
-import { StyleSheet, View } from 'react-native'
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native'
 
 import { colors } from '../../theme/colors'
 
 type Props = {
   children: React.ReactNode
+  style?: StyleProp<ViewStyle>
 }
 
-export function AuthCard({ children }: Props) {
+export function AuthCard({ children, style }: Props) {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, style]}>
       {/* Card */}
       {children}
     </View>

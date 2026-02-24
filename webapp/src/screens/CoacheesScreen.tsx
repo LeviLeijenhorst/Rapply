@@ -12,6 +12,7 @@ import { typography } from '../theme/typography'
 import { CoacheeUpsertModal } from '../components/coachees/CoacheeUpsertModal'
 import { ConfirmCoacheeDeleteModal } from '../components/coachees/ConfirmCoacheeDeleteModal'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
+import { getCoacheeUpsertValues, serializeCoacheeUpsertValues, type CoacheeUpsertValues } from '../utils/coacheeProfile'
 
 type Props = {
   onSelectCoachee: (coacheeId: string) => void
@@ -20,7 +21,7 @@ let persistedCoacheesScrollY = 0
 
 export function CoacheesScreen({ onSelectCoachee }: Props) {
   const { width: windowWidth } = useWindowDimensions()
-  const { data, createCoachee, updateCoacheeName, archiveCoachee, deleteCoachee } = useLocalAppData()
+  const { data, createCoachee, updateCoachee, archiveCoachee, deleteCoachee } = useLocalAppData()
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const searchInputRef = useRef<TextInput | null>(null)
@@ -30,7 +31,7 @@ export function CoacheesScreen({ onSelectCoachee }: Props) {
   const [isUpsertModalOpen, setIsUpsertModalOpen] = useState(false)
   const [upsertMode, setUpsertMode] = useState<'create' | 'edit'>('create')
   const [upsertCoacheeId, setUpsertCoacheeId] = useState<string | null>(null)
-  const [upsertInitialName, setUpsertInitialName] = useState('')
+  const [upsertInitialValues, setUpsertInitialValues] = useState<CoacheeUpsertValues>(getCoacheeUpsertValues(null))
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [pendingDeleteCoacheeId, setPendingDeleteCoacheeId] = useState<string | null>(null)
   const [page, setPage] = useState(1)
@@ -146,7 +147,7 @@ export function CoacheesScreen({ onSelectCoachee }: Props) {
             onPress={() => {
               setUpsertMode('create')
               setUpsertCoacheeId(null)
-              setUpsertInitialName('')
+              setUpsertInitialValues(getCoacheeUpsertValues(null))
               setIsUpsertModalOpen(true)
             }}
           >
@@ -180,7 +181,7 @@ export function CoacheesScreen({ onSelectCoachee }: Props) {
               onPressEdit={() => {
                 setUpsertMode('edit')
                 setUpsertCoacheeId(item.id)
-                setUpsertInitialName(item.name)
+                setUpsertInitialValues(getCoacheeUpsertValues(item))
                 setIsUpsertModalOpen(true)
               }}
               onPressMore={(anchorPoint) => {
@@ -244,19 +245,20 @@ export function CoacheesScreen({ onSelectCoachee }: Props) {
       <CoacheeUpsertModal
         visible={isUpsertModalOpen}
         mode={upsertMode}
-        initialName={upsertInitialName}
+        initialValues={upsertInitialValues}
         onClose={() => {
           setIsUpsertModalOpen(false)
           setUpsertCoacheeId(null)
         }}
-        onSave={(name) => {
+        onSave={(values) => {
+          const serialized = serializeCoacheeUpsertValues(values)
+          const trimmedName = serialized.name.trim()
           if (upsertMode === 'create') {
-            const trimmedName = name.trim()
             if (trimmedName.length === 0) {
               setIsUpsertModalOpen(false)
               return
             }
-            createCoachee(trimmedName)
+            createCoachee(serialized)
             setIsUpsertModalOpen(false)
             return
           }
@@ -266,13 +268,12 @@ export function CoacheesScreen({ onSelectCoachee }: Props) {
             return
           }
 
-          const trimmedName = name.trim()
           if (trimmedName.length === 0) {
             setIsUpsertModalOpen(false)
             return
           }
 
-          updateCoacheeName(upsertCoacheeId, trimmedName)
+          updateCoachee(upsertCoacheeId, serialized)
           setIsUpsertModalOpen(false)
           setUpsertCoacheeId(null)
         }}
@@ -435,4 +436,3 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 })
-

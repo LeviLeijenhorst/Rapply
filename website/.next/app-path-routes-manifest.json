@@ -4,6 +4,7 @@
   "/(site)/gebruikersovereenkomst/page": "/gebruikersovereenkomst",
   "/(site)/over-ons/page": "/over-ons",
   "/(site)/page": "/",
+  "/(site)/pricing/page": "/pricing",
   "/(site)/privacybeleid/page": "/privacybeleid",
   "/(site)/product/page": "/product",
   "/(site)/toestemming-vragen/page": "/toestemming-vragen",

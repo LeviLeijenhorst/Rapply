@@ -17,6 +17,13 @@ import { parseRichTextMarkdown } from '../utils/richTextFormatting'
 
 type SavedFilterKey = 'all' | 'saved'
 
+function getTemplateDisplayName(name: string): string {
+  const normalized = name.trim().toLowerCase()
+  if (normalized === 'voortgangsgespreksverslag') return 'Voortgangsgesprek'
+  if (normalized === 'intakeverslag') return 'intake'
+  return name
+}
+
 // Renders the templates overview, filters, and create/edit/delete modal flows.
 export function TemplatesScreen() {
   const { width: windowWidth } = useWindowDimensions()
@@ -54,7 +61,12 @@ export function TemplatesScreen() {
       .filter((template) => (activeSavedFilter === 'saved' ? template.isSaved : true))
       .filter((template) => {
         if (normalizedQuery.length === 0) return true
-        return template.name.toLowerCase().includes(normalizedQuery) || template.description.toLowerCase().includes(normalizedQuery)
+        const normalizedDisplayName = getTemplateDisplayName(template.name).toLowerCase()
+        return (
+          template.name.toLowerCase().includes(normalizedQuery) ||
+          normalizedDisplayName.includes(normalizedQuery) ||
+          template.description.toLowerCase().includes(normalizedQuery)
+        )
       })
   }, [activeSavedFilter, searchText, templates])
   const hasSearchQuery = searchText.trim().length > 0
@@ -156,7 +168,7 @@ export function TemplatesScreen() {
               {visibleTemplates.map((template) => (
                 <View key={template.id} style={styles.gridItem}>
                   <TemplateCard
-                    title={template.name}
+                    title={getTemplateDisplayName(template.name)}
                     description={template.description}
                     onPress={() => setEditingTemplateId(template.id)}
                   />
@@ -184,7 +196,7 @@ export function TemplatesScreen() {
         template={
           editingTemplate
             ? {
-                name: editingTemplate.name,
+                name: editingTemplate.isDefault ? getTemplateDisplayName(editingTemplate.name) : editingTemplate.name,
                 description: editingTemplate.description,
                 sections: editingTemplate.sections,
               }
@@ -213,7 +225,7 @@ export function TemplatesScreen() {
 
       <ConfirmTemplateDeleteModal
         visible={Boolean(pendingDeleteTemplateId)}
-        templateName={pendingDeleteTemplate?.name ?? null}
+        templateName={pendingDeleteTemplate ? getTemplateDisplayName(pendingDeleteTemplate.name) : null}
         onClose={() => setPendingDeleteTemplateId(null)}
         onConfirm={() => {
           if (!pendingDeleteTemplateId) return

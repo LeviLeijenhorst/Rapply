@@ -3,9 +3,6 @@
     "[project]/Coachscribe/website/app/(site)/coaches/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
-    "[project]/Coachscribe/website/app/(site)/contact/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ],
     "[project]/Coachscribe/website/app/(site)/over-ons/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
@@ -15,13 +12,13 @@
     "[project]/Coachscribe/website/app/(site)/pricing/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
-    "[project]/Coachscribe/website/app/(site)/privacybeleid/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ],
     "[project]/Coachscribe/website/app/(site)/product/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
     "[project]/Coachscribe/website/app/(site)/veiligheid/page": [
+      "static/media/83459a130389a713-s.p.d10ff594.woff2"
+    ],
+    "[project]/Coachscribe/website/app/(site)/verwerkersovereenkomst/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ]
   },

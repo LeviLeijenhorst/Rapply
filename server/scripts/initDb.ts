@@ -84,6 +84,7 @@ async function main() {
     "014_contact_and_allowlist.sql",
     "017_manual_pricing.sql",
     "018_transcription_runtime_settings.sql",
+    "019_coachee_and_session_context_fields.sql",
   ].map((name) =>
     path.join(sqlDir, name),
   )

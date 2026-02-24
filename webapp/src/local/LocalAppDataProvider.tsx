@@ -15,7 +15,7 @@ import {
   saveLocalAppData,
   setWrittenReport,
   updatePracticeSettings,
-  updateCoacheeName,
+  updateCoachee,
   updateNote,
   updateSession,
 } from './localAppDataStore'
@@ -46,8 +46,8 @@ type ContextValue = {
   isAppDataLoaded: boolean
   reset: () => void
 
-  createCoachee: (name: string) => string
-  updateCoacheeName: (coacheeId: string, name: string) => void
+  createCoachee: (values: { name: string; clientDetails?: string; employerDetails?: string; firstSickDay?: string }) => string
+  updateCoachee: (coacheeId: string, values: { name?: string; clientDetails?: string; employerDetails?: string; firstSickDay?: string }) => void
   archiveCoachee: (coacheeId: string) => void
   restoreCoachee: (coacheeId: string) => void
   deleteCoachee: (coacheeId: string) => void
@@ -72,6 +72,9 @@ type ContextValue = {
       uploadFileName?: string | null
       transcript?: string | null
       summary?: string | null
+      reportDate?: string | null
+      wvpWeekNumber?: string | null
+      reportFirstSickDay?: string | null
       transcriptionStatus?: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
       transcriptionError?: string | null
     }
@@ -138,7 +141,13 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
 
     const coachees: Coachee[] = []
     for (const coachee of remote.coachees) {
-      coachees.push({ ...coachee, name: await decryptTextCompat(coachee.name) })
+      coachees.push({
+        ...coachee,
+        name: await decryptTextCompat(coachee.name),
+        clientDetails: await decryptTextCompat(coachee.clientDetails ?? ''),
+        employerDetails: await decryptTextCompat(coachee.employerDetails ?? ''),
+        firstSickDay: await decryptTextCompat(coachee.firstSickDay ?? ''),
+      })
     }
 
     const sessions: Session[] = []
@@ -149,6 +158,9 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         uploadFileName: session.uploadFileName ? await decryptTextCompat(session.uploadFileName) : null,
         transcript: session.transcript ? await decryptTextCompat(session.transcript) : null,
         summary: session.summary ? await decryptTextCompat(session.summary) : null,
+        reportDate: session.reportDate ? await decryptTextCompat(session.reportDate) : null,
+        wvpWeekNumber: session.wvpWeekNumber ? await decryptTextCompat(session.wvpWeekNumber) : null,
+        reportFirstSickDay: session.reportFirstSickDay ? await decryptTextCompat(session.reportFirstSickDay) : null,
         transcriptionError: session.transcriptionError ? await decryptTextCompat(session.transcriptionError) : null,
         audioDurationSeconds: typeof session.audioDurationSeconds === 'number' ? session.audioDurationSeconds : null,
       })
@@ -187,7 +199,13 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
 
   async function encryptCoachee(coachee: Coachee): Promise<Coachee> {
     if (!e2ee) return coachee
-    return { ...coachee, name: await e2ee.encryptText(coachee.name) }
+    return {
+      ...coachee,
+      name: await e2ee.encryptText(coachee.name),
+      clientDetails: await e2ee.encryptText(coachee.clientDetails ?? ''),
+      employerDetails: await e2ee.encryptText(coachee.employerDetails ?? ''),
+      firstSickDay: await e2ee.encryptText(coachee.firstSickDay ?? ''),
+    }
   }
 
   async function encryptSession(session: Session): Promise<Session> {
@@ -198,6 +216,9 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
       uploadFileName: session.uploadFileName ? await e2ee.encryptText(session.uploadFileName) : null,
       transcript: session.transcript ? await e2ee.encryptText(session.transcript) : null,
       summary: session.summary ? await e2ee.encryptText(session.summary) : null,
+      reportDate: session.reportDate ? await e2ee.encryptText(session.reportDate) : null,
+      wvpWeekNumber: session.wvpWeekNumber ? await e2ee.encryptText(session.wvpWeekNumber) : null,
+      reportFirstSickDay: session.reportFirstSickDay ? await e2ee.encryptText(session.reportFirstSickDay) : null,
       transcriptionError: session.transcriptionError ? await e2ee.encryptText(session.transcriptionError) : null,
     }
   }
@@ -394,13 +415,16 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
       isAppDataLoaded,
       reset: () => setData(loadLocalAppData()),
 
-      createCoachee: (name) => {
-        const trimmedName = name.trim()
+      createCoachee: (values) => {
+        const trimmedName = values.name.trim()
         if (!trimmedName) return ''
         const now = Date.now()
         const coachee: Coachee = {
           id: createId('coachee'),
           name: trimmedName,
+          clientDetails: (values.clientDetails ?? '').trim(),
+          employerDetails: (values.employerDetails ?? '').trim(),
+          firstSickDay: (values.firstSickDay ?? '').trim(),
           createdAtUnixMs: now,
           updatedAtUnixMs: now,
           isArchived: false,
@@ -411,11 +435,22 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         }
         return coachee.id
       },
-      updateCoacheeName: (coacheeId, name) => {
+      updateCoachee: (coacheeId, values) => {
         const updatedAtUnixMs = Date.now()
-        setData((previous) => updateCoacheeName(previous, coacheeId, name))
+        setData((previous) => updateCoachee(previous, coacheeId, values))
         if (!e2ee) return
-        runRemoteAction(e2ee.encryptText(name.trim()).then((encrypted) => updateCoacheeRemote({ id: coacheeId, name: encrypted, updatedAtUnixMs })))
+        void (async () => {
+          await updateCoacheeRemote({
+            id: coacheeId,
+            updatedAtUnixMs,
+            ...(values.name !== undefined ? { name: await e2ee.encryptText(values.name.trim()) } : {}),
+            ...(values.clientDetails !== undefined ? { clientDetails: await e2ee.encryptText(values.clientDetails.trim()) } : {}),
+            ...(values.employerDetails !== undefined ? { employerDetails: await e2ee.encryptText(values.employerDetails.trim()) } : {}),
+            ...(values.firstSickDay !== undefined ? { firstSickDay: await e2ee.encryptText(values.firstSickDay.trim()) } : {}),
+          })
+        })()
+          .then(refreshFromServer)
+          .catch((error: unknown) => console.error('[LocalAppDataProvider] Remote update failed', error))
       },
       archiveCoachee: (coacheeId) => {
         const updatedAtUnixMs = Date.now()
@@ -446,6 +481,9 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           uploadFileName: values.uploadFileName,
           transcript: null,
           summary: null,
+          reportDate: null,
+          wvpWeekNumber: null,
+          reportFirstSickDay: null,
           transcriptionStatus: values.transcriptionStatus ?? 'idle',
           transcriptionError: values.transcriptionError ?? null,
           createdAtUnixMs: now,
@@ -486,6 +524,15 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
             uploadFileName: encryptedUploadFileName,
             transcript: encryptedTranscript,
             summary: encryptedSummary,
+            reportDate: values.reportDate === undefined ? undefined : values.reportDate === null ? null : await e2ee.encryptText(values.reportDate),
+            wvpWeekNumber:
+              values.wvpWeekNumber === undefined ? undefined : values.wvpWeekNumber === null ? null : await e2ee.encryptText(values.wvpWeekNumber),
+            reportFirstSickDay:
+              values.reportFirstSickDay === undefined
+                ? undefined
+                : values.reportFirstSickDay === null
+                  ? null
+                  : await e2ee.encryptText(values.reportFirstSickDay),
             transcriptionStatus: values.transcriptionStatus,
             transcriptionError: encryptedError,
           })

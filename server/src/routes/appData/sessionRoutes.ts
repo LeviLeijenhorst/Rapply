@@ -33,6 +33,9 @@ export function registerSessionRoutes(app: Express): void {
         uploadFileName: readOptionalText(payload.uploadFileName, true),
         transcript: readOptionalText(payload.transcript, true),
         summary: readOptionalText(payload.summary, true),
+        reportDate: readOptionalText(payload.reportDate, true),
+        wvpWeekNumber: readOptionalText(payload.wvpWeekNumber, true),
+        reportFirstSickDay: readOptionalText(payload.reportFirstSickDay, true),
         transcriptionStatus: readOptionalTranscriptionStatus(payload.transcriptionStatus),
         transcriptionError: readOptionalText(payload.transcriptionError, true),
       })

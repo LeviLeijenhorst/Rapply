@@ -36,6 +36,22 @@ export function saveLocalAppData(data: LocalAppData) {
 
 function normalizeLocalAppData(data: LocalAppData): LocalAppData {
   const fallback = createDefaultLocalAppData()
+  const coachees = Array.isArray(data.coachees)
+    ? data.coachees.map((coachee) => ({
+        ...coachee,
+        clientDetails: typeof (coachee as any).clientDetails === 'string' ? (coachee as any).clientDetails : '',
+        employerDetails: typeof (coachee as any).employerDetails === 'string' ? (coachee as any).employerDetails : '',
+        firstSickDay: typeof (coachee as any).firstSickDay === 'string' ? (coachee as any).firstSickDay : '',
+      }))
+    : fallback.coachees
+  const sessions = Array.isArray(data.sessions)
+    ? data.sessions.map((session) => ({
+        ...session,
+        reportDate: typeof (session as any).reportDate === 'string' ? (session as any).reportDate : null,
+        wvpWeekNumber: typeof (session as any).wvpWeekNumber === 'string' ? (session as any).wvpWeekNumber : null,
+        reportFirstSickDay: typeof (session as any).reportFirstSickDay === 'string' ? (session as any).reportFirstSickDay : null,
+      }))
+    : fallback.sessions
   const notes = Array.isArray(data.notes)
     ? data.notes.map((n) => ({
         ...n,
@@ -44,6 +60,8 @@ function normalizeLocalAppData(data: LocalAppData): LocalAppData {
     : fallback.notes
   return {
     ...data,
+    coachees,
+    sessions,
     notes,
     templates: Array.isArray(data.templates)
       ? data.templates.map((template) => ({
@@ -72,6 +90,26 @@ export function updateCoacheeName(data: LocalAppData, coacheeId: string, name: s
   const trimmedName = name.trim()
   if (!trimmedName) return data
   return { ...data, coachees: data.coachees.map((c) => (c.id === coacheeId ? { ...c, name: trimmedName } : c)) }
+}
+
+export function updateCoachee(
+  data: LocalAppData,
+  coacheeId: string,
+  values: { name?: string; clientDetails?: string; employerDetails?: string; firstSickDay?: string },
+): LocalAppData {
+  return {
+    ...data,
+    coachees: data.coachees.map((coachee) => {
+      if (coachee.id !== coacheeId) return coachee
+      return {
+        ...coachee,
+        ...(values.name !== undefined ? { name: values.name.trim() } : {}),
+        ...(values.clientDetails !== undefined ? { clientDetails: values.clientDetails.trim() } : {}),
+        ...(values.employerDetails !== undefined ? { employerDetails: values.employerDetails.trim() } : {}),
+        ...(values.firstSickDay !== undefined ? { firstSickDay: values.firstSickDay.trim() } : {}),
+      }
+    }),
+  }
 }
 
 export function archiveCoachee(data: LocalAppData, coacheeId: string): LocalAppData {
@@ -109,6 +147,9 @@ export function updateSession(
     uploadFileName?: string | null
     transcript?: string | null
     summary?: string | null
+    reportDate?: string | null
+    wvpWeekNumber?: string | null
+    reportFirstSickDay?: string | null
     transcriptionStatus?: Session['transcriptionStatus']
     transcriptionError?: string | null
   }
@@ -127,6 +168,9 @@ export function updateSession(
         ...(values.uploadFileName !== undefined ? { uploadFileName: values.uploadFileName } : {}),
         ...(values.transcript !== undefined ? { transcript: values.transcript } : {}),
         ...(values.summary !== undefined ? { summary: values.summary } : {}),
+        ...(values.reportDate !== undefined ? { reportDate: values.reportDate } : {}),
+        ...(values.wvpWeekNumber !== undefined ? { wvpWeekNumber: values.wvpWeekNumber } : {}),
+        ...(values.reportFirstSickDay !== undefined ? { reportFirstSickDay: values.reportFirstSickDay } : {}),
         ...(values.transcriptionStatus !== undefined ? { transcriptionStatus: values.transcriptionStatus } : {}),
         ...(values.transcriptionError !== undefined ? { transcriptionError: values.transcriptionError } : {}),
         updatedAtUnixMs: now,

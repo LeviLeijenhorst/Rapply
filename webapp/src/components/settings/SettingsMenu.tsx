@@ -68,7 +68,7 @@ export function SettingsMenu({
     {
       key: 'archive',
       label: 'Archief',
-      icon: <ArchiefMenuIcon color={menuIconColor} />,
+      icon: <ArchiefMenuIcon color={menuIconColor} strokeWidth={1.25} />,
       onPress: onOpenArchive,
     },
     {

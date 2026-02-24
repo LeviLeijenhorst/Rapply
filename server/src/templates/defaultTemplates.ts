@@ -170,7 +170,7 @@ const legacyGenericSections = [
 
 const legacyTemplateBlueprints: TemplateBlueprint[] = [
   {
-    name: "Intakeverslag",
+    name: "intake",
     description: intakeDescription,
     sections: legacyGenericSections,
   },
@@ -218,7 +218,7 @@ const legacyTemplateBlueprints: TemplateBlueprint[] = [
 
 const reintegrationTemplateBlueprints: TemplateBlueprint[] = [
   {
-    name: "Intakeverslag",
+    name: "intake",
     description: intakeDescription,
     sections: [
       { title: "Clientgegevens", description: "Naam, functie, eerste ziektedag en betrokken contactpersonen." },
@@ -231,7 +231,7 @@ const reintegrationTemplateBlueprints: TemplateBlueprint[] = [
     ],
   },
   {
-    name: "Voortgangsgespreksverslag",
+    name: "Voortgangsgesprek",
     description: progressDescription,
     sections: [
       { title: "Datum en weeknummer", description: "Leg de datum en WvP-context in weken vast." },

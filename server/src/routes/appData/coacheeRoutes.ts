@@ -24,8 +24,11 @@ export function registerCoacheeRoutes(app: Express): void {
       const id = readId(payload.id, "id")
       const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs, "updatedAtUnixMs")
       const name = readOptionalText(payload.name)
+      const clientDetails = readOptionalText(payload.clientDetails, true)
+      const employerDetails = readOptionalText(payload.employerDetails, true)
+      const firstSickDay = readOptionalText(payload.firstSickDay, true)
       const isArchived = typeof payload.isArchived === "boolean" ? payload.isArchived : undefined
-      await updateCoachee(user.userId, { id, name, isArchived, updatedAtUnixMs })
+      await updateCoachee(user.userId, { id, name, clientDetails, employerDetails, firstSickDay, isArchived, updatedAtUnixMs })
       res.status(200).json({ ok: true })
     }),
   )

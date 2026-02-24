@@ -41,6 +41,7 @@ import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
 import { EndToEndEncryptieScreen } from '../screens/EndToEndEncryptieScreen'
 import { useToast } from '../toast/ToastProvider'
 import { consumeSubscriptionReturnResumeRequest } from './newSession/subscriptionReturnDraftStore'
+import { getCoacheeUpsertValues, serializeCoacheeUpsertValues } from '../utils/coacheeProfile'
 
 type AnchorPoint = { x: number; y: number }
 type OverlayScreenKey = 'archief'
@@ -122,14 +123,6 @@ function normalizeOptionalName(value: unknown): string | null {
   return trimmed
 }
 
-function buildFallbackNameFromEmail(email: string | null): string | null {
-  if (!email) return null
-  const atIndex = email.indexOf('@')
-  const localPart = atIndex > 0 ? email.slice(0, atIndex) : email
-  const cleaned = localPart.replace(/[._-]+/g, ' ').trim()
-  return cleaned.length > 0 ? cleaned : null
-}
-
 export function AppShell({ onLogout }: Props) {
   const { width } = useWindowDimensions()
   const isTooSmall = width < 1100
@@ -174,6 +167,7 @@ export function AppShell({ onLogout }: Props) {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [isDeleteAccountConfirmModalOpen, setIsDeleteAccountConfirmModalOpen] = useState(false)
   const [restoreNewSessionDraftFromSubscriptionReturn, setRestoreNewSessionDraftFromSubscriptionReturn] = useState(false)
+  const [isRecordingBusy, setIsRecordingBusy] = useState(false)
   const { showToast, showErrorToast } = useToast()
   const isCurrentUserAdmin = currentUserAccountType === 'admin'
 
@@ -219,8 +213,7 @@ export function AppShell({ onLogout }: Props) {
           fullNameFromEntra.length > 0
             ? fullNameFromEntra
             : normalizeOptionalName(response?.name) ??
-              normalizeOptionalName(response?.displayName) ??
-              buildFallbackNameFromEmail(email)
+              normalizeOptionalName(response?.displayName)
         setCurrentUserName(preferredName)
       })
       .catch(() => {
@@ -573,10 +566,14 @@ export function AppShell({ onLogout }: Props) {
     setIsCoacheeModalOpen(true)
   }, [])
 
-  const openNewSessionModal = useCallback((coacheeId: string | null) => {
-    setNewSessionCoacheeId(coacheeId)
-    setIsNewSessionModalOpen(true)
-  }, [])
+  const openNewSessionModal = useCallback(
+    (coacheeId: string | null) => {
+      if (isRecordingBusy) return
+      setNewSessionCoacheeId(coacheeId)
+      setIsNewSessionModalOpen(true)
+    },
+    [isRecordingBusy],
+  )
 
   const openSessionFromCoachee = useCallback(
     (sessionId: string, coacheeId: string) => {
@@ -777,6 +774,7 @@ export function AppShell({ onLogout }: Props) {
             onSelectSession={(sessionId) => {
               openSessionFromCoachee(sessionId, selectedCoacheeId)
             }}
+            isCreateSessionDisabled={isRecordingBusy}
             onPressCreateSession={() => openNewSessionModal(selectedCoacheeId)}
           />
         )
@@ -797,6 +795,7 @@ export function AppShell({ onLogout }: Props) {
           onSelectSessie={(sessieId) => {
             navigateTo({ kind: 'sessie', sessieId })
           }}
+          isCreateSessionDisabled={isRecordingBusy}
           onPressCreateSession={() => openNewSessionModal(null)}
         />
       )
@@ -876,6 +875,7 @@ export function AppShell({ onLogout }: Props) {
                 setIsSettingsMenuOpen(false)
               }}
               onPressCreateSession={() => openNewSessionModal(null)}
+              isCreateSessionDisabled={isRecordingBusy}
               onOpenContact={() => {
                 setIsSettingsMenuOpen(false)
                 setSettingsMenuAnchorPoint(null)
@@ -950,10 +950,12 @@ export function AppShell({ onLogout }: Props) {
 
           <NewSessionModal
             visible={isNewSessionModalOpen}
+            onRecordingBusyChange={setIsRecordingBusy}
             initialCoacheeId={newSessionCoacheeId}
             restoreDraftFromSubscriptionReturn={restoreNewSessionDraftFromSubscriptionReturn}
             onRestoreDraftHandled={() => setRestoreNewSessionDraftFromSubscriptionReturn(false)}
             onClose={() => {
+              setIsRecordingBusy(false)
               setIsNewSessionModalOpen(false)
               setNewlyCreatedCoacheeId(null)
               setNewSessionCoacheeId(null)
@@ -1031,15 +1033,16 @@ export function AppShell({ onLogout }: Props) {
           <CoacheeUpsertModal
             visible={isCoacheeModalOpen}
             mode="create"
-            initialName=""
+            initialValues={getCoacheeUpsertValues(null)}
             onClose={() => setIsCoacheeModalOpen(false)}
-            onSave={(name) => {
-              const trimmedName = name.trim()
+            onSave={(values) => {
+              const serialized = serializeCoacheeUpsertValues(values)
+              const trimmedName = serialized.name.trim()
               if (!trimmedName) {
                 setIsCoacheeModalOpen(false)
                 return
               }
-              const createdCoacheeId = createCoachee(trimmedName)
+              const createdCoacheeId = createCoachee(serialized)
               if (createdCoacheeId) {
                 setNewlyCreatedCoacheeId(createdCoacheeId)
               }

@@ -17,12 +17,14 @@ type Props = {
 export function ToastProvider({ children }: Props) {
   const [toastMessage, setToastMessage] = useState('')
   const [isToastVisible, setIsToastVisible] = useState(false)
+  const [isToastHovered, setIsToastHovered] = useState(false)
 
   const showToast = useCallback((message: string) => {
     const trimmed = String(message || '').trim()
     if (!trimmed) return
     setToastMessage(trimmed)
     setIsToastVisible(false)
+    setIsToastHovered(false)
     if (typeof window !== 'undefined') {
       window.requestAnimationFrame(() => setIsToastVisible(true))
       return
@@ -35,17 +37,22 @@ export function ToastProvider({ children }: Props) {
   }, [showToast])
 
   useEffect(() => {
-    if (!isToastVisible) return
+    if (!isToastVisible || isToastHovered) return
     const timeout = setTimeout(() => setIsToastVisible(false), 2600)
     return () => clearTimeout(timeout)
-  }, [isToastVisible])
+  }, [isToastHovered, isToastVisible])
 
   const value = useMemo<ToastApi>(() => ({ showToast, showErrorToast }), [showErrorToast, showToast])
 
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <BottomToast visible={isToastVisible} message={toastMessage} />
+      <BottomToast
+        visible={isToastVisible}
+        message={toastMessage}
+        onHoverStart={() => setIsToastHovered(true)}
+        onHoverEnd={() => setIsToastHovered(false)}
+      />
     </ToastContext.Provider>
   )
 }

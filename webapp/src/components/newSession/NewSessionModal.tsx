@@ -45,6 +45,7 @@ type OptionKey = 'gesprek' | 'verslag' | 'upload' | 'schrijven'
 type Props = {
   visible: boolean
   onClose: () => void
+  onRecordingBusyChange?: (isBusy: boolean) => void
   onOpenMySubscription: () => void
   restoreDraftFromSubscriptionReturn?: boolean
   onRestoreDraftHandled?: () => void
@@ -198,6 +199,7 @@ function createOperationId(): string {
 export function NewSessionModal({
   visible,
   onClose,
+  onRecordingBusyChange,
   onOpenMySubscription,
   restoreDraftFromSubscriptionReturn = false,
   onRestoreDraftHandled,
@@ -259,7 +261,10 @@ export function NewSessionModal({
   const { height: windowHeight, width: windowWidth } = useWindowDimensions()
   const templates = data.templates ?? []
   const defaultTemplateId = useMemo(() => {
-    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'intakeverslag')
+    const standardTemplate = templates.find((template) => {
+      const normalizedName = template.name.trim().toLowerCase()
+      return normalizedName === 'intake' || normalizedName === 'intakeverslag'
+    })
     return (standardTemplate ?? templates[0])?.id ?? null
   }, [templates])
   const selectedTemplate = useMemo(() => templates.find((template) => template.id === selectedTemplateId) ?? null, [selectedTemplateId, templates])
@@ -594,6 +599,22 @@ export function NewSessionModal({
     recorder.elapsedSeconds < maxRecordingSeconds
   const recordingLimitRemainingSeconds = Math.max(0, displayedRecordingMaxSeconds - displayedRecordingElapsedSeconds)
   const shouldShowMinimized = step === 'recording' && isMinimized && !isRestoringFromMinimized
+  const isRecordingBusy =
+    visible &&
+    (step === 'recording' ||
+      recorder.status === 'requesting' ||
+      recorder.status === 'stopping' ||
+      isRealtimeTranscriberStarting)
+
+  useEffect(() => {
+    onRecordingBusyChange?.(isRecordingBusy)
+  }, [isRecordingBusy, onRecordingBusyChange])
+
+  useEffect(() => {
+    return () => {
+      onRecordingBusyChange?.(false)
+    }
+  }, [onRecordingBusyChange])
 
 
   useEffect(() => {

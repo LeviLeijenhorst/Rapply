@@ -23,6 +23,8 @@ const styles = StyleSheet.create({
   },
   layer: {
     width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 })
 

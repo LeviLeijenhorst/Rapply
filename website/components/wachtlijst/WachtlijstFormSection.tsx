@@ -31,12 +31,13 @@ export default function WachtlijstFormSection() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [isToastVisible, setIsToastVisible] = useState(false);
+  const [isToastHovered, setIsToastHovered] = useState(false);
 
   useEffect(() => {
-    if (!isToastVisible) return;
+    if (!isToastVisible || isToastHovered) return;
     const timeout = window.setTimeout(() => setIsToastVisible(false), 2600);
     return () => window.clearTimeout(timeout);
-  }, [isToastVisible]);
+  }, [isToastHovered, isToastVisible]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -70,6 +71,7 @@ export default function WachtlijstFormSection() {
 
       setFormValues(initialFormValues);
       setToastMessage("Bericht verzonden! Je hoort snel van ons.");
+      setIsToastHovered(false);
       setIsToastVisible(false);
       window.requestAnimationFrame(() => setIsToastVisible(true));
     } catch (error) {
@@ -80,6 +82,7 @@ export default function WachtlijstFormSection() {
         setToastMessage("Verzenden mislukt. Probeer het opnieuw.");
       }
       console.error("[wachtlijst] submit failed", error);
+      setIsToastHovered(false);
       setIsToastVisible(false);
       window.requestAnimationFrame(() => setIsToastVisible(true));
     } finally {
@@ -221,6 +224,8 @@ export default function WachtlijstFormSection() {
       <BottomToast
         isVisible={isToastVisible}
         message={toastMessage}
+        onMouseEnter={() => setIsToastHovered(true)}
+        onMouseLeave={() => setIsToastHovered(false)}
       />
     </SectionContainer>
   );

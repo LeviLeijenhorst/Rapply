@@ -22,6 +22,7 @@ import { SessieRenameModal } from '../components/sessies/SessieRenameModal'
 type Props = {
   onSelectSessie: (sessieId: string) => void
   onPressCreateSession: () => void
+  isCreateSessionDisabled?: boolean
 }
 
 type TabKey = 'alleSessies' | 'losseSessies'
@@ -38,7 +39,7 @@ function formatDurationLabel(durationSeconds: number | null): string {
   return hours > 0 ? `${hours}:${paddedMinutes}:${paddedSeconds}` : `${minutes}:${paddedSeconds}`
 }
 
-export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
+export function SessiesScreen({ onSelectSessie, onPressCreateSession, isCreateSessionDisabled = false }: Props) {
   const { width: windowWidth } = useWindowDimensions()
   const { data, deleteSession, updateSession } = useLocalAppData()
   const [activeTabKey, setActiveTabKey] = useState<TabKey>('alleSessies')
@@ -137,7 +138,13 @@ export function SessiesScreen({ onSelectSessie, onPressCreateSession }: Props) {
         )}
       </AnimatedWidthContainer>
       <Pressable
-        style={({ hovered }) => [styles.addButton, webTransitionSmooth, hovered ? styles.addButtonHovered : undefined]}
+        disabled={isCreateSessionDisabled}
+        style={({ hovered }) => [
+          styles.addButton,
+          webTransitionSmooth,
+          isCreateSessionDisabled ? styles.addButtonDisabled : undefined,
+          hovered && !isCreateSessionDisabled ? styles.addButtonHovered : undefined,
+        ]}
         onPress={onPressCreateSession}
       >
         {/* Add label */}
@@ -478,6 +485,10 @@ const styles = StyleSheet.create({
   },
   addButtonHovered: {
     backgroundColor: '#A50058',
+  },
+  addButtonDisabled: {
+    backgroundColor: '#C6C6C6',
+    borderColor: '#C6C6C6',
   },
   addButtonText: {
     fontSize: 14,

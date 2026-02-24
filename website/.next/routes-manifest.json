@@ -77,6 +77,12 @@
       "namedRegex": "^/over\\-ons(?:/)?$"
     },
     {
+      "page": "/pricing",
+      "regex": "^/pricing(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/pricing(?:/)?$"
+    },
+    {
       "page": "/privacybeleid",
       "regex": "^/privacybeleid(?:/)?$",
       "routeKeys": {},

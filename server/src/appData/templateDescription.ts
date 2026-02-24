@@ -122,8 +122,8 @@ Legt arbeidsdeskundige bevindingen vast over belastbaarheid, passend werk en rea
 - Conclusie en advies met vervolgstappen`
 
   const normalized = name.trim().toLowerCase()
-  if (normalized === "intakeverslag") return intakeDescription
-  if (normalized === "voortgangsrapportage" || normalized === "voortgangsgespreksverslag") return progressDescription
+  if (normalized === "intake" || normalized === "intakeverslag") return intakeDescription
+  if (normalized === "voortgangsrapportage" || normalized === "voortgangsgespreksverslag" || normalized === "voortgangsgesprek") return progressDescription
   if (normalized === "plan van aanpak") return pvaDescription
   if (normalized === "eerstejaarsevaluatie") return firstYearDescription
   if (normalized === "tweede spoor rapportage" || normalized === "tweede spoor plan/rapport") return secondTrackDescription

@@ -58,7 +58,6 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
   const [checkoutLoadingPlanId, setCheckoutLoadingPlanId] = useState<string | null>(null)
   const [isCancelBusy, setIsCancelBusy] = useState(false)
   const [hoursSavedPerWeek, setHoursSavedPerWeek] = useState(4)
-  const [usedTimePercent, setUsedTimePercent] = useState(55)
   const [averageSessionPrice, setAverageSessionPrice] = useState(150)
   const { showErrorToast } = useToast()
   const inputWebStyle = useMemo(() => ({ outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any), [])
@@ -117,7 +116,8 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
   const primaryPlan = plans[0] ?? null
   const estimatedReportsPerMonth = primaryPlan ? Math.max(0, Math.floor(primaryPlan.minutesPerMonth / 60)) : 0
   const savedHoursPerMonth = hoursSavedPerWeek * 4.33
-  const estimatedSessionsPerMonth = Math.max(0, savedHoursPerMonth * (usedTimePercent / 100))
+  const sessionDurationHours = 1
+  const estimatedSessionsPerMonth = Math.max(0, savedHoursPerMonth / sessionDurationHours)
   const monthlyRevenue = Math.max(0, estimatedSessionsPerMonth * averageSessionPrice)
   const monthlySubscriptionCost = primaryPlan?.monthlyPrice ?? 0
   const monthlyNetProfit = monthlyRevenue - monthlySubscriptionCost
@@ -218,31 +218,6 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                         <Text style={styles.rangeLegendText}>16 uur</Text>
                       </View>
                       <Text style={styles.calculatorHintText}>Schat hoeveel uren per week je vrijspeelt doordat verslaglegging sneller gaat.</Text>
-                    </View>
-
-                    <View style={styles.calculatorSection}>
-                      <View style={styles.fieldLabelRow}>
-                        <Text isSemibold style={styles.fieldTitle}>Percentage ingevulde tijd</Text>
-                        <View style={styles.fieldValueBadge}>
-                          <Text style={styles.fieldValueBadgeText}>{usedTimePercent}%</Text>
-                        </View>
-                      </View>
-                      <View style={styles.rangeWrap}>
-                        <input
-                          type="range"
-                          min={0}
-                          max={100}
-                          step={1}
-                          value={usedTimePercent}
-                          onChange={(event) => setUsedTimePercent(Number(event.currentTarget.value))}
-                          style={{ ...(styles.rangeInput as any), ...rangeInputWebStyle }}
-                        />
-                      </View>
-                      <View style={styles.rangeLegendRow}>
-                        <Text style={styles.rangeLegendText}>0%</Text>
-                        <Text style={styles.rangeLegendText}>100%</Text>
-                      </View>
-                      <Text style={styles.calculatorHintText}>Welk deel van je bespaarde tijd zet je om in extra sessies?</Text>
                     </View>
 
                     <View style={styles.calculatorSection}>

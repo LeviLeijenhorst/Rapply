@@ -64,6 +64,7 @@ import { normalizeTranscriptionError } from '../utils/transcriptionError'
 import { ConfirmChatClearModal } from '../components/sessionDetail/ConfirmChatClearModal'
 import { AnimatedOverlayModal } from '../components/AnimatedOverlayModal'
 import { fetchBillingStatus, type BillingStatus } from '../services/billing'
+import { ReportContextModal } from '../components/sessionDetail/ReportContextModal'
 
 type Props = {
   sessionId: string
@@ -128,6 +129,7 @@ export function SessieDetailScreen({
   const [isPdfEditorOpen, setIsPdfEditorOpen] = useState(false)
   const [pdfEditorDraft, setPdfEditorDraft] = useState('')
   const [pdfEditorTitle, setPdfEditorTitle] = useState<string | undefined>(undefined)
+  const [isReportContextModalVisible, setIsReportContextModalVisible] = useState(false)
   const [isCancelTranscriptionModalVisible, setIsCancelTranscriptionModalVisible] = useState(false)
   const [isDownloadingAudio, setIsDownloadingAudio] = useState(false)
   const [isDeletingAudio, setIsDeletingAudio] = useState(false)
@@ -140,7 +142,10 @@ export function SessieDetailScreen({
   const templates = data.templates ?? []
   const practiceTintColor = data.practiceSettings.tintColor || colors.selected
   const defaultTemplateId = useMemo(() => {
-    const standardTemplate = templates.find((template) => template.name.toLowerCase() === 'intakeverslag')
+    const standardTemplate = templates.find((template) => {
+      const normalizedName = template.name.trim().toLowerCase()
+      return normalizedName === 'intake' || normalizedName === 'intakeverslag'
+    })
     return (standardTemplate ?? templates[0])?.id ?? null
   }, [templates])
   const selectedTemplate = useMemo(() => templates.find((template) => template.id === selectedTemplateId) ?? null, [selectedTemplateId, templates])
@@ -686,6 +691,18 @@ export function SessieDetailScreen({
     const includedRemainingSeconds = Math.max(0, Math.floor(status.includedSeconds - status.cycleUsedSeconds))
     const nonExpiringRemainingSeconds = Math.max(0, Math.floor(status.nonExpiringTotalSeconds - status.nonExpiringUsedSeconds))
     return includedRemainingSeconds + nonExpiringRemainingSeconds
+  }
+
+  function handleSaveSummary(value: string) {
+    updateSession(sessionId, {
+      summary: value,
+      transcriptionStatus: value ? 'done' : session?.transcriptionStatus ?? 'done',
+      transcriptionError: null,
+    })
+    setIsSummaryEditorOpen(false)
+    if (session?.kind === 'recording' || session?.kind === 'upload') {
+      setIsReportContextModalVisible(true)
+    }
   }
 
   function formatMinutesLabel(totalSeconds: number): string {
@@ -1651,16 +1668,28 @@ export function SessieDetailScreen({
 
       <RichTextEditorModal
         visible={isSummaryEditorOpen}
-        title="Samenvatting bewerken"
+        title="Verslag bewerken"
         initialValue={session?.summary ?? ''}
+        saveLabel="Verslag opslaan"
         onClose={() => setIsSummaryEditorOpen(false)}
-        onSave={(value) => {
+        onSave={handleSaveSummary}
+      />
+
+      <ReportContextModal
+        visible={isReportContextModalVisible}
+        initialValues={{
+          reportDate: session?.reportDate ?? '',
+          wvpWeekNumber: session?.wvpWeekNumber ?? '',
+          reportFirstSickDay: session?.reportFirstSickDay ?? '',
+        }}
+        onClose={() => setIsReportContextModalVisible(false)}
+        onSave={(values) => {
           updateSession(sessionId, {
-            summary: value,
-            transcriptionStatus: value ? 'done' : session?.transcriptionStatus ?? 'done',
-            transcriptionError: null,
+            reportDate: values.reportDate.trim() || null,
+            wvpWeekNumber: values.wvpWeekNumber.trim() || null,
+            reportFirstSickDay: values.reportFirstSickDay.trim() || null,
           })
-          setIsSummaryEditorOpen(false)
+          setIsReportContextModalVisible(false)
         }}
       />
 

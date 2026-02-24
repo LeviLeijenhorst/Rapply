@@ -243,11 +243,9 @@ Azure Blob Storage (versleutelde uploads).
 
 #### C. Transcriptie, samenvatting en chat (optioneel)
 
-AI-dienstverleners afhankelijk van configuratie, waaronder:
-
 - Azure Speech
 - Azure OpenAI
 
 #### D. Abonnementen
 
-RevenueCat (beheer van abonnementsstatus en aankoopinformatie).
+Mollie (beheer van abonnementsstatus en aankoopinformatie).

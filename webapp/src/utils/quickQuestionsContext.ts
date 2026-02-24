@@ -1,4 +1,5 @@
 import { LocalChatMessage } from '../services/chat'
+import { formatCoacheeDetailsForPrompt, formatEmployerDetailsForPrompt } from './coacheeProfile'
 
 function normalizeText(value: string | null | undefined) {
   return String(value || '').trim()
@@ -185,6 +186,130 @@ export function buildCoacheeWrittenReportsSystemMessages(params: {
         .map((session, index) => `${index + 1}. ${session.title} (${session.dateLabel})\n${session.reportText}`)
         .join('\n\n')}${isTruncated ? '\n\nLet op: niet alle verslagen passen in de context. Oudere verslagen zijn weggelaten.' : ''}\n\nGebruik deze verslagen om de vragen te beantwoorden.`
     : `Er zijn nog geen geschreven verslagen beschikbaar voor ${params.coacheeName}.`
+
+  return [{ role: 'system', text }]
+}
+
+export function buildCoacheeStructuredSystemMessages(params: {
+  coacheeName: string
+  coacheeCreatedAtUnixMs?: number | null
+  clientDetails?: string | null
+  employerDetails?: string | null
+  firstSickDay?: string | null
+  sessions: {
+    title: string
+    createdAtUnixMs: number
+    summary: string | null
+    reportText: string | null
+    reportDate?: string | null
+    wvpWeekNumber?: string | null
+    reportFirstSickDay?: string | null
+  }[]
+  maxTotalCharacters?: number
+  maxSessionCharacters?: number
+}): LocalChatMessage[] {
+  const maxTotalCharacters = Math.max(1500, params.maxTotalCharacters ?? 60000)
+  const maxSessionCharacters = Math.max(700, params.maxSessionCharacters ?? 3500)
+  const sortedSessions = [...params.sessions].sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
+  const basicInfoParts: string[] = []
+  const parsedClientDetails = formatCoacheeDetailsForPrompt(params.clientDetails)
+  const parsedEmployerDetails = formatEmployerDetailsForPrompt(params.employerDetails)
+  const normalizedFirstSickDay = normalizeText(params.firstSickDay)
+
+  basicInfoParts.push(...parsedClientDetails)
+  basicInfoParts.push(...parsedEmployerDetails)
+  if (!parsedClientDetails.length && normalizeText(params.clientDetails)) basicInfoParts.push(`Cliëntgegevens: ${normalizeText(params.clientDetails)}`)
+  if (!parsedEmployerDetails.length && normalizeText(params.employerDetails)) basicInfoParts.push(`Werkgeversgegevens: ${normalizeText(params.employerDetails)}`)
+  if (normalizedFirstSickDay) basicInfoParts.push(`Eerste ziektedag: ${normalizedFirstSickDay}`)
+  if (Number.isFinite(params.coacheeCreatedAtUnixMs)) {
+    basicInfoParts.push(`Cliënt aangemaakt: ${formatDateLabel(Number(params.coacheeCreatedAtUnixMs))}`)
+  }
+
+  const intakeSession =
+    sortedSessions.find((session) => {
+      const title = normalizeText(session.title).toLowerCase()
+      const hasContent = Boolean(normalizeText(session.reportText) || normalizeText(session.summary))
+      return hasContent && (title === 'intake' || title.includes('intake'))
+    }) ?? null
+
+  const otherSessions = intakeSession ? sortedSessions.filter((session) => session !== intakeSession) : sortedSessions
+  let remainingCharacters = maxTotalCharacters
+
+  const basicInfoText =
+    basicInfoParts.length > 0
+      ? basicInfoParts.join('\n')
+      : 'Nog geen basisgegevens vastgelegd.'
+  remainingCharacters -= basicInfoText.length
+
+  const formatSessionContextLine = (session: {
+    createdAtUnixMs: number
+    reportDate?: string | null
+    wvpWeekNumber?: string | null
+    reportFirstSickDay?: string | null
+  }) => {
+    const parts = [`Gespreksdatum: ${formatDateLabel(session.createdAtUnixMs)}`]
+    if (normalizeText(session.reportDate)) parts.push(`Rapportdatum: ${normalizeText(session.reportDate)}`)
+    if (normalizeText(session.wvpWeekNumber)) parts.push(`WvP-weeknummer: ${normalizeText(session.wvpWeekNumber)}`)
+    if (normalizeText(session.reportFirstSickDay)) parts.push(`Eerste ziektedag (verslag): ${normalizeText(session.reportFirstSickDay)}`)
+    return parts.join(' | ')
+  }
+
+  const formatSessionBlock = (session: {
+    title: string
+    createdAtUnixMs: number
+    summary: string | null
+    reportText: string | null
+    reportDate?: string | null
+    wvpWeekNumber?: string | null
+    reportFirstSickDay?: string | null
+  }): string => {
+    const title = normalizeText(session.title) || 'Verslag'
+    const reportText = normalizeText(session.reportText)
+    const summary = normalizeText(session.summary)
+    const content = reportText || summary
+    const sourceLabel = reportText ? 'Geschreven verslag' : 'Samenvatting'
+    const clippedContent = content.length > maxSessionCharacters ? content.slice(0, maxSessionCharacters) : content
+    return `${title}\n${formatSessionContextLine(session)}\nBron: ${sourceLabel}\n${clippedContent}`
+  }
+
+  let intakeBlock = 'Geen intakeverslag beschikbaar.'
+  if (intakeSession) {
+    const block = formatSessionBlock(intakeSession)
+    if (remainingCharacters > 0) {
+      intakeBlock = block.slice(0, Math.max(0, remainingCharacters))
+      remainingCharacters -= intakeBlock.length
+    }
+  }
+
+  const includedOtherBlocks: string[] = []
+  for (const session of otherSessions) {
+    if (remainingCharacters <= 0) break
+    const hasContent = Boolean(normalizeText(session.reportText) || normalizeText(session.summary))
+    if (!hasContent) continue
+    const block = formatSessionBlock(session)
+    const clipped = block.slice(0, Math.max(0, remainingCharacters))
+    if (!clipped.trim()) continue
+    includedOtherBlocks.push(clipped)
+    remainingCharacters -= clipped.length
+  }
+
+  const otherReportsText =
+    includedOtherBlocks.length > 0
+      ? includedOtherBlocks.map((block, index) => `${index + 1}. ${block}`).join('\n\n')
+      : 'Geen andere verslagen met inhoud beschikbaar.'
+
+  const text = `Dossiercontext voor ${params.coacheeName}:
+
+1. Basisgegevens
+${basicInfoText}
+
+2. Intakeverslag
+${intakeBlock}
+
+3. Overige verslagen (nieuw naar oud)
+${otherReportsText}
+
+Gebruik deze structuur en context om de vragen te beantwoorden.`
 
   return [{ role: 'system', text }]
 }

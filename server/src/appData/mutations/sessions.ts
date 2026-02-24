@@ -7,9 +7,9 @@ export async function createSession(userId: string, session: Session): Promise<v
     `
     insert into public.coachee_sessions (
       id, user_id, coachee_id, title, kind, audio_blob_id, audio_duration_seconds, upload_file_name, transcript, summary,
-      transcription_status, transcription_error, created_at_unix_ms, updated_at_unix_ms
+      report_date, wvp_week_number, report_first_sick_day, transcription_status, transcription_error, created_at_unix_ms, updated_at_unix_ms
     )
-    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
     on conflict (id) do update
       set coachee_id = excluded.coachee_id,
           title = excluded.title,
@@ -19,6 +19,9 @@ export async function createSession(userId: string, session: Session): Promise<v
           upload_file_name = excluded.upload_file_name,
           transcript = excluded.transcript,
           summary = excluded.summary,
+          report_date = excluded.report_date,
+          wvp_week_number = excluded.wvp_week_number,
+          report_first_sick_day = excluded.report_first_sick_day,
           transcription_status = excluded.transcription_status,
           transcription_error = excluded.transcription_error,
           updated_at_unix_ms = excluded.updated_at_unix_ms
@@ -36,6 +39,9 @@ export async function createSession(userId: string, session: Session): Promise<v
       session.uploadFileName,
       session.transcript,
       session.summary,
+      session.reportDate,
+      session.wvpWeekNumber,
+      session.reportFirstSickDay,
       session.transcriptionStatus,
       session.transcriptionError,
       session.createdAtUnixMs,
@@ -56,6 +62,9 @@ export async function updateSession(
     uploadFileName?: string | null
     transcript?: string | null
     summary?: string | null
+    reportDate?: string | null
+    wvpWeekNumber?: string | null
+    reportFirstSickDay?: string | null
     transcriptionStatus?: Session["transcriptionStatus"]
     transcriptionError?: string | null
     updatedAtUnixMs: number
@@ -101,6 +110,21 @@ export async function updateSession(
   if (params.summary !== undefined) {
     updates.push(`summary = $${index++}`)
     values.push(params.summary)
+  }
+
+  if (params.reportDate !== undefined) {
+    updates.push(`report_date = $${index++}`)
+    values.push(params.reportDate)
+  }
+
+  if (params.wvpWeekNumber !== undefined) {
+    updates.push(`wvp_week_number = $${index++}`)
+    values.push(params.wvpWeekNumber)
+  }
+
+  if (params.reportFirstSickDay !== undefined) {
+    updates.push(`report_first_sick_day = $${index++}`)
+    values.push(params.reportFirstSickDay)
   }
 
   if (params.transcriptionStatus !== undefined) {

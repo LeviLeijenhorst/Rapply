@@ -32,7 +32,6 @@ function PricingSection(props) {
     const [isLoading, setIsLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(true);
     const [isVisible, setIsVisible] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(true);
     const [hoursSavedPerWeek, setHoursSavedPerWeek] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(4);
-    const [usedTimePercent, setUsedTimePercent] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(55);
     const [averageSessionPrice, setAverageSessionPrice] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(150);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "PricingSection.useEffect": ()=>{
@@ -115,7 +114,8 @@ function PricingSection(props) {
     ]);
     const estimatedReportsPerMonth = primaryPlan ? Math.max(0, Math.floor(primaryPlan.minutesPerMonth / 60)) : 0;
     const savedHoursPerMonth = hoursSavedPerWeek * 4.33;
-    const estimatedSessionsPerMonth = Math.max(0, savedHoursPerMonth * (usedTimePercent / 100));
+    const sessionDurationHours = 1;
+    const estimatedSessionsPerMonth = Math.max(0, savedHoursPerMonth / sessionDurationHours);
     const monthlyRevenue = Math.max(0, estimatedSessionsPerMonth * averageSessionPrice);
     const monthlySubscriptionCost = primaryPlan?.monthlyPrice ?? 0;
     const monthlyNetProfit = monthlyRevenue - monthlySubscriptionCost;
@@ -132,19 +132,19 @@ function PricingSection(props) {
                     "aria-label": "Prijzen laden"
                 }, void 0, false, {
                     fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                    lineNumber: 149,
+                    lineNumber: 146,
                     columnNumber: 13
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 148,
+                lineNumber: 145,
                 columnNumber: 11
             }, this) : !primaryPlan ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                 className: "text-[14px] leading-[20px] text-[rgba(38,52,63,0.8)]",
                 children: "Er zijn nog geen abonnementen beschikbaar."
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 155,
+                lineNumber: 152,
                 columnNumber: 11
             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
                 children: [
@@ -165,7 +165,7 @@ function PricingSection(props) {
                                                         children: "Tijdsbesparing per week (uren)"
                                                     }, void 0, false, {
                                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                        lineNumber: 164,
+                                                        lineNumber: 161,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -176,13 +176,13 @@ function PricingSection(props) {
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                        lineNumber: 167,
+                                                        lineNumber: 164,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 163,
+                                                lineNumber: 160,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -197,7 +197,7 @@ function PricingSection(props) {
                                                 className: "w-full cursor-pointer accent-[#BE0165]"
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 171,
+                                                lineNumber: 168,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -207,20 +207,20 @@ function PricingSection(props) {
                                                         children: "0,3 uur"
                                                     }, void 0, false, {
                                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                        lineNumber: 183,
+                                                        lineNumber: 180,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                         children: "16 uur"
                                                     }, void 0, false, {
                                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                        lineNumber: 184,
+                                                        lineNumber: 181,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 182,
+                                                lineNumber: 179,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -228,96 +228,13 @@ function PricingSection(props) {
                                                 children: "Schat hoeveel uren per week je vrijspeelt doordat verslaglegging sneller gaat."
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 186,
+                                                lineNumber: 183,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                        lineNumber: 162,
-                                        columnNumber: 17
-                                    }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                        className: "space-y-2",
-                                        children: [
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                className: "flex items-center justify-between gap-3",
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                        className: "text-[20px] font-semibold leading-6 text-[#1D0A00]",
-                                                        children: "Percentage ingevulde tijd"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                        lineNumber: 193,
-                                                        columnNumber: 21
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                        className: "rounded-lg border border-[#E0E0E0] bg-[#FEFEFE] px-3 py-2 text-[14px] leading-[18px] text-[#1D0A00]",
-                                                        children: [
-                                                            usedTimePercent,
-                                                            "%"
-                                                        ]
-                                                    }, void 0, true, {
-                                                        fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                        lineNumber: 196,
-                                                        columnNumber: 21
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 192,
-                                                columnNumber: 19
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                                type: "range",
-                                                min: 0,
-                                                max: 100,
-                                                step: 1,
-                                                value: usedTimePercent,
-                                                onChange: (event)=>{
-                                                    setUsedTimePercent(Number(event.currentTarget.value));
-                                                },
-                                                className: "w-full cursor-pointer accent-[#BE0165]"
-                                            }, void 0, false, {
-                                                fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 200,
-                                                columnNumber: 19
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                className: "flex items-center justify-between text-[14px] leading-[18px] text-[rgba(38,52,63,0.6)]",
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                        children: "0%"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                        lineNumber: 212,
-                                                        columnNumber: 21
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                        children: "100%"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                        lineNumber: 213,
-                                                        columnNumber: 21
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 211,
-                                                columnNumber: 19
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                className: "text-[14px] leading-5 text-[rgba(38,52,63,0.6)]",
-                                                children: "Welk deel van je bespaarde tijd zet je om in extra sessies?"
-                                            }, void 0, false, {
-                                                fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 215,
-                                                columnNumber: 19
-                                            }, this)
-                                        ]
-                                    }, void 0, true, {
-                                        fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                        lineNumber: 191,
+                                        lineNumber: 159,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -328,7 +245,7 @@ function PricingSection(props) {
                                                 children: "Gemiddelde prijs per sessie (EUR)"
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 220,
+                                                lineNumber: 189,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -343,19 +260,19 @@ function PricingSection(props) {
                                                 placeholder: "150"
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 223,
+                                                lineNumber: 192,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                        lineNumber: 219,
+                                        lineNumber: 188,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                lineNumber: 161,
+                                lineNumber: 158,
                                 columnNumber: 15
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -369,7 +286,7 @@ function PricingSection(props) {
                                                 children: "Nieuwe sessies per maand"
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 242,
+                                                lineNumber: 211,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -377,13 +294,13 @@ function PricingSection(props) {
                                                 children: estimatedSessionsPerMonth.toFixed(1).replace(".", ",")
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 245,
+                                                lineNumber: 214,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                        lineNumber: 241,
+                                        lineNumber: 210,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -394,7 +311,7 @@ function PricingSection(props) {
                                                 children: "Opbrengst per maand"
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 250,
+                                                lineNumber: 219,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -402,13 +319,13 @@ function PricingSection(props) {
                                                 children: formatEuroPrice(monthlyRevenue)
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 253,
+                                                lineNumber: 222,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                        lineNumber: 249,
+                                        lineNumber: 218,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -419,7 +336,7 @@ function PricingSection(props) {
                                                 children: "Kosten CoachScribe"
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 258,
+                                                lineNumber: 227,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -427,20 +344,20 @@ function PricingSection(props) {
                                                 children: formatEuroPrice(monthlySubscriptionCost)
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 261,
+                                                lineNumber: 230,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                        lineNumber: 257,
+                                        lineNumber: 226,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         className: "my-1 h-px bg-[#E0E0E0]"
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                        lineNumber: 265,
+                                        lineNumber: 234,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -448,7 +365,7 @@ function PricingSection(props) {
                                         children: "Netto opbrengst per maand"
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                        lineNumber: 266,
+                                        lineNumber: 235,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -456,7 +373,7 @@ function PricingSection(props) {
                                         children: formatEuroPrice(monthlyNetProfit)
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                        lineNumber: 269,
+                                        lineNumber: 238,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -469,19 +386,19 @@ function PricingSection(props) {
                                                 children: "minus de kosten van CoachScribe."
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 274,
+                                                lineNumber: 243,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                        lineNumber: 272,
+                                        lineNumber: 241,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                lineNumber: 240,
+                                lineNumber: 209,
                                 columnNumber: 15
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -492,7 +409,7 @@ function PricingSection(props) {
                                         children: primaryPlan.name
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                        lineNumber: 281,
+                                        lineNumber: 250,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -503,7 +420,7 @@ function PricingSection(props) {
                                                 children: formatEuroPrice(primaryPlan.monthlyPrice)
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 285,
+                                                lineNumber: 254,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -511,13 +428,13 @@ function PricingSection(props) {
                                                 children: "/maand"
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 288,
+                                                lineNumber: 257,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                        lineNumber: 284,
+                                        lineNumber: 253,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -529,7 +446,7 @@ function PricingSection(props) {
                                                     color: "#BE0165"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                    lineNumber: 293,
+                                                    lineNumber: 262,
                                                     columnNumber: 37
                                                 }, void 0),
                                                 children: [
@@ -538,7 +455,7 @@ function PricingSection(props) {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 293,
+                                                lineNumber: 262,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(FeatureRow, {
@@ -547,7 +464,7 @@ function PricingSection(props) {
                                                     color: "#BE0165"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                    lineNumber: 296,
+                                                    lineNumber: 265,
                                                     columnNumber: 37
                                                 }, void 0),
                                                 children: [
@@ -556,7 +473,7 @@ function PricingSection(props) {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 296,
+                                                lineNumber: 265,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(FeatureRow, {
@@ -565,13 +482,13 @@ function PricingSection(props) {
                                                     color: "#BE0165"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                    lineNumber: 299,
+                                                    lineNumber: 268,
                                                     columnNumber: 37
                                                 }, void 0),
                                                 children: "Uren tijdsbesparing per maand"
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 299,
+                                                lineNumber: 268,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(FeatureRow, {
@@ -580,13 +497,13 @@ function PricingSection(props) {
                                                     color: "#BE0165"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                    lineNumber: 302,
+                                                    lineNumber: 271,
                                                     columnNumber: 37
                                                 }, void 0),
                                                 children: "Automatisch opgebouwde, consistente rapportages"
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 302,
+                                                lineNumber: 271,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(FeatureRow, {
@@ -595,13 +512,13 @@ function PricingSection(props) {
                                                     color: "#BE0165"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                    lineNumber: 305,
+                                                    lineNumber: 274,
                                                     columnNumber: 37
                                                 }, void 0),
                                                 children: "Veilige opslag binnen de EU"
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 305,
+                                                lineNumber: 274,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(FeatureRow, {
@@ -610,19 +527,19 @@ function PricingSection(props) {
                                                     color: "#BE0165"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                    lineNumber: 308,
+                                                    lineNumber: 277,
                                                     columnNumber: 37
                                                 }, void 0),
                                                 children: "Alle informatie over al je clienten op een plek"
                                             }, void 0, false, {
                                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                                lineNumber: 308,
+                                                lineNumber: 277,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                        lineNumber: 292,
+                                        lineNumber: 261,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -635,24 +552,24 @@ function PricingSection(props) {
                                             openInNewTab: true
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                            lineNumber: 313,
+                                            lineNumber: 282,
                                             columnNumber: 19
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                        lineNumber: 312,
+                                        lineNumber: 281,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                                lineNumber: 280,
+                                lineNumber: 249,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                        lineNumber: 160,
+                        lineNumber: 157,
                         columnNumber: 13
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -662,28 +579,28 @@ function PricingSection(props) {
                             children: "Gespreksverslagen worden berekend op basis van 60 minuten per gesprek."
                         }, void 0, false, {
                             fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                            lineNumber: 325,
+                            lineNumber: 294,
                             columnNumber: 15
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                        lineNumber: 324,
+                        lineNumber: 293,
                         columnNumber: 13
                     }, this)
                 ]
             }, void 0, true)
         }, void 0, false, {
             fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-            lineNumber: 146,
+            lineNumber: 143,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-        lineNumber: 142,
+        lineNumber: 139,
         columnNumber: 5
     }, this);
 }
-_s(PricingSection, "TGJAVsYfMfzz33y/4ZESvZL5WyY=");
+_s(PricingSection, "o7xfcuLwoA7haN3V/hR+aAB2BCA=");
 _c = PricingSection;
 function FeatureRow({ icon, children }) {
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -694,20 +611,20 @@ function FeatureRow({ icon, children }) {
                 children: icon
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 345,
+                lineNumber: 314,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                 children: children
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 346,
+                lineNumber: 315,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-        lineNumber: 344,
+        lineNumber: 313,
         columnNumber: 5
     }, this);
 }
@@ -728,7 +645,7 @@ function VerslagGenererenIcon({ size = 24, color = "#171717" }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 359,
+                lineNumber: 328,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -739,7 +656,7 @@ function VerslagGenererenIcon({ size = 24, color = "#171717" }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 366,
+                lineNumber: 335,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -750,7 +667,7 @@ function VerslagGenererenIcon({ size = 24, color = "#171717" }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 367,
+                lineNumber: 336,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -761,7 +678,7 @@ function VerslagGenererenIcon({ size = 24, color = "#171717" }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 368,
+                lineNumber: 337,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -772,13 +689,13 @@ function VerslagGenererenIcon({ size = 24, color = "#171717" }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 369,
+                lineNumber: 338,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-        lineNumber: 358,
+        lineNumber: 327,
         columnNumber: 5
     }, this);
 }
@@ -795,12 +712,12 @@ function HoursPerMonthIcon({ color = "#BE0165", size = 24 }) {
             fill: color
         }, void 0, false, {
             fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-            lineNumber: 377,
+            lineNumber: 346,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-        lineNumber: 376,
+        lineNumber: 345,
         columnNumber: 5
     }, this);
 }
@@ -822,7 +739,7 @@ function CalendarCircleIcon({ size = 24, color = "#BE0165" }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 388,
+                lineNumber: 357,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -834,7 +751,7 @@ function CalendarCircleIcon({ size = 24, color = "#BE0165" }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 396,
+                lineNumber: 365,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -846,7 +763,7 @@ function CalendarCircleIcon({ size = 24, color = "#BE0165" }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 397,
+                lineNumber: 366,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -858,7 +775,7 @@ function CalendarCircleIcon({ size = 24, color = "#BE0165" }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 398,
+                lineNumber: 367,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -870,13 +787,13 @@ function CalendarCircleIcon({ size = 24, color = "#BE0165" }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 399,
+                lineNumber: 368,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-        lineNumber: 387,
+        lineNumber: 356,
         columnNumber: 5
     }, this);
 }
@@ -896,7 +813,7 @@ function StandaardVerslagIcon({ color = "#BE0165", size = 18 }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 414,
+                lineNumber: 383,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -906,7 +823,7 @@ function StandaardVerslagIcon({ color = "#BE0165", size = 18 }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 415,
+                lineNumber: 384,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -916,7 +833,7 @@ function StandaardVerslagIcon({ color = "#BE0165", size = 18 }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 416,
+                lineNumber: 385,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -926,7 +843,7 @@ function StandaardVerslagIcon({ color = "#BE0165", size = 18 }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 417,
+                lineNumber: 386,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -936,7 +853,7 @@ function StandaardVerslagIcon({ color = "#BE0165", size = 18 }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 418,
+                lineNumber: 387,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -946,13 +863,13 @@ function StandaardVerslagIcon({ color = "#BE0165", size = 18 }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 424,
+                lineNumber: 393,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-        lineNumber: 413,
+        lineNumber: 382,
         columnNumber: 5
     }, this);
 }
@@ -969,12 +886,12 @@ function SecuritySafeIcon({ color = "#BD0265", size = 24 }) {
             fill: color
         }, void 0, false, {
             fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-            lineNumber: 432,
+            lineNumber: 401,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-        lineNumber: 431,
+        lineNumber: 400,
         columnNumber: 5
     }, this);
 }
@@ -995,7 +912,7 @@ function CoacheesIcon({ color = "#BE0165", size = 24 }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 443,
+                lineNumber: 412,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -1006,7 +923,7 @@ function CoacheesIcon({ color = "#BE0165", size = 24 }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 450,
+                lineNumber: 419,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -1017,7 +934,7 @@ function CoacheesIcon({ color = "#BE0165", size = 24 }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 457,
+                lineNumber: 426,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -1028,7 +945,7 @@ function CoacheesIcon({ color = "#BE0165", size = 24 }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 464,
+                lineNumber: 433,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -1039,7 +956,7 @@ function CoacheesIcon({ color = "#BE0165", size = 24 }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 471,
+                lineNumber: 440,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -1050,13 +967,13 @@ function CoacheesIcon({ color = "#BE0165", size = 24 }) {
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-                lineNumber: 478,
+                lineNumber: 447,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/Coachscribe/website/components/home/PricingSection.tsx",
-        lineNumber: 442,
+        lineNumber: 411,
         columnNumber: 5
     }, this);
 }

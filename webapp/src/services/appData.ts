@@ -9,7 +9,15 @@ export async function createCoacheeRemote(coachee: Coachee): Promise<void> {
   await callSecureApi('/coachees/create', { coachee })
 }
 
-export async function updateCoacheeRemote(params: { id: string; name?: string; isArchived?: boolean; updatedAtUnixMs: number }): Promise<void> {
+export async function updateCoacheeRemote(params: {
+  id: string
+  name?: string
+  clientDetails?: string
+  employerDetails?: string
+  firstSickDay?: string
+  isArchived?: boolean
+  updatedAtUnixMs: number
+}): Promise<void> {
   await callSecureApi('/coachees/update', params)
 }
 
@@ -31,6 +39,9 @@ export async function updateSessionRemote(params: {
   uploadFileName?: string | null
   transcript?: string | null
   summary?: string | null
+  reportDate?: string | null
+  wvpWeekNumber?: string | null
+  reportFirstSickDay?: string | null
   transcriptionStatus?: Session['transcriptionStatus']
   transcriptionError?: string | null
 }): Promise<void> {
