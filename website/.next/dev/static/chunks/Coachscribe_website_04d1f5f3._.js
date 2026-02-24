@@ -138,6 +138,10 @@ const navigationLinks = [
         destination: "/coaches"
     },
     {
+        label: "Prijzen",
+        destination: "/pricing"
+    },
+    {
         label: "Veiligheid",
         destination: "/veiligheid"
     },
@@ -154,6 +158,7 @@ function NavigationBar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [isScrolled, setIsScrolled] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const pathname = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["usePathname"])();
+    const isPricingPath = pathname === "/pricing" || pathname.startsWith("/pricing/");
     const useSoftBackground = pathname === "/contact" || pathname.startsWith("/contact/") || pathname === "/wachtlijst" || pathname.startsWith("/wachtlijst/");
     const isActiveDestination = (destination)=>pathname === destination || pathname.startsWith(`${destination}/`);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
@@ -173,7 +178,7 @@ function NavigationBar() {
         }
     }["NavigationBar.useEffect"], []);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("header", {
-        className: `fixed left-0 top-0 z-50 w-full font-inter ${useSoftBackground ? "bg-[#F8F9F9]" : "bg-white"}`,
+        className: `fixed left-0 top-0 z-50 w-full font-inter ${isPricingPath ? "bg-transparent" : useSoftBackground ? "bg-[#F8F9F9]" : "bg-white"}`,
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: `relative mx-auto w-full max-w-full px-0 pb-0 pt-0 transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${isScrolled ? "xl:px-0 xl:pb-0 xl:pt-0" : "xl:px-20 xl:pb-8 xl:pt-8"}`,
@@ -201,12 +206,12 @@ function NavigationBar() {
                                 priority: true
                             }, void 0, false, {
                                 fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                lineNumber: 72,
+                                lineNumber: 79,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                            lineNumber: 71,
+                            lineNumber: 78,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("nav", {
@@ -217,12 +222,12 @@ function NavigationBar() {
                                     children: navigationLink.label
                                 }, navigationLink.label, false, {
                                     fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                    lineNumber: 84,
+                                    lineNumber: 91,
                                     columnNumber: 15
                                 }, this))
                         }, void 0, false, {
                             fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                            lineNumber: 82,
+                            lineNumber: 89,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -235,7 +240,7 @@ function NavigationBar() {
                                     className: "font-normal"
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                    lineNumber: 99,
+                                    lineNumber: 106,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$Button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -245,13 +250,13 @@ function NavigationBar() {
                                     className: "font-normal"
                                 }, void 0, false, {
                                     fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                    lineNumber: 105,
+                                    lineNumber: 112,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                            lineNumber: 98,
+                            lineNumber: 105,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -274,7 +279,7 @@ function NavigationBar() {
                                         strokeLinecap: "round"
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                        lineNumber: 127,
+                                        lineNumber: 134,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -284,7 +289,7 @@ function NavigationBar() {
                                         strokeLinecap: "round"
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                        lineNumber: 133,
+                                        lineNumber: 140,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -294,29 +299,29 @@ function NavigationBar() {
                                         strokeLinecap: "round"
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                        lineNumber: 139,
+                                        lineNumber: 146,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                lineNumber: 119,
+                                lineNumber: 126,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                            lineNumber: 113,
+                            lineNumber: 120,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                    lineNumber: 56,
+                    lineNumber: 63,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                lineNumber: 49,
+                lineNumber: 56,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -329,7 +334,7 @@ function NavigationBar() {
                         className: "h-full flex-1"
                     }, void 0, false, {
                         fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                        lineNumber: 157,
+                        lineNumber: 164,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -343,7 +348,7 @@ function NavigationBar() {
                                         children: "Menu"
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                        lineNumber: 172,
+                                        lineNumber: 179,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -367,7 +372,7 @@ function NavigationBar() {
                                                     strokeLinejoin: "round"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                                    lineNumber: 188,
+                                                    lineNumber: 195,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -378,7 +383,7 @@ function NavigationBar() {
                                                     strokeLinejoin: "round"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                                    lineNumber: 195,
+                                                    lineNumber: 202,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -389,24 +394,24 @@ function NavigationBar() {
                                                     strokeLinejoin: "round"
                                                 }, void 0, false, {
                                                     fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                                    lineNumber: 202,
+                                                    lineNumber: 209,
                                                     columnNumber: 17
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                            lineNumber: 180,
+                                            lineNumber: 187,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                        lineNumber: 174,
+                                        lineNumber: 181,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                lineNumber: 170,
+                                lineNumber: 177,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("nav", {
@@ -418,12 +423,12 @@ function NavigationBar() {
                                         children: navigationLink.label
                                     }, navigationLink.label, false, {
                                         fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                        lineNumber: 215,
+                                        lineNumber: 222,
                                         columnNumber: 15
                                     }, this))
                             }, void 0, false, {
                                 fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                lineNumber: 213,
+                                lineNumber: 220,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -438,12 +443,12 @@ function NavigationBar() {
                                             className: "font-normal"
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                            lineNumber: 232,
+                                            lineNumber: 239,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                        lineNumber: 231,
+                                        lineNumber: 238,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -455,36 +460,36 @@ function NavigationBar() {
                                             className: "font-normal"
                                         }, void 0, false, {
                                             fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                            lineNumber: 240,
+                                            lineNumber: 247,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                        lineNumber: 239,
+                                        lineNumber: 246,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                                lineNumber: 230,
+                                lineNumber: 237,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                        lineNumber: 164,
+                        lineNumber: 171,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-                lineNumber: 150,
+                lineNumber: 157,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/Coachscribe/website/components/NavigationBar.tsx",
-        lineNumber: 43,
+        lineNumber: 46,
         columnNumber: 5
     }, this);
 }

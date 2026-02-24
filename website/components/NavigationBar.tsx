@@ -10,6 +10,7 @@ import logo from "@/home/logo.png";
 const navigationLinks = [
   { label: "Product", destination: "/product" },
   { label: "Doelgroep", destination: "/coaches" },
+  { label: "Prijzen", destination: "/pricing" },
   { label: "Veiligheid", destination: "/veiligheid" },
   { label: "Over Ons", destination: "/over-ons" },
 ];
@@ -21,6 +22,8 @@ export default function NavigationBar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
+  const isPricingPath =
+    pathname === "/pricing" || pathname.startsWith("/pricing/");
   const useSoftBackground =
     pathname === "/contact" ||
     pathname.startsWith("/contact/") ||
@@ -42,7 +45,11 @@ export default function NavigationBar() {
   return (
     <header
       className={`fixed left-0 top-0 z-50 w-full font-inter ${
-        useSoftBackground ? "bg-[#F8F9F9]" : "bg-white"
+        isPricingPath
+          ? "bg-transparent"
+          : useSoftBackground
+            ? "bg-[#F8F9F9]"
+            : "bg-white"
       }`}
     >
       {/* Navigation bar container */}
