@@ -15,6 +15,8 @@ import {
 } from "expo-audio"
 
 const MAX_VISIBLE_BARS = 50
+const MAX_RECORDING_DURATION_MINUTES = 115
+const MAX_RECORDING_DURATION_MILLISECONDS = MAX_RECORDING_DURATION_MINUTES * 60 * 1000
 
 function AudioBar({ value }: { value: number }) {
   const minHeight = 10
@@ -265,6 +267,13 @@ export default function RecordingScreen() {
       title,
     })
   }
+
+  useEffect(() => {
+    if (!isFocused || isRecordingPaused) return
+    if (!hasStartedRef.current || hasStoppedRef.current) return
+    if ((recorderState.durationMillis ?? 0) < MAX_RECORDING_DURATION_MILLISECONDS) return
+    void handleStopButtonPress()
+  }, [handleStopButtonPress, isFocused, isRecordingPaused, recorderState.durationMillis])
 
   function handleTogglePauseButtonPress() {
     vibrate()

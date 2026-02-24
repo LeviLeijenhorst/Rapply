@@ -160,7 +160,7 @@ export async function transcribeViaEncryptedUpload(params: {
     logger.error("[transcription] transcribeViaEncryptedUpload failed", { message })
     const normalizedMessage = message.toLowerCase()
     if (normalizedMessage.includes("audiolengthlimitexceeded") || normalizedMessage.includes("maximal audio length exceeded")) {
-      throw new Error("Deze opname is te lang voor transcriptie. Gebruik een opname korter dan 120 minuten.")
+      throw new Error("Deze opname is te lang voor transcriptie. Gebruik een opname korter dan 115 minuten.")
     }
     if (normalizedMessage.includes("blobnotfound") || normalizedMessage.includes("object cannot be found")) {
       throw new Error("Upload naar de server is niet meer beschikbaar. Probeer opnieuw met een stabiele verbinding.")
@@ -175,5 +175,4 @@ export async function transcribeViaEncryptedUpload(params: {
     } catch {}
   }
 }
-
 
