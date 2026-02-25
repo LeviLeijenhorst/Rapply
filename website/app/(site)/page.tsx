@@ -3,7 +3,7 @@ import FeaturesSection from "@/components/home/FeaturesSection";
 import AvailabilitySection from "@/components/home/AvailabilitySection";
 import SecuritySection from "@/components/home/SecuritySection";
 import FrequentlyAskedQuestionsSection from "@/components/home/FrequentlyAskedQuestionsSection";
-import PricingSection from "@/components/home/PricingSection";
+import WinWinSection from "@/components/home/WinWinSection";
 
 export default function HomePage() {
   return (
@@ -18,8 +18,8 @@ export default function HomePage() {
         <SecuritySection disableAnimations />
         {/* Availability */}
         <AvailabilitySection />
-        {/* Pricing */}
-        <PricingSection />
+        {/* Win-win */}
+        <WinWinSection />
         {/* Frequently asked questions */}
         <FrequentlyAskedQuestionsSection />
       </div>

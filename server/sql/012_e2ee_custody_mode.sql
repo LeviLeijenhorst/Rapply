@@ -11,6 +11,16 @@ alter table public.e2ee_user_keys
   alter column argon2_parallelism drop not null,
   alter column wrapped_ark_user_passphrase drop not null;
 
-alter table public.e2ee_user_keys
-  add constraint e2ee_user_keys_custody_mode_check
-  check (custody_mode in ('server_managed', 'user_managed'));
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'e2ee_user_keys_custody_mode_check'
+  ) then
+    alter table public.e2ee_user_keys
+      add constraint e2ee_user_keys_custody_mode_check
+      check (custody_mode in ('server_managed', 'user_managed'));
+  end if;
+end
+$$;

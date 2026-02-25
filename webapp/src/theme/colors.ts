@@ -4,7 +4,7 @@ export const colorTokens = semanticColorTokens
 
 export type ThemeMode = keyof typeof colorTokens
 
-const colorVar = (key: keyof typeof colorTokens.light) => `var(--color-${key})`
+const colorVar = (key: keyof typeof colorTokens.light) => `var(--color-${key}, ${colorTokens.light[key]})`
 
 export const colors = {
   pageBackground: colorVar('pageBackground'),

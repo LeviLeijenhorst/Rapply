@@ -35,4 +35,6 @@ test("buildChatPolicySystemPrompt includes grounded-action-points rule", () => {
   const prompt = buildChatPolicySystemPrompt()
   assert.match(prompt, /Noem alleen actiepunten die expliciet/i)
   assert.match(prompt, /voeg geen nieuwe actiepunten toe/i)
+  assert.match(prompt, /Noem of gebruik nooit sprekerlabels/i)
+  assert.match(prompt, /weiger niet onnodig/i)
 })

@@ -702,17 +702,20 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
       updatePracticeSettings: (values) => {
         const updatedAtUnixMs = Date.now()
         setData((previous) => updatePracticeSettings(previous, { ...values, updatedAtUnixMs }))
-        if (!e2ee) return
         void (async () => {
-          const encryptedPracticeName = values.practiceName !== undefined ? await e2ee.encryptText(values.practiceName.trim()) : undefined
-          const encryptedWebsite = values.website !== undefined ? await e2ee.encryptText(values.website.trim()) : undefined
-          const encryptedTintColor = values.tintColor !== undefined ? await e2ee.encryptText(values.tintColor) : undefined
+          const practiceName = values.practiceName !== undefined ? values.practiceName.trim() : undefined
+          const website = values.website !== undefined ? values.website.trim() : undefined
+          const tintColor = values.tintColor
+          const logoDataUrl = values.logoDataUrl
+          const remotePracticeName = practiceName === undefined ? undefined : e2ee ? await e2ee.encryptText(practiceName) : practiceName
+          const remoteWebsite = website === undefined ? undefined : e2ee ? await e2ee.encryptText(website) : website
+          const remoteTintColor = tintColor === undefined ? undefined : e2ee ? await e2ee.encryptText(tintColor) : tintColor
           const encryptedLogoDataUrl =
-            values.logoDataUrl === undefined ? undefined : values.logoDataUrl === null ? null : await e2ee.encryptText(values.logoDataUrl)
+            logoDataUrl === undefined ? undefined : logoDataUrl === null ? null : e2ee ? await e2ee.encryptText(logoDataUrl) : logoDataUrl
           await updatePracticeSettingsRemote({
-            practiceName: encryptedPracticeName,
-            website: encryptedWebsite,
-            tintColor: encryptedTintColor,
+            practiceName: remotePracticeName,
+            website: remoteWebsite,
+            tintColor: remoteTintColor,
             logoDataUrl: encryptedLogoDataUrl,
             updatedAtUnixMs,
           })

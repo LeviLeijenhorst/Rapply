@@ -22,7 +22,7 @@ export default function CoachesCtaSection() {
           </div>
           <div className="mt-6">
             <Button
-              label="Probeer het uit"
+              label="Probeer het gratis"
               destination="https://app.coachscribe.nl"
               showArrow
               className="font-normal"

@@ -14,13 +14,14 @@ import { colors } from '../theme/colors'
 import { typography } from '../theme/typography'
 import { webTransitionSmooth } from '../theme/webTransitions'
 import { parseRichTextMarkdown } from '../utils/richTextFormatting'
+import { isGespreksverslagTemplateName } from '../utils/templateCategories'
 
 type SavedFilterKey = 'all' | 'saved'
 
 function getTemplateDisplayName(name: string): string {
   const normalized = name.trim().toLowerCase()
   if (normalized === 'voortgangsgespreksverslag') return 'Voortgangsgesprek'
-  if (normalized === 'intakeverslag') return 'intake'
+  if (normalized === 'intakeverslag') return 'Intake'
   return name
 }
 
@@ -69,6 +70,14 @@ export function TemplatesScreen() {
         )
       })
   }, [activeSavedFilter, searchText, templates])
+  const visibleConversationTemplates = useMemo(
+    () => visibleTemplates.filter((template) => isGespreksverslagTemplateName(template.name)),
+    [visibleTemplates],
+  )
+  const visibleOtherTemplates = useMemo(
+    () => visibleTemplates.filter((template) => !isGespreksverslagTemplateName(template.name)),
+    [visibleTemplates],
+  )
   const hasSearchQuery = searchText.trim().length > 0
   const isSavedFilter = activeSavedFilter === 'saved'
   const emptyTemplatesText = hasSearchQuery
@@ -164,16 +173,47 @@ export function TemplatesScreen() {
               <Text style={styles.emptyStateText}>{emptyTemplatesText}</Text>
             </View>
           ) : (
-            <View style={styles.gridRow}>
-              {visibleTemplates.map((template) => (
-                <View key={template.id} style={styles.gridItem}>
-                  <TemplateCard
-                    title={getTemplateDisplayName(template.name)}
-                    description={template.description}
-                    onPress={() => setEditingTemplateId(template.id)}
-                  />
-                </View>
-              ))}
+            <View style={styles.sectionsContainer}>
+              <View style={styles.sectionBlock}>
+                <Text isSemibold style={styles.sectionTitle}>
+                  Templates voor gespreksverslagen
+                </Text>
+                {visibleConversationTemplates.length === 0 ? (
+                  <Text style={styles.sectionEmptyText}>Geen gespreksverslagen gevonden.</Text>
+                ) : (
+                  <View style={styles.gridRow}>
+                    {visibleConversationTemplates.map((template) => (
+                      <View key={template.id} style={styles.gridItem}>
+                        <TemplateCard
+                          title={getTemplateDisplayName(template.name)}
+                          description={template.description}
+                          onPress={() => setEditingTemplateId(template.id)}
+                        />
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+              <View style={styles.sectionBlock}>
+                <Text isSemibold style={styles.sectionTitle}>
+                  Templates voor andere verslagen
+                </Text>
+                {visibleOtherTemplates.length === 0 ? (
+                  <Text style={styles.sectionEmptyText}>Geen andere verslagen gevonden.</Text>
+                ) : (
+                  <View style={styles.gridRow}>
+                    {visibleOtherTemplates.map((template) => (
+                      <View key={template.id} style={styles.gridItem}>
+                        <TemplateCard
+                          title={getTemplateDisplayName(template.name)}
+                          description={template.description}
+                          onPress={() => setEditingTemplateId(template.id)}
+                        />
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
             </View>
           )}
         </AnimatedMainContent>
@@ -430,6 +470,25 @@ const styles = StyleSheet.create({
   gridArea: {
     flex: 1,
   },
+  sectionsContainer: {
+    width: '100%',
+    gap: 22,
+  },
+  sectionBlock: {
+    width: '100%',
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    lineHeight: 20,
+    color: colors.textStrong,
+  },
+  sectionEmptyText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    paddingHorizontal: 2,
+  },
   emptyState: {
     width: '100%',
     alignItems: 'center',
@@ -446,7 +505,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     width: '100%',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     gap: 16,
   },
   gridItem: {

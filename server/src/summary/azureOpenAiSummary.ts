@@ -86,6 +86,15 @@ function splitTextByEstimatedTokenBudget(params: { text: string; maxAllowedToken
   return chunks
 }
 
+// Intent: removeSpeakerLabelsFromOutput
+function removeSpeakerLabelsFromOutput(value: string): string {
+  return String(value || "")
+    .replace(/\bspeaker[_\s-]*\d+\b\s*:?\s*/gi, "")
+    .replace(/\bspreker[_\s-]*\d+\b\s*:?\s*/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+}
+
 // Intent: generateSummaryWithAzureOpenAi
 export async function generateSummaryWithAzureOpenAi(params: { transcript: string; templateKey?: string; template?: SummaryTemplate }): Promise<string> {
   const deployment = String(env.azureOpenAiSummaryDeployment || "").trim()
@@ -126,7 +135,7 @@ export async function generateSummaryWithAzureOpenAi(params: { transcript: strin
     if (!normalizedSummary) {
       throw new Error("Summary generation failed")
     }
-    return normalizedSummary
+    return removeSpeakerLabelsFromOutput(normalizedSummary)
   }
 
   const partialSummaries: string[] = []
@@ -155,7 +164,7 @@ export async function generateSummaryWithAzureOpenAi(params: { transcript: strin
   if (!merged) {
     throw new Error("Summary generation failed")
   }
-  return merged
+  return removeSpeakerLabelsFromOutput(merged)
 }
 
 // Intent: buildSummarySystemPrompt
@@ -164,6 +173,7 @@ function buildSummarySystemPrompt() {
     "Je bent een assistent voor CoachScribe. Vat een coachgesprek samen in het Nederlands. " +
     "Noem geen details die niet in de tekst staan. " +
     "Schrijf geen persoonsgegevens zoals e-mailadressen of telefoonnummers. " +
+    "Noem of gebruik nooit sprekerlabels zoals 'speaker_1', 'speaker 1', 'spreker 1' of vergelijkbare labels. " +
     "Gebruik alleen Markdown met kopjes die beginnen met '### ' en bullet points die beginnen met '- '."
   )
 }

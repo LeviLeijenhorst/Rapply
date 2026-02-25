@@ -35,6 +35,13 @@ npm run init-db
 
 `init-db` is a clean-start reset and recreates the `public` schema from migration files.
 
+To apply migrations without resetting data (safe for existing environments), run:
+
+```bash
+cd server
+npm run apply-db-migrations
+```
+
 4. Start the server:
 
 ```bash
@@ -59,6 +66,7 @@ Use only the GitHub workflow `.github/workflows/main_coachscribe-api.yml` for AP
 1. In Azure Portal, disconnect **Deployment Center** source sync for `coachscribe-api` to avoid Oryx/source-based deploys racing with the workflow artifact deploy.
 2. Ensure app startup command is `node dist/index.cjs`.
 3. Deploy by pushing to `main` (changes in `server/**`) or running the workflow manually.
+   - The workflow now applies pending SQL migrations (`npm run apply-db-migrations`) against the configured `DATABASE_URL` before deploying code.
 4. Verify runtime code with:
    - `GET /health` and check `build.diagnosticLogVersion`
    - App Service log stream for `[request] POST /transcription/start reached Express (global middleware)` during a transcription start.

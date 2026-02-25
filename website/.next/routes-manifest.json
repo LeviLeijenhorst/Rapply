@@ -41,6 +41,12 @@
       "namedRegex": "^/_not\\-found(?:/)?$"
     },
     {
+      "page": "/apple-icon.png",
+      "regex": "^/apple\\-icon\\.png(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/apple\\-icon\\.png(?:/)?$"
+    },
+    {
       "page": "/coaches",
       "regex": "^/coaches(?:/)?$",
       "routeKeys": {},
@@ -63,6 +69,12 @@
       "regex": "^/gebruikersovereenkomst(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/gebruikersovereenkomst(?:/)?$"
+    },
+    {
+      "page": "/icon.png",
+      "regex": "^/icon\\.png(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/icon\\.png(?:/)?$"
     },
     {
       "page": "/icon.svg",
@@ -93,6 +105,12 @@
       "regex": "^/product(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/product(?:/)?$"
+    },
+    {
+      "page": "/ROI",
+      "regex": "^/ROI(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/ROI(?:/)?$"
     },
     {
       "page": "/toestemming-vragen",

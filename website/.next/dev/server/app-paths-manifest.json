@@ -1,5 +1,8 @@
 {
+  "/(site)/ROI/page": "app/(site)/ROI/page.js",
   "/(site)/coaches/page": "app/(site)/coaches/page.js",
+  "/(site)/contact/page": "app/(site)/contact/page.js",
+  "/(site)/gebruikersovereenkomst/page": "app/(site)/gebruikersovereenkomst/page.js",
   "/(site)/over-ons/page": "app/(site)/over-ons/page.js",
   "/(site)/page": "app/(site)/page.js",
   "/(site)/pricing/page": "app/(site)/pricing/page.js",

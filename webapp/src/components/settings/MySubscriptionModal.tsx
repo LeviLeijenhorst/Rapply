@@ -50,6 +50,11 @@ function formatEuroPrice(value: number): string {
   }).format(value)
 }
 
+function clamp(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min
+  return Math.min(max, Math.max(min, value))
+}
+
 export function MySubscriptionModal({ visible, onClose }: Props) {
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([])
   const [canSeePricingPage, setCanSeePricingPage] = useState(true)
@@ -57,8 +62,10 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
   const [isPricingLoading, setIsPricingLoading] = useState(false)
   const [checkoutLoadingPlanId, setCheckoutLoadingPlanId] = useState<string | null>(null)
   const [isCancelBusy, setIsCancelBusy] = useState(false)
-  const [hoursSavedPerWeek, setHoursSavedPerWeek] = useState(4)
-  const [averageSessionPrice, setAverageSessionPrice] = useState(150)
+  const [hourlyRate, setHourlyRate] = useState(75)
+  const [sessionsPerWeek, setSessionsPerWeek] = useState(10)
+  const [currentMinutes, setCurrentMinutes] = useState(20)
+  const [newSessionsPercentage, setNewSessionsPercentage] = useState(50)
   const { showErrorToast } = useToast()
   const inputWebStyle = useMemo(() => ({ outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any), [])
   const rangeInputWebStyle = useMemo(() => ({ cursor: 'pointer', accentColor: colors.selected } as any), [])
@@ -115,12 +122,16 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
   const plans = useMemo(() => pricingPlans, [pricingPlans])
   const primaryPlan = plans[0] ?? null
   const estimatedReportsPerMonth = primaryPlan ? Math.max(0, Math.floor(primaryPlan.minutesPerMonth / 60)) : 0
-  const savedHoursPerMonth = hoursSavedPerWeek * 4.33
-  const sessionDurationHours = 1
-  const estimatedSessionsPerMonth = Math.max(0, savedHoursPerMonth / sessionDurationHours)
-  const monthlyRevenue = Math.max(0, estimatedSessionsPerMonth * averageSessionPrice)
   const monthlySubscriptionCost = primaryPlan?.monthlyPrice ?? 0
-  const monthlyNetProfit = monthlyRevenue - monthlySubscriptionCost
+  const toolMinutes = 8
+  const weeksPerYear = 46
+  const currentHoursWeek = (sessionsPerWeek * currentMinutes) / 60
+  const toolHoursWeek = (sessionsPerWeek * toolMinutes) / 60
+  const hoursSavedWeek = Math.max(0, currentHoursWeek - toolHoursWeek)
+  const eurSavedWeek = hoursSavedWeek * hourlyRate * (newSessionsPercentage / 100)
+  const eurSavedMonth = eurSavedWeek * 4.33
+  const eurSavedYear = eurSavedWeek * weeksPerYear
+  const monthlyNetProfit = eurSavedMonth - monthlySubscriptionCost
 
   const handleSelectPlan = async (planId: string) => {
     try {
@@ -196,68 +207,158 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
               <View style={styles.plansRow}>
                   <View style={styles.calculatorCard}>
                     <View style={styles.calculatorSection}>
-                      <View style={styles.fieldLabelRow}>
-                        <Text isSemibold style={styles.fieldTitle}>Tijdsbesparing per week (uren)</Text>
-                        <View style={styles.fieldValueBadge}>
-                          <Text style={styles.fieldValueBadgeText}>{hoursSavedPerWeek.toFixed(1).replace('.', ',')} uur</Text>
+                      <Text isSemibold style={styles.fieldTitle}>Uurtarief (EUR)</Text>
+                      <View style={styles.inputRow}>
+                        <View style={styles.textInputWrap}>
+                          <TextInput
+                            value={String(hourlyRate)}
+                            onChangeText={(value) => {
+                              const digitsOnly = value.replace(/[^\d]/g, '')
+                              setHourlyRate(clamp(digitsOnly ? Number(digitsOnly) : 0, 20, 250))
+                            }}
+                            keyboardType="numeric"
+                            style={[styles.textInput, inputWebStyle]}
+                            placeholder="75"
+                            placeholderTextColor={colors.textSecondary}
+                          />
                         </View>
+                        <Text style={styles.inputUnit}>EUR</Text>
                       </View>
                       <View style={styles.rangeWrap}>
                         <input
                           type="range"
-                          min={0.3}
-                          max={16}
-                          step={0.1}
-                          value={hoursSavedPerWeek}
-                          onChange={(event) => setHoursSavedPerWeek(Number(event.currentTarget.value))}
+                          min={20}
+                          max={250}
+                          step={1}
+                          value={hourlyRate}
+                          onChange={(event) => setHourlyRate(Number(event.currentTarget.value))}
                           style={{ ...(styles.rangeInput as any), ...rangeInputWebStyle }}
                         />
                       </View>
-                      <View style={styles.rangeLegendRow}>
-                        <Text style={styles.rangeLegendText}>0,3 uur</Text>
-                        <Text style={styles.rangeLegendText}>16 uur</Text>
-                      </View>
-                      <Text style={styles.calculatorHintText}>Schat hoeveel uren per week je vrijspeelt doordat verslaglegging sneller gaat.</Text>
                     </View>
 
                     <View style={styles.calculatorSection}>
-                      <Text isSemibold style={styles.fieldTitle}>Gemiddelde prijs per sessie (EUR)</Text>
-                      <View style={styles.textInputWrap}>
-                        <TextInput
-                          value={String(averageSessionPrice)}
-                          onChangeText={(value) => {
-                            const digitsOnly = value.replace(/[^\d]/g, '')
-                            setAverageSessionPrice(digitsOnly ? Number(digitsOnly) : 0)
-                          }}
-                          keyboardType="numeric"
-                          style={[styles.textInput, inputWebStyle]}
-                          placeholder="150"
-                          placeholderTextColor={colors.textSecondary}
+                      <Text isSemibold style={styles.fieldTitle}>Sessies per week</Text>
+                      <View style={styles.inputRow}>
+                        <View style={styles.textInputWrap}>
+                          <TextInput
+                            value={String(sessionsPerWeek)}
+                            onChangeText={(value) => {
+                              const digitsOnly = value.replace(/[^\d]/g, '')
+                              setSessionsPerWeek(clamp(digitsOnly ? Number(digitsOnly) : 0, 1, 40))
+                            }}
+                            keyboardType="numeric"
+                            style={[styles.textInput, inputWebStyle]}
+                            placeholder="10"
+                            placeholderTextColor={colors.textSecondary}
+                          />
+                        </View>
+                        <Text style={styles.inputUnit}>sessies</Text>
+                      </View>
+                      <View style={styles.rangeWrap}>
+                        <input
+                          type="range"
+                          min={1}
+                          max={40}
+                          step={1}
+                          value={sessionsPerWeek}
+                          onChange={(event) => setSessionsPerWeek(Number(event.currentTarget.value))}
+                          style={{ ...(styles.rangeInput as any), ...rangeInputWebStyle }}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.calculatorSection}>
+                      <Text isSemibold style={styles.fieldTitle}>Minuten verslaglegging per sessie (nu)</Text>
+                      <View style={styles.inputRow}>
+                        <View style={styles.textInputWrap}>
+                          <TextInput
+                            value={String(currentMinutes)}
+                            onChangeText={(value) => {
+                              const digitsOnly = value.replace(/[^\d]/g, '')
+                              setCurrentMinutes(clamp(digitsOnly ? Number(digitsOnly) : 0, 5, 90))
+                            }}
+                            keyboardType="numeric"
+                            style={[styles.textInput, inputWebStyle]}
+                            placeholder="20"
+                            placeholderTextColor={colors.textSecondary}
+                          />
+                        </View>
+                        <Text style={styles.inputUnit}>min</Text>
+                      </View>
+                      <View style={styles.rangeWrap}>
+                        <input
+                          type="range"
+                          min={5}
+                          max={90}
+                          step={1}
+                          value={currentMinutes}
+                          onChange={(event) => setCurrentMinutes(Number(event.currentTarget.value))}
+                          style={{ ...(styles.rangeInput as any), ...rangeInputWebStyle }}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.calculatorSection}>
+                      <Text isSemibold style={styles.fieldTitle}>
+                        In welk deel van je bespaarde tijd help je nieuwe mensen?
+                      </Text>
+                      <View style={styles.inputRow}>
+                        <View style={styles.textInputWrap}>
+                          <TextInput
+                            value={String(newSessionsPercentage)}
+                            onChangeText={(value) => {
+                              const digitsOnly = value.replace(/[^\d]/g, '')
+                              setNewSessionsPercentage(clamp(digitsOnly ? Number(digitsOnly) : 0, 0, 100))
+                            }}
+                            keyboardType="numeric"
+                            style={[styles.textInput, inputWebStyle]}
+                            placeholder="50"
+                            placeholderTextColor={colors.textSecondary}
+                          />
+                        </View>
+                        <Text style={styles.inputUnit}>%</Text>
+                      </View>
+                      <View style={styles.rangeWrap}>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={newSessionsPercentage}
+                          onChange={(event) => setNewSessionsPercentage(Number(event.currentTarget.value))}
+                          style={{ ...(styles.rangeInput as any), ...rangeInputWebStyle }}
                         />
                       </View>
                     </View>
                   </View>
 
                   <View style={styles.roiCard}>
-                    <View style={styles.roiRow}>
-                      <Text isSemibold style={styles.roiLabel}>Nieuwe sessies per maand</Text>
-                      <Text isSemibold style={styles.roiValue}>{estimatedSessionsPerMonth.toFixed(1).replace('.', ',')}</Text>
+                    <View style={styles.metricGrid}>
+                      <View style={styles.metricTile}>
+                        <Text style={styles.metricLabel}>Uren bespaard per week</Text>
+                        <Text isSemibold style={styles.metricValue}>{hoursSavedWeek.toFixed(1).replace('.', ',')} uur</Text>
+                      </View>
+                      <View style={styles.metricTile}>
+                        <Text style={styles.metricLabel}>Besparing per maand</Text>
+                        <Text isSemibold style={styles.metricValue}>{formatEuroPrice(eurSavedMonth)}</Text>
+                      </View>
+                      <View style={styles.metricTile}>
+                        <Text style={styles.metricLabel}>Besparing per jaar</Text>
+                        <Text isSemibold style={styles.metricValue}>{formatEuroPrice(eurSavedYear)}</Text>
+                      </View>
                     </View>
-                    <View style={styles.roiRow}>
-                      <Text isSemibold style={styles.roiLabel}>Opbrengst per maand</Text>
-                      <Text isSemibold style={styles.roiValue}>{formatEuroPrice(monthlyRevenue)}</Text>
+                    <View style={styles.netSavingCard}>
+                      <Text style={styles.netSavingLabel}>Netto besparing per maand</Text>
+                      <Text style={styles.netSavingFormula}>
+                        {`${formatEuroPrice(eurSavedMonth)} - `}
+                        <Text style={styles.netSavingFormulaPrice}>
+                          {`${formatEuroPrice(monthlySubscriptionCost)}`}
+                          <Text style={styles.netSavingFormulaStar}>*</Text>
+                        </Text>
+                        {` = ${formatEuroPrice(monthlyNetProfit)}`}
+                      </Text>
                     </View>
-                    <View style={styles.roiRow}>
-                      <Text isSemibold style={styles.roiLabel}>Kosten CoachScribe</Text>
-                      <Text isSemibold style={styles.roiValue}>{formatEuroPrice(monthlySubscriptionCost)}</Text>
-                    </View>
-                    <View style={styles.roiDivider} />
-                    <Text isSemibold style={styles.roiNetLabel}>Netto opbrengst per maand</Text>
-                    <Text isBold style={styles.roiNetValue}>{formatEuroPrice(monthlyNetProfit)}</Text>
-                    <Text style={styles.roiNetHint}>
-                      Dit is je extra opbrengst{' '}
-                      <Text isBold style={styles.roiNetHint}>minus de kosten van CoachScribe.</Text>
-                    </Text>
                   </View>
 
                   <View style={[styles.planCard, selectedPlanId === primaryPlan.id ? styles.planCardSelected : undefined]}>
@@ -309,7 +410,6 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                   </View>
               </View>
               <View style={styles.footerRow}>
-                <Text style={styles.footnoteText}>Gespreksverslagen worden berekend op basis van 60 minuten per gesprek.</Text>
                 {selectedPlanId ? (
                 <Pressable
                   onPress={() => {
@@ -413,32 +513,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 24,
-    gap: 20,
-  },
-  calculatorSection: {
-    gap: 8,
-  },
-  fieldLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    padding: 16,
     gap: 12,
   },
+  calculatorSection: {
+    gap: 6,
+  },
   fieldTitle: {
-    fontSize: 20,
-    lineHeight: 24,
-    color: colors.textStrong,
-  },
-  fieldValueBadge: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  fieldValueBadgeText: {
     fontSize: 14,
     lineHeight: 18,
     color: colors.textStrong,
@@ -449,82 +530,100 @@ const styles = StyleSheet.create({
   rangeInput: {
     width: '100%',
   },
-  rangeLegendRow: {
-    width: '100%',
+  inputRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  rangeLegendText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textSecondary,
-  },
-  calculatorHintText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textSecondary,
+    gap: 8,
   },
   textInputWrap: {
-    width: '100%',
-    borderRadius: 10,
+    width: '50%',
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  inputUnit: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
   },
   textInput: {
     width: '100%',
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 16,
     color: colors.textStrong,
   },
   roiCard: {
     flex: 1,
     minWidth: 320,
     borderRadius: 16,
-    backgroundColor: colors.selected,
+    backgroundColor: '#FEFEFE',
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 24,
-    gap: 14,
-  },
-  roiRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
     gap: 12,
   },
-  roiLabel: {
-    fontSize: 18,
-    lineHeight: 24,
-    color: '#FFFFFF',
-    flex: 1,
-  },
-  roiValue: {
-    fontSize: 22,
-    lineHeight: 28,
-    color: '#FFFFFF',
-  },
-  roiDivider: {
+  metricGrid: {
     width: '100%',
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.35)',
-    marginVertical: 2,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
   },
-  roiNetLabel: {
-    fontSize: 26,
-    lineHeight: 30,
-    color: '#FFFFFF',
+  metricTile: {
+    flexBasis: '48%' as any,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    padding: 12,
+    gap: 4,
   },
-  roiNetValue: {
-    fontSize: 42,
-    lineHeight: 46,
-    color: '#FFFFFF',
+  metricLabel: {
+    fontSize: 13,
+    lineHeight: 17,
+    color: colors.textSecondary,
   },
-  roiNetHint: {
+  metricValue: {
     fontSize: 20,
     lineHeight: 24,
-    color: 'rgba(255,255,255,0.9)',
+    color: colors.textStrong,
+  },
+  netSavingCard: {
+    marginTop: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    padding: 12,
+    gap: 4,
+  },
+  netSavingLabel: {
+    fontSize: 13,
+    lineHeight: 17,
+    color: colors.textSecondary,
+  },
+  netSavingFormula: {
+    fontSize: 20,
+    lineHeight: 24,
+    color: colors.textStrong,
+    fontWeight: '600',
+  },
+  netSavingFormulaPrice: {
+    position: 'relative',
+    paddingRight: 6,
+  },
+  netSavingFormulaStar: {
+    fontSize: 10,
+    lineHeight: 10,
+    transform: [{ translateY: -6 }],
+  },
+  netSavingNote: {
+    marginTop: 6,
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
   },
   planCard: {
     flex: 1,
@@ -586,12 +685,6 @@ const styles = StyleSheet.create({
   },
   subscribeButtonSubscribed: {
     ...( { boxShadow: 'none' } as any ),
-  },
-  footnoteText: {
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.textSecondary,
-    flex: 1,
   },
   footerRow: {
     width: '100%',

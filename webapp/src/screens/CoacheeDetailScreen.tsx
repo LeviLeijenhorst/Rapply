@@ -13,6 +13,7 @@ import { ChevronLeftIcon } from '../components/icons/ChevronLeftIcon'
 import { PlusIcon } from '../components/icons/PlusIcon'
 import { SearchIcon } from '../components/icons/SearchIcon'
 import { TrashIcon } from '../components/icons/TrashIcon'
+import { AanpassenIcon } from '../components/icons/AanpassenIcon'
 import { Text } from '../components/Text'
 import { colors } from '../theme/colors'
 import { typography } from '../theme/typography'
@@ -101,6 +102,10 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
   const notesSession = useMemo(() => {
     return data.sessions.find((item) => item.coacheeId === coacheeId && item.kind === 'notes') ?? null
   }, [coacheeId, data.sessions])
+  const quickQuestionTemplates = useMemo(
+    () => data.templates.map((template) => ({ id: template.id, name: template.name })),
+    [data.templates],
+  )
 
   const isMenuVisible = !!menuSessionId && !!menuAnchorPoint
   const pendingDeleteSessionTitle = pendingDeleteSessionId ? data.sessions.find((item) => item.id === pendingDeleteSessionId)?.title : null
@@ -162,18 +167,6 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
     setIsChatSending(true)
 
     try {
-      const coacheeSessions = data.sessions.filter((item) => item.coacheeId === coacheeId && item.kind !== 'notes')
-      const writtenReportBySessionId = new Map(data.writtenReports.map((report) => [report.sessionId, report.text]))
-      const coacheeContextSessions = coacheeSessions.map((item) => ({
-        title: item.title,
-        createdAtUnixMs: item.createdAtUnixMs,
-        summary: item.summary,
-        reportText: item.kind === 'written' ? writtenReportBySessionId.get(item.id) ?? null : null,
-        reportDate: item.reportDate,
-        wvpWeekNumber: item.wvpWeekNumber,
-        reportFirstSickDay: item.reportFirstSickDay,
-      }))
-
       const responseText = await completeChat({
         messages: [
           ...buildCoacheeStructuredSystemMessages({
@@ -182,7 +175,8 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
             clientDetails: coachee?.clientDetails ?? '',
             employerDetails: coachee?.employerDetails ?? '',
             firstSickDay: coachee?.firstSickDay ?? '',
-            sessions: coacheeContextSessions,
+            includeSessionReports: false,
+            sessions: [],
             maxTotalCharacters: 55000,
             maxSessionCharacters: 3500,
           }),
@@ -246,6 +240,7 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
           </Pressable>
         </View>
         <Pressable onPress={() => setIsEditCoacheeModalOpen(true)} style={({ hovered }) => [styles.editCoacheeButton, hovered ? styles.editCoacheeButtonHovered : undefined]}>
+          <AanpassenIcon color="#656565" size={18} />
           <Text isBold style={styles.editCoacheeButtonText}>
             Cliëntgegevens
           </Text>
@@ -363,7 +358,10 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
                   showsVerticalScrollIndicator={false}
                 >
                   {shouldShowQuickStart ? (
-                    <QuickQuestionsStart coacheeName={coacheeName} onSelectOption={(fullSentence) => sendChatMessage(fullSentence)} />
+                    <QuickQuestionsStart
+                      templates={quickQuestionTemplates}
+                      onSelectOption={(option) => sendChatMessage(option.promptText)}
+                    />
                   ) : (
                     <>
                       {chatMessages.map((message) => (
@@ -499,13 +497,15 @@ const styles = StyleSheet.create({
   },
   editCoacheeButton: {
     height: 40,
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    borderRadius: 12,
+    padding: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: '#FFFFFF',
   },
   editCoacheeButtonHovered: {
     backgroundColor: colors.hoverBackground,
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
   editCoacheeButtonText: {
     fontSize: 14,
     lineHeight: 18,
-    color: colors.textStrong,
+    color: '#656565',
   },
   backTitleButtonHovered: {
     backgroundColor: colors.hoverBackground,

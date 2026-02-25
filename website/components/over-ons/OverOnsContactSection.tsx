@@ -28,11 +28,13 @@ const inputClassName =
 type OverOnsContactSectionProps = {
   useRoundedContainer?: boolean;
   useLightTheme?: boolean;
+  sectionContentClassName?: string;
 };
 
 export default function OverOnsContactSection({
   useRoundedContainer = true,
   useLightTheme = false,
+  sectionContentClassName = "pb-[80px] pt-[80px] md:pb-[80px] md:pt-[80px]",
 }: OverOnsContactSectionProps) {
   const [formValues, setFormValues] = useState<ContactFormValues>(initialFormValues);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -114,7 +116,7 @@ export default function OverOnsContactSection({
   return (
     <SectionContainer
       className="bg-[#F8F9F9]"
-      contentClassName="pb-[80px] pt-[80px] md:pb-[80px] md:pt-[80px]"
+      contentClassName={sectionContentClassName}
     >
       <section
         id="contact"

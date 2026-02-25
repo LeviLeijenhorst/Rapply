@@ -7,6 +7,7 @@ import { asyncHandler, sendError } from "../http"
 
 type RegisterAnalyticsRoutesParams = {
   rateLimitAccount: RequestHandler
+  rateLimitPublic: RequestHandler
 }
 
 type AnalyticsApp = "website" | "webapp"
@@ -215,7 +216,7 @@ function readRequesterContext(req: Request): { ipAddress: string | null; userAge
 export function registerAnalyticsRoutes(app: Express, params: RegisterAnalyticsRoutesParams): void {
   app.post(
     "/analytics/public/events",
-    params.rateLimitAccount,
+    params.rateLimitPublic,
     asyncHandler(async (req, res) => {
       const analyticsApp = parseApp(req.body?.app)
       if (!analyticsApp) {

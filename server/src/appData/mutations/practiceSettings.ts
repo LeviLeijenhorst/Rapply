@@ -34,6 +34,7 @@ export async function updatePracticeSettings(
           tint_color = excluded.tint_color,
           logo_data_url = excluded.logo_data_url,
           updated_at_unix_ms = excluded.updated_at_unix_ms
+      where excluded.updated_at_unix_ms >= public.practice_settings.updated_at_unix_ms
     `,
     [userId, practiceName, website, tintColor, logoDataUrl, params.updatedAtUnixMs],
   )

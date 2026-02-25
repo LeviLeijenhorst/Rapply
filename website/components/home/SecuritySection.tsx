@@ -103,7 +103,7 @@ export default function SecuritySection({
   return (
     <SectionContainer
       className="bg-white bg-[linear-gradient(to_top_right,_rgba(184,212,255,0.25),_rgba(198,175,255,0.25))]"
-      contentClassName={duplicateCards ? "pt-12 pb-14 md:pt-16 md:pb-20" : "md:pb-[60px]"}
+      contentClassName={duplicateCards ? "pt-12 pb-12 md:pt-16 md:pb-16" : "md:pb-[60px]"}
     >
       {/* Security content */}
       <div

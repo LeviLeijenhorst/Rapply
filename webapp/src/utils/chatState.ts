@@ -2,6 +2,7 @@ export type ChatStateMessage = {
   id: string
   role: 'user' | 'assistant'
   text: string
+  promptText?: string
 }
 
 export function createChatMessageId() {

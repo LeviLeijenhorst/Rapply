@@ -109,6 +109,15 @@ function buildSessionScopeLine(sessionId: string) {
   return `Session-ID: ${sessionId}`
 }
 
+// Intent: removeSpeakerLabelsFromOutput
+function removeSpeakerLabelsFromOutput(value: string): string {
+  return String(value || "")
+    .replace(/\bspeaker[_\s-]*\d+\b\s*:?\s*/gi, "")
+    .replace(/\bspreker[_\s-]*\d+\b\s*:?\s*/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+}
+
 export function buildChatPolicySystemPrompt() {
   return [
     "U bent een Nederlandstalige assistent voor loopbaan- en re-integratiecoaches.",
@@ -117,6 +126,8 @@ export function buildChatPolicySystemPrompt() {
     "Verzin nooit feiten, citaten, gebeurtenissen of actiepunten.",
     "Als een vraag om actiepunten vraagt, noem alleen actiepunten die expliciet in de context of gebruikerstekst staan.",
     "Als er geen expliciete actiepunten zijn, zeg dat duidelijk en voeg geen nieuwe actiepunten toe.",
+    "Noem of gebruik nooit sprekerlabels zoals 'speaker_1', 'speaker 1', 'spreker 1' of vergelijkbare labels.",
+    "Als de context onvoldoende is, weiger niet onnodig: geef een bruikbaar, best-effort antwoord op basis van de gebruikerstekst, markeer aannames kort en stel zo nodig een verduidelijkingsvraag.",
   ].join(" ")
 }
 
@@ -172,5 +183,5 @@ export async function completeChatWithAzureOpenAi(params: {
   if (!text) {
     throw new Error("No chat response returned")
   }
-  return text
+  return removeSpeakerLabelsFromOutput(text)
 }

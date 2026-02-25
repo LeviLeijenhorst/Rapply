@@ -27,8 +27,8 @@ create index if not exists contact_submissions_created_at_idx on public.contact_
 
 insert into public.signup_email_allowlist (id, email, added_by_email)
 values ('d44fc71f-3afe-4726-a35f-66741b0920ed', 'ltleijenhorst@gmail.com', 'ltleijenhorst@gmail.com')
-on conflict (email) do nothing;
+on conflict do nothing;
 
 insert into public.signup_email_allowlist (id, email, added_by_email)
 values ('a0d7e2b2-c0f6-4dcb-8b67-0deec3575ad2', 'xomikod667@dolofan.com', 'xomikod667@dolofan.com')
-on conflict (email) do nothing;
+on conflict do nothing;

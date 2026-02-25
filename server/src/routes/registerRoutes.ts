@@ -16,6 +16,7 @@ type RegisterRoutesParams = {
   diagnosticLogVersion: string
   rateLimitAi: RequestHandler
   rateLimitBilling: RequestHandler
+  rateLimitPublic: RequestHandler
   rateLimitTranscription: RequestHandler
   rateLimitAccount: RequestHandler
   hasDatabaseUrl: boolean
@@ -33,6 +34,7 @@ type RegisterRoutesParams = {
   rateLimitWindowMs: number
   rateLimitMaxRequests: number
   azureSpeechConfigured: boolean
+  getRequiredSchemaCheckStatus: () => { checkedAtUnixMs: number | null; missingRequiredColumns: string[] }
 }
 
 // Registers all API route groups in a single explicit order.
@@ -56,14 +58,15 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
     rateLimitWindowMs: params.rateLimitWindowMs,
     rateLimitMaxRequests: params.rateLimitMaxRequests,
     azureSpeechConfigured: params.azureSpeechConfigured,
+    getRequiredSchemaCheckStatus: params.getRequiredSchemaCheckStatus,
   })
 
   registerAuthRoutes(app)
-  registerAnalyticsRoutes(app, { rateLimitAccount: params.rateLimitAccount })
+  registerAnalyticsRoutes(app, { rateLimitAccount: params.rateLimitAccount, rateLimitPublic: params.rateLimitPublic })
   registerE2eeRoutes(app, { rateLimitAccount: params.rateLimitAccount })
   registerAppDataRoutes(app)
   registerAiRoutes(app, { rateLimitAi: params.rateLimitAi })
-  registerFeedbackRoutes(app, { rateLimitAccount: params.rateLimitAccount })
+  registerFeedbackRoutes(app, { rateLimitAccount: params.rateLimitAccount, rateLimitPublic: params.rateLimitPublic })
   registerAdminTranscriptionRoutes(app, { rateLimitAccount: params.rateLimitAccount })
   registerBillingRoutes(app, { rateLimitBilling: params.rateLimitBilling })
   registerTranscriptionRoutes(app, { rateLimitTranscription: params.rateLimitTranscription })

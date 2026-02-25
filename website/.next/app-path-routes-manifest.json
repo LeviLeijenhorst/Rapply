@@ -1,4 +1,5 @@
 {
+  "/(site)/ROI/page": "/ROI",
   "/(site)/coaches/page": "/coaches",
   "/(site)/contact/page": "/contact",
   "/(site)/gebruikersovereenkomst/page": "/gebruikersovereenkomst",
@@ -13,6 +14,8 @@
   "/(site)/wachtlijst/page": "/wachtlijst",
   "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
+  "/apple-icon.png/route": "/apple-icon.png",
   "/favicon.ico/route": "/favicon.ico",
+  "/icon.png/route": "/icon.png",
   "/icon.svg/route": "/icon.svg"
 }

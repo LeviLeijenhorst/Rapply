@@ -109,6 +109,14 @@ function formatDateTime(value: string): string {
   return parsed.toLocaleString('nl-NL')
 }
 
+function parseDecimalInput(value: string): number | null {
+  const normalized = value.trim().replace(',', '.')
+  if (!normalized) return null
+  const parsed = Number(normalized)
+  if (!Number.isFinite(parsed)) return null
+  return parsed
+}
+
 function minutesToReports(minutes: number): number {
   return Math.max(0, Math.floor(minutes / 60))
 }
@@ -145,6 +153,7 @@ export function AdminRevenueScreen() {
   const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>('azure-fast-batch')
   const [transcriptionModeUpdatedAt, setTranscriptionModeUpdatedAt] = useState<string | null>(null)
   const [isTranscriptionModeBusy, setIsTranscriptionModeBusy] = useState(false)
+  const [addMonthlyMinutesInput, setAddMonthlyMinutesInput] = useState('')
   const [analyticsWindowDays, setAnalyticsWindowDays] = useState(30)
   const [analyticsCounters, setAnalyticsCounters] = useState<AnalyticsCounters>({
     websiteVisits: 0,
@@ -333,8 +342,10 @@ export function AdminRevenueScreen() {
   useEffect(() => {
     if (!selectedUser) {
       setSelectedUserForm(null)
+      setAddMonthlyMinutesInput('')
       return
     }
+    setAddMonthlyMinutesInput('')
     setSelectedUserForm({
       planId: selectedUser.planId,
       customMonthlyPrice: selectedUser.customMonthlyPrice == null ? '' : String(selectedUser.customMonthlyPrice),
@@ -379,10 +390,15 @@ export function AdminRevenueScreen() {
 
   const saveSelectedUser = useCallback(async () => {
     if (!selectedUser || !selectedUserForm) return
-    const customMonthlyPrice = selectedUserForm.customMonthlyPrice.trim()
+    const customMonthlyPriceRaw = selectedUserForm.customMonthlyPrice.trim()
+    const parsedCustomMonthlyPrice = customMonthlyPriceRaw.length > 0 ? parseDecimalInput(customMonthlyPriceRaw) : null
     const extraMinutes = Number(selectedUserForm.extraMinutes)
     if (!Number.isFinite(extraMinutes) || extraMinutes < 0) {
       setStatusMessage('Extra minuten moeten 0 of hoger zijn.')
+      return
+    }
+    if (customMonthlyPriceRaw.length > 0 && (parsedCustomMonthlyPrice == null || parsedCustomMonthlyPrice < 0)) {
+      setStatusMessage('Custom prijs p/m moet een geldig bedrag zijn (bijv. 49,95).')
       return
     }
 
@@ -392,7 +408,7 @@ export function AdminRevenueScreen() {
       await callSecureApi<{ ok: true }>('/admin/users/update-pricing-controls', {
         userId: selectedUser.userId,
         planId: selectedUserForm.planId,
-        customMonthlyPrice: customMonthlyPrice.length > 0 ? Number(customMonthlyPrice) : null,
+        customMonthlyPrice: parsedCustomMonthlyPrice,
         extraMinutes: Math.trunc(extraMinutes),
         accountType: selectedUserForm.accountType,
         isAllowlisted: selectedUserForm.isAllowlisted,
@@ -408,6 +424,36 @@ export function AdminRevenueScreen() {
       setIsBusy(false)
     }
   }, [loadData, selectedUser, selectedUserForm, showErrorToast])
+
+  const addMonthlyMinutes = useCallback(async () => {
+    if (!selectedUser) return
+    const additionalMinutesRaw = Number(addMonthlyMinutesInput)
+    if (!Number.isFinite(additionalMinutesRaw) || additionalMinutesRaw <= 0) {
+      setStatusMessage('Voer een geldig aantal extra minuten per maand in.')
+      return
+    }
+
+    try {
+      setIsBusy(true)
+      setStatusMessage(null)
+      const response = await callSecureApi<{ ok: true; addedMinutes: number; extraMinutes: number; availableMinutesPerMonth: number }>(
+        '/admin/users/add-monthly-minutes',
+        {
+          userId: selectedUser.userId,
+          additionalMinutes: Math.trunc(additionalMinutesRaw),
+        },
+      )
+      setStatusMessage(
+        `${response.addedMinutes} minuten per maand toegevoegd. Nieuw extra totaal: ${response.extraMinutes} min. Beschikbaar per maand: ${response.availableMinutesPerMonth} min.`,
+      )
+      setAddMonthlyMinutesInput('')
+      await loadData()
+    } catch (error) {
+      showErrorToast(parseError(error), 'Extra minuten toevoegen mislukt.')
+    } finally {
+      setIsBusy(false)
+    }
+  }, [addMonthlyMinutesInput, loadData, selectedUser, showErrorToast])
 
   function updatePlanValue(planId: string, patch: Partial<Plan>) {
     setPlans((prev) => prev.map((plan) => (plan.id === planId ? { ...plan, ...patch } : plan)))
@@ -725,8 +771,31 @@ export function AdminRevenueScreen() {
                       />
                     </View>
                     <View style={styles.fieldColumn}>
-                      <Text style={styles.fieldLabel}>Extra minuten</Text>
+                      <Text style={styles.fieldLabel}>Extra minuten p/m (totaal)</Text>
                       <TextInput value={selectedUserForm.extraMinutes} onChangeText={(value) => setSelectedUserForm((prev) => (prev ? { ...prev, extraMinutes: value } : prev))} placeholder="0" placeholderTextColor={colors.textSecondary} keyboardType="numeric" style={styles.input} />
+                    </View>
+                  </View>
+                  <View style={styles.userInputRow}>
+                    <View style={styles.fieldColumn}>
+                      <Text style={styles.fieldLabel}>Extra minuten p/m toevoegen</Text>
+                      <TextInput
+                        value={addMonthlyMinutesInput}
+                        onChangeText={setAddMonthlyMinutesInput}
+                        placeholder="bijv. 300"
+                        placeholderTextColor={colors.textSecondary}
+                        keyboardType="numeric"
+                        style={styles.input}
+                      />
+                    </View>
+                    <View style={styles.fieldColumn}>
+                      <Text style={styles.fieldLabel}>Snelle actie</Text>
+                      <Pressable
+                        onPress={() => void addMonthlyMinutes()}
+                        style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined, isBusy ? styles.buttonDisabled : undefined]}
+                        disabled={isBusy}
+                      >
+                        <Text isBold style={styles.primaryButtonText}>Minuten toevoegen</Text>
+                      </Pressable>
                     </View>
                   </View>
 

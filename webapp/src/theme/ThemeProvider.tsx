@@ -1,4 +1,4 @@
-import React, { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import React, { ReactNode, createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from 'react'
 
 import { ThemeMode, colorTokens } from './colors'
 import { writeStoredThemeMode } from './themeStorage'
@@ -32,7 +32,7 @@ function getInitialThemeMode(): ThemeMode {
 export function ThemeProvider({ children }: Props) {
   const [mode, setMode] = useState<ThemeMode>(() => getInitialThemeMode())
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     applyThemeMode(mode)
     writeStoredThemeMode(mode)
   }, [mode])

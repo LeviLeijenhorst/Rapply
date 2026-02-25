@@ -9,24 +9,22 @@ import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 type QuickQuestionOption = {
   id: string
   text: string
+  promptText: string
 }
 
 type Props = {
-  coacheeName: string
-  onSelectOption: (fullSentence: string) => void
+  templates: { id: string; name: string; promptText?: string }[]
+  onSelectOption: (option: { text: string; promptText: string }) => void
 }
 
-function buildOptions(coacheeName: string): QuickQuestionOption[] {
-  void coacheeName
-  return [
-    { id: 'plan-van-aanpak', text: 'een concept plan van aanpak voor het re-integratietraject.' },
-    { id: 'belemmeringen', text: 'de belangrijkste belemmerende en bevorderende factoren voor werkhervatting.' },
-    { id: 'actielijst', text: 'een concrete actielijst met deadlines voor coach en cliënt.' },
-    { id: 'eerste-evaluatie', text: 'een opzet voor de eerstejaarsevaluatie op basis van dit gesprek.' },
-    { id: 'tweede-spoor', text: 'een samenvatting met focus op tweede spoor en arbeidsmogelijkheden.' },
-    { id: 'werkgever-terugkoppeling', text: 'een zakelijke terugkoppeling die geschikt is voor de werkgever.' },
-    { id: 'volgende-sessie', text: 'een voorstel voor agenda en doelen van het volgende gesprek.' },
-  ]
+function buildOptions(templates: { id: string; name: string; promptText?: string }[]): QuickQuestionOption[] {
+  return templates
+    .map((template) => {
+      const text = String(template.name || '').trim()
+      const promptText = String(template.promptText || '').trim() || text
+      return { id: String(template.id || '').trim(), text, promptText }
+    })
+    .filter((template) => template.id.length > 0 && template.text.length > 0 && template.promptText.length > 0)
 }
 
 function shuffleOptions(options: QuickQuestionOption[]) {
@@ -40,11 +38,11 @@ function shuffleOptions(options: QuickQuestionOption[]) {
   return nextOptions
 }
 
-export function QuickQuestionsStart({ coacheeName, onSelectOption }: Props) {
+export function QuickQuestionsStart({ templates, onSelectOption }: Props) {
   const opacity = useRef(new Animated.Value(1)).current
   const translateY = useRef(new Animated.Value(0)).current
   const [isAnimating, setIsAnimating] = useState(false)
-  const baseOptions = useMemo(() => buildOptions(coacheeName), [coacheeName])
+  const baseOptions = useMemo(() => buildOptions(templates), [templates])
   const [optionsOrder, setOptionsOrder] = useState<QuickQuestionOption[]>(() => shuffleOptions(baseOptions))
   const [activeIndex, setActiveIndex] = useState(0)
   const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false)
@@ -114,7 +112,7 @@ export function QuickQuestionsStart({ coacheeName, onSelectOption }: Props) {
     <View style={styles.container}>
       {/* Intro line */}
       <Text isSemibold style={styles.titleText}>
-        Ik wil...
+        Templates
       </Text>
 
       <Animated.View style={[styles.optionsContainer, { opacity, transform: [{ translateY }] }]}>
@@ -122,7 +120,7 @@ export function QuickQuestionsStart({ coacheeName, onSelectOption }: Props) {
         {visibleOptions.map((option) => (
           <Pressable
             key={option.id}
-            onPress={() => onSelectOption(`Ik wil ${option.text}`)}
+            onPress={() => onSelectOption({ text: option.text, promptText: option.promptText })}
             style={({ hovered }) => [styles.optionTextButton, hovered ? styles.optionTextButtonHovered : undefined]}
           >
             {/* Quick option text */}
@@ -157,7 +155,7 @@ export function QuickQuestionsStart({ coacheeName, onSelectOption }: Props) {
           <View style={styles.modalBody}>
             <View style={styles.modalHeader}>
               <Text isSemibold style={styles.modalTitle}>
-                Ik wil...
+                Templates
               </Text>
             </View>
             <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
@@ -191,7 +189,7 @@ export function QuickQuestionsStart({ coacheeName, onSelectOption }: Props) {
             <Pressable
               onPress={() => {
                 if (!selectedOption) return
-                onSelectOption(`Ik wil ${selectedOption.text}`)
+                onSelectOption({ text: selectedOption.text, promptText: selectedOption.promptText })
                 setIsOptionsModalVisible(false)
               }}
               disabled={!selectedOption}

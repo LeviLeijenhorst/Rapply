@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
+import { ActivityIndicator, Animated, Easing, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
+import Svg, { G, Rect } from 'react-native-svg'
 
 import { AuthCard } from '../components/AuthCard'
 import { CoachscribeLogo } from '../../components/CoachscribeLogo'
@@ -13,16 +14,72 @@ type Props = {
   errorMessage?: string | null
 }
 
+const BACKGROUND_RECT_ROTATIONS = [-14.3046, -30.2452, -58.7584, -78.4897, -94.1937]
+const BACKGROUND_RECT_RADIUS_RATIO = 149.5 / 687
+
+function AuthEntryBackgroundPattern({ size }: { size: number }) {
+  const center = size / 2
+  const radius = size * BACKGROUND_RECT_RADIUS_RATIO
+
+  return (
+    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} overflow="visible">
+      {BACKGROUND_RECT_ROTATIONS.map((angle) => (
+        <G key={angle} rotation={angle} originX={center} originY={center}>
+          <Rect
+            x={0}
+            y={0}
+            width={size}
+            height={size}
+            rx={radius}
+            fill="#FFFFFF"
+            fillOpacity={0.35}
+            stroke="none"
+          />
+        </G>
+      ))}
+    </Svg>
+  )
+}
+
 export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
   const { width, height } = useWindowDimensions()
   const [isStartingLogin, setIsStartingLogin] = useState(false)
   const { showErrorToast } = useToast()
   const squareSize = Math.min(640, width - 140, height - 140)
+  const entranceProgress = React.useRef(new Animated.Value(0)).current
 
   useEffect(() => {
     if (!errorMessage) return
     showErrorToast(errorMessage, 'Inloggen mislukt. Probeer het opnieuw.')
   }, [errorMessage, showErrorToast])
+
+  useEffect(() => {
+    entranceProgress.setValue(0)
+    Animated.timing(entranceProgress, {
+      toValue: 1,
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start()
+  }, [entranceProgress])
+
+  const entranceStyle = {
+    opacity: entranceProgress,
+    transform: [
+      {
+        translateY: entranceProgress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [10, 0],
+        }),
+      },
+      {
+        scale: entranceProgress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.985, 1],
+        }),
+      },
+    ],
+  }
 
   async function startLogin() {
     if (isStartingLogin) return
@@ -44,63 +101,89 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
   }
 
   return (
-    <AuthCard style={[styles.squareCard, { width: squareSize, height: squareSize }]}>
-      {/* Welcome panel */}
-      <View style={styles.welcomePanel}>
-        {/* Welcome content */}
-        <View style={styles.welcomeContent}>
-          <View style={styles.topContent}>
-            {/* Brand header */}
-            <View style={styles.brandHeader}>
-              {/* Brand logo */}
-              <CoachscribeLogo />
-              {/* Brand tagline */}
-              <Text style={styles.brandTagline}>Focus op de mens</Text>
-            </View>
-            {/* Welcome title */}
-            <Text isBold style={styles.welcomeTitle}>
-              Welkom
-            </Text>
-            {/* Welcome description */}
-            <Text style={styles.welcomeParagraph}>
-              CoachScribe ondersteunt <Text isBold style={styles.welcomeParagraphBold}>loopbaan- en re-integratieprofessionals</Text> bij heldere dossiervorming en het bewaren van overzicht.
-            </Text>
-            {/* Welcome description */}
-            <Text style={styles.welcomeParagraph}>
-              Gesprekken en afspraken worden veilig vastgelegd en gestructureerd, zodat jij meer tijd houdt voor de begeleiding van je client.
-            </Text>
-          </View>
-          {/* Continue button */}
-          <Pressable
-            disabled={isStartingLogin}
-            onPress={startLogin}
-            style={({ hovered }) => [
-              styles.actionButton,
-              styles.actionButtonBottom,
-              isStartingLogin ? styles.actionButtonDisabled : undefined,
-              !isStartingLogin && hovered ? styles.actionButtonHovered : undefined,
-            ]}
-          >
-            {isStartingLogin ? (
-              <ActivityIndicator size="small" color={colors.selected} />
-            ) : (
-              <Text isBold style={styles.actionButtonText}>
-                Doorgaan
-              </Text>
-            )}
-          </Pressable>
+    <Animated.View style={entranceStyle}>
+      <View style={[styles.cardStack, { width: squareSize, height: squareSize }]}>
+        <View pointerEvents="none" style={styles.backgroundPattern}>
+          <AuthEntryBackgroundPattern size={squareSize} />
         </View>
+        <AuthCard style={styles.squareCard}>
+          {/* Welcome panel */}
+          <View style={styles.welcomePanel}>
+            {/* Welcome content */}
+            <View style={styles.welcomeContent}>
+              <View style={styles.topContent}>
+                {/* Brand header */}
+                <View style={styles.brandHeader}>
+                  {/* Brand logo */}
+                  <CoachscribeLogo />
+                  {/* Brand tagline */}
+                  <Text style={styles.brandTagline}>Focus op de mens</Text>
+                </View>
+                {/* Welcome title */}
+                <Text isBold style={styles.welcomeTitle}>
+                  Welkom
+                </Text>
+                {/* Welcome description */}
+                <Text style={styles.welcomeParagraph}>
+                  CoachScribe ondersteunt <Text isBold style={styles.welcomeParagraphBold}>loopbaan- en re-integratieprofessionals</Text> bij heldere dossiervorming en het bewaren van overzicht.
+                </Text>
+                {/* Welcome description */}
+                <Text style={styles.welcomeParagraph}>
+                  Gesprekken en afspraken worden veilig vastgelegd en gestructureerd, zodat jij meer tijd houdt voor de begeleiding van je client.
+                </Text>
+              </View>
+              {/* Continue button */}
+              <Pressable
+                disabled={isStartingLogin}
+                onPress={startLogin}
+                style={({ hovered }) => [
+                  styles.actionButton,
+                  styles.actionButtonBottom,
+                  isStartingLogin ? styles.actionButtonDisabled : undefined,
+                  !isStartingLogin && hovered ? styles.actionButtonHovered : undefined,
+                ]}
+              >
+                {isStartingLogin ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text isBold style={styles.actionButtonText}>
+                    Doorgaan
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </AuthCard>
       </View>
-    </AuthCard>
+    </Animated.View>
   )
 }
 
 const styles = StyleSheet.create({
-  squareCard: {
+  cardStack: {
     maxWidth: '100%',
     alignSelf: 'center',
+    position: 'relative',
+    overflow: 'visible',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backgroundPattern: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 0,
+  },
+  squareCard: {
+    width: '100%',
+    height: '100%',
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
+    zIndex: 1,
   },
   brandHeader: {
     width: '100%',

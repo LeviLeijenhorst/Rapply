@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native'
 
 import { CircleCloseIcon } from '../components/icons/CircleCloseIcon'
+import { PracticeColorPicker } from '../components/PracticeColorPicker'
 import { EditSmallIcon } from '../components/icons/EditSmallIcon'
 import { PracticeExportIcon } from '../components/icons/PracticeExportIcon'
 import { Text } from '../components/Text'
@@ -16,26 +17,6 @@ function normalizeHexColor(value: string) {
   const trimmed = String(value || '').trim()
   if (!/^#[0-9a-fA-F]{6}$/.test(trimmed)) return '#BE0165'
   return trimmed.toUpperCase()
-}
-
-function sanitizeHexInput(value: string) {
-  return String(value || '')
-    .replace('#', '')
-    .replace(/[^0-9a-fA-F]/g, '')
-    .slice(0, 6)
-    .toUpperCase()
-}
-
-function normalizeHexInputOnBlur(input: string) {
-  const sanitized = sanitizeHexInput(input)
-  if (sanitized.length === 3) {
-    return sanitized
-      .split('')
-      .map((character) => `${character}${character}`)
-      .join('')
-  }
-  if (sanitized.length === 6) return sanitized
-  return 'BE0165'
 }
 
 async function readFileAsDataUrl(file: File): Promise<string> {
@@ -53,35 +34,50 @@ export function MijnPraktijkScreen() {
 
   const [practiceNameDraft, setPracticeNameDraft] = useState(settings.practiceName)
   const [websiteDraft, setWebsiteDraft] = useState(settings.website)
-  const [tintColorInput, setTintColorInput] = useState(normalizeHexColor(settings.tintColor || '#BE0165').replace('#', ''))
+  const [tintColorDraft, setTintColorDraft] = useState(normalizeHexColor(settings.tintColor || '#BE0165'))
   const [isDragActive, setIsDragActive] = useState(false)
   const [isLogoHovered, setIsLogoHovered] = useState(false)
   const [isRemoveLogoConfirmOpen, setIsRemoveLogoConfirmOpen] = useState(false)
+  const tintColorAutosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const logoDropAreaRef = useRef<View | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const colorInputRef = useRef<TextInput | null>(null)
 
   const hiddenFileInputStyle = useMemo(() => ({ position: 'absolute', opacity: 0, width: 0, height: 0 }), [])
-
-  const tintColorDraft = useMemo(() => {
-    const normalized = sanitizeHexInput(tintColorInput)
-    if (normalized.length === 3) {
-      const expanded = normalized
-        .split('')
-        .map((character) => `${character}${character}`)
-        .join('')
-      return `#${expanded}`
-    }
-    if (normalized.length === 6) return `#${normalized}`
-    return normalizeHexColor(settings.tintColor || '#BE0165')
-  }, [settings.tintColor, tintColorInput])
 
   useEffect(() => {
     setPracticeNameDraft(settings.practiceName)
     setWebsiteDraft(settings.website)
-    setTintColorInput(normalizeHexColor(settings.tintColor || '#BE0165').replace('#', ''))
+    setTintColorDraft(normalizeHexColor(settings.tintColor || '#BE0165'))
   }, [settings.practiceName, settings.website, settings.tintColor])
+
+  useEffect(() => {
+    const normalizedDraft = normalizeHexColor(tintColorDraft)
+    const normalizedStored = normalizeHexColor(settings.tintColor || '#BE0165')
+    if (normalizedDraft === normalizedStored) {
+      if (tintColorAutosaveTimeoutRef.current) {
+        clearTimeout(tintColorAutosaveTimeoutRef.current)
+        tintColorAutosaveTimeoutRef.current = null
+      }
+      return
+    }
+
+    if (tintColorAutosaveTimeoutRef.current) {
+      clearTimeout(tintColorAutosaveTimeoutRef.current)
+      tintColorAutosaveTimeoutRef.current = null
+    }
+    tintColorAutosaveTimeoutRef.current = setTimeout(() => {
+      tintColorAutosaveTimeoutRef.current = null
+      updatePracticeSettings({ tintColor: normalizedDraft })
+    }, 280)
+
+    return () => {
+      if (tintColorAutosaveTimeoutRef.current) {
+        clearTimeout(tintColorAutosaveTimeoutRef.current)
+        tintColorAutosaveTimeoutRef.current = null
+      }
+    }
+  }, [settings.tintColor, tintColorDraft, updatePracticeSettings])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -145,30 +141,8 @@ export function MijnPraktijkScreen() {
 
   function persistTintColor(nextColor: string) {
     const normalized = normalizeHexColor(nextColor)
-    setTintColorInput(normalized.replace('#', ''))
+    setTintColorDraft(normalized)
     updatePracticeSettings({ tintColor: normalized })
-  }
-
-  function handleTintColorChange(nextValue: string) {
-    const sanitized = sanitizeHexInput(nextValue)
-    setTintColorInput(sanitized)
-    if (sanitized.length === 6) {
-      persistTintColor(`#${sanitized}`)
-      return
-    }
-    if (sanitized.length === 3) {
-      const expanded = sanitized
-        .split('')
-        .map((character) => `${character}${character}`)
-        .join('')
-      persistTintColor(`#${expanded}`)
-    }
-  }
-
-  function handleTintColorBlur() {
-    const normalizedWithoutHash = normalizeHexInputOnBlur(tintColorInput)
-    setTintColorInput(normalizedWithoutHash)
-    persistTintColor(`#${normalizedWithoutHash}`)
   }
 
   async function handleLogoFileSelected(file: File | null) {
@@ -187,7 +161,7 @@ export function MijnPraktijkScreen() {
   return (
     <View style={styles.container}>
       <Text isSemibold style={styles.headerTitle}>
-        Mijn praktijk
+        Huisstijl
       </Text>
 
       <View style={styles.formSection}>
@@ -197,22 +171,21 @@ export function MijnPraktijkScreen() {
         <View style={styles.logoColorRow}>
           <View style={styles.colorColumn}>
             <Text isSemibold style={styles.fieldLabelText}>
-              Kleur
+              Kleur (De kleur van gegenereerde PDF's)
             </Text>
             <View style={styles.colorPickerWrap}>
-              <Pressable onPress={() => colorInputRef.current?.focus()} style={[styles.colorCard, { backgroundColor: tintColorDraft }]}>
-                <TextInput
-                  ref={colorInputRef}
-                  value={tintColorInput}
-                  onChangeText={handleTintColorChange}
-                  onBlur={handleTintColorBlur}
-                  placeholder="BE0165"
-                  placeholderTextColor="rgba(255,255,255,0.85)"
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                  style={styles.colorHexInput}
-                />
-              </Pressable>
+              <PracticeColorPicker
+                value={tintColorDraft}
+                onPreviewChange={(nextColor) => setTintColorDraft(normalizeHexColor(nextColor))}
+                onCommit={(nextColor) => {
+                  const normalized = normalizeHexColor(nextColor)
+                  if (normalized === normalizeHexColor(settings.tintColor || '#BE0165')) {
+                    setTintColorDraft(normalized)
+                    return
+                  }
+                  persistTintColor(normalized)
+                }}
+              />
             </View>
           </View>
 
@@ -336,6 +309,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     gap: 14,
+    paddingBottom: 84,
     ...( { overflow: 'visible' } as any ),
   },
   headerTitle: {
@@ -400,7 +374,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   colorColumn: {
-    width: brandControlSize,
+    width: 176,
     maxWidth: '100%',
     gap: 8,
   },
@@ -463,28 +437,5 @@ const styles = StyleSheet.create({
   colorPickerWrap: {
     width: '100%',
     position: 'relative',
-  },
-  colorCard: {
-    width: brandControlSize,
-    maxWidth: '100%',
-    height: brandControlSize,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...( { cursor: 'pointer' } as any ),
-  },
-  colorHexInput: {
-    width: 88,
-    height: 42,
-    borderRadius: 0,
-    borderWidth: 0,
-    backgroundColor: 'transparent',
-    paddingHorizontal: 12,
-    textAlign: 'center',
-    fontSize: fontSizes.md,
-    lineHeight: 22,
-    color: '#FFFFFF',
-    letterSpacing: 1,
-    ...( { outlineStyle: 'none', outlineWidth: 0, cursor: 'pointer' } as any ),
   },
 })

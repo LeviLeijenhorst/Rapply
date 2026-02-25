@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 import { colors } from '../theme/colors'
 import { CoacheesIcon } from './icons/CoacheesIcon'
 import { FeedbackIcon } from './icons/FeedbackIcon'
+import { MijnPraktijkIcon } from './icons/MijnPraktijkIcon'
 import { PlusIcon } from './icons/PlusIcon'
 import { SessiesIcon } from './icons/SessiesIcon'
 import { SettingsIcon } from './icons/SettingsIcon'
@@ -123,13 +124,13 @@ export function Sidebar({
               isCompact={isCompact}
             />
           ) : null}
-          {/* <SidebarItem
-            label="Mijn praktijk"
+          <SidebarItem
+            label="Huisstijl"
             isSelected={selectedSidebarItemKey === 'mijnPraktijk'}
             onPress={() => onSelectSidebarItem('mijnPraktijk')}
             icon={<MijnPraktijkIcon color={selectedSidebarItemKey === 'mijnPraktijk' ? selectedColor : unselectedColor} size={24} />}
             isCompact={isCompact}
-          /> */}
+          />
           {selectedSidebarItemKey === 'archief' ? (
             <SidebarItem
               label="Archief"

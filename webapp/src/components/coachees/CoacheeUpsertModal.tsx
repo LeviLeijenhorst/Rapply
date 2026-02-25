@@ -50,13 +50,6 @@ function parseDateInput(value: string): Date | null {
   return candidate
 }
 
-function formatDateDigitsInput(raw: string) {
-  const digits = raw.replace(/\D/g, '').slice(0, 8)
-  if (digits.length <= 2) return digits
-  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
-  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
-}
-
 function getCalendarCells(monthDate: Date): CalendarCell[] {
   const year = monthDate.getFullYear()
   const month = monthDate.getMonth()
@@ -90,15 +83,23 @@ function getCalendarCells(monthDate: Date): CalendarCell[] {
 }
 
 export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSave }: Props) {
+  const CALENDAR_PANEL_WIDTH = 320
+  const CALENDAR_PANEL_HEIGHT = 320
+  const CALENDAR_PANEL_OFFSET = 8
   const [values, setValues] = useState<CoacheeUpsertValues>(initialValues)
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
   const [visibleMonth, setVisibleMonth] = useState<Date>(new Date())
+  const [calendarAnchor, setCalendarAnchor] = useState<{ left: number; top: number } | null>(null)
+  const containerRef = useRef<View | null>(null)
+  const calendarButtonRef = useRef<View | null>(null)
   const firstNameInputRef = useRef<TextInput | null>(null)
+  const firstSickDayInputRef = useRef<TextInput | null>(null)
 
   useEffect(() => {
     if (!visible) return
     setValues(initialValues)
     setIsCalendarOpen(false)
+    setCalendarAnchor(null)
     const parsed = parseDateInput(initialValues.firstSickDay)
     setVisibleMonth(parsed ?? new Date())
   }, [initialValues, visible])
@@ -125,6 +126,46 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
     setValues((previous) => ({ ...previous, [key]: nextValue }))
   }
 
+  function clampFormattedDate(formatted: string) {
+    const match = formatted.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+    if (!match) return formatted
+    let day = Number(match[1])
+    let month = Number(match[2])
+    const year = Number(match[3])
+    if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) return formatted
+    if (month > 12) month = 12
+    if (month >= 1) {
+      const maxDay = new Date(year, month, 0).getDate()
+      if (day > maxDay) day = maxDay
+    }
+    return `${pad2(day)}/${pad2(month)}/${year}`
+  }
+
+  function formatDateInput(raw: string) {
+    const digits = raw.replace(/\D/g, '').slice(0, 8)
+    if (digits.length <= 2) return digits
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+  }
+
+  function updateCalendarAnchor() {
+    if (!containerRef.current || !calendarButtonRef.current) return
+    calendarButtonRef.current.measureLayout(
+      containerRef.current as any,
+      (left: number, top: number, width: number) => {
+        const alignedLeft = left + width - CALENDAR_PANEL_WIDTH
+        const aboveTop = top - CALENDAR_PANEL_HEIGHT - CALENDAR_PANEL_OFFSET
+        setCalendarAnchor({
+          left: Math.max(8, alignedLeft),
+          top: Math.max(8, aboveTop),
+        })
+      },
+      () => {
+        setCalendarAnchor(null)
+      },
+    )
+  }
+
   function renderInputRow(
     label: string,
     key: keyof CoacheeUpsertValues,
@@ -147,7 +188,7 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
             onChangeText={(text) => setValue(key, text as CoacheeUpsertValues[keyof CoacheeUpsertValues])}
             placeholder={options?.placeholder ?? ''}
             placeholderTextColor="#656565"
-            style={[styles.textInput, inputWebStyle]}
+            style={[styles.textInput, styles.inputCursorPointer, inputWebStyle]}
           />
           <Pressable
             onPress={() => {
@@ -165,6 +206,7 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
 
   return (
     <AnimatedOverlayModal visible={visible} onClose={onClose} contentContainerStyle={styles.container}>
+      <View ref={containerRef} style={styles.modalInner}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.headerIconCircle}>
@@ -181,13 +223,13 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
           Persoon
         </Text>
         {renderInputRow('Voornaam', 'firstName', { placeholder: 'Voornaam...', inputRef: firstNameInputRef, required: true })}
-        {renderInputRow('Achternaam', 'lastName', { placeholder: 'Achternaam (optioneel)...' })}
+        {renderInputRow('Achternaam', 'lastName', { placeholder: 'Achternaam...' })}
 
         <Text isSemibold style={styles.sectionTitle}>
           Cliëntgegevens
         </Text>
         {renderInputRow('E-mail', 'clientEmail', { placeholder: 'naam@voorbeeld.nl' })}
-        {renderInputRow('Telefoon', 'clientPhone', { placeholder: '06...' })}
+        {renderInputRow('Telefoon', 'clientPhone', { placeholder: '0622168360' })}
         {renderInputRow('Adres', 'clientAddress', { placeholder: 'Straat + huisnummer' })}
         {renderInputRow('Postcode', 'clientPostalCode', { placeholder: '1234 AB' })}
         {renderInputRow('Woonplaats', 'clientCity', { placeholder: 'Plaats' })}
@@ -206,90 +248,44 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Eerste ziektedag</Text>
           <View style={styles.dateRow}>
-            <View style={styles.dateInputWrap}>
+            <Pressable
+              onPress={() => firstSickDayInputRef.current?.focus()}
+              style={({ hovered }) => [styles.dateInputWrap, hovered ? styles.dateInputWrapHovered : undefined]}
+            >
               <TextInput
+                ref={firstSickDayInputRef}
                 value={values.firstSickDay}
                 onChangeText={(text) => {
-                  setValue('firstSickDay', formatDateDigitsInput(text))
+                  const formatted = formatDateInput(text)
+                  setValue('firstSickDay', clampFormattedDate(formatted))
+                  setIsCalendarOpen(false)
+                }}
+                onKeyPress={(event) => {
+                  if (event.nativeEvent.key !== 'Backspace') return
+                  if (!values.firstSickDay.endsWith('/')) return
+                  setValue('firstSickDay', values.firstSickDay.slice(0, -1))
                   setIsCalendarOpen(false)
                 }}
                 placeholder="dd/mm/jjjj"
                 placeholderTextColor="#656565"
                 keyboardType="number-pad"
-                style={[styles.textInput, inputWebStyle]}
+                style={[styles.textInput, styles.inputCursorPointer, inputWebStyle]}
               />
-            </View>
-            <Pressable
-              onPress={() => {
-                const parsed = parseDateInput(values.firstSickDay)
-                if (parsed) setVisibleMonth(parsed)
-                setIsCalendarOpen((previous) => !previous)
-              }}
-              style={({ hovered }) => [styles.calendarButton, hovered ? styles.calendarButtonHovered : undefined]}
-            >
-              <CalendarCircleIcon size={18} />
             </Pressable>
-          </View>
-          {isCalendarOpen ? (
-            <View style={styles.calendarPanel}>
-              <View style={styles.calendarHeader}>
-                <Pressable
-                  onPress={() => setVisibleMonth((previous) => new Date(previous.getFullYear(), previous.getMonth() - 1, 1))}
-                  style={({ hovered }) => [styles.calendarNavButton, hovered ? styles.calendarNavButtonHovered : undefined]}
-                >
-                  <Text isBold style={styles.calendarNavButtonText}>
-                    {'<'}
-                  </Text>
-                </Pressable>
-                <Text isSemibold style={styles.calendarMonthTitle}>
-                  {monthTitle}
-                </Text>
-                <Pressable
-                  onPress={() => setVisibleMonth((previous) => new Date(previous.getFullYear(), previous.getMonth() + 1, 1))}
-                  style={({ hovered }) => [styles.calendarNavButton, hovered ? styles.calendarNavButtonHovered : undefined]}
-                >
-                  <Text isBold style={styles.calendarNavButtonText}>
-                    {'>'}
-                  </Text>
-                </Pressable>
-              </View>
-              <View style={styles.calendarWeekRow}>
-                {dayLabels.map((dayLabel) => (
-                  <View key={dayLabel} style={styles.calendarDayLabelWrap}>
-                    <Text isSemibold style={styles.calendarDayLabel}>
-                      {dayLabel}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-              <View style={styles.calendarGrid}>
-                {calendarCells.map((cell) => {
-                  const isSelected = cell.isoDate === selectedIso
-                  return (
-                    <Pressable
-                      key={cell.isoDate}
-                      onPress={() => {
-                        const [year, month, day] = cell.isoDate.split('-').map(Number)
-                        setValue('firstSickDay', formatDateToInput(new Date(year, month - 1, day)))
-                        setVisibleMonth(new Date(year, month - 1, 1))
-                        setIsCalendarOpen(false)
-                      }}
-                      style={({ hovered }) => [
-                        styles.calendarDayButton,
-                        !cell.inCurrentMonth ? styles.calendarDayButtonOutside : undefined,
-                        isSelected ? styles.calendarDayButtonSelected : undefined,
-                        hovered ? styles.calendarDayButtonHovered : undefined,
-                      ]}
-                    >
-                      <Text style={[styles.calendarDayText, !cell.inCurrentMonth ? styles.calendarDayTextOutside : undefined, isSelected ? styles.calendarDayTextSelected : undefined]}>
-                        {cell.dayOfMonth}
-                      </Text>
-                    </Pressable>
-                  )
-                })}
-              </View>
+            <View ref={calendarButtonRef}>
+              <Pressable
+                onPress={() => {
+                  const parsed = parseDateInput(values.firstSickDay)
+                  if (parsed) setVisibleMonth(parsed)
+                  updateCalendarAnchor()
+                  setIsCalendarOpen((previous) => !previous)
+                }}
+                style={({ hovered }) => [styles.calendarButton, hovered ? styles.calendarButtonHovered : undefined]}
+              >
+                <CalendarCircleIcon size={18} />
+              </Pressable>
             </View>
-          ) : null}
+          </View>
         </View>
       </ScrollView>
 
@@ -309,6 +305,67 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
           </Text>
         </Pressable>
       </View>
+      {isCalendarOpen && calendarAnchor ? (
+        <View style={[styles.calendarPanel, { left: calendarAnchor.left, top: calendarAnchor.top }]}>
+          <View style={styles.calendarHeader}>
+            <Pressable
+              onPress={() => setVisibleMonth((previous) => new Date(previous.getFullYear(), previous.getMonth() - 1, 1))}
+              style={({ hovered }) => [styles.calendarNavButton, hovered ? styles.calendarNavButtonHovered : undefined]}
+            >
+              <Text isBold style={styles.calendarNavButtonText}>
+                {'<'}
+              </Text>
+            </Pressable>
+            <Text isSemibold style={styles.calendarMonthTitle}>
+              {monthTitle}
+            </Text>
+            <Pressable
+              onPress={() => setVisibleMonth((previous) => new Date(previous.getFullYear(), previous.getMonth() + 1, 1))}
+              style={({ hovered }) => [styles.calendarNavButton, hovered ? styles.calendarNavButtonHovered : undefined]}
+            >
+              <Text isBold style={styles.calendarNavButtonText}>
+                {'>'}
+              </Text>
+            </Pressable>
+          </View>
+          <View style={styles.calendarWeekRow}>
+            {dayLabels.map((dayLabel) => (
+              <View key={dayLabel} style={styles.calendarDayLabelWrap}>
+                <Text isSemibold style={styles.calendarDayLabel}>
+                  {dayLabel}
+                </Text>
+              </View>
+            ))}
+          </View>
+          <View style={styles.calendarGrid}>
+            {calendarCells.map((cell) => {
+              const isSelected = cell.isoDate === selectedIso
+              return (
+                <Pressable
+                  key={cell.isoDate}
+                  onPress={() => {
+                    const [year, month, day] = cell.isoDate.split('-').map(Number)
+                    setValue('firstSickDay', formatDateToInput(new Date(year, month - 1, day)))
+                    setVisibleMonth(new Date(year, month - 1, 1))
+                    setIsCalendarOpen(false)
+                  }}
+                  style={({ hovered }) => [
+                    styles.calendarDayButton,
+                    !cell.inCurrentMonth ? styles.calendarDayButtonOutside : undefined,
+                    isSelected ? styles.calendarDayButtonSelected : undefined,
+                    hovered ? styles.calendarDayButtonHovered : undefined,
+                  ]}
+                >
+                  <Text style={[styles.calendarDayText, !cell.inCurrentMonth ? styles.calendarDayTextOutside : undefined, isSelected ? styles.calendarDayTextSelected : undefined]}>
+                    {cell.dayOfMonth}
+                  </Text>
+                </Pressable>
+              )
+            })}
+          </View>
+        </View>
+      ) : null}
+      </View>
     </AnimatedOverlayModal>
   )
 }
@@ -321,6 +378,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 16,
     ...( { boxShadow: '0 20px 60px rgba(0,0,0,0.3)' } as any ),
+    overflow: 'visible',
+    position: 'relative',
+  },
+  modalInner: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 16,
+    backgroundColor: colors.surface,
     overflow: 'hidden',
   },
   header: {
@@ -354,10 +419,12 @@ const styles = StyleSheet.create({
   bodyScroll: {
     width: '100%',
     maxHeight: '68vh' as any,
+    ...( { overflow: 'visible' } as any ),
   },
   body: {
     padding: 24,
     gap: 12,
+    ...( { overflow: 'visible' } as any ),
   },
   sectionTitle: {
     marginTop: 4,
@@ -385,10 +452,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    ...( { cursor: 'text' } as any ),
+    ...( { cursor: 'pointer' } as any ),
   },
   inputRowHovered: {
-    backgroundColor: colors.hoverBackground,
+    borderColor: colors.selected,
   },
   textInput: {
     flex: 1,
@@ -396,6 +463,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 20,
     color: colors.textStrong,
+  },
+  inputCursorPointer: {
+    ...( { cursor: 'pointer' } as any ),
   },
   inputIconButton: {
     width: 30,
@@ -421,6 +491,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingHorizontal: 14,
     justifyContent: 'center',
+    ...( { cursor: 'pointer' } as any ),
+  },
+  dateInputWrapHovered: {
+    borderColor: colors.selected,
   },
   calendarButton: {
     width: 52,
@@ -431,11 +505,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
+    ...( { cursor: 'pointer' } as any ),
   },
   calendarButtonHovered: {
     backgroundColor: colors.hoverBackground,
+    borderColor: colors.selected,
   },
   calendarPanel: {
+    position: 'absolute',
+    zIndex: 50,
     width: 320,
     borderRadius: 14,
     borderWidth: 1,
@@ -527,6 +605,9 @@ const styles = StyleSheet.create({
     gap: 0,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    overflow: 'hidden',
   },
   footerSecondaryButton: {
     height: 48,
@@ -535,6 +616,7 @@ const styles = StyleSheet.create({
     minWidth: 140,
     alignItems: 'center',
     justifyContent: 'center',
+    borderBottomLeftRadius: 16,
   },
   footerSecondaryButtonHovered: {
     backgroundColor: colors.hoverBackground,
@@ -551,6 +633,7 @@ const styles = StyleSheet.create({
     minWidth: 140,
     alignItems: 'center',
     justifyContent: 'center',
+    borderBottomRightRadius: 16,
   },
   footerPrimaryButtonDisabled: {
     backgroundColor: '#CFA5BC',

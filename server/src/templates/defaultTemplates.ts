@@ -13,6 +13,15 @@ type TemplateBlueprint = {
   sections: Array<{ title: string; description: string }>
 }
 
+function normalizeTemplateName(name: string): string {
+  return String(name || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "")
+}
+
 const intakeDescription = `### Doel
 Het intakeverslag brengt de beginsituatie van het traject helder in kaart. Je legt vast wat er speelt, wat de belastbaarheid is en welke eerste afspraken worden gemaakt.
 
@@ -330,6 +339,14 @@ const reintegrationTemplateBlueprints: TemplateBlueprint[] = [
     ],
   },
 ]
+
+export function getReintegrationDefaultTemplateSectionsByName(name: string): Array<{ title: string; description: string }> | null {
+  const normalizedName = normalizeTemplateName(name)
+  if (!normalizedName) return null
+  const match = reintegrationTemplateBlueprints.find((blueprint) => normalizeTemplateName(blueprint.name) === normalizedName)
+  if (!match) return null
+  return match.sections.map((section) => ({ title: section.title, description: section.description }))
+}
 
 // Intent: createLegacyDefaultTemplates
 export function createLegacyDefaultTemplates(): Template[] {

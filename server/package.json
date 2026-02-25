@@ -8,7 +8,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "esbuild src/index.ts --bundle --platform=node --format=cjs --target=node20 --outfile=dist/index.cjs",
     "start": "node dist/index.cjs",
-    "init-db": "tsx scripts/initDb.ts"
+    "init-db": "tsx scripts/initDb.ts",
+    "apply-db-migrations": "tsx scripts/applyDbMigrations.ts"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.28.0",

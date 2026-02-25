@@ -13,6 +13,7 @@ import { deleteEncryptedUploadsByPrefix } from "../transcription/storage"
 
 type RegisterFeedbackRoutesParams = {
   rateLimitAccount: RequestHandler
+  rateLimitPublic: RequestHandler
 }
 
 type AccountType = "admin" | "paid" | "test"
@@ -25,7 +26,7 @@ let ensureManualPricingSchemaPromise: Promise<void> | null = null
 let ensureManagedPlansPromise: Promise<void> | null = null
 
 const managedPlanDefaults: Array<{ name: string; monthlyPrice: number; minutesPerMonth: number; description: string | null }> = [
-  { name: "Abonnement", monthlyPrice: 119, minutesPerMonth: 3000, description: null },
+  { name: "Abonnement", monthlyPrice: 85, minutesPerMonth: 3000, description: null },
 ]
 const MANAGED_PLAN_COUNT = managedPlanDefaults.length
 
@@ -317,6 +318,18 @@ function parseAccountType(value: unknown): AccountType | null {
 }
 
 function toNumberOrNull(value: unknown): number | null {
+  if (value == null) return null
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return null
+    return value
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().replace(",", ".")
+    if (!normalized) return null
+    const parsedFromString = Number(normalized)
+    if (!Number.isFinite(parsedFromString)) return null
+    return parsedFromString
+  }
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return null
   return parsed
@@ -1038,8 +1051,79 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
   )
 
   app.post(
-    "/pricing/plans/public",
+    "/admin/users/add-monthly-minutes",
     params.rateLimitAccount,
+    asyncHandler(async (req, res) => {
+      await ensureManagedPlans()
+      const adminEmail = await requireAdminUserEmail(req).catch(() => null)
+      if (!adminEmail) {
+        sendError(res, 403, "Forbidden")
+        return
+      }
+
+      const userId = typeof req.body?.userId === "string" ? req.body.userId.trim() : ""
+      const additionalMinutesRaw = Number(req.body?.additionalMinutes)
+
+      if (!userId) {
+        sendError(res, 400, "Missing userId")
+        return
+      }
+      if (!Number.isFinite(additionalMinutesRaw) || additionalMinutesRaw <= 0) {
+        sendError(res, 400, "Invalid additionalMinutes")
+        return
+      }
+      const additionalMinutes = Math.trunc(additionalMinutesRaw)
+      if (additionalMinutes <= 0) {
+        sendError(res, 400, "Invalid additionalMinutes")
+        return
+      }
+
+      const updated = await queryMany<{ id: string; extra_minutes: number }>(
+        `
+        update public.users
+        set extra_minutes = coalesce(extra_minutes, 0) + $1,
+            updated_at = now()
+        where id = $2
+        returning id, extra_minutes
+        `,
+        [additionalMinutes, userId],
+      )
+      const row = updated[0]
+      if (!row?.id) {
+        sendError(res, 404, "User not found")
+        return
+      }
+
+      const pricing = (
+        await queryMany<{ plan_minutes_per_month: number | null }>(
+          `
+          select p.minutes_per_month as plan_minutes_per_month
+          from public.users u
+          left join public.plans p on p.id = u.plan_id
+          where u.id = $1
+          limit 1
+          `,
+          [userId],
+        )
+      )[0]
+
+      const includedMinutes = Number(pricing?.plan_minutes_per_month || 0)
+      const totalAvailableMinutes = includedMinutes + Number(row.extra_minutes || 0)
+
+      res.status(200).json({
+        ok: true,
+        adminEmail,
+        userId: row.id,
+        addedMinutes: additionalMinutes,
+        extraMinutes: row.extra_minutes,
+        availableMinutesPerMonth: totalAvailableMinutes,
+      })
+    }),
+  )
+
+  app.post(
+    "/pricing/plans/public",
+    params.rateLimitPublic,
     asyncHandler(async (_req, res) => {
       await ensureManagedPlans()
       const rows = await queryMany<{
@@ -1074,7 +1158,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
 
   app.post(
     "/pricing/me-visibility",
-    params.rateLimitAccount,
+    params.rateLimitPublic,
     asyncHandler(async (req, res) => {
       await ensureManagedPlans()
       const hasAuthorizationHeader = String(req.headers.authorization || "").trim().length > 0

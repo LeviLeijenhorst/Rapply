@@ -19,11 +19,13 @@ type RegisterSystemRoutesParams = {
   rateLimitWindowMs: number
   rateLimitMaxRequests: number
   azureSpeechConfigured: boolean
+  getRequiredSchemaCheckStatus: () => { checkedAtUnixMs: number | null; missingRequiredColumns: string[] }
 }
 
 // Registers non-sensitive diagnostic and health endpoints.
 export function registerSystemRoutes(app: Express, params: RegisterSystemRoutesParams): void {
   app.get("/health", (_req, res) => {
+    const schema = params.getRequiredSchemaCheckStatus()
     res.status(200).json({
       ok: true,
       build: {
@@ -34,6 +36,11 @@ export function registerSystemRoutes(app: Express, params: RegisterSystemRoutesP
         database: {
           hasDatabaseUrl: params.hasDatabaseUrl,
           ssl: params.databaseSsl,
+          schemaCheck: {
+            checkedAtUnixMs: schema.checkedAtUnixMs,
+            missingRequiredColumnsCount: schema.missingRequiredColumns.length,
+            missingRequiredColumns: schema.missingRequiredColumns,
+          },
         },
         azureStorage: {
           hasAccountName: params.hasAzureStorageAccountName,

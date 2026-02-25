@@ -10,7 +10,6 @@ import logo from "@/home/logo.png";
 const navigationLinks = [
   { label: "Product", destination: "/product" },
   { label: "Doelgroep", destination: "/coaches" },
-  { label: "Prijzen", destination: "/pricing" },
   { label: "Veiligheid", destination: "/veiligheid" },
   { label: "Over Ons", destination: "/over-ons" },
 ];
@@ -22,8 +21,6 @@ export default function NavigationBar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
-  const isPricingPath =
-    pathname === "/pricing" || pathname.startsWith("/pricing/");
   const useSoftBackground =
     pathname === "/contact" ||
     pathname.startsWith("/contact/") ||
@@ -45,11 +42,7 @@ export default function NavigationBar() {
   return (
     <header
       className={`fixed left-0 top-0 z-50 w-full font-inter ${
-        isPricingPath
-          ? "bg-transparent"
-          : useSoftBackground
-            ? "bg-[#F8F9F9]"
-            : "bg-white"
+        useSoftBackground ? "bg-[#F8F9F9]" : "bg-white"
       }`}
     >
       {/* Navigation bar container */}
@@ -110,7 +103,7 @@ export default function NavigationBar() {
               className="font-normal"
             />
             <Button
-              label="Probeer het uit"
+              label="Probeer het gratis"
               destination="https://app.coachscribe.nl"
               variant="primary"
               className="font-normal"
@@ -245,7 +238,7 @@ export default function NavigationBar() {
             </div>
             <div onClick={() => setIsMobileMenuOpen(false)}>
               <Button
-                label="Probeer het uit"
+                label="Probeer het gratis"
                 destination="https://app.coachscribe.nl"
                 variant="primary"
                 className="font-normal"

@@ -196,6 +196,7 @@ export function buildCoacheeStructuredSystemMessages(params: {
   clientDetails?: string | null
   employerDetails?: string | null
   firstSickDay?: string | null
+  includeSessionReports?: boolean
   sessions: {
     title: string
     createdAtUnixMs: number
@@ -210,6 +211,7 @@ export function buildCoacheeStructuredSystemMessages(params: {
 }): LocalChatMessage[] {
   const maxTotalCharacters = Math.max(1500, params.maxTotalCharacters ?? 60000)
   const maxSessionCharacters = Math.max(700, params.maxSessionCharacters ?? 3500)
+  const includeSessionReports = params.includeSessionReports !== false
   const sortedSessions = [...params.sessions].sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
   const basicInfoParts: string[] = []
   const parsedClientDetails = formatCoacheeDetailsForPrompt(params.clientDetails)
@@ -273,32 +275,39 @@ export function buildCoacheeStructuredSystemMessages(params: {
   }
 
   let intakeBlock = 'Geen intakeverslag beschikbaar.'
-  if (intakeSession) {
-    const block = formatSessionBlock(intakeSession)
-    if (remainingCharacters > 0) {
-      intakeBlock = block.slice(0, Math.max(0, remainingCharacters))
-      remainingCharacters -= intakeBlock.length
+  if (includeSessionReports) {
+    if (intakeSession) {
+      const block = formatSessionBlock(intakeSession)
+      if (remainingCharacters > 0) {
+        intakeBlock = block.slice(0, Math.max(0, remainingCharacters))
+        remainingCharacters -= intakeBlock.length
+      }
     }
   }
 
   const includedOtherBlocks: string[] = []
-  for (const session of otherSessions) {
-    if (remainingCharacters <= 0) break
-    const hasContent = Boolean(normalizeText(session.reportText) || normalizeText(session.summary))
-    if (!hasContent) continue
-    const block = formatSessionBlock(session)
-    const clipped = block.slice(0, Math.max(0, remainingCharacters))
-    if (!clipped.trim()) continue
-    includedOtherBlocks.push(clipped)
-    remainingCharacters -= clipped.length
+  if (includeSessionReports) {
+    for (const session of otherSessions) {
+      if (remainingCharacters <= 0) break
+      const hasContent = Boolean(normalizeText(session.reportText) || normalizeText(session.summary))
+      if (!hasContent) continue
+      const block = formatSessionBlock(session)
+      const clipped = block.slice(0, Math.max(0, remainingCharacters))
+      if (!clipped.trim()) continue
+      includedOtherBlocks.push(clipped)
+      remainingCharacters -= clipped.length
+    }
   }
 
   const otherReportsText =
     includedOtherBlocks.length > 0
       ? includedOtherBlocks.map((block, index) => `${index + 1}. ${block}`).join('\n\n')
-      : 'Geen andere verslagen met inhoud beschikbaar.'
+      : includeSessionReports
+        ? 'Geen andere verslagen met inhoud beschikbaar.'
+        : 'Gespreksverslagen zijn niet opgenomen in deze context.'
 
-  const text = `Dossiercontext voor ${params.coacheeName}:
+  const text = includeSessionReports
+    ? `Dossiercontext voor ${params.coacheeName}:
 
 1. Basisgegevens
 ${basicInfoText}
@@ -310,6 +319,15 @@ ${intakeBlock}
 ${otherReportsText}
 
 Gebruik deze structuur en context om de vragen te beantwoorden.`
+    : `Dossiercontext voor ${params.coacheeName}:
+
+1. Basisgegevens
+${basicInfoText}
+
+2. Gespreksverslagen
+${otherReportsText}
+
+Gebruik uitsluitend de basisgegevens in deze context om de vragen te beantwoorden.`
 
   return [{ role: 'system', text }]
 }

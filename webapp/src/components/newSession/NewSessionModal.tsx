@@ -38,6 +38,7 @@ import {
   type TranscriptionMode,
 } from '../../services/realtimeTranscription'
 import { useToast } from '../../toast/ToastProvider'
+import { isGespreksverslagTemplateName } from '../../utils/templateCategories'
 
 type Step = 'select' | 'consent' | 'upload' | 'recording' | 'recorded'
 type OptionKey = 'gesprek' | 'verslag' | 'upload' | 'schrijven'
@@ -260,14 +261,20 @@ export function NewSessionModal({
   const realtimeOperationIdRef = useRef<string | null>(null)
   const { height: windowHeight, width: windowWidth } = useWindowDimensions()
   const templates = data.templates ?? []
+  const reportTypeTemplates = useMemo(() => {
+    return templates.filter((template) => isGespreksverslagTemplateName(template.name))
+  }, [templates])
   const defaultTemplateId = useMemo(() => {
-    const standardTemplate = templates.find((template) => {
+    const standardTemplate = reportTypeTemplates.find((template) => {
       const normalizedName = template.name.trim().toLowerCase()
       return normalizedName === 'intake' || normalizedName === 'intakeverslag'
     })
-    return (standardTemplate ?? templates[0])?.id ?? null
-  }, [templates])
-  const selectedTemplate = useMemo(() => templates.find((template) => template.id === selectedTemplateId) ?? null, [selectedTemplateId, templates])
+    return (standardTemplate ?? reportTypeTemplates[0])?.id ?? null
+  }, [reportTypeTemplates])
+  const selectedTemplate = useMemo(
+    () => reportTypeTemplates.find((template) => template.id === selectedTemplateId) ?? null,
+    [reportTypeTemplates, selectedTemplateId],
+  )
   const summaryTemplate = useMemo(() => {
     if (!selectedTemplate) return undefined
     const sections = selectedTemplate.sections
@@ -422,9 +429,9 @@ export function NewSessionModal({
 
   useEffect(() => {
     if (!defaultTemplateId) return
-    if (selectedTemplateId && templates.some((template) => template.id === selectedTemplateId)) return
+    if (selectedTemplateId && reportTypeTemplates.some((template) => template.id === selectedTemplateId)) return
     setSelectedTemplateId(defaultTemplateId)
-  }, [defaultTemplateId, selectedTemplateId, templates])
+  }, [defaultTemplateId, reportTypeTemplates, selectedTemplateId])
 
   useEffect(() => {
     if (!visible) return
@@ -1615,7 +1622,7 @@ export function NewSessionModal({
                     style={[styles.reportTypePanel, { maxHeight: reportTypeDropdownMaxHeight ?? defaultDropdownMaxHeight }]}
                   >
                     <ScrollView style={styles.reportTypeList} contentContainerStyle={styles.reportTypeListContent} showsVerticalScrollIndicator={false}>
-                      {templates.map((template, index, items) => {
+                      {reportTypeTemplates.map((template, index, items) => {
                         const isFirst = index === 0
                         const isLast = index === items.length - 1
                         return (

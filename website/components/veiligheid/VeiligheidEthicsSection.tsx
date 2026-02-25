@@ -3,7 +3,7 @@ import SectionContainer from "@/components/home/SectionContainer";
 export default function VeiligheidEthicsSection() {
   return (
     <>
-      <SectionContainer className="bg-white" contentClassName="pt-16 pb-16 md:pt-24 md:pb-24">
+      <SectionContainer className="bg-white" contentClassName="pt-12 pb-12 md:pt-16 md:pb-16">
         <div className="flex w-full flex-col gap-10">
           <div className="flex w-full flex-col items-start gap-[16px] text-left">
             <h2 className="font-[var(--font-catamaran)] text-[40px] font-medium leading-[120%] text-black">

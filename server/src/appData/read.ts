@@ -1,6 +1,7 @@
 import { queryMany, queryOne } from "../db"
 import { getDefaultTemplateDescriptionByName } from "./templateDescription"
 import type { AppData, SessionKind, Template, TemplateSection } from "./types"
+import { getReintegrationDefaultTemplateSectionsByName } from "../templates/defaultTemplates"
 
 type TemplateRow = {
   id: string
@@ -27,23 +28,49 @@ function normalizeDefaultTemplateDescription(name: string, description: string, 
   return ""
 }
 
+function normalizeTemplateSectionTitle(value: string): string {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "")
+}
+
+function hasLegacyGenericTemplateSections(sections: TemplateSection[]): boolean {
+  if (sections.length !== 3) return false
+  const normalizedTitles = sections.map((section) => normalizeTemplateSectionTitle(section.title))
+  return (
+    normalizedTitles[0] === "situatie" &&
+    normalizedTitles[1] === "analyse" &&
+    normalizedTitles[2] === "adviesenvervolgstappen"
+  )
+}
+
 // Normalizes the stored sections_json payload into one template domain object.
 function mapTemplateRow(row: TemplateRow): Template {
   const rawSectionsPayload = typeof row.sections_json === "string" ? JSON.parse(row.sections_json) : row.sections_json
-  const sections = Array.isArray(rawSectionsPayload)
+  const rawSections = Array.isArray(rawSectionsPayload)
     ? (rawSectionsPayload as TemplateSection[])
     : Array.isArray((rawSectionsPayload as any)?.sections)
       ? (((rawSectionsPayload as any).sections as TemplateSection[]) ?? [])
       : []
   const descriptionRaw = typeof (rawSectionsPayload as any)?.description === "string" ? ((rawSectionsPayload as any).description as string) : ""
   const isDefaultRaw = typeof (rawSectionsPayload as any)?.isDefault === "boolean" ? ((rawSectionsPayload as any).isDefault as boolean) : false
+  const normalizedSections = hasLegacyGenericTemplateSections(rawSections)
+    ? getReintegrationDefaultTemplateSectionsByName(row.name)?.map((section, index) => ({
+        id: `${row.id}-section-${index + 1}`,
+        title: section.title,
+        description: section.description,
+      })) ?? rawSections
+    : rawSections
   const normalizedDescription = normalizeDefaultTemplateDescription(row.name, descriptionRaw, isDefaultRaw)
   const description = normalizedDescription || getDefaultTemplateDescriptionByName(row.name)
   return {
     id: row.id,
     name: row.name,
     description,
-    sections,
+    sections: normalizedSections,
     isSaved: row.is_saved,
     isDefault: isDefaultRaw,
     createdAtUnixMs: Number(row.created_at_unix_ms),

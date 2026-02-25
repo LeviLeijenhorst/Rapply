@@ -10,12 +10,13 @@ import { FullScreenOpenIcon } from '../components/icons/FullScreenOpenIcon'
 import { FullScreenCloseIcon } from '../components/icons/FullScreenCloseIcon'
 import { CopyIcon } from '../components/icons/CopyIcon'
 import { SharePdfIcon } from '../components/icons/SharePdfIcon'
+import { ShareTextIcon } from '../components/icons/ShareTextIcon'
 import { Text } from '../components/Text'
 import { colors } from '../theme/colors'
 import { ConversationTabs, ConversationTabKey } from '../components/sessionDetail/ConversationTabs'
 import { AudioPlayerCard, type AudioPlayerHandle } from '../components/sessionDetail/AudioPlayerCard'
 import { ChatComposer } from '../components/sessionDetail/ChatComposer'
-import { ChatMessage, exportMessageToPdf } from '../components/sessionDetail/ChatMessage'
+import { ChatMessage, exportMessageToPdf, exportMessageToWord } from '../components/sessionDetail/ChatMessage'
 import { QuickQuestionsStart } from '../components/sessionDetail/QuickQuestionsStart'
 import { ReportPanel } from '../components/sessionDetail/ReportPanel'
 import { NotesTabPanel } from '../components/sessionDetail/NotesTabPanel'
@@ -61,6 +62,7 @@ import {
 } from '../audio/pendingPreviewStore'
 import { RichTextEditorModal } from '../components/editor/RichTextEditorModal'
 import { normalizeTranscriptionError } from '../utils/transcriptionError'
+import { isGespreksverslagTemplateName } from '../utils/templateCategories'
 import { ConfirmChatClearModal } from '../components/sessionDetail/ConfirmChatClearModal'
 import { AnimatedOverlayModal } from '../components/AnimatedOverlayModal'
 import { fetchBillingStatus, type BillingStatus } from '../services/billing'
@@ -140,15 +142,40 @@ export function SessieDetailScreen({
 
   const coacheeButtonRef = useRef<any>(null)
   const templates = data.templates ?? []
+  const isConversationSession = session?.kind === 'recording' || session?.kind === 'upload'
+  const templatesForSession = useMemo(() => {
+    if (!isConversationSession) return templates
+    return templates.filter((template) => isGespreksverslagTemplateName(template.name))
+  }, [isConversationSession, templates])
+  const quickQuestionTemplates = useMemo(
+    () =>
+      templatesForSession.map((template) => {
+        const sectionLines = template.sections
+          .map((section, index) => {
+            const title = section.title.trim() || `Onderdeel ${index + 1}`
+            const description = section.description.trim()
+            return description ? `${index + 1}. ${title}: ${description}` : `${index + 1}. ${title}`
+          })
+          .join('\n')
+        const promptText = sectionLines
+          ? `Maak een verslag op basis van dit verslagtype:\n${template.name}\n\nOnderdelen:\n${sectionLines}`
+          : `Maak een verslag op basis van dit verslagtype:\n${template.name}`
+        return { id: template.id, name: template.name, promptText }
+      }),
+    [templatesForSession],
+  )
   const practiceTintColor = data.practiceSettings.tintColor || colors.selected
   const defaultTemplateId = useMemo(() => {
-    const standardTemplate = templates.find((template) => {
+    const standardTemplate = templatesForSession.find((template) => {
       const normalizedName = template.name.trim().toLowerCase()
       return normalizedName === 'intake' || normalizedName === 'intakeverslag'
     })
-    return (standardTemplate ?? templates[0])?.id ?? null
-  }, [templates])
-  const selectedTemplate = useMemo(() => templates.find((template) => template.id === selectedTemplateId) ?? null, [selectedTemplateId, templates])
+    return (standardTemplate ?? templatesForSession[0])?.id ?? null
+  }, [templatesForSession])
+  const selectedTemplate = useMemo(
+    () => templatesForSession.find((template) => template.id === selectedTemplateId) ?? null,
+    [selectedTemplateId, templatesForSession],
+  )
   const summaryTemplate = useMemo(() => {
     if (!selectedTemplate) return undefined
     const sections = selectedTemplate.sections
@@ -267,9 +294,9 @@ export function SessieDetailScreen({
 
   useEffect(() => {
     if (!defaultTemplateId) return
-    if (selectedTemplateId && templates.some((template) => template.id === selectedTemplateId)) return
+    if (selectedTemplateId && templatesForSession.some((template) => template.id === selectedTemplateId)) return
     setSelectedTemplateId(defaultTemplateId)
-  }, [defaultTemplateId, selectedTemplateId, templates])
+  }, [defaultTemplateId, selectedTemplateId, templatesForSession])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -409,13 +436,26 @@ export function SessieDetailScreen({
     handleRequestPdfEdit({ text: writtenReportDraft, title: editableSessionTitle })
   }
 
+  function handleExportWrittenReportAsWord() {
+    if (!hasWrittenReportContent) return
+    void exportMessageToWord(writtenReportDraft, editableSessionTitle, {
+      practiceName: data.practiceSettings.practiceName,
+      website: data.practiceSettings.website,
+      tintColor: data.practiceSettings.tintColor,
+      logoDataUrl: data.practiceSettings.logoDataUrl,
+    })
+  }
+
   function handleTranscriptMentionPress(seconds: number) {
     audioPlayerRef.current?.seekToSeconds(seconds)
   }
 
-  async function sendChatMessage(messageText: string) {
-    const trimmedText = messageText.trim()
-    if (!trimmedText || isChatSending) return
+  async function sendChatMessage(messageInput: string | { text: string; promptText?: string }) {
+    const visibleText = typeof messageInput === 'string' ? messageInput : messageInput.text
+    const promptText = typeof messageInput === 'string' ? messageInput : messageInput.promptText
+    const trimmedText = visibleText.trim()
+    const trimmedPromptText = String(promptText || '').trim() || trimmedText
+    if (!trimmedText || !trimmedPromptText || isChatSending) return
 
     const pdfStartToken = '[[PDF_START]]'
     const pdfEndToken = '[[PDF_END]]'
@@ -430,6 +470,7 @@ export function SessieDetailScreen({
       id: createChatMessageId(),
       role: 'user',
       text: trimmedText,
+      promptText: trimmedPromptText,
     }
 
     const nextChatMessages = [...chatMessages, nextUserMessage]
@@ -451,7 +492,7 @@ export function SessieDetailScreen({
           systemMessage,
           ...nextChatMessages.map<LocalChatMessage>((message) => ({
             role: message.role,
-            text: message.text,
+            text: message.role === 'user' ? String(message.promptText || '').trim() || message.text : message.text,
           })),
         ],
       })
@@ -877,7 +918,7 @@ export function SessieDetailScreen({
       return
     }
     const runId = beginGenerationRun()
-    const template = templates.find((item) => item.id === templateId) ?? null
+    const template = templatesForSession.find((item) => item.id === templateId) ?? null
     const templateForSummary = template
       ? {
           name: template.name,
@@ -1022,6 +1063,18 @@ export function SessieDetailScreen({
                   >
                     <SharePdfIcon color="#656565" size={18} />
                   </Pressable>
+                  <Pressable
+                    onPress={handleExportWrittenReportAsWord}
+                    disabled={!hasWrittenReportContent}
+                    style={({ hovered }) => [
+                      styles.secondaryActionButton,
+                      styles.secondaryActionButtonIconOnly,
+                      !hasWrittenReportContent ? styles.audioActionButtonDisabled : undefined,
+                      hovered ? styles.secondaryActionButtonHovered : undefined,
+                    ]}
+                  >
+                    <ShareTextIcon color="#656565" size={18} />
+                  </Pressable>
                 </>
               ) : null}
               {isWrittenSession ? (
@@ -1152,8 +1205,8 @@ export function SessieDetailScreen({
                       >
                         {shouldShowQuickStart ? (
                           <QuickQuestionsStart
-                            coacheeName={editableCoacheeName}
-                            onSelectOption={(fullSentence) => sendChatMessage(fullSentence)}
+                            templates={quickQuestionTemplates}
+                            onSelectOption={(option) => sendChatMessage(option)}
                           />
                         ) : (
                           <>
@@ -1225,7 +1278,7 @@ export function SessieDetailScreen({
           initialTemplateKey={selectedTemplateId ?? ''}
           initialTemplateLabel={selectedTemplateLabel}
           coacheeOptions={activeCoacheeNames}
-          templateOptions={templates.map((template) => ({ key: template.id, label: template.name }))}
+          templateOptions={templatesForSession.map((template) => ({ key: template.id, label: template.name }))}
           isTemplateChangeAllowed={!isWrittenSession}
           onClose={() => setIsEditSessieModalVisible(false)}
           onApply={(values) => {
@@ -1262,7 +1315,7 @@ export function SessieDetailScreen({
 
         <TemplatePickerModal
           visible={isTemplatePickerModalVisible}
-          templates={templates.map((template) => ({ id: template.id, name: template.name }))}
+          templates={templatesForSession.map((template) => ({ id: template.id, name: template.name }))}
           selectedTemplateId={selectedTemplateId}
           onClose={() => setIsTemplatePickerModalVisible(false)}
           onContinue={(templateId) => {
@@ -1394,6 +1447,18 @@ export function SessieDetailScreen({
                   ]}
                 >
                   <SharePdfIcon color="#656565" size={18} />
+                </Pressable>
+                <Pressable
+                  onPress={handleExportWrittenReportAsWord}
+                  disabled={!hasWrittenReportContent}
+                  style={({ hovered }) => [
+                    styles.secondaryActionButton,
+                    styles.secondaryActionButtonIconOnly,
+                    !hasWrittenReportContent ? styles.audioActionButtonDisabled : undefined,
+                    hovered ? styles.secondaryActionButtonHovered : undefined,
+                  ]}
+                >
+                  <ShareTextIcon color="#656565" size={18} />
                 </Pressable>
               </>
             ) : null}
@@ -1549,8 +1614,8 @@ export function SessieDetailScreen({
                       >
                         {shouldShowQuickStart ? (
                           <QuickQuestionsStart
-                            coacheeName={editableCoacheeName}
-                            onSelectOption={(fullSentence) => sendChatMessage(fullSentence)}
+                            templates={quickQuestionTemplates}
+                            onSelectOption={(option) => sendChatMessage(option)}
                           />
                         ) : (
                           <>
@@ -1618,7 +1683,7 @@ export function SessieDetailScreen({
         initialTemplateKey={selectedTemplateId ?? ''}
         initialTemplateLabel={selectedTemplateLabel}
         coacheeOptions={activeCoacheeNames}
-        templateOptions={templates.map((template) => ({ key: template.id, label: template.name }))}
+        templateOptions={templatesForSession.map((template) => ({ key: template.id, label: template.name }))}
         isTemplateChangeAllowed={!isWrittenSession}
         onClose={() => setIsEditSessieModalVisible(false)}
         onApply={(values) => {
@@ -1656,7 +1721,7 @@ export function SessieDetailScreen({
 
       <TemplatePickerModal
         visible={isTemplatePickerModalVisible}
-        templates={templates.map((template) => ({ id: template.id, name: template.name }))}
+        templates={templatesForSession.map((template) => ({ id: template.id, name: template.name }))}
         selectedTemplateId={selectedTemplateId}
         onClose={() => setIsTemplatePickerModalVisible(false)}
         onContinue={(templateId) => {
@@ -1805,7 +1870,10 @@ export function SessieDetailScreen({
                   showsVerticalScrollIndicator={false}
                 >
                   {shouldShowQuickStart ? (
-                    <QuickQuestionsStart coacheeName={editableCoacheeName} onSelectOption={(fullSentence) => sendChatMessage(fullSentence)} />
+                    <QuickQuestionsStart
+                      templates={quickQuestionTemplates}
+                      onSelectOption={(option) => sendChatMessage(option)}
+                    />
                   ) : (
                     <>
                       {chatMessages.map((message) => (

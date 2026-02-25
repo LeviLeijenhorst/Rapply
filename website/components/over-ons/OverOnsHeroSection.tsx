@@ -3,7 +3,7 @@ import SectionContainer from "@/components/home/SectionContainer";
 
 export default function OverOnsHeroSection() {
   return (
-    <SectionContainer className="bg-white" contentClassName="pt-10 md:pt-12">
+    <SectionContainer className="bg-white">
       <div className="flex w-full items-start justify-center">
         <div className="flex w-full flex-col items-center">
           <div className="flex w-full max-w-3xl flex-col items-center gap-8 text-center">

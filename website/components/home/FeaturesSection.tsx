@@ -79,7 +79,7 @@ export default function FeaturesSection() {
                   {/* Feature action */}
                   <div className="flex w-full">
                     <Button
-                      label="Probeer het uit"
+                      label="Probeer het gratis"
                       destination="https://app.coachscribe.nl"
                       variant="primary"
                       showArrow

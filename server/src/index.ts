@@ -1,5 +1,5 @@
 import express from "express"
-import { getDatabaseConnectionInfo, testDatabaseConnection } from "./db"
+import { getDatabaseConnectionInfo, getRequiredSchemaCheckStatus, runRequiredSchemaCheck, testDatabaseConnection } from "./db"
 import { env } from "./env"
 import { sendError } from "./http"
 import { registerAudioRoutes } from "./routes/audioRoutes"
@@ -14,8 +14,23 @@ function logDatabaseConnectionStatus(): void {
   const databaseConnectionInfo = getDatabaseConnectionInfo()
   console.log("[db] configured", databaseConnectionInfo)
   testDatabaseConnection()
-    .then(() => {
+    .then(async () => {
       console.log("[db] connection ok")
+      try {
+        const schemaCheck = await runRequiredSchemaCheck()
+        if (schemaCheck.missing.length > 0) {
+          console.log("[db] schema warning", {
+            missingRequiredColumnsCount: schemaCheck.missing.length,
+            missingRequiredColumns: schemaCheck.missing.map((item) => `${item.tableName}.${item.columnName}`),
+          })
+        } else {
+          console.log("[db] schema check ok")
+        }
+      } catch (error: any) {
+        const message = String(error?.message || error || "")
+        const stack = typeof error?.stack === "string" ? error.stack : null
+        console.log("[db] schema check failed", { message, stack })
+      }
     })
     .catch((error: any) => {
       const message = String(error?.message || error || "")
@@ -61,6 +76,13 @@ const rateLimitWindowMs = Number.isFinite(env.rateLimitWindowMs) ? env.rateLimit
 const rateLimitMaxRequests = Number.isFinite(env.rateLimitMaxRequests) ? env.rateLimitMaxRequests : 120
 const rateLimitAi = createRateLimitMiddleware({ windowMs: rateLimitWindowMs, maxRequests: rateLimitMaxRequests, keyPrefix: "ai" })
 const rateLimitBilling = createRateLimitMiddleware({ windowMs: rateLimitWindowMs, maxRequests: rateLimitMaxRequests, keyPrefix: "billing" })
+const publicRateLimitMaxRequests =
+  env.runtimeEnvironment === "production" ? Math.max(rateLimitMaxRequests, 180) : Math.max(rateLimitMaxRequests, 2_000)
+const rateLimitPublic = createRateLimitMiddleware({
+  windowMs: rateLimitWindowMs,
+  maxRequests: publicRateLimitMaxRequests,
+  keyPrefix: "public",
+})
 const rateLimitTranscription = createRateLimitMiddleware({
   windowMs: rateLimitWindowMs,
   maxRequests: rateLimitMaxRequests,
@@ -72,6 +94,7 @@ const rateLimitAccount = createRateLimitMiddleware({ windowMs: rateLimitWindowMs
   diagnosticLogVersion,
   rateLimitAi,
   rateLimitBilling,
+  rateLimitPublic,
   rateLimitTranscription,
   rateLimitAccount,
   hasDatabaseUrl: !!env.databaseUrl,
@@ -89,6 +112,7 @@ const rateLimitAccount = createRateLimitMiddleware({ windowMs: rateLimitWindowMs
   rateLimitWindowMs,
   rateLimitMaxRequests,
   azureSpeechConfigured: !!env.azureSpeechKey && !!env.azureSpeechRegion,
+  getRequiredSchemaCheckStatus,
 })
 
 app.use((req, res) => {

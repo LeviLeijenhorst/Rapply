@@ -287,7 +287,7 @@ export default function ProductImpactSection() {
         </div>
         <div className="mt-10">
           <Button
-            label="Probeer het uit"
+            label="Probeer het gratis"
             destination="https://app.coachscribe.nl"
             variant="primary"
             showArrow

@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import logo from "@/home/logo.png";
 import linkedinIcon from "@/home/LinkedIn.svg";
 import instagramIcon from "@/home/Instagram.svg";
@@ -10,11 +9,10 @@ import instagramIcon from "@/home/Instagram.svg";
 const navigationLinks = [
   { label: "Product", destination: "/product" },
   { label: "Doelgroep", destination: "/coaches" },
-  { label: "Prijzen", destination: "/pricing" },
   { label: "Veiligheid", destination: "/veiligheid" },
   { label: "Over Ons", destination: "/over-ons" },
   { label: "Contact", destination: "/contact" },
-  { label: "Probeer het uit", destination: "https://app.coachscribe.nl" },
+  { label: "Probeer het gratis", destination: "https://app.coachscribe.nl" },
 ];
 
 const connectLinks = [
@@ -33,18 +31,8 @@ const connectLinks = [
 ];
 
 export default function Footer() {
-  const pathname = usePathname();
-  const isPricingPath =
-    pathname === "/pricing" || pathname.startsWith("/pricing/");
-
   return (
-    <footer
-      className={`w-full text-[#1D0A00] ${
-        isPricingPath
-          ? "bg-transparent"
-          : "bg-[linear-gradient(110deg,rgba(184,212,255,0.45)_0%,rgba(198,175,255,0.25)_55%,rgba(255,224,236,0.45)_100%)]"
-      }`}
-    >
+    <footer className="w-full text-[#1D0A00] bg-[linear-gradient(110deg,rgba(184,212,255,0.45)_0%,rgba(198,175,255,0.25)_55%,rgba(255,224,236,0.45)_100%)]">
       {/* Footer container */}
       <div className="mx-auto w-full max-w-6xl px-8 pb-8 pt-20">
         {/* Footer content */}

@@ -91,7 +91,7 @@ export default function WachtlijstFormSection() {
   };
 
   return (
-    <SectionContainer className="bg-[#F8F9F9]" contentClassName="pb-[80px] pt-[80px] md:pb-[80px] md:pt-[80px]">
+    <SectionContainer className="bg-[#F8F9F9]" contentClassName="pt-6 pb-[80px] md:pt-10 md:pb-[80px]">
       <section className="mx-auto w-full max-w-3xl rounded-2xl bg-white p-8 shadow-[0_8px_20px_rgba(15,23,42,0.08)] md:p-10">
         <div className="mb-8 flex w-full flex-col gap-3">
           <h1 className="text-3xl font-semibold text-[#1D0A00] md:text-4xl xl:text-5xl">

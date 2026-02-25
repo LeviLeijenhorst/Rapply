@@ -4,7 +4,7 @@ import CoachesCtaSection from "@/components/coaches/CoachesCtaSection";
 import CoachesFrequentlyAskedQuestionsSection from "@/components/coaches/CoachesFrequentlyAskedQuestionsSection";
 import ProductCoachesSection from "@/components/product/ProductCoachesSection";
 import SecuritySection from "@/components/home/SecuritySection";
-import PricingSection from "@/components/home/PricingSection";
+import WinWinSection from "@/components/home/WinWinSection";
 
 export default function CoachesPage() {
   return (
@@ -15,7 +15,7 @@ export default function CoachesPage() {
         <CoachesWorkflowSection />
         <ProductCoachesSection />
         <SecuritySection />
-        <PricingSection />
+        <WinWinSection />
         <CoachesFrequentlyAskedQuestionsSection />
       </div>
     </div>

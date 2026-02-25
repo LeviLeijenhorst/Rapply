@@ -5,7 +5,7 @@ import ProductCoachesSection from "@/components/product/ProductCoachesSection";
 import SecuritySection from "@/components/home/SecuritySection";
 import AvailabilitySection from "@/components/home/AvailabilitySection";
 import ProductFrequentlyAskedQuestionsSection from "@/components/product/ProductFrequentlyAskedQuestionsSection";
-import PricingSection from "@/components/home/PricingSection";
+import WinWinSection from "@/components/home/WinWinSection";
 
 export default function ProductPage() {
   return (
@@ -17,7 +17,7 @@ export default function ProductPage() {
         <ProductCoachesSection />
         <SecuritySection disableAnimations />
         <AvailabilitySection />
-        <PricingSection />
+        <WinWinSection />
         <ProductFrequentlyAskedQuestionsSection />
       </div>
     </div>

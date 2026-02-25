@@ -3,6 +3,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import dotenv from "dotenv"
 import { Pool } from "pg"
+import { readSqlMigrationFiles } from "./sqlMigrations"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -68,26 +69,7 @@ async function main() {
   })
 
   const sqlDir = path.resolve(__dirname, "..", "sql")
-  const sqlFilesInOrder = [
-    "001_init.sql",
-    "002_entra_external_id.sql",
-    "002_remove_transcript.sql",
-    "003_app_data.sql",
-    "004_audio_blobs.sql",
-    "006_templates.sql",
-    "007_audio_duration_seconds.sql",
-    "008_audio_streams.sql",
-    "009_practice_settings.sql",
-    "011_e2ee_v2.sql",
-    "012_e2ee_custody_mode.sql",
-    "013_notes_title.sql",
-    "014_contact_and_allowlist.sql",
-    "017_manual_pricing.sql",
-    "018_transcription_runtime_settings.sql",
-    "019_coachee_and_session_context_fields.sql",
-  ].map((name) =>
-    path.join(sqlDir, name),
-  )
+  const sqlFilesInOrder = readSqlMigrationFiles(sqlDir)
 
   try {
     await pool.query("select 1")

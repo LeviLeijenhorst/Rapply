@@ -413,7 +413,7 @@ export default function VerwerkersovereenkomstFlow() {
 
   return (
     <section className="w-full bg-[#F8F9F9]">
-      <div className="mx-auto w-full max-w-6xl p-6 py-12 md:p-10 md:py-16">
+      <div className="mx-auto w-full max-w-6xl px-6 pb-12 pt-6 md:px-10 md:pb-16 md:pt-10">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
           <div className="flex flex-col gap-3">
             <h1 className="text-3xl font-semibold text-[#1D0A00] md:text-4xl xl:text-5xl">
