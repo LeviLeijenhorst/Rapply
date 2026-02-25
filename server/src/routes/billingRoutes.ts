@@ -1,6 +1,6 @@
 import express, { type Express, type RequestHandler } from "express"
 import { requireAuthenticatedUser } from "../auth"
-import { cancelMollieSubscriptionForUser, changeMollieSubscriptionPlanForUser, createMolliePlanCheckout, isMollieConfigured, processMolliePaymentWebhook, syncMollieSubscriptionForUser, syncRecentMolliePaymentsForUser } from "../billing/mollie"
+import { cancelMollieSubscriptionForUser, changeMollieSubscriptionPlanForUser, createMollieExtraMinutesCheckout, createMolliePlanCheckout, isMollieConfigured, processMolliePaymentWebhook, syncMollieSubscriptionForUser, syncRecentMolliePaymentsForUser } from "../billing/mollie"
 import { readManualPricingContextForUser } from "../billing/manualPricing"
 import { derivePlanStateFromRevenueCatSubscriber, derivePurchasedSecondsFromRevenueCatSubscriber, fetchRevenueCatSubscriber } from "../billing/revenuecat"
 import { ensureBillingUser, readBillingStatus } from "../billing/store"
@@ -96,6 +96,31 @@ export function registerBillingRoutes(app: Express, params: RegisterBillingRoute
         email: user.email,
         displayName: user.displayName,
         planId: plan.id,
+      })
+
+      res.status(200).json({
+        ok: true,
+        checkoutUrl: checkout.checkoutUrl,
+        paymentId: checkout.paymentId,
+        requiresRedirect: checkout.requiresRedirect,
+      })
+    }),
+  )
+
+  app.post(
+    "/billing/mollie/create-extra-minutes-checkout",
+    params.rateLimitBilling,
+    asyncHandler(async (req, res) => {
+      if (!isMollieConfigured()) {
+        sendError(res, 400, "Mollie is not configured")
+        return
+      }
+
+      const user = await requireAuthenticatedUser(req)
+      const checkout = await createMollieExtraMinutesCheckout({
+        userId: user.userId,
+        email: user.email,
+        displayName: user.displayName,
       })
 
       res.status(200).json({

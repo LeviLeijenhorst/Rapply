@@ -14,7 +14,7 @@ import { CoacheesIcon } from '../icons/CoacheesIcon'
 import { SecuritySafeIcon } from '../icons/SecuritySafeIcon'
 import { callSecureApi } from '../../services/secureApi'
 import { AppButton } from '../AppButton'
-import { cancelMollieSubscription, createMollieCheckout } from '../../services/billing'
+import { cancelMollieSubscription, createMollieCheckout, createMollieExtraMinutesCheckout } from '../../services/billing'
 import { toUserFriendlyErrorMessage } from '../../utils/userFriendlyError'
 import { useToast } from '../../toast/ToastProvider'
 import { requestSubscriptionReturnResumeIfDraftAvailable } from '../newSession/subscriptionReturnDraftStore'
@@ -61,6 +61,7 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [isPricingLoading, setIsPricingLoading] = useState(false)
   const [checkoutLoadingPlanId, setCheckoutLoadingPlanId] = useState<string | null>(null)
+  const [isExtraMinutesCheckoutBusy, setIsExtraMinutesCheckoutBusy] = useState(false)
   const [isCancelBusy, setIsCancelBusy] = useState(false)
   const [hourlyRate, setHourlyRate] = useState(75)
   const [sessionsPerWeek, setSessionsPerWeek] = useState(10)
@@ -74,6 +75,7 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
     if (!visible) return
     let isCancelled = false
     setCheckoutLoadingPlanId(null)
+    setIsExtraMinutesCheckoutBusy(false)
     setIsCancelBusy(false)
 
     const loadPricing = async () => {
@@ -110,6 +112,7 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
     if (!visible || typeof window === 'undefined') return
     const handleReturnToPage = () => {
       setCheckoutLoadingPlanId(null)
+      setIsExtraMinutesCheckoutBusy(false)
     }
     window.addEventListener('pageshow', handleReturnToPage)
     window.addEventListener('focus', handleReturnToPage)
@@ -173,6 +176,27 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
       )
     } finally {
       setIsCancelBusy(false)
+    }
+  }
+
+  const handleBuyExtraMinutes = async () => {
+    try {
+      setIsExtraMinutesCheckoutBusy(true)
+      const response = await createMollieExtraMinutesCheckout()
+      const checkoutUrl = String(response.checkoutUrl || '').trim()
+      if (!checkoutUrl) {
+        throw new Error('Geen checkout URL ontvangen')
+      }
+      if (typeof window !== 'undefined') {
+        requestSubscriptionReturnResumeIfDraftAvailable()
+        window.location.assign(checkoutUrl)
+      }
+    } catch (error) {
+      showErrorToast(
+        toUserFriendlyErrorMessage(error, { fallback: 'Betalen starten lukt nu niet. Probeer het opnieuw.' }),
+        'Betalen starten lukt nu niet. Probeer het opnieuw.',
+      )
+      setIsExtraMinutesCheckoutBusy(false)
     }
   }
 
@@ -410,6 +434,17 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                   </View>
               </View>
               <View style={styles.footerRow}>
+                <AppButton
+                  label={isExtraMinutesCheckoutBusy ? '' : 'Koop 60 extra minuten'}
+                  leading={isExtraMinutesCheckoutBusy ? <ActivityIndicator size="small" color="#FFFFFF" /> : undefined}
+                  style={[styles.extraMinutesButton, styles.subscribeButtonCta]}
+                  onPress={() => {
+                    if (isExtraMinutesCheckoutBusy || !!checkoutLoadingPlanId) return
+                    void handleBuyExtraMinutes()
+                  }}
+                  variant="filled"
+                  isDisabled={isExtraMinutesCheckoutBusy || !!checkoutLoadingPlanId}
+                />
                 {selectedPlanId ? (
                 <Pressable
                   onPress={() => {
@@ -692,6 +727,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+  },
+  extraMinutesButton: {
+    minWidth: 220,
+    height: 40,
+    borderRadius: 12,
   },
   cancelLinkWrap: {
     alignSelf: 'flex-end',

@@ -1,6 +1,7 @@
 import crypto from "crypto"
 import { execute, queryMany, queryOne } from "../db"
 import { env } from "../env"
+import { extraTranscriptionSecondsPerPurchase } from "./constants"
 
 type MollieAmount = {
   currency: string
@@ -150,6 +151,47 @@ async function readPlanSummary(planId: string): Promise<{ id: string; name: stri
     name: row.name,
     monthlyPrice: Number(row.monthly_price),
   }
+}
+
+async function readFallbackExtraTranscriptionOneTimePriceEur(): Promise<number | null> {
+  const row = await queryOne<{ monthly_price: string; minutes_per_month: number }>(
+    `
+    select monthly_price, minutes_per_month
+    from public.plans
+    where is_active = true
+      and monthly_price > 0
+      and minutes_per_month > 0
+    order by monthly_price asc
+    limit 1
+    `,
+    [],
+  )
+
+  const monthlyPrice = Number(row?.monthly_price ?? NaN)
+  const monthlyMinutes = Number(row?.minutes_per_month ?? NaN)
+  if (!Number.isFinite(monthlyPrice) || !Number.isFinite(monthlyMinutes) || monthlyPrice <= 0 || monthlyMinutes <= 0) {
+    return null
+  }
+
+  const oneTimeMinutes = extraTranscriptionSecondsPerPurchase / 60
+  const perMinutePrice = monthlyPrice / monthlyMinutes
+  const amount = Math.round(perMinutePrice * oneTimeMinutes * 100) / 100
+  if (!Number.isFinite(amount) || amount <= 0) return null
+  return amount
+}
+
+async function getExtraTranscriptionOneTimePriceEur(): Promise<number> {
+  const configured = Number(env.extraTranscriptionOneTimePriceEur ?? NaN)
+  if (Number.isFinite(configured) && configured > 0) {
+    return configured
+  }
+
+  const derived = await readFallbackExtraTranscriptionOneTimePriceEur()
+  if (derived && derived > 0) {
+    return derived
+  }
+
+  throw new Error("Cannot determine one-time transcription price; set EXTRA_TRANSCRIPTION_ONE_TIME_PRICE_EUR")
 }
 
 async function ensureCustomerForUser(params: {
@@ -312,6 +354,100 @@ export async function createMolliePlanCheckout(params: {
       crypto.randomUUID(),
       params.userId,
       params.planId,
+      payment.id,
+      payment.status || "open",
+      optionalTrimmed(payment.sequenceType || null),
+      payment.amount?.value ? Number(payment.amount.value) : checkoutAmount,
+      optionalTrimmed(payment.amount?.currency || "EUR"),
+      checkoutUrl,
+      JSON.stringify(metadata),
+    ],
+  )
+
+  return { checkoutUrl, paymentId: payment.id, requiresRedirect: true }
+}
+
+export async function createMollieExtraMinutesCheckout(params: {
+  userId: string
+  email: string | null
+  displayName: string | null
+}): Promise<{ checkoutUrl: string; paymentId: string; requiresRedirect: boolean }> {
+  await ensureMollieSchema()
+
+  const redirectUrl = optionalTrimmed(env.mollieRedirectUrl)
+  if (!redirectUrl) {
+    throw new Error("Missing MOLLIE_REDIRECT_URL")
+  }
+  const webhookUrl = requireMollieWebhookUrl()
+
+  const checkoutAmount = await getExtraTranscriptionOneTimePriceEur()
+  if (!(checkoutAmount > 0)) {
+    throw new Error("One-time purchase amount must be greater than zero")
+  }
+
+  const customerId = await ensureCustomerForUser({
+    userId: params.userId,
+    email: params.email,
+    displayName: params.displayName,
+  })
+
+  const metadata: Record<string, unknown> = {
+    userId: params.userId,
+    kind: "one_time_extra_transcription_minutes",
+    grantSeconds: extraTranscriptionSecondsPerPurchase,
+  }
+
+  const payment = await mollieApiRequest<MolliePayment>("/payments", {
+    method: "POST",
+    body: JSON.stringify({
+      amount: {
+        currency: "EUR",
+        value: normalizeAmountValue(checkoutAmount),
+      },
+      customerId,
+      locale: "nl_NL",
+      description: `Coachscribe extra transcriptieminuten (${Math.floor(extraTranscriptionSecondsPerPurchase / 60)} min)`,
+      redirectUrl,
+      webhookUrl,
+      metadata,
+    }),
+  })
+
+  const checkoutUrl = String(payment?._links?.checkout?.href || "").trim()
+  if (!checkoutUrl) {
+    throw new Error("Mollie checkout URL ontbreekt")
+  }
+
+  await execute(
+    `
+    insert into public.mollie_payments (
+      id,
+      user_id,
+      plan_id,
+      mollie_payment_id,
+      status,
+      sequence_type,
+      amount_value,
+      currency,
+      checkout_url,
+      metadata,
+      created_at,
+      updated_at
+    )
+    values ($1, $2, null, $3, $4, $5, $6, $7, $8, $9::jsonb, now(), now())
+    on conflict (mollie_payment_id) do update
+      set user_id = excluded.user_id,
+          status = excluded.status,
+          sequence_type = excluded.sequence_type,
+          amount_value = excluded.amount_value,
+          currency = excluded.currency,
+          checkout_url = excluded.checkout_url,
+          metadata = excluded.metadata,
+          updated_at = now()
+    `,
+    [
+      crypto.randomUUID(),
+      params.userId,
       payment.id,
       payment.status || "open",
       optionalTrimmed(payment.sequenceType || null),
@@ -591,9 +727,11 @@ export async function processMolliePaymentWebhook(paymentId: string): Promise<vo
   const existing = await queryOne<{
     user_id: string | null
     plan_id: string | null
+    status: string | null
+    metadata: any | null
   }>(
     `
-    select user_id, plan_id
+    select user_id, plan_id, status, metadata
     from public.mollie_payments
     where mollie_payment_id = $1
     limit 1
@@ -601,9 +739,11 @@ export async function processMolliePaymentWebhook(paymentId: string): Promise<vo
     [cleanedPaymentId],
   )
 
-  const metadata = payment.metadata && typeof payment.metadata === "object" ? payment.metadata : {}
+  const storedMetadata = existing?.metadata && typeof existing.metadata === "object" ? existing.metadata : {}
+  const metadata = payment.metadata && typeof payment.metadata === "object" ? payment.metadata : storedMetadata
   const userId = optionalTrimmed(existing?.user_id || (metadata as any).userId)
   const planId = optionalTrimmed(existing?.plan_id || (metadata as any).planId)
+  const previousStatus = String(existing?.status || "").trim().toLowerCase()
 
   await execute(
     `
@@ -648,9 +788,34 @@ export async function processMolliePaymentWebhook(paymentId: string): Promise<vo
     ],
   )
 
-  if (!userId || !planId) return
-
   const paymentStatus = String(payment.status || "").trim().toLowerCase()
+  const metadataKind = optionalTrimmed((metadata as any).kind)
+
+  if (!userId) return
+
+  if (metadataKind === "one_time_extra_transcription_minutes") {
+    if (paymentStatus === "paid" && previousStatus !== "paid") {
+      const requestedGrantSeconds = Number((metadata as any).grantSeconds)
+      const grantSeconds = Number.isFinite(requestedGrantSeconds) && requestedGrantSeconds > 0
+        ? Math.floor(requestedGrantSeconds)
+        : extraTranscriptionSecondsPerPurchase
+
+      await execute(
+        `
+        insert into public.billing_users (user_id, purchased_seconds, updated_at)
+        values ($1, $2, now())
+        on conflict (user_id) do update
+          set purchased_seconds = public.billing_users.purchased_seconds + excluded.purchased_seconds,
+              updated_at = now()
+        `,
+        [userId, grantSeconds],
+      )
+    }
+    return
+  }
+
+  if (!planId) return
+
   if (paymentStatus !== "paid") {
     if (payment.customerId && payment.subscriptionId) {
       const subscription = await fetchSubscription(payment.customerId, payment.subscriptionId)
@@ -682,7 +847,6 @@ export async function processMolliePaymentWebhook(paymentId: string): Promise<vo
     return
   }
 
-  const metadataKind = optionalTrimmed((metadata as any).kind)
   if (metadataKind === "subscription_upgrade_difference") {
     const previousCustomerId = optionalTrimmed((metadata as any).previousCustomerId || payment.customerId)
     const previousSubscriptionId = optionalTrimmed((metadata as any).previousSubscriptionId)

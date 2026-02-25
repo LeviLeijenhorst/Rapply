@@ -26,6 +26,10 @@ export async function createMollieCheckout(planId: string): Promise<MollieChecko
   return callSecureApi<MollieCheckoutResponse>('/billing/mollie/create-checkout', { planId })
 }
 
+export async function createMollieExtraMinutesCheckout(): Promise<MollieCheckoutResponse> {
+  return callSecureApi<MollieCheckoutResponse>('/billing/mollie/create-extra-minutes-checkout', {})
+}
+
 export async function cancelMollieSubscription(): Promise<{ ok: boolean; canceled: boolean }> {
   return callSecureApi<{ ok: boolean; canceled: boolean }>('/billing/mollie/cancel-subscription', {})
 }

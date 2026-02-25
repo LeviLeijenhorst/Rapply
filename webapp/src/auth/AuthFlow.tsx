@@ -9,7 +9,6 @@ import { navigate, usePathname } from './router/webRouter'
 import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
 import { Text } from '../components/Text'
 import { colors } from '../theme/colors'
-import { AllowlistLaunchScreen } from './screens/AllowlistLaunchScreen'
 
 type Props = {
   onAuthenticated: () => void
@@ -20,7 +19,6 @@ export function AuthFlow({ onAuthenticated }: Props) {
   const { width } = useWindowDimensions()
   const [authError, setAuthError] = useState<string | null>(null)
   const [isProcessingCallback, setIsProcessingCallback] = useState(false)
-  const [isAllowlistBlocked, setIsAllowlistBlocked] = useState(false)
   const hasHandledCallback = useRef(false)
   const hasStartedDirectSignIn = useRef(false)
 
@@ -43,15 +41,12 @@ export function AuthFlow({ onAuthenticated }: Props) {
       })
       .catch((error) => {
         console.error('[AuthFlow] Entra callback failed', error)
-        const rawMessage = error instanceof Error ? error.message : String(error || '')
-        const isForbiddenError = rawMessage.toLowerCase().includes('api error: 403')
-        setIsAllowlistBlocked(isForbiddenError)
         const intent = getAuthIntent()
         clearAuthIntent()
         const mode = intent === 'signup' ? 'signup' : 'signin'
         setAuthError(toUserFriendlyErrorMessage(error, {
           fallback: 'Inloggen mislukt',
-          forbiddenMessage: 'Dit e-mailadres staat niet op de allowlist. Vraag toegang aan contact@jnlsolutions.nl.',
+          forbiddenMessage: 'Je hebt geen toegang tot dit account.',
         }))
         navigate(`/inloggen?mode=${mode}`, { replace: true })
         hasHandledCallback.current = false
@@ -89,16 +84,12 @@ export function AuthFlow({ onAuthenticated }: Props) {
     hasStartedDirectSignIn.current = true
 
     setAuthError(null)
-    setIsAllowlistBlocked(false)
     setIsProcessingCallback(true)
     signInWithEntra().catch((error) => {
       console.error('[AuthFlow] direct Entra sign in failed', error)
-      const rawMessage = error instanceof Error ? error.message : String(error || '')
-      const isForbiddenError = rawMessage.toLowerCase().includes('api error: 403')
-      setIsAllowlistBlocked(isForbiddenError)
       setAuthError(toUserFriendlyErrorMessage(error, {
         fallback: 'Inloggen mislukt',
-        forbiddenMessage: 'Dit e-mailadres staat niet op de allowlist. Vraag toegang aan contact@jnlsolutions.nl.',
+        forbiddenMessage: 'Je hebt geen toegang tot dit account.',
       }))
       navigate('/inloggen?mode=signin', { replace: true })
       setIsProcessingCallback(false)
@@ -111,14 +102,6 @@ export function AuthFlow({ onAuthenticated }: Props) {
       return (
         <View style={styles.tooSmallContainer}>
           <Text style={styles.tooSmallText}>Deze webapp is niet zichtbaar op schermen smaller dan 1100px.</Text>
-        </View>
-      )
-    }
-
-    if (isAllowlistBlocked) {
-      return (
-        <View style={styles.allowlistCenteredContainer}>
-          <AllowlistLaunchScreen />
         </View>
       )
     }
@@ -180,11 +163,5 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: colors.textStrong,
     textAlign: 'center',
-  },
-  allowlistCenteredContainer: {
-    flex: 1,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 })

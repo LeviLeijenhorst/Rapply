@@ -1,6 +1,6 @@
 import crypto from "crypto"
 import { execute, queryOne } from "./db"
-import { isAdminEmail, normalizeEmail } from "./admin"
+import { normalizeEmail } from "./admin"
 
 export type AppUser = {
   userId: string
@@ -60,12 +60,6 @@ async function ensureUsersAccountTypeColumn(): Promise<void> {
   await ensureUsersAccountTypeColumnPromise
 }
 
-function createSignupNotAllowedError(): Error {
-  const error: any = new Error("Dit e-mailadres staat niet op de allowlist. Vraag toegang aan de beheerder.")
-  error.status = 403
-  return error as Error
-}
-
 // Intent: ensureUserFromEntra
 export async function ensureUserFromEntra(params: { entraUserId: string; email: string | null; displayName: string | null }): Promise<AppUser> {
   await ensureUsersAllowlistColumn()
@@ -85,11 +79,10 @@ export async function ensureUserFromEntra(params: { entraUserId: string; email: 
     entra_user_id: string
     email: string | null
     display_name: string | null
-    is_allowlisted: boolean
     account_type: "admin" | "paid" | "test"
   }>(
     `
-    select id, entra_user_id, email, display_name, is_allowlisted, account_type
+    select id, entra_user_id, email, display_name, account_type
     from public.users
     where entra_user_id = $1
     limit 1
@@ -98,10 +91,6 @@ export async function ensureUserFromEntra(params: { entraUserId: string; email: 
   )
 
   if (existingUser?.id) {
-    if (!isAdminEmail(normalizedEmail) && !existingUser.is_allowlisted) {
-      throw createSignupNotAllowedError()
-    }
-
     const updatedExistingUser = await queryOne<{
       id: string
       entra_user_id: string
@@ -139,11 +128,10 @@ export async function ensureUserFromEntra(params: { entraUserId: string; email: 
       entra_user_id: string | null
       email: string | null
       display_name: string | null
-      is_allowlisted: boolean
       account_type: "admin" | "paid" | "test"
     }>(
       `
-      select id, entra_user_id, email, display_name, is_allowlisted, account_type
+      select id, entra_user_id, email, display_name, account_type
       from public.users
       where lower(email) = $1
       limit 1
@@ -152,10 +140,6 @@ export async function ensureUserFromEntra(params: { entraUserId: string; email: 
     )
 
     if (existingUserByEmail?.id) {
-      if (!isAdminEmail(normalizedEmail) && !existingUserByEmail.is_allowlisted) {
-        throw createSignupNotAllowedError()
-      }
-
       const updatedUserByEmail = await queryOne<{
         id: string
         entra_user_id: string
@@ -186,26 +170,6 @@ export async function ensureUserFromEntra(params: { entraUserId: string; email: 
         displayName: updatedUserByEmail.display_name,
         accountType: updatedUserByEmail.account_type,
       }
-    }
-  }
-
-  if (!normalizedEmail) {
-    throw createSignupNotAllowedError()
-  }
-
-  if (!isAdminEmail(normalizedEmail)) {
-    const allowlistEntry = await queryOne<{ email: string }>(
-      `
-      select email
-      from public.signup_email_allowlist
-      where lower(email) = $1
-      limit 1
-      `,
-      [normalizedEmail],
-    )
-
-    if (!allowlistEntry?.email) {
-      throw createSignupNotAllowedError()
     }
   }
 
