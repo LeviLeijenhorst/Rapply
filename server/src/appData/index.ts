@@ -21,6 +21,7 @@ export type {
   Session,
   Note,
   WrittenReport,
+  TemplateCategory,
   TemplateSection,
   Template,
   PracticeSettings,

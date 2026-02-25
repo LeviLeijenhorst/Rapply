@@ -68,7 +68,7 @@ export function TemplateEditModal({ visible, mode, template, readOnly = false, o
   useEffect(() => {
     if (!visible) return
     setPendingDeleteSectionId(null)
-    if (mode === 'edit' && template) {
+    if (template) {
       setActiveTemplate(template)
       return
     }

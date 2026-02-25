@@ -1,4 +1,6 @@
-function normalizeTemplateName(name: string): string {
+import type { Template, TemplateCategory } from '../local/types'
+
+export function normalizeTemplateName(name: string): string {
   return name
     .trim()
     .toLowerCase()
@@ -7,17 +9,17 @@ function normalizeTemplateName(name: string): string {
     .replace(/[^a-z0-9]+/g, '')
 }
 
-export function isGespreksverslagTemplateName(name: string): boolean {
+export function inferTemplateCategoryFromName(name: string): TemplateCategory {
   const normalized = normalizeTemplateName(name)
-  if (!normalized) return false
+  if (!normalized) return 'ander-verslag'
 
-  if (normalized === 'intake' || normalized === 'intakeverslag') return true
+  if (normalized === 'intake' || normalized === 'intakeverslag') return 'gespreksverslag'
   if (
     normalized === 'voortgangsgesprek' ||
     normalized === 'voortgangsgespreksverslag' ||
     normalized === 'voortgangsrapportage'
   ) {
-    return true
+    return 'gespreksverslag'
   }
   if (
     normalized === 'terugkoppelingsrapportclient' ||
@@ -27,8 +29,17 @@ export function isGespreksverslagTemplateName(name: string): boolean {
     normalized === 'terugkoppelingsrapportvoorwerknemer' ||
     normalized === 'terugkoppelingwerknemer'
   ) {
-    return true
+    return 'gespreksverslag'
   }
 
-  return false
+  return 'ander-verslag'
+}
+
+export function isGespreksverslagTemplate(template: Pick<Template, 'name' | 'category'>): boolean {
+  if (template.category === 'gespreksverslag') return true
+  return inferTemplateCategoryFromName(template.name) === 'gespreksverslag'
+}
+
+export function isGespreksverslagTemplateName(name: string): boolean {
+  return inferTemplateCategoryFromName(name) === 'gespreksverslag'
 }

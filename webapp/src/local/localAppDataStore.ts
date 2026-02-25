@@ -1,6 +1,7 @@
 import { createDefaultLocalAppData } from './defaultData'
 import { readJsonFromLocalStorage, writeJsonToLocalStorage } from './localStorageJson'
 import { Coachee, LocalAppData, Note, Session, SessionKind, Template, WrittenReport } from './types'
+import { inferTemplateCategoryFromName } from '../utils/templateCategories'
 
 const storageKey = 'coachscribe.localAppData.v2'
 
@@ -66,6 +67,10 @@ function normalizeLocalAppData(data: LocalAppData): LocalAppData {
     templates: Array.isArray(data.templates)
       ? data.templates.map((template) => ({
           ...template,
+          category:
+            (template as any).category === 'gespreksverslag' || (template as any).category === 'ander-verslag'
+              ? (template as any).category
+              : inferTemplateCategoryFromName(String((template as any).name || '')),
           description: typeof (template as any).description === 'string' ? (template as any).description : '',
           isDefault: typeof (template as any).isDefault === 'boolean' ? (template as any).isDefault : false,
         }))

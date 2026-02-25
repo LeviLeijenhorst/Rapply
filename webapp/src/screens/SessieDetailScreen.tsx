@@ -62,7 +62,7 @@ import {
 } from '../audio/pendingPreviewStore'
 import { RichTextEditorModal } from '../components/editor/RichTextEditorModal'
 import { normalizeTranscriptionError } from '../utils/transcriptionError'
-import { isGespreksverslagTemplateName } from '../utils/templateCategories'
+import { isGespreksverslagTemplate } from '../utils/templateCategories'
 import { ConfirmChatClearModal } from '../components/sessionDetail/ConfirmChatClearModal'
 import { AnimatedOverlayModal } from '../components/AnimatedOverlayModal'
 import { fetchBillingStatus, type BillingStatus } from '../services/billing'
@@ -145,7 +145,7 @@ export function SessieDetailScreen({
   const isConversationSession = session?.kind === 'recording' || session?.kind === 'upload'
   const templatesForSession = useMemo(() => {
     if (!isConversationSession) return templates
-    return templates.filter((template) => isGespreksverslagTemplateName(template.name))
+    return templates.filter((template) => isGespreksverslagTemplate(template))
   }, [isConversationSession, templates])
   const quickQuestionTemplates = useMemo(
     () =>

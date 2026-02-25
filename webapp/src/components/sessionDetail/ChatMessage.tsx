@@ -567,6 +567,11 @@ export async function exportMessageToPdf(messageText: string, reportTitle: strin
       const spacingAfter = isHeadingTwo ? 6 : 4
       const color = strongTextColor
       const wrapped = wrapSegmentsToLines(doc, line.segments, maxWidth, fontSize)
+      // Keep a section header away from the page bottom by reserving room for the full
+      // header block plus at least one body line that follows the section.
+      const headingBlockHeight = wrapped.length * lineHeight + (wrapped.length > 0 ? 2 : 0) + spacingAfter
+      const sectionStartMinimumHeight = headingBlockHeight + bodyLineHeight
+      ensureSpace(sectionStartMinimumHeight)
       wrapped.forEach((segments, idx) => {
         ensureSpace(lineHeight)
         drawSegmentsLine(segments, contentX, cursorY, color, fontSize)

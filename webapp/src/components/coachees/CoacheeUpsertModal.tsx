@@ -4,9 +4,7 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { colors } from '../../theme/colors'
 import { Text } from '../Text'
-import { EditActionIcon } from '../icons/EditActionIcon'
 import { MijnAccountIcon } from '../icons/MijnAccountIcon'
-import { focusAndSelectAll } from '../../utils/textInput'
 import { CalendarCircleIcon } from '../icons/CalendarCircleIcon'
 import type { CoacheeUpsertValues } from '../../utils/coacheeProfile'
 
@@ -85,20 +83,28 @@ function getCalendarCells(monthDate: Date): CalendarCell[] {
 export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSave }: Props) {
   const CALENDAR_PANEL_WIDTH = 320
   const CALENDAR_PANEL_HEIGHT = 320
-  const CALENDAR_PANEL_OFFSET = 8
+  const CALENDAR_PANEL_OFFSET = 24
+  const CALENDAR_ANIMATION_MS = 180
   const [values, setValues] = useState<CoacheeUpsertValues>(initialValues)
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+  const [isCalendarMounted, setIsCalendarMounted] = useState(false)
+  const [isCalendarActive, setIsCalendarActive] = useState(false)
   const [visibleMonth, setVisibleMonth] = useState<Date>(new Date())
   const [calendarAnchor, setCalendarAnchor] = useState<{ left: number; top: number } | null>(null)
   const containerRef = useRef<View | null>(null)
   const calendarButtonRef = useRef<View | null>(null)
+  const calendarPanelRef = useRef<View | null>(null)
   const firstNameInputRef = useRef<TextInput | null>(null)
   const firstSickDayInputRef = useRef<TextInput | null>(null)
+  const inputRefs = useRef<Partial<Record<keyof CoacheeUpsertValues, TextInput | null>>>({})
+  const calendarCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (!visible) return
     setValues(initialValues)
     setIsCalendarOpen(false)
+    setIsCalendarMounted(false)
+    setIsCalendarActive(false)
     setCalendarAnchor(null)
     const parsed = parseDateInput(initialValues.firstSickDay)
     setVisibleMonth(parsed ?? new Date())
@@ -109,6 +115,63 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
     const id = setTimeout(() => firstNameInputRef.current?.focus(), 120)
     return () => clearTimeout(id)
   }, [visible])
+
+  useEffect(() => {
+    if (calendarCloseTimerRef.current) {
+      clearTimeout(calendarCloseTimerRef.current)
+      calendarCloseTimerRef.current = null
+    }
+
+    if (isCalendarOpen) {
+      setIsCalendarMounted(true)
+      const id = setTimeout(() => setIsCalendarActive(true), 8)
+      return () => clearTimeout(id)
+    }
+
+    setIsCalendarActive(false)
+    calendarCloseTimerRef.current = setTimeout(() => {
+      setIsCalendarMounted(false)
+      calendarCloseTimerRef.current = null
+    }, CALENDAR_ANIMATION_MS)
+
+    return () => {
+      if (calendarCloseTimerRef.current) {
+        clearTimeout(calendarCloseTimerRef.current)
+        calendarCloseTimerRef.current = null
+      }
+    }
+  }, [CALENDAR_ANIMATION_MS, isCalendarOpen])
+
+  useEffect(() => {
+    if (!isCalendarOpen) return
+    if (typeof window === 'undefined') return
+
+    const pointInRect = (x: number, y: number, rect: DOMRect | null | undefined) => {
+      if (!rect) return false
+      return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+    }
+
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      const touch = 'touches' in event ? event.touches[0] ?? event.changedTouches[0] : null
+      const clientX = touch ? touch.clientX : (event as MouseEvent).clientX
+      const clientY = touch ? touch.clientY : (event as MouseEvent).clientY
+      if (typeof clientX !== 'number' || typeof clientY !== 'number') return
+
+      const panelRect = (calendarPanelRef.current as any)?.getBoundingClientRect?.() as DOMRect | undefined
+      const buttonRect = (calendarButtonRef.current as any)?.getBoundingClientRect?.() as DOMRect | undefined
+      if (pointInRect(clientX, clientY, panelRect) || pointInRect(clientX, clientY, buttonRect)) return
+
+      setIsCalendarOpen(false)
+    }
+
+    window.addEventListener('mousedown', onPointerDown)
+    window.addEventListener('touchstart', onPointerDown, { passive: true })
+
+    return () => {
+      window.removeEventListener('mousedown', onPointerDown)
+      window.removeEventListener('touchstart', onPointerDown)
+    }
+  }, [isCalendarOpen])
 
   const monthTitle = useMemo(() => new Intl.DateTimeFormat('nl-NL', { month: 'long', year: 'numeric' }).format(visibleMonth), [visibleMonth])
   const calendarCells = useMemo(() => getCalendarCells(visibleMonth), [visibleMonth])
@@ -126,25 +189,71 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
     setValues((previous) => ({ ...previous, [key]: nextValue }))
   }
 
-  function clampFormattedDate(formatted: string) {
-    const match = formatted.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
-    if (!match) return formatted
-    let day = Number(match[1])
-    let month = Number(match[2])
-    const year = Number(match[3])
-    if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) return formatted
-    if (month > 12) month = 12
-    if (month >= 1) {
-      const maxDay = new Date(year, month, 0).getDate()
-      if (day > maxDay) day = maxDay
+  function clampDateDigits(digits: string) {
+    if (digits.length === 0) return digits
+    const fallbackYear = new Date().getFullYear()
+    const rawDay = digits.slice(0, Math.min(2, digits.length))
+    const rawMonth = digits.length > 2 ? digits.slice(2, Math.min(4, digits.length)) : ''
+    const rawYear = digits.length > 4 ? digits.slice(4) : ''
+
+    let day = rawDay
+    if (rawDay.length === 2) {
+      const dayNumber = Number(rawDay)
+      if (Number.isFinite(dayNumber)) {
+        let maxDay = 31
+        if (rawMonth.length === 2) {
+          const monthNumber = Number(rawMonth)
+          if (monthNumber >= 1 && monthNumber <= 12) {
+            const yearForCalc = rawYear.length === 4 ? Number(rawYear) : fallbackYear
+            maxDay = new Date(yearForCalc, monthNumber, 0).getDate()
+          }
+        }
+        day = pad2(Math.max(1, Math.min(dayNumber, maxDay)))
+      }
     }
-    return `${pad2(day)}/${pad2(month)}/${year}`
+
+    let month = rawMonth
+    if (rawMonth.length === 2) {
+      const monthNumber = Number(rawMonth)
+      if (Number.isFinite(monthNumber)) {
+        month = pad2(Math.max(1, Math.min(monthNumber, 12)))
+      }
+    }
+
+    if (day.length === 2 && month.length === 2) {
+      const dayNumber = Number(day)
+      const monthNumber = Number(month)
+      if (Number.isFinite(dayNumber) && Number.isFinite(monthNumber) && monthNumber >= 1 && monthNumber <= 12) {
+        const yearForCalc = rawYear.length === 4 ? Number(rawYear) : fallbackYear
+        const maxDay = new Date(yearForCalc, monthNumber, 0).getDate()
+        day = pad2(Math.max(1, Math.min(dayNumber, maxDay)))
+      }
+    }
+
+    return `${day}${month}${rawYear}`.slice(0, 8)
   }
 
-  function formatDateInput(raw: string) {
-    const digits = raw.replace(/\D/g, '').slice(0, 8)
-    if (digits.length <= 2) return digits
-    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
+  function formatDateInput(raw: string, previousValue: string) {
+    const previousDigits = previousValue.replace(/\D/g, '').slice(0, 8)
+    const rawDigits = raw.replace(/\D/g, '').slice(0, 8)
+    const digits = clampDateDigits(rawDigits)
+    const isDeleting = rawDigits.length < previousDigits.length
+    const endsAtSecondSeparator = previousValue.endsWith('/') && rawDigits.length === previousDigits.length
+
+    if (isDeleting && endsAtSecondSeparator) {
+      const digitsWithoutMonth = digits.slice(0, 2)
+      return digitsWithoutMonth.length === 2 ? `${digitsWithoutMonth}/` : digitsWithoutMonth
+    }
+
+    if (isDeleting && previousValue.endsWith('/') && previousDigits.length === 2 && rawDigits.length === 2) {
+      return digits
+    }
+
+    if (digits.length <= 2) return digits.length === 2 ? `${digits}/` : digits
+    if (digits.length <= 4) {
+      const monthPart = digits.slice(2)
+      return digits.length === 4 ? `${digits.slice(0, 2)}/${monthPart}/` : `${digits.slice(0, 2)}/${monthPart}`
+    }
     return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
   }
 
@@ -169,7 +278,7 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
   function renderInputRow(
     label: string,
     key: keyof CoacheeUpsertValues,
-    options?: { placeholder?: string; inputRef?: React.RefObject<TextInput | null>; required?: boolean },
+    options?: { placeholder?: string; inputRef?: React.MutableRefObject<TextInput | null>; required?: boolean },
   ) {
     const value = values[key]
     return (
@@ -178,27 +287,18 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
           {label}
           {options?.required ? ' *' : ''}
         </Text>
-        <Pressable
-          onPress={() => options?.inputRef?.current?.focus()}
-          style={({ hovered }) => [styles.inputRow, hovered ? styles.inputRowHovered : undefined]}
-        >
+        <Pressable onPress={() => inputRefs.current[key]?.focus()} style={({ hovered }) => [styles.inputRow, hovered ? styles.inputRowHovered : undefined]}>
           <TextInput
-            ref={options?.inputRef}
+            ref={(instance) => {
+              inputRefs.current[key] = instance
+              if (options?.inputRef) options.inputRef.current = instance
+            }}
             value={String(value)}
             onChangeText={(text) => setValue(key, text as CoacheeUpsertValues[keyof CoacheeUpsertValues])}
             placeholder={options?.placeholder ?? ''}
             placeholderTextColor="#656565"
             style={[styles.textInput, styles.inputCursorPointer, inputWebStyle]}
           />
-          <Pressable
-            onPress={() => {
-              if (!options?.inputRef) return
-              focusAndSelectAll(options.inputRef, String(value))
-            }}
-            style={({ hovered }) => [styles.inputIconButton, hovered ? styles.inputIconButtonHovered : undefined]}
-          >
-            <EditActionIcon color="#656565" size={18} />
-          </Pressable>
         </Pressable>
       </View>
     )
@@ -256,8 +356,8 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
                 ref={firstSickDayInputRef}
                 value={values.firstSickDay}
                 onChangeText={(text) => {
-                  const formatted = formatDateInput(text)
-                  setValue('firstSickDay', clampFormattedDate(formatted))
+                  const formatted = formatDateInput(text, values.firstSickDay)
+                  setValue('firstSickDay', formatted)
                   setIsCalendarOpen(false)
                 }}
                 onKeyPress={(event) => {
@@ -305,8 +405,8 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
           </Text>
         </Pressable>
       </View>
-      {isCalendarOpen && calendarAnchor ? (
-        <View style={[styles.calendarPanel, { left: calendarAnchor.left, top: calendarAnchor.top }]}>
+      {isCalendarMounted && calendarAnchor ? (
+        <View ref={calendarPanelRef} style={[styles.calendarPanel, styles.calendarPanelTransitionBase, isCalendarActive ? styles.calendarPanelTransitionOpen : styles.calendarPanelTransitionClosed, { left: calendarAnchor.left, top: calendarAnchor.top }]}>
           <View style={styles.calendarHeader}>
             <Pressable
               onPress={() => setVisibleMonth((previous) => new Date(previous.getFullYear(), previous.getMonth() - 1, 1))}
@@ -467,16 +567,6 @@ const styles = StyleSheet.create({
   inputCursorPointer: {
     ...( { cursor: 'pointer' } as any ),
   },
-  inputIconButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inputIconButtonHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -521,6 +611,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 12,
     ...( { boxShadow: '0 14px 28px rgba(15,23,42,0.14)' } as any ),
+  },
+  calendarPanelTransitionBase: {
+    ...( { transitionProperty: 'opacity, transform', transitionDuration: '180ms', transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transformOrigin: '100% 100%', willChange: 'opacity, transform' } as any ),
+  },
+  calendarPanelTransitionOpen: {
+    opacity: 1,
+    ...( { transform: 'translateY(0px) scale(1)' } as any ),
+  },
+  calendarPanelTransitionClosed: {
+    opacity: 0,
+    ...( { transform: 'translateY(8px) scale(0.96)' } as any ),
   },
   calendarHeader: {
     flexDirection: 'row',

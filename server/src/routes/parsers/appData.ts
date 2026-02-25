@@ -1,6 +1,39 @@
 import type { Coachee, Note, Session, Template, WrittenReport } from "../../appData"
 import { readId, readOptionalId, readOptionalNumber, readOptionalText, readText, readUnixMs } from "./scalars"
 
+function normalizeTemplateName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "")
+}
+
+function inferTemplateCategoryFromName(name: string): Template["category"] {
+  const normalized = normalizeTemplateName(name)
+  if (!normalized) return "ander-verslag"
+  if (normalized === "intake" || normalized === "intakeverslag") return "gespreksverslag"
+  if (
+    normalized === "voortgangsgesprek" ||
+    normalized === "voortgangsgespreksverslag" ||
+    normalized === "voortgangsrapportage"
+  ) {
+    return "gespreksverslag"
+  }
+  if (
+    normalized === "terugkoppelingsrapportclient" ||
+    normalized === "terugkoppelingsrapportvoorclient" ||
+    normalized === "terugkoppelingclient" ||
+    normalized === "terugkoppelingsrapportwerknemer" ||
+    normalized === "terugkoppelingsrapportvoorwerknemer" ||
+    normalized === "terugkoppelingwerknemer"
+  ) {
+    return "gespreksverslag"
+  }
+  return "ander-verslag"
+}
+
 // Parses an optional session transcription status enum value.
 export function readOptionalTranscriptionStatus(value: unknown): Session["transcriptionStatus"] | undefined {
   if (typeof value !== "string") return undefined
@@ -93,14 +126,18 @@ export function readTemplateSection(value: unknown, index: number): Template["se
 // Parses a template payload from request input.
 export function readTemplate(value: unknown): Template {
   const payload = (value || {}) as any
+  const name = readText(payload.name, "template.name")
   const createdAtUnixMs = readUnixMs(payload.createdAtUnixMs, "template.createdAtUnixMs")
   const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs ?? payload.createdAtUnixMs, "template.updatedAtUnixMs")
+  const category =
+    payload.category === "gespreksverslag" || payload.category === "ander-verslag" ? payload.category : inferTemplateCategoryFromName(name)
   if (!Array.isArray(payload.sections)) {
     throw new Error("Missing template.sections")
   }
   return {
     id: readId(payload.id, "template.id"),
-    name: readText(payload.name, "template.name"),
+    name,
+    category,
     description: readOptionalText(payload.description, true) ?? "",
     sections: payload.sections.map((section: unknown, index: number) => readTemplateSection(section, index)),
     isSaved: typeof payload.isSaved === "boolean" ? payload.isSaved : false,

@@ -38,7 +38,7 @@ import {
   type TranscriptionMode,
 } from '../../services/realtimeTranscription'
 import { useToast } from '../../toast/ToastProvider'
-import { isGespreksverslagTemplateName } from '../../utils/templateCategories'
+import { isGespreksverslagTemplate } from '../../utils/templateCategories'
 
 type Step = 'select' | 'consent' | 'upload' | 'recording' | 'recorded'
 type OptionKey = 'gesprek' | 'verslag' | 'upload' | 'schrijven'
@@ -262,7 +262,7 @@ export function NewSessionModal({
   const { height: windowHeight, width: windowWidth } = useWindowDimensions()
   const templates = data.templates ?? []
   const reportTypeTemplates = useMemo(() => {
-    return templates.filter((template) => isGespreksverslagTemplateName(template.name))
+    return templates.filter((template) => isGespreksverslagTemplate(template))
   }, [templates])
   const defaultTemplateId = useMemo(() => {
     const standardTemplate = reportTypeTemplates.find((template) => {

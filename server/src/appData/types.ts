@@ -51,9 +51,12 @@ export type TemplateSection = {
   description: string
 }
 
+export type TemplateCategory = "gespreksverslag" | "ander-verslag"
+
 export type Template = {
   id: string
   name: string
+  category: TemplateCategory
   description: string
   sections: TemplateSection[]
   isSaved: boolean

@@ -37,6 +37,30 @@ function normalizeTemplateSectionTitle(value: string): string {
     .replace(/[^a-z0-9]+/g, "")
 }
 
+function inferTemplateCategoryFromName(name: string): Template["category"] {
+  const normalized = normalizeTemplateSectionTitle(name)
+  if (!normalized) return "ander-verslag"
+  if (normalized === "intake" || normalized === "intakeverslag") return "gespreksverslag"
+  if (
+    normalized === "voortgangsgesprek" ||
+    normalized === "voortgangsgespreksverslag" ||
+    normalized === "voortgangsrapportage"
+  ) {
+    return "gespreksverslag"
+  }
+  if (
+    normalized === "terugkoppelingsrapportclient" ||
+    normalized === "terugkoppelingsrapportvoorclient" ||
+    normalized === "terugkoppelingclient" ||
+    normalized === "terugkoppelingsrapportwerknemer" ||
+    normalized === "terugkoppelingsrapportvoorwerknemer" ||
+    normalized === "terugkoppelingwerknemer"
+  ) {
+    return "gespreksverslag"
+  }
+  return "ander-verslag"
+}
+
 function hasLegacyGenericTemplateSections(sections: TemplateSection[]): boolean {
   if (sections.length !== 3) return false
   const normalizedTitles = sections.map((section) => normalizeTemplateSectionTitle(section.title))
@@ -56,7 +80,9 @@ function mapTemplateRow(row: TemplateRow): Template {
       ? (((rawSectionsPayload as any).sections as TemplateSection[]) ?? [])
       : []
   const descriptionRaw = typeof (rawSectionsPayload as any)?.description === "string" ? ((rawSectionsPayload as any).description as string) : ""
+  const categoryRaw = (rawSectionsPayload as any)?.category
   const isDefaultRaw = typeof (rawSectionsPayload as any)?.isDefault === "boolean" ? ((rawSectionsPayload as any).isDefault as boolean) : false
+  const category = categoryRaw === "gespreksverslag" || categoryRaw === "ander-verslag" ? categoryRaw : inferTemplateCategoryFromName(row.name)
   const normalizedSections = hasLegacyGenericTemplateSections(rawSections)
     ? getReintegrationDefaultTemplateSectionsByName(row.name)?.map((section, index) => ({
         id: `${row.id}-section-${index + 1}`,
@@ -69,6 +95,7 @@ function mapTemplateRow(row: TemplateRow): Template {
   return {
     id: row.id,
     name: row.name,
+    category,
     description,
     sections: normalizedSections,
     isSaved: row.is_saved,

@@ -2,19 +2,22 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native'
 
 import { AnimatedMainContent } from '../components/AnimatedMainContent'
+import { AnimatedDropdownPanel } from '../components/AnimatedDropdownPanel'
 import { AnimatedWidthContainer } from '../components/AnimatedWidthContainer'
 import { PlusIcon } from '../components/icons/PlusIcon'
 import { SearchIcon } from '../components/icons/SearchIcon'
 import { CalendlyModal } from '../components/templates/CalendlyModal'
 import { ConfirmTemplateDeleteModal } from '../components/templates/ConfirmTemplateDeleteModal'
-import { TemplateEditModal } from '../components/templates/TemplateEditModal'
+import { TemplateEditModal, type TemplateEditModalTemplate } from '../components/templates/TemplateEditModal'
 import { Text } from '../components/Text'
+import { WebPortal } from '../components/WebPortal'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
+import { TemplateCategory } from '../local/types'
 import { colors } from '../theme/colors'
 import { typography } from '../theme/typography'
 import { webTransitionSmooth } from '../theme/webTransitions'
 import { parseRichTextMarkdown } from '../utils/richTextFormatting'
-import { isGespreksverslagTemplateName } from '../utils/templateCategories'
+import { isGespreksverslagTemplate } from '../utils/templateCategories'
 
 type SavedFilterKey = 'all' | 'saved'
 
@@ -25,18 +28,38 @@ function getTemplateDisplayName(name: string): string {
   return name
 }
 
+function createTemplateDraftForCategory(category: TemplateCategory): TemplateEditModalTemplate {
+  const sectionId = `section-${Date.now()}`
+  if (category === 'gespreksverslag') {
+    return {
+      name: 'Nieuw gespreksverslag',
+      description: '',
+      sections: [{ id: sectionId, title: '', description: '' }],
+    }
+  }
+  return {
+    name: 'Nieuw verslag',
+    description: '',
+    sections: [{ id: sectionId, title: '', description: '' }],
+  }
+}
+
 // Renders the templates overview, filters, and create/edit/delete modal flows.
 export function TemplatesScreen() {
   const { width: windowWidth } = useWindowDimensions()
   const { data, createTemplate, updateTemplate, deleteTemplate } = useLocalAppData()
   const [searchText, setSearchText] = useState('')
   const [activeSavedFilter, setActiveSavedFilter] = useState<SavedFilterKey>('all')
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [createTemplateCategory, setCreateTemplateCategory] = useState<TemplateCategory | null>(null)
+  const [createTemplateDraft, setCreateTemplateDraft] = useState<TemplateEditModalTemplate | null>(null)
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
   const [pendingDeleteTemplateId, setPendingDeleteTemplateId] = useState<string | null>(null)
   const [isCalendlyModalOpen, setIsCalendlyModalOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false)
+  const [createMenuAnchor, setCreateMenuAnchor] = useState<{ left: number; top: number; width: number } | null>(null)
   const searchInputRef = useRef<TextInput | null>(null)
+  const createButtonRef = useRef<any>(null)
 
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
   const templates = data.templates ?? []
@@ -71,11 +94,11 @@ export function TemplatesScreen() {
       })
   }, [activeSavedFilter, searchText, templates])
   const visibleConversationTemplates = useMemo(
-    () => visibleTemplates.filter((template) => isGespreksverslagTemplateName(template.name)),
+    () => visibleTemplates.filter((template) => isGespreksverslagTemplate(template)),
     [visibleTemplates],
   )
   const visibleOtherTemplates = useMemo(
-    () => visibleTemplates.filter((template) => !isGespreksverslagTemplateName(template.name)),
+    () => visibleTemplates.filter((template) => !isGespreksverslagTemplate(template)),
     [visibleTemplates],
   )
   const hasSearchQuery = searchText.trim().length > 0
@@ -91,6 +114,30 @@ export function TemplatesScreen() {
     const id = setTimeout(() => searchInputRef.current?.focus(), 120)
     return () => clearTimeout(id)
   }, [isSearchOpen])
+
+  useEffect(() => {
+    if (!isCreateMenuOpen) return
+    if (typeof window === 'undefined') return
+
+    const updateCreateMenuAnchor = () => {
+      const rect = createButtonRef.current?.getBoundingClientRect?.()
+      if (!rect) return
+      const menuWidth = Math.max(230, rect.width)
+      setCreateMenuAnchor({
+        left: rect.right - menuWidth,
+        top: rect.bottom + 8,
+        width: menuWidth,
+      })
+    }
+
+    updateCreateMenuAnchor()
+    window.addEventListener('resize', updateCreateMenuAnchor)
+    window.addEventListener('scroll', updateCreateMenuAnchor, true)
+    return () => {
+      window.removeEventListener('resize', updateCreateMenuAnchor)
+      window.removeEventListener('scroll', updateCreateMenuAnchor, true)
+    }
+  }, [isCreateMenuOpen])
 
   return (
     <View style={styles.container}>
@@ -131,8 +178,9 @@ export function TemplatesScreen() {
               )}
             </AnimatedWidthContainer>
             <Pressable
+              ref={createButtonRef}
               style={({ hovered }) => [styles.addButton, webTransitionSmooth, hovered ? styles.addButtonHovered : undefined]}
-              onPress={() => setIsCreateModalOpen(true)}
+              onPress={() => setIsCreateMenuOpen((previous) => !previous)}
             >
               <PlusIcon color="#FFFFFF" size={22} />
               <Text numberOfLines={1} style={styles.addButtonText}>
@@ -166,6 +214,46 @@ export function TemplatesScreen() {
         </View> */}
       </View>
 
+      {isCreateMenuOpen && createMenuAnchor ? (
+        <WebPortal>
+          <View style={styles.createMenuLayer as any}>
+            <Pressable style={styles.createMenuBackdrop as any} onPress={() => setIsCreateMenuOpen(false)} />
+            <AnimatedDropdownPanel
+              visible={isCreateMenuOpen}
+              style={[
+                styles.createMenu,
+                {
+                  left: createMenuAnchor.left,
+                  top: createMenuAnchor.top,
+                  width: createMenuAnchor.width,
+                } as any,
+              ]}
+            >
+              <Pressable
+                onPress={() => {
+                  setCreateTemplateCategory('gespreksverslag')
+                  setCreateTemplateDraft(createTemplateDraftForCategory('gespreksverslag'))
+                  setIsCreateMenuOpen(false)
+                }}
+                style={({ hovered }) => [styles.createMenuItem, hovered ? styles.createMenuItemHovered : undefined]}
+              >
+                <Text style={styles.createMenuItemText}>Gespreksverslag template</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setCreateTemplateCategory('ander-verslag')
+                  setCreateTemplateDraft(createTemplateDraftForCategory('ander-verslag'))
+                  setIsCreateMenuOpen(false)
+                }}
+                style={({ hovered }) => [styles.createMenuItem, hovered ? styles.createMenuItemHovered : undefined]}
+              >
+                <Text style={styles.createMenuItemText}>Ander verslag template</Text>
+              </Pressable>
+            </AnimatedDropdownPanel>
+          </View>
+        </WebPortal>
+      ) : null}
+
       <View style={styles.gridArea}>
         <AnimatedMainContent contentKey={activeSavedFilter}>
           {visibleTemplates.length === 0 ? (
@@ -175,9 +263,20 @@ export function TemplatesScreen() {
           ) : (
             <View style={styles.sectionsContainer}>
               <View style={styles.sectionBlock}>
-                <Text isSemibold style={styles.sectionTitle}>
-                  Templates voor gespreksverslagen
-                </Text>
+                <View style={styles.sectionHeaderRow}>
+                  <Text isSemibold style={styles.sectionTitle}>
+                    Templates voor gespreksverslagen
+                  </Text>
+                  <Pressable
+                    onPress={() => {
+                      setCreateTemplateCategory('gespreksverslag')
+                      setCreateTemplateDraft(createTemplateDraftForCategory('gespreksverslag'))
+                    }}
+                    style={({ hovered }) => [styles.sectionCreateIconButton, hovered ? styles.sectionCreateIconButtonHovered : undefined]}
+                  >
+                    <PlusIcon color={colors.textStrong} size={16} />
+                  </Pressable>
+                </View>
                 {visibleConversationTemplates.length === 0 ? (
                   <Text style={styles.sectionEmptyText}>Geen gespreksverslagen gevonden.</Text>
                 ) : (
@@ -195,9 +294,20 @@ export function TemplatesScreen() {
                 )}
               </View>
               <View style={styles.sectionBlock}>
-                <Text isSemibold style={styles.sectionTitle}>
-                  Templates voor andere verslagen
-                </Text>
+                <View style={styles.sectionHeaderRow}>
+                  <Text isSemibold style={styles.sectionTitle}>
+                    Templates voor andere verslagen
+                  </Text>
+                  <Pressable
+                    onPress={() => {
+                      setCreateTemplateCategory('ander-verslag')
+                      setCreateTemplateDraft(createTemplateDraftForCategory('ander-verslag'))
+                    }}
+                    style={({ hovered }) => [styles.sectionCreateIconButton, hovered ? styles.sectionCreateIconButtonHovered : undefined]}
+                  >
+                    <PlusIcon color={colors.textStrong} size={16} />
+                  </Pressable>
+                </View>
                 {visibleOtherTemplates.length === 0 ? (
                   <Text style={styles.sectionEmptyText}>Geen andere verslagen gevonden.</Text>
                 ) : (
@@ -220,12 +330,19 @@ export function TemplatesScreen() {
       </View>
 
       <TemplateEditModal
-        visible={isCreateModalOpen}
+        visible={Boolean(createTemplateCategory && createTemplateDraft)}
         mode="create"
-        onClose={() => setIsCreateModalOpen(false)}
+        template={createTemplateDraft ?? undefined}
+        onClose={() => {
+          setCreateTemplateCategory(null)
+          setCreateTemplateDraft(null)
+          setIsCreateMenuOpen(false)
+        }}
         onSave={(template) => {
-          createTemplate(template)
-          setIsCreateModalOpen(false)
+          if (!createTemplateCategory) return
+          createTemplate({ ...template, category: createTemplateCategory })
+          setCreateTemplateCategory(null)
+          setCreateTemplateDraft(null)
         }}
       />
 
@@ -399,6 +516,36 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     ...( { transform: [{ translateY: 1 }] } as any ),
   },
+  createMenu: {
+    position: 'fixed',
+    minWidth: 230,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingVertical: 4,
+    ...( { boxShadow: '0 8px 20px rgba(0,0,0,0.12)', zIndex: 10001 } as any ),
+  },
+  createMenuLayer: {
+    ...( { position: 'fixed', inset: 0, zIndex: 10000 } as any ),
+  },
+  createMenuBackdrop: {
+    ...( { position: 'absolute', inset: 0 } as any ),
+  },
+  createMenuItem: {
+    height: 38,
+    paddingHorizontal: 12,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  createMenuItemHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  createMenuItemText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+  },
   bookCallButton: {
     height: 40,
     borderRadius: 10,
@@ -478,10 +625,30 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 12,
   },
+  sectionHeaderRow: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 8,
+  },
   sectionTitle: {
     fontSize: 16,
     lineHeight: 20,
     color: colors.textStrong,
+  },
+  sectionCreateIconButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionCreateIconButtonHovered: {
+    backgroundColor: colors.hoverBackground,
   },
   sectionEmptyText: {
     fontSize: 14,

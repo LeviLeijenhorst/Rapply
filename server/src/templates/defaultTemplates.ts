@@ -9,6 +9,7 @@ function createId(prefix: string) {
 
 type TemplateBlueprint = {
   name: string
+  category?: Template["category"]
   description: string
   sections: Array<{ title: string; description: string }>
 }
@@ -20,6 +21,30 @@ function normalizeTemplateName(name: string): string {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "")
+}
+
+function inferTemplateCategoryFromName(name: string): Template["category"] {
+  const normalized = normalizeTemplateName(name)
+  if (!normalized) return "ander-verslag"
+  if (normalized === "intake" || normalized === "intakeverslag") return "gespreksverslag"
+  if (
+    normalized === "voortgangsgesprek" ||
+    normalized === "voortgangsgespreksverslag" ||
+    normalized === "voortgangsrapportage"
+  ) {
+    return "gespreksverslag"
+  }
+  if (
+    normalized === "terugkoppelingsrapportclient" ||
+    normalized === "terugkoppelingsrapportvoorclient" ||
+    normalized === "terugkoppelingclient" ||
+    normalized === "terugkoppelingsrapportwerknemer" ||
+    normalized === "terugkoppelingsrapportvoorwerknemer" ||
+    normalized === "terugkoppelingwerknemer"
+  ) {
+    return "gespreksverslag"
+  }
+  return "ander-verslag"
 }
 
 const intakeDescription = `### Doel
@@ -149,6 +174,7 @@ function materializeTemplateBlueprints(blueprints: TemplateBlueprint[]): Templat
   return blueprints.map((blueprint) => ({
     id: createId("template"),
     name: blueprint.name,
+    category: blueprint.category ?? inferTemplateCategoryFromName(blueprint.name),
     description: blueprint.description,
     isSaved: false,
     isDefault: true,

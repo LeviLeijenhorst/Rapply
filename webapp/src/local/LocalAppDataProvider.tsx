@@ -20,7 +20,7 @@ import {
   updateSession,
 } from './localAppDataStore'
 import { createId } from './createId'
-import { Coachee, LocalAppData, Note, PracticeSettings, Session, SessionKind, Template, TemplateSection, WrittenReport } from './types'
+import { Coachee, LocalAppData, Note, PracticeSettings, Session, SessionKind, Template, TemplateCategory, TemplateSection, WrittenReport } from './types'
 import {
   createCoacheeRemote,
   createNoteRemote,
@@ -87,7 +87,7 @@ type ContextValue = {
 
   setWrittenReport: (sessionId: string, text: string) => void
 
-  createTemplate: (values: { name: string; description: string; sections: TemplateSection[] }) => string
+  createTemplate: (values: { name: string; category: TemplateCategory; description: string; sections: TemplateSection[] }) => string
   updateTemplate: (templateId: string, values: { name?: string; description?: string; sections?: TemplateSection[] }) => void
   deleteTemplate: (templateId: string) => void
   toggleTemplateSaved: (templateId: string) => void
@@ -622,6 +622,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         const template: Template = {
           id: createId('template'),
           name: trimmedName,
+          category: values.category,
           description: trimmedDescription,
           sections: values.sections,
           isSaved: false,
