@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
+import React, { useEffect, useRef, useState } from 'react'
+import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native'
 import { LoadingSpinner } from '../LoadingSpinner'
 
 import { Text } from '../Text'
 import { colors } from '../../theme/colors'
-import { StandaardVerslagIcon } from '../icons/StandaardVerslagIcon'
 import { CopyIcon } from '../icons/CopyIcon'
 import { CopiedIcon } from '../icons/CopiedIcon'
 import { EditSmallIcon } from '../icons/EditSmallIcon'
@@ -13,13 +12,11 @@ import { ShareTextIcon } from '../icons/ShareTextIcon'
 import { VerslagGenererenIcon } from '../icons/VerslagGenererenIcon'
 import { VerslagSchrijvenIcon } from '../icons/VerslagSchrijvenIcon'
 import { toUserFriendlyTranscriptionError } from '../../utils/transcriptionError'
-import { parseRichTextMarkdown, RichTextInlineSegment, richTextSharedFormatting } from '../../utils/richTextFormatting'
+import { parseRichTextMarkdown, RichTextInlineSegment, richTextMarkdownToHtml, richTextSharedFormatting } from '../../utils/richTextFormatting'
 import { useToast } from '../../toast/ToastProvider'
 
 type Props = {
-  templateLabel: string
   onPressTemplate?: () => void
-  isCompact?: boolean
   summary: string | null
   hasTranscript: boolean
   transcriptionStatus: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
@@ -48,10 +45,112 @@ function renderInlineSegments(segments: RichTextInlineSegment[], textStyle: any)
   )
 }
 
+function buildClipboardHtml(markdown: string) {
+  const contentHtml = richTextMarkdownToHtml(markdown)
+  return [
+    '<div style="font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.45; color: #1f1f1f;">',
+    contentHtml,
+    '</div>',
+  ].join('')
+}
+
+function ToolbarIconButton({
+  onPress,
+  disabled = false,
+  tooltip,
+  style,
+  icon,
+}: {
+  onPress: () => void
+  disabled?: boolean
+  tooltip: string
+  style?: any
+  icon: React.ReactNode | ((state: { isHovered: boolean; disabled: boolean }) => React.ReactNode)
+}) {
+  const [isHovered, setIsHovered] = useState(false)
+  const [isTooltipRendered, setIsTooltipRendered] = useState(false)
+  const tooltipOpacity = useRef(new Animated.Value(0)).current
+  const tooltipTranslateY = useRef(new Animated.Value(4)).current
+
+  useEffect(() => {
+    if (isHovered && !disabled) {
+      setIsTooltipRendered(true)
+      Animated.parallel([
+        Animated.timing(tooltipOpacity, {
+          toValue: 1,
+          duration: 140,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(tooltipTranslateY, {
+          toValue: 0,
+          duration: 140,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start()
+      return
+    }
+
+    Animated.parallel([
+      Animated.timing(tooltipOpacity, {
+        toValue: 0,
+        duration: 110,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(tooltipTranslateY, {
+        toValue: 4,
+        duration: 110,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) setIsTooltipRendered(false)
+    })
+  }, [disabled, isHovered, tooltipOpacity, tooltipTranslateY])
+
+  return (
+    <View style={styles.iconButtonWrap} pointerEvents="box-none">
+      <Pressable
+        onPress={onPress}
+        disabled={disabled}
+        onHoverIn={() => setIsHovered(true)}
+        onHoverOut={() => setIsHovered(false)}
+        onFocus={() => setIsHovered(true)}
+        onBlur={() => setIsHovered(false)}
+        style={({ hovered }) => [
+          styles.actionButton,
+          disabled ? styles.actionButtonDisabled : undefined,
+          hovered ? styles.actionButtonHovered : undefined,
+          style,
+        ]}
+        {...(typeof window !== 'undefined' ? ({ title: tooltip } as any) : {})}
+      >
+        {typeof icon === 'function' ? icon({ isHovered, disabled }) : icon}
+      </Pressable>
+      {isTooltipRendered ? (
+        <Animated.View
+          style={[
+            styles.tooltipBox,
+            {
+              opacity: tooltipOpacity,
+              transform: [{ translateY: tooltipTranslateY }],
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <Text isBold numberOfLines={1} style={styles.tooltipText}>
+            {tooltip}
+          </Text>
+        </Animated.View>
+      ) : null}
+    </View>
+  )
+}
+
 export function ReportPanel({
-  templateLabel,
   onPressTemplate,
-  isCompact,
   summary,
   hasTranscript,
   transcriptionStatus,
@@ -72,7 +171,6 @@ export function ReportPanel({
   const hasError = transcriptionStatus === 'error'
   const shouldShowLoading = (isTranscribing || isGenerating) && !hasError
   const loadingLabel = !hasTranscript || isTranscribing ? 'Transcript wordt gegenereerd' : 'Verslag wordt gegenereerd'
-  const showTemplateButton = Boolean(onPressTemplate)
 
   const reportCopyText = summary || ''
   const showEditSummaryButton = !shouldShowLoading && !!onEditSummary
@@ -80,6 +178,32 @@ export function ReportPanel({
   const summaryLines = parseRichTextMarkdown(summary || '')
   const reportErrorMessage = toUserFriendlyTranscriptionError(transcriptionError, 'Er is een fout opgetreden bij het genereren van het verslag.')
   const isInsufficientMinutesError = reportErrorMessage.toLowerCase().includes('niet genoeg minuten over voor transcriptie')
+
+  async function handleCopy() {
+    if (!hasSummary) return
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return
+
+    try {
+      const clipboard = navigator.clipboard as any
+      const ClipboardItemCtor = (globalThis as any).ClipboardItem
+      if (ClipboardItemCtor && typeof clipboard.write === 'function') {
+        const html = buildClipboardHtml(reportCopyText)
+        const item = new ClipboardItemCtor({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([reportCopyText], { type: 'text/plain' }),
+        })
+        await clipboard.write([item])
+      } else {
+        await navigator.clipboard.writeText(reportCopyText)
+      }
+      setShowCopyNotification(true)
+      setTimeout(() => setShowCopyNotification(false), 3000)
+    } catch {
+      await navigator.clipboard.writeText(reportCopyText)
+      setShowCopyNotification(true)
+      setTimeout(() => setShowCopyNotification(false), 3000)
+    }
+  }
 
   useEffect(() => {
     if (!hasError) return
@@ -92,75 +216,54 @@ export function ReportPanel({
     <View style={styles.container}>
       {/* Report panel */}
       <View style={styles.toolbarRow}>
-        {showTemplateButton ? (
-          <Pressable
-            onPress={onPressTemplate}
-            style={({ hovered }) => [
-              styles.templateButton,
-              isCompact ? styles.templateButtonCompact : undefined,
-              hovered ? styles.templateButtonHovered : undefined,
-            ]}
-          >
-            <StandaardVerslagIcon color={colors.textStrong} size={18} />
-            {!isCompact ? (
-              <Text isSemibold style={styles.templateButtonText}>
-                {templateLabel}
-              </Text>
-            ) : null}
-          </Pressable>
-        ) : (
-          <View />
-        )}
         <View style={styles.toolbarActions}>
+          {onPressTemplate ? (
+            <ToolbarIconButton
+              onPress={onPressTemplate}
+              tooltip="Verslag genereren"
+              icon={({ isHovered, disabled }) => <VerslagGenererenIcon size={18} color={disabled ? '#BDB6B2' : isHovered ? colors.selected : '#8E8480'} />}
+            />
+          ) : null}
           {showEditSummaryButton ? (
-            <Pressable onPress={onEditSummary} style={({ hovered }) => [styles.editButton, hovered ? styles.editButtonHovered : undefined]}>
-              {({ hovered }) => <EditSmallIcon color={hovered ? colors.selected : colors.textSecondary} size={17} />}
-            </Pressable>
+            <ToolbarIconButton
+              onPress={onEditSummary}
+              tooltip="Verslag bewerken"
+              style={styles.editButton}
+              icon={({ isHovered, disabled }) => (
+                <EditSmallIcon color={disabled ? '#BDB6B2' : isHovered ? colors.selected : colors.textSecondary} size={17} />
+              )}
+            />
           ) : null}
           {onShareSummary ? (
-            <Pressable
+            <ToolbarIconButton
               onPress={onShareSummary}
               disabled={!hasSummary}
-              style={({ hovered }) => [
-                styles.actionButton,
-                !hasSummary ? styles.actionButtonDisabled : undefined,
-                hovered ? styles.actionButtonHovered : undefined,
-              ]}
-            >
-              <SharePdfIcon color="#8E8480" size={18} />
-            </Pressable>
+              tooltip="PDF exporteren"
+              icon={({ isHovered, disabled }) => <SharePdfIcon color={disabled ? '#BDB6B2' : isHovered ? colors.selected : '#8E8480'} size={18} />}
+            />
           ) : null}
           {onExportSummaryAsWord ? (
-            <Pressable
+            <ToolbarIconButton
               onPress={onExportSummaryAsWord}
               disabled={!hasSummary}
-              style={({ hovered }) => [
-                styles.actionButton,
-                !hasSummary ? styles.actionButtonDisabled : undefined,
-                hovered ? styles.actionButtonHovered : undefined,
-              ]}
-            >
-              <ShareTextIcon color="#8E8480" size={18} />
-            </Pressable>
+              tooltip="Word exporteren"
+              icon={({ isHovered, disabled }) => <ShareTextIcon color={disabled ? '#BDB6B2' : isHovered ? colors.selected : '#8E8480'} size={18} />}
+            />
           ) : null}
-          <Pressable
+          <ToolbarIconButton
             onPress={() => {
-              if (!hasSummary) return
-              if (typeof navigator === 'undefined') return
-              navigator.clipboard?.writeText(reportCopyText).then(() => {
-                setShowCopyNotification(true)
-                setTimeout(() => setShowCopyNotification(false), 3000)
-              })
+              void handleCopy()
             }}
             disabled={!hasSummary}
-            style={({ hovered }) => [
-              styles.actionButton,
-              !hasSummary ? styles.actionButtonDisabled : undefined,
-              hovered ? styles.actionButtonHovered : undefined,
-            ]}
-          >
-            {showCopyNotification ? <CopiedIcon size={18} /> : <CopyIcon color={hasSummary ? '#8E8480' : '#BDB6B2'} size={18} />}
-          </Pressable>
+            tooltip="Kopieer verslag"
+            icon={({ isHovered, disabled }) =>
+              showCopyNotification ? (
+                <CopiedIcon size={18} />
+              ) : (
+                <CopyIcon color={disabled ? '#BDB6B2' : isHovered ? colors.selected : '#8E8480'} size={18} />
+              )
+            }
+          />
         </View>
       </View>
 
@@ -293,36 +396,19 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    position: 'relative',
+    zIndex: 30,
   },
   toolbarActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    position: 'relative',
+    zIndex: 31,
   },
-  templateButton: {
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  templateButtonCompact: {
-    width: 40,
-    padding: 0,
-  },
-  templateButtonHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  templateButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
+  iconButtonWrap: {
+    position: 'relative',
   },
   editButton: {
     width: 34,
@@ -337,6 +423,8 @@ const styles = StyleSheet.create({
   reportContent: {
     width: '100%',
     gap: 12,
+    position: 'relative',
+    zIndex: 1,
   },
   summaryContent: {
     width: '100%',
@@ -424,6 +512,30 @@ const styles = StyleSheet.create({
   },
   actionButtonDisabled: {
     opacity: 0.5,
+  },
+  tooltipBox: {
+    position: 'absolute',
+    top: 38,
+    left: 0,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    zIndex: 20,
+    minWidth: 128,
+    maxWidth: 220,
+    minHeight: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...( { boxShadow: '0 3px 8px rgba(23, 28, 31, 0.08)' } as any ),
+  },
+  tooltipText: {
+    fontSize: 12,
+    lineHeight: 14,
+    color: colors.textStrong,
+    ...( { whiteSpace: 'nowrap' } as any ),
   },
   copyNotification: {
     position: 'absolute',

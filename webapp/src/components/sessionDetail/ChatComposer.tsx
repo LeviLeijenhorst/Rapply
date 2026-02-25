@@ -209,6 +209,6 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     paddingRight: 52,
-    paddingTop: 2,
+    paddingTop: 5,
   },
 })

@@ -12,9 +12,10 @@ export type ConversationTabKey = 'snelleVragen' | 'notities' | 'volledigeSessie'
 type Props = {
   activeTabKey: ConversationTabKey
   onSelectTab: (tabKey: ConversationTabKey) => void
+  showFullConversationTab?: boolean
 }
 
-export function ConversationTabs({ activeTabKey, onSelectTab }: Props) {
+export function ConversationTabs({ activeTabKey, onSelectTab, showFullConversationTab = true }: Props) {
   return (
     <View style={styles.container}>
       {/* Tabs */}
@@ -31,12 +32,14 @@ export function ConversationTabs({ activeTabKey, onSelectTab }: Props) {
           icon={(color) => <NotitiesSessieIcon color={color} size={24} />}
           onPress={() => onSelectTab('notities')}
         />
-        <TabButton
-          label="Volledig gesprek"
-          isSelected={activeTabKey === 'volledigeSessie'}
-          icon={(color) => <VolledigeSessieIcon color={color} size={24} />}
-          onPress={() => onSelectTab('volledigeSessie')}
-        />
+        {showFullConversationTab ? (
+          <TabButton
+            label="Volledig gesprek"
+            isSelected={activeTabKey === 'volledigeSessie'}
+            icon={(color) => <VolledigeSessieIcon color={color} size={24} />}
+            onPress={() => onSelectTab('volledigeSessie')}
+          />
+        ) : null}
       </View>
     </View>
   )

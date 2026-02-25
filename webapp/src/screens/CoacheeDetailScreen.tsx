@@ -14,6 +14,7 @@ import { PlusIcon } from '../components/icons/PlusIcon'
 import { SearchIcon } from '../components/icons/SearchIcon'
 import { TrashIcon } from '../components/icons/TrashIcon'
 import { AanpassenIcon } from '../components/icons/AanpassenIcon'
+import { CircleCloseIcon } from '../components/icons/CircleCloseIcon'
 import { Text } from '../components/Text'
 import { colors } from '../theme/colors'
 import { typography } from '../theme/typography'
@@ -100,6 +101,7 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
   const [isEditCoacheeModalOpen, setIsEditCoacheeModalOpen] = useState(false)
   const [isChatMinutesBlocked, setIsChatMinutesBlocked] = useState(false)
   const [isCheckingChatMinutes, setIsCheckingChatMinutes] = useState(false)
+  const [isNoMinutesCtaDismissed, setIsNoMinutesCtaDismissed] = useState(false)
 
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const filteredSessions = sessions.filter((item) => item.title.toLowerCase().includes(normalizedQuery))
@@ -180,6 +182,7 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
       const hasMinutes = remainingSeconds > 0
       setIsChatMinutesBlocked(!hasMinutes)
       if (!hasMinutes) {
+        setIsNoMinutesCtaDismissed(false)
         appendNoMinutesAssistantMessage()
       }
       return hasMinutes
@@ -266,6 +269,11 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
     if (activeTabKey !== 'snelleVragen') return
     scrollChatToEnd()
   }, [activeTabKey, chatMessages.length, isChatSending])
+
+  useEffect(() => {
+    if (isChatMinutesBlocked) return
+    setIsNoMinutesCtaDismissed(false)
+  }, [isChatMinutesBlocked])
 
   return (
     <View style={styles.container}>
@@ -413,8 +421,16 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
                   )}
                 </ScrollView>
 
-                {isChatMinutesBlocked ? (
+                {isChatMinutesBlocked && !isNoMinutesCtaDismissed ? (
                   <View style={styles.noMinutesCtaContainer}>
+                    <Pressable
+                      onPress={() => setIsNoMinutesCtaDismissed(true)}
+                      style={({ hovered }) => [styles.noMinutesCtaCloseButton, hovered ? styles.noMinutesCtaCloseButtonHovered : undefined]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Melding sluiten"
+                    >
+                      <CircleCloseIcon size={18} color={colors.textSecondary} />
+                    </Pressable>
                     <Text style={styles.noMinutesCtaText}>U heeft geen minuten meer.</Text>
                     <Pressable
                       onPress={onOpenMySubscription}
@@ -698,6 +714,7 @@ const styles = StyleSheet.create({
   chatTab: {
     flex: 1,
     gap: 16,
+    position: 'relative',
   },
   chatArea: {
     flex: 1,
@@ -718,13 +735,31 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   noMinutesCtaContainer: {
-    width: '100%',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 82,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: '#FFFFFF',
     padding: 12,
+    paddingRight: 36,
     gap: 10,
+    zIndex: 2,
+  },
+  noMinutesCtaCloseButton: {
+    position: 'absolute',
+    right: 8,
+    top: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noMinutesCtaCloseButtonHovered: {
+    backgroundColor: colors.hoverBackground,
   },
   noMinutesCtaText: {
     fontSize: 13,

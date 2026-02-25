@@ -67,6 +67,7 @@ type ContextValue = {
     values: {
       coacheeId?: string | null
       title?: string
+      createdAtUnixMs?: number
       audioBlobId?: string | null
       audioDurationSeconds?: number | null
       uploadFileName?: string | null
@@ -519,6 +520,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
             updatedAtUnixMs,
             coacheeId: values.coacheeId,
             title: encryptedTitle,
+            createdAtUnixMs: values.createdAtUnixMs,
             audioBlobId: values.audioBlobId,
             audioDurationSeconds: values.audioDurationSeconds,
             uploadFileName: encryptedUploadFileName,

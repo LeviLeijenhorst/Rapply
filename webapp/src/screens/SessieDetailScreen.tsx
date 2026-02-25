@@ -8,9 +8,7 @@ import { CoacheeAvatarIcon } from '../components/icons/CoacheeAvatarIcon'
 import { CalendarCircleIcon } from '../components/icons/CalendarCircleIcon'
 import { FullScreenOpenIcon } from '../components/icons/FullScreenOpenIcon'
 import { FullScreenCloseIcon } from '../components/icons/FullScreenCloseIcon'
-import { CopyIcon } from '../components/icons/CopyIcon'
-import { SharePdfIcon } from '../components/icons/SharePdfIcon'
-import { ShareTextIcon } from '../components/icons/ShareTextIcon'
+import { CircleCloseIcon } from '../components/icons/CircleCloseIcon'
 import { Text } from '../components/Text'
 import { colors } from '../theme/colors'
 import { ConversationTabs, ConversationTabKey } from '../components/sessionDetail/ConversationTabs'
@@ -67,6 +65,7 @@ import { ConfirmChatClearModal } from '../components/sessionDetail/ConfirmChatCl
 import { AnimatedOverlayModal } from '../components/AnimatedOverlayModal'
 import { fetchBillingStatus, type BillingStatus } from '../services/billing'
 import { ReportContextModal } from '../components/sessionDetail/ReportContextModal'
+import { useToast } from '../toast/ToastProvider'
 
 type Props = {
   sessionId: string
@@ -79,6 +78,180 @@ type Props = {
   onChangeCoachee: (coacheeId: string | null) => void
   newlyCreatedCoacheeName?: string | null
   onNewlyCreatedCoacheeHandled?: () => void
+}
+
+function normalizeTemplateMatchValue(value: string): string {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function getTemplateDisplayName(name: string): string {
+  const normalizedName = String(name || '').trim().toLowerCase()
+  if (normalizedName === 'intake' || normalizedName === 'intakeverslag') return 'Intake'
+  return name
+}
+
+function inferTemplateIdFromSessionTitle(
+  title: string | null | undefined,
+  templates: { id: string; name: string }[],
+): string | null {
+  const normalizedTitle = normalizeTemplateMatchValue(title || '')
+  if (!normalizedTitle) return null
+  let bestMatch: { id: string; score: number } | null = null
+  for (const template of templates) {
+    const normalizedTemplateName = normalizeTemplateMatchValue(template.name)
+    if (!normalizedTemplateName) continue
+    let score = 0
+    if (normalizedTitle === normalizedTemplateName) score = 2000 + normalizedTemplateName.length
+    else if (normalizedTitle.includes(normalizedTemplateName)) score = 1000 + normalizedTemplateName.length
+    else if (normalizedTemplateName.includes(normalizedTitle)) score = 500 + normalizedTitle.length
+    if (!bestMatch || score > bestMatch.score) {
+      bestMatch = { id: template.id, score }
+    }
+  }
+  return bestMatch?.score ? bestMatch.id : null
+}
+
+type TemplatePickerIntent = 'generate' | 'write'
+type CalendarCell = {
+  isoDate: string
+  dayOfMonth: number
+  inCurrentMonth: boolean
+}
+
+const emptyTemplateOptionId = '__empty_template__'
+const dayLabels = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo']
+const missingCoacheeGenerateError = 'Wijs dit verslag eerst aan een cliënt toe om het te genereren.'
+
+function pad2(value: number): string {
+  return String(value).padStart(2, '0')
+}
+
+function toIsoDate(value: Date): string {
+  return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`
+}
+
+function formatDateToInput(value: Date): string {
+  return `${pad2(value.getDate())}/${pad2(value.getMonth() + 1)}/${value.getFullYear()}`
+}
+
+function parseDateInput(value: string): Date | null {
+  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (!match) return null
+  const day = Number(match[1])
+  const month = Number(match[2])
+  const year = Number(match[3])
+  if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) return null
+  const candidate = new Date(year, month - 1, day)
+  if (candidate.getFullYear() !== year || candidate.getMonth() !== month - 1 || candidate.getDate() !== day) return null
+  return candidate
+}
+
+function clampDateDigits(digits: string, fallbackYear: number): string {
+  if (digits.length === 0) return digits
+  const rawDay = digits.slice(0, Math.min(2, digits.length))
+  const rawMonth = digits.length > 2 ? digits.slice(2, Math.min(4, digits.length)) : ''
+  const rawYear = digits.length > 4 ? digits.slice(4) : ''
+
+  let day = rawDay
+  if (rawDay.length === 2) {
+    const dayNumber = Number(rawDay)
+    if (Number.isFinite(dayNumber)) {
+      let maxDay = 31
+      if (rawMonth.length === 2) {
+        const monthNumber = Number(rawMonth)
+        if (monthNumber >= 1 && monthNumber <= 12) {
+          const yearForCalc = rawYear.length === 4 ? Number(rawYear) : fallbackYear
+          maxDay = new Date(yearForCalc, monthNumber, 0).getDate()
+        }
+      }
+      day = pad2(Math.max(1, Math.min(dayNumber, maxDay)))
+    }
+  }
+
+  let month = rawMonth
+  if (rawMonth.length === 2) {
+    const monthNumber = Number(rawMonth)
+    if (Number.isFinite(monthNumber)) {
+      month = pad2(Math.max(1, Math.min(monthNumber, 12)))
+    }
+  }
+
+  if (day.length === 2 && month.length === 2) {
+    const dayNumber = Number(day)
+    const monthNumber = Number(month)
+    if (Number.isFinite(dayNumber) && Number.isFinite(monthNumber) && monthNumber >= 1 && monthNumber <= 12) {
+      const yearForCalc = rawYear.length === 4 ? Number(rawYear) : fallbackYear
+      const maxDay = new Date(yearForCalc, monthNumber, 0).getDate()
+      day = pad2(Math.max(1, Math.min(dayNumber, maxDay)))
+    }
+  }
+
+  return `${day}${month}${rawYear}`.slice(0, 8)
+}
+
+function formatTypingDateInput(raw: string, previousValue: string): string {
+  const fallbackYear = new Date().getFullYear()
+  const previousDigits = previousValue.replace(/\D/g, '').slice(0, 8)
+  const rawDigits = raw.replace(/\D/g, '').slice(0, 8)
+  const digits = clampDateDigits(rawDigits, fallbackYear)
+  const isDeleting = rawDigits.length < previousDigits.length
+  const endsAtSecondSeparator = previousValue.endsWith('/') && rawDigits.length === previousDigits.length
+
+  if (isDeleting && endsAtSecondSeparator) {
+    const digitsWithoutMonth = digits.slice(0, 2)
+    return digitsWithoutMonth.length === 2 ? `${digitsWithoutMonth}/` : digitsWithoutMonth
+  }
+
+  if (isDeleting && previousValue.endsWith('/') && previousDigits.length === 2 && rawDigits.length === 2) {
+    return digits
+  }
+
+  if (digits.length <= 2) return digits.length === 2 ? `${digits}/` : digits
+  if (digits.length <= 4) {
+    const monthPart = digits.slice(2)
+    return digits.length === 4 ? `${digits.slice(0, 2)}/${monthPart}/` : `${digits.slice(0, 2)}/${monthPart}`
+  }
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+}
+
+function getCalendarCells(monthDate: Date): CalendarCell[] {
+  const year = monthDate.getFullYear()
+  const month = monthDate.getMonth()
+  const firstDayOfMonth = new Date(year, month, 1)
+  const startWeekday = (firstDayOfMonth.getDay() + 6) % 7
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const daysInPreviousMonth = new Date(year, month, 0).getDate()
+  const cells: CalendarCell[] = []
+
+  for (let index = 0; index < 42; index += 1) {
+    const dayOffset = index - startWeekday + 1
+    let currentDate: Date
+    let inCurrentMonth = true
+    if (dayOffset <= 0) {
+      currentDate = new Date(year, month - 1, daysInPreviousMonth + dayOffset)
+      inCurrentMonth = false
+    } else if (dayOffset > daysInMonth) {
+      currentDate = new Date(year, month + 1, dayOffset - daysInMonth)
+      inCurrentMonth = false
+    } else {
+      currentDate = new Date(year, month, dayOffset)
+    }
+    cells.push({ isoDate: toIsoDate(currentDate), dayOfMonth: currentDate.getDate(), inCurrentMonth })
+  }
+
+  return cells
+}
+
+function formatSessionDate(createdAtUnixMs: number): string {
+  const date = new Date(createdAtUnixMs)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleDateString('nl-NL')
 }
 
 export function SessieDetailScreen({
@@ -94,16 +267,17 @@ export function SessieDetailScreen({
   onNewlyCreatedCoacheeHandled,
 }: Props) {
   const { width } = useWindowDimensions()
-  const isCompactLayout = width < 1100
   const isVerySmallLayout = width < 860
   const isMobileLayout = width < 760
   const isHeaderActionButtonsCompact = width < 990
   const hideDate = width < 930
   const { data, deleteSession, setWrittenReport, updateSession } = useLocalAppData()
+  const { showErrorToast } = useToast()
   const e2ee = useE2ee()
   const session = data.sessions.find((item) => item.id === sessionId) ?? null
   const isWrittenSession = session?.kind === 'written'
   const writtenReportText = data.writtenReports.find((report) => report.sessionId === sessionId)?.text ?? ''
+  const reportText = isWrittenSession ? writtenReportText : (session?.summary ?? '')
   const hasTranscript = Boolean(session?.transcript && session.transcript.trim())
   const hasSavedAudio = Boolean(String(session?.audioBlobId || '').trim())
 
@@ -114,12 +288,21 @@ export function SessieDetailScreen({
   const [transcriptSearchText, setTranscriptSearchText] = useState('')
   const [editableCoacheeName, setEditableCoacheeName] = useState(coacheeName)
   const [editableSessionTitle, setEditableSessionTitle] = useState(title)
+  const [isTitleEditorOpen, setIsTitleEditorOpen] = useState(false)
+  const [titleMenuAnchor, setTitleMenuAnchor] = useState<{ left: number; top: number; width: number } | null>(null)
+  const [editableSessionDateInput, setEditableSessionDateInput] = useState(
+    formatDateToInput(new Date(session?.createdAtUnixMs ?? Date.now())),
+  )
+  const [isDateCalendarOpen, setIsDateCalendarOpen] = useState(false)
+  const [dateMenuAnchor, setDateMenuAnchor] = useState<{ left: number; top: number; width: number } | null>(null)
+  const [visibleDateMonth, setVisibleDateMonth] = useState<Date>(new Date(session?.createdAtUnixMs ?? Date.now()))
   const [isEditSessieModalVisible, setIsEditSessieModalVisible] = useState(false)
   const [isTemplatePickerModalVisible, setIsTemplatePickerModalVisible] = useState(false)
+  const [templatePickerIntent, setTemplatePickerIntent] = useState<TemplatePickerIntent>('generate')
+  const [templatePickerSelectedTemplateId, setTemplatePickerSelectedTemplateId] = useState<string | null>(null)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [isChatMaximized, setIsChatMaximized] = useState(false)
   const [isChatMaximizedRendered, setIsChatMaximizedRendered] = useState(false)
-  const [writtenReportDraft, setWrittenReportDraft] = useState(writtenReportText)
   const [isDeleteSessieModalVisible, setIsDeleteSessieModalVisible] = useState(false)
   const [isClearChatModalVisible, setIsClearChatModalVisible] = useState(false)
   const [pendingPreviewAudioUrl, setPendingPreviewAudioUrl] = useState<string | null>(null)
@@ -127,10 +310,14 @@ export function SessieDetailScreen({
   const [currentAudioSeconds, setCurrentAudioSeconds] = useState(0)
   const [currentAudioDurationSeconds, setCurrentAudioDurationSeconds] = useState<number | null>(session?.audioDurationSeconds ?? null)
   const [isSummaryEditorOpen, setIsSummaryEditorOpen] = useState(false)
+  const [summaryEditorInitialValue, setSummaryEditorInitialValue] = useState(reportText)
   const [forcedTranscriptionStatus, setForcedTranscriptionStatus] = useState<'transcribing' | 'generating' | null>(null)
   const [isPdfEditorOpen, setIsPdfEditorOpen] = useState(false)
   const [pdfEditorDraft, setPdfEditorDraft] = useState('')
   const [pdfEditorTitle, setPdfEditorTitle] = useState<string | undefined>(undefined)
+  const [isWordEditorOpen, setIsWordEditorOpen] = useState(false)
+  const [wordEditorDraft, setWordEditorDraft] = useState('')
+  const [wordEditorTitle, setWordEditorTitle] = useState<string | undefined>(undefined)
   const [isReportContextModalVisible, setIsReportContextModalVisible] = useState(false)
   const [isCancelTranscriptionModalVisible, setIsCancelTranscriptionModalVisible] = useState(false)
   const [isDownloadingAudio, setIsDownloadingAudio] = useState(false)
@@ -138,12 +325,23 @@ export function SessieDetailScreen({
   const [isNoMinutesModalVisible, setIsNoMinutesModalVisible] = useState(false)
   const [isChatMinutesBlocked, setIsChatMinutesBlocked] = useState(false)
   const [isCheckingChatMinutes, setIsCheckingChatMinutes] = useState(false)
+  const [isNoMinutesCtaDismissed, setIsNoMinutesCtaDismissed] = useState(false)
   const [requiredTranscriptionSeconds, setRequiredTranscriptionSeconds] = useState(0)
   const [remainingTranscriptionSeconds, setRemainingTranscriptionSeconds] = useState(0)
   const hasDownloadableAudio = hasSavedAudio || Boolean(pendingPreviewAudioUrl)
 
   const coacheeButtonRef = useRef<any>(null)
+  const backTitleButtonRef = useRef<any>(null)
+  const sessionTitleInputRef = useRef<TextInput | null>(null)
+  const titleEditorPanelRef = useRef<any>(null)
+  const dateHoverTargetRef = useRef<any>(null)
+  const dateCalendarPanelRef = useRef<any>(null)
   const templates = data.templates ?? []
+  const templatePickerTemplates = useMemo(
+    () => templates.map((template) => ({ id: template.id, name: getTemplateDisplayName(template.name) })),
+    [templates],
+  )
+  const templatePickerDefaultTemplateId = useMemo(() => templatePickerTemplates[0]?.id ?? null, [templatePickerTemplates])
   const isConversationSession = session?.kind === 'recording' || session?.kind === 'upload'
   const templatesForSession = useMemo(() => {
     if (!isConversationSession) return templates
@@ -207,7 +405,77 @@ export function SessieDetailScreen({
     if (sections.length === 0) return undefined
     return { name: selectedTemplate.name, sections }
   }, [selectedTemplate])
-  const selectedTemplateLabel = selectedTemplate?.name ?? 'Template'
+  const selectedTemplateLabel = selectedTemplate ? getTemplateDisplayName(selectedTemplate.name) : 'Template'
+  const hasTrajectoryReportGenerationSource = useMemo(() => {
+    if (!session) return false
+    const writtenReportsBySessionId = new Map(data.writtenReports.map((report) => [report.sessionId, report.text]))
+    const notesBySessionId = new Map<string, string[]>()
+    data.notes.forEach((note) => {
+      const text = `${String(note.title || '').trim()}\n${String(note.text || '').trim()}`.trim()
+      if (!text) return
+      const previous = notesBySessionId.get(note.sessionId) ?? []
+      notesBySessionId.set(note.sessionId, [...previous, text])
+    })
+    const relatedSessions = (session.coacheeId
+      ? data.sessions.filter((item) => item.coacheeId === session.coacheeId)
+      : [session]
+    ).sort((a, b) => a.createdAtUnixMs - b.createdAtUnixMs)
+    return relatedSessions.some((relatedSession) => {
+      const transcript = String(relatedSession.transcript || '').trim()
+      const isCurrentSession = relatedSession.id === session.id
+      const summary = isWrittenSession && isCurrentSession ? '' : String(relatedSession.summary || '').trim()
+      const written = isWrittenSession && isCurrentSession ? '' : String(writtenReportsBySessionId.get(relatedSession.id) || '').trim()
+      const notes = notesBySessionId.get(relatedSession.id) ?? []
+      return Boolean(transcript || summary || written || notes.length > 0)
+    })
+  }, [data.notes, data.sessions, data.writtenReports, isWrittenSession, session])
+  const trajectoryReportSourceText = useMemo(() => {
+    if (!session) return ''
+    const writtenReportsBySessionId = new Map(data.writtenReports.map((report) => [report.sessionId, report.text]))
+    const notesBySessionId = new Map<string, string[]>()
+    data.notes.forEach((note) => {
+      const title = String(note.title || '').trim()
+      const text = String(note.text || '').trim()
+      const combined = `${title}\n${text}`.trim()
+      if (!combined) return
+      const previous = notesBySessionId.get(note.sessionId) ?? []
+      notesBySessionId.set(note.sessionId, [...previous, combined])
+    })
+    const relatedSessions = (session.coacheeId
+      ? data.sessions.filter((item) => item.coacheeId === session.coacheeId)
+      : [session]
+    ).sort((a, b) => a.createdAtUnixMs - b.createdAtUnixMs)
+    const blocks: string[] = []
+
+    relatedSessions.forEach((relatedSession) => {
+      const transcript = String(relatedSession.transcript || '').trim()
+      const isCurrentSession = relatedSession.id === session.id
+      const summary = isWrittenSession && isCurrentSession ? '' : String(relatedSession.summary || '').trim()
+      const written = isWrittenSession && isCurrentSession ? '' : String(writtenReportsBySessionId.get(relatedSession.id) || '').trim()
+      const notes = notesBySessionId.get(relatedSession.id) ?? []
+      if (!transcript && !summary && !written && notes.length === 0) return
+
+      const blockLines: string[] = [
+        `Sessie: ${String(relatedSession.title || 'Onbenoemde sessie').trim() || 'Onbenoemde sessie'}`,
+        `Datum: ${formatSessionDate(relatedSession.createdAtUnixMs) || '-'}`,
+      ]
+      if (transcript) {
+        blockLines.push('', 'Volledige sessie:', transcript)
+      }
+      if (summary) {
+        blockLines.push('', 'Verslag:', summary)
+      }
+      if (written) {
+        blockLines.push('', 'Geschreven verslag:', written)
+      }
+      if (notes.length > 0) {
+        blockLines.push('', 'Notities:', notes.map((entry) => `- ${entry}`).join('\n'))
+      }
+      blocks.push(blockLines.join('\n'))
+    })
+
+    return blocks.join('\n\n---\n\n').trim()
+  }, [data.notes, data.sessions, data.writtenReports, isWrittenSession, session])
   const audioPlayerRef = useRef<AudioPlayerHandle | null>(null)
   const chatScrollRef = useRef<ScrollView | null>(null)
   const [isCoacheeMenuOpen, setIsCoacheeMenuOpen] = useState(false)
@@ -218,15 +486,15 @@ export function SessieDetailScreen({
     return [unassignedCoacheeLabel, ...names]
   }, [data.coachees])
   const isCoacheeMenuVisible = isCoacheeMenuOpen
-  const inputWebStyle = useMemo(() => ({ outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any), [])
-  const isWrittenReportDirty = isWrittenSession && writtenReportDraft !== writtenReportText
-  const hasWrittenReportContent = isWrittenSession && writtenReportDraft.trim().length > 0
   const effectiveTranscriptionStatus = forcedTranscriptionStatus ?? (session?.transcriptionStatus ?? 'idle')
   const shouldShowQuickStart = chatMessages.length === 0
   const shouldShowClearChat = chatMessages.length > 0
   const shouldUseTranscriptTint = hasSavedAudio || pendingPreviewShouldSaveAudio === true
   const chatOverlayOpacity = useRef(new Animated.Value(0)).current
   const chatOverlayScale = useRef(new Animated.Value(0.98)).current
+  const noMinutesCtaOpacity = useRef(new Animated.Value(0)).current
+  const noMinutesCtaTranslateY = useRef(new Animated.Value(8)).current
+  const selectedTemplateIdBySessionRef = useRef<Record<string, string>>({})
   const previousMessageCountRef = useRef(chatMessages.length)
   const shouldSkipChatSaveRef = useRef(false)
   const generationRunIdRef = useRef(0)
@@ -253,11 +521,149 @@ export function SessieDetailScreen({
     const top = Math.min(Math.max(padding, coacheeMenuAnchor.top), Math.max(padding, viewportHeight - estimatedHeight - padding))
     return { left, top, width }
   }, [coacheeMenuAnchor, coacheeMenuEstimatedHeight])
+  const selectedDate = useMemo(() => parseDateInput(editableSessionDateInput), [editableSessionDateInput])
+  const selectedDateIso = selectedDate ? toIsoDate(selectedDate) : ''
+  const dateMonthTitle = useMemo(
+    () => new Intl.DateTimeFormat('nl-NL', { month: 'long', year: 'numeric' }).format(visibleDateMonth),
+    [visibleDateMonth],
+  )
+  const dateCalendarCells = useMemo(() => getCalendarCells(visibleDateMonth), [visibleDateMonth])
+  const sessionDateLabel = useMemo(() => {
+    if (session?.createdAtUnixMs) return formatSessionDate(session.createdAtUnixMs)
+    return dateLabel
+  }, [dateLabel, session?.createdAtUnixMs])
+  const dateMenuPosition = useMemo(() => {
+    if (!dateMenuAnchor) return null
+    const padding = 12
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800
+    const width = 320
+    const estimatedHeight = 336
+    const left = Math.min(Math.max(padding, dateMenuAnchor.left), Math.max(padding, viewportWidth - width - padding))
+    const top = Math.min(Math.max(padding, dateMenuAnchor.top), Math.max(padding, viewportHeight - estimatedHeight - padding))
+    return { left, top, width }
+  }, [dateMenuAnchor])
+  const titleMenuPosition = useMemo(() => {
+    if (!titleMenuAnchor) return null
+    const padding = 12
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800
+    const width = Math.max(260, titleMenuAnchor.width)
+    const estimatedHeight = 76
+    const left = Math.min(Math.max(padding, titleMenuAnchor.left), Math.max(padding, viewportWidth - width - padding))
+    const top = Math.min(Math.max(padding, titleMenuAnchor.top), Math.max(padding, viewportHeight - estimatedHeight - padding))
+    return { left, top, width }
+  }, [titleMenuAnchor])
 
   function updateCoacheeMenuAnchor() {
     const rect = coacheeButtonRef.current?.getBoundingClientRect?.()
     if (!rect) return
     setCoacheeMenuAnchor({ left: rect.left, top: rect.bottom + 8, width: rect.width })
+  }
+
+  function updateTitleMenuAnchor() {
+    const rect = backTitleButtonRef.current?.getBoundingClientRect?.()
+    if (!rect) return
+    setTitleMenuAnchor({ left: rect.left, top: rect.bottom + 8, width: rect.width })
+  }
+
+  function updateDateMenuAnchor() {
+    const rect = dateHoverTargetRef.current?.getBoundingClientRect?.()
+    if (!rect) return
+    setDateMenuAnchor({ left: rect.left, top: rect.bottom + 8, width: 320 })
+  }
+
+  function applySessionTitle(nextTitle: string) {
+    const trimmed = nextTitle.trim()
+    const fallbackTitle = String(session?.title || title).trim()
+    const safeNextTitle = trimmed || fallbackTitle
+    setEditableSessionTitle(safeNextTitle)
+    if (safeNextTitle && safeNextTitle !== String(session?.title || '').trim()) {
+      updateSession(sessionId, { title: safeNextTitle })
+    }
+  }
+
+  function applySessionDate(inputValue: string) {
+    const parsed = parseDateInput(inputValue)
+    if (!parsed || !session) {
+      setEditableSessionDateInput(formatDateToInput(new Date(session?.createdAtUnixMs ?? Date.now())))
+      return
+    }
+    const currentDate = new Date(session.createdAtUnixMs)
+    const merged = new Date(
+      parsed.getFullYear(),
+      parsed.getMonth(),
+      parsed.getDate(),
+      currentDate.getHours(),
+      currentDate.getMinutes(),
+      currentDate.getSeconds(),
+      currentDate.getMilliseconds(),
+    )
+    const nextUnixMs = merged.getTime()
+    setEditableSessionDateInput(formatDateToInput(merged))
+    if (nextUnixMs !== session.createdAtUnixMs) {
+      updateSession(sessionId, { createdAtUnixMs: nextUnixMs })
+    }
+  }
+
+  function selectTemplateForCurrentSession(nextTemplateId: string | null) {
+    const normalizedTemplateId = String(nextTemplateId || '').trim() || null
+    setSelectedTemplateId(normalizedTemplateId)
+    if (normalizedTemplateId) {
+      selectedTemplateIdBySessionRef.current[sessionId] = normalizedTemplateId
+      return
+    }
+    delete selectedTemplateIdBySessionRef.current[sessionId]
+  }
+
+  function openTemplatePickerForGenerate() {
+    if (!session?.coacheeId) {
+      showErrorToast(missingCoacheeGenerateError, missingCoacheeGenerateError)
+      return
+    }
+    if (templatePickerTemplates.length === 0) return
+    const nextSelectedTemplateId =
+      (selectedTemplateId && templatePickerTemplates.some((template) => template.id === selectedTemplateId) ? selectedTemplateId : null) ??
+      templatePickerDefaultTemplateId
+    setTemplatePickerIntent('generate')
+    setTemplatePickerSelectedTemplateId(nextSelectedTemplateId ?? null)
+    setIsTemplatePickerModalVisible(true)
+  }
+
+  function openTemplatePickerForWrite() {
+    if (templatePickerTemplates.length === 0) {
+      setSummaryEditorInitialValue('')
+      setIsSummaryEditorOpen(true)
+      return
+    }
+    setTemplatePickerIntent('write')
+    setTemplatePickerSelectedTemplateId(emptyTemplateOptionId)
+    setIsTemplatePickerModalVisible(true)
+  }
+
+  function buildSummaryTemplateDraft(templateId: string): string {
+    if (templateId === emptyTemplateOptionId) return ''
+    const template = templates.find((item) => item.id === templateId)
+    if (!template) return ''
+    const headings = template.sections
+      .map((section, index) => {
+        const title = section.title.trim() || `Onderdeel ${index + 1}`
+        return `### ${title}`
+      })
+      .filter(Boolean)
+    return headings.join('\n\n')
+  }
+
+  function handleTemplatePickerContinue(templateId: string) {
+    setTemplatePickerSelectedTemplateId(templateId)
+    setIsTemplatePickerModalVisible(false)
+    if (templatePickerIntent === 'write') {
+      setSummaryEditorInitialValue(buildSummaryTemplateDraft(templateId))
+      setIsSummaryEditorOpen(true)
+      return
+    }
+    selectTemplateForCurrentSession(templateId)
+    void generateReportForTemplate(templateId)
   }
 
   useEffect(() => {
@@ -293,8 +699,15 @@ export function SessieDetailScreen({
   }, [sessionId])
 
   useEffect(() => {
-    setWrittenReportDraft(writtenReportText)
-  }, [writtenReportText, sessionId])
+    if (!isWrittenSession) return
+    if (activeTabKey !== 'volledigeSessie') return
+    setActiveTabKey('snelleVragen')
+  }, [activeTabKey, isWrittenSession])
+
+  useEffect(() => {
+    if (isSummaryEditorOpen) return
+    setSummaryEditorInitialValue(reportText)
+  }, [isSummaryEditorOpen, reportText])
 
   useEffect(() => {
     setCurrentAudioDurationSeconds(session?.audioDurationSeconds ?? null)
@@ -311,10 +724,35 @@ export function SessieDetailScreen({
   }, [data.coachees, newlyCreatedCoacheeName, onNewlyCreatedCoacheeHandled, sessionId, updateSession])
 
   useEffect(() => {
-    if (!defaultTemplateId) return
-    if (selectedTemplateId && templatesForSession.some((template) => template.id === selectedTemplateId)) return
-    setSelectedTemplateId(defaultTemplateId)
-  }, [defaultTemplateId, selectedTemplateId, templatesForSession])
+    setEditableSessionTitle(String(session?.title || title))
+    setEditableCoacheeName(String(coacheeName || ''))
+    setEditableSessionDateInput(formatDateToInput(new Date(session?.createdAtUnixMs ?? Date.now())))
+    setVisibleDateMonth(new Date(session?.createdAtUnixMs ?? Date.now()))
+    setIsDateCalendarOpen(false)
+    setIsTitleEditorOpen(false)
+  }, [coacheeName, session?.createdAtUnixMs, session?.title, title])
+
+  useEffect(() => {
+    if (templatesForSession.length === 0) {
+      setSelectedTemplateId(null)
+      return
+    }
+    const validTemplateIds = new Set(templatesForSession.map((template) => template.id))
+    const rememberedTemplateId = selectedTemplateIdBySessionRef.current[sessionId]
+    if (rememberedTemplateId && validTemplateIds.has(rememberedTemplateId)) {
+      setSelectedTemplateId(rememberedTemplateId)
+      return
+    }
+    const inferredTemplateId = inferTemplateIdFromSessionTitle(session?.title, templatesForSession)
+    const fallbackTemplateId = defaultTemplateId ?? templatesForSession[0]?.id ?? null
+    const nextTemplateId = inferredTemplateId && validTemplateIds.has(inferredTemplateId) ? inferredTemplateId : fallbackTemplateId
+    if (nextTemplateId) {
+      selectedTemplateIdBySessionRef.current[sessionId] = nextTemplateId
+      setSelectedTemplateId(nextTemplateId)
+      return
+    }
+    setSelectedTemplateId(null)
+  }, [defaultTemplateId, session?.title, sessionId, templatesForSession])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -375,6 +813,99 @@ export function SessieDetailScreen({
       window.removeEventListener('mousedown', onMouseDown)
     }
   }, [coacheeMenuEstimatedHeight, coacheeMenuPosition, isCoacheeMenuOpen])
+
+  useEffect(() => {
+    if (!isDateCalendarOpen) return
+    if (typeof window === 'undefined') return
+
+    const pointInRect = (x: number, y: number, rect: DOMRect | null | undefined) => {
+      if (!rect) return false
+      return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+    }
+
+    const closeIfOutside = (clientX: number, clientY: number) => {
+      const panelRect = dateCalendarPanelRef.current?.getBoundingClientRect?.() as DOMRect | undefined
+      const targetRect = dateHoverTargetRef.current?.getBoundingClientRect?.() as DOMRect | undefined
+      const connectorRect = panelRect && targetRect
+        ? {
+            left: Math.min(targetRect.left, panelRect.left),
+            right: Math.max(targetRect.right, panelRect.right),
+            top: Math.min(targetRect.bottom, panelRect.top),
+            bottom: Math.max(targetRect.bottom, panelRect.top),
+          }
+        : null
+      if (pointInRect(clientX, clientY, panelRect) || pointInRect(clientX, clientY, targetRect) || pointInRect(clientX, clientY, connectorRect as any)) return
+      setIsDateCalendarOpen(false)
+    }
+
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      const touch = 'touches' in event ? event.touches[0] ?? event.changedTouches[0] : null
+      const clientX = touch ? touch.clientX : (event as MouseEvent).clientX
+      const clientY = touch ? touch.clientY : (event as MouseEvent).clientY
+      if (typeof clientX !== 'number' || typeof clientY !== 'number') return
+      closeIfOutside(clientX, clientY)
+    }
+    const onMouseMove = (event: MouseEvent) => closeIfOutside(event.clientX, event.clientY)
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mousedown', onPointerDown)
+    window.addEventListener('touchstart', onPointerDown, { passive: true })
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mousedown', onPointerDown)
+      window.removeEventListener('touchstart', onPointerDown)
+    }
+  }, [isDateCalendarOpen])
+
+  useEffect(() => {
+    if (!isTitleEditorOpen) return
+    if (typeof window === 'undefined') return
+
+    const pointInRect = (x: number, y: number, rect: DOMRect | null | undefined) => {
+      if (!rect) return false
+      return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+    }
+
+    const closeIfOutside = (clientX: number, clientY: number) => {
+      const panelRect = titleEditorPanelRef.current?.getBoundingClientRect?.() as DOMRect | undefined
+      const targetRect = backTitleButtonRef.current?.getBoundingClientRect?.() as DOMRect | undefined
+      const connectorRect = panelRect && targetRect
+        ? {
+            left: Math.min(targetRect.left, panelRect.left),
+            right: Math.max(targetRect.right, panelRect.right),
+            top: Math.min(targetRect.bottom, panelRect.top),
+            bottom: Math.max(targetRect.bottom, panelRect.top),
+          }
+        : null
+      if (pointInRect(clientX, clientY, panelRect) || pointInRect(clientX, clientY, targetRect) || pointInRect(clientX, clientY, connectorRect as any)) return
+      applySessionTitle(editableSessionTitle)
+      setIsTitleEditorOpen(false)
+    }
+
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      const touch = 'touches' in event ? event.touches[0] ?? event.changedTouches[0] : null
+      const clientX = touch ? touch.clientX : (event as MouseEvent).clientX
+      const clientY = touch ? touch.clientY : (event as MouseEvent).clientY
+      if (typeof clientX !== 'number' || typeof clientY !== 'number') return
+      closeIfOutside(clientX, clientY)
+    }
+    const onMouseMove = (event: MouseEvent) => closeIfOutside(event.clientX, event.clientY)
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mousedown', onPointerDown)
+    window.addEventListener('touchstart', onPointerDown, { passive: true })
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mousedown', onPointerDown)
+      window.removeEventListener('touchstart', onPointerDown)
+    }
+  }, [editableSessionTitle, isTitleEditorOpen])
+
+  useEffect(() => {
+    if (!isTitleEditorOpen) return
+    const id = setTimeout(() => sessionTitleInputRef.current?.focus(), 20)
+    return () => clearTimeout(id)
+  }, [isTitleEditorOpen])
 
   useEffect(() => {
     shouldSkipChatSaveRef.current = true
@@ -443,16 +974,6 @@ export function SessieDetailScreen({
     setIsClearChatModalVisible(true)
   }
 
-  function appendNoMinutesAssistantMessage() {
-    const noMinutesText = 'U heeft geen minuten meer. Ga naar Mijn abonnement om extra minuten toe te voegen.'
-    setChatMessages((previousMessages) => {
-      if (previousMessages.some((message) => message.role === 'assistant' && message.text === noMinutesText)) {
-        return previousMessages
-      }
-      return [...previousMessages, { id: createChatMessageId(), role: 'assistant', text: noMinutesText }]
-    })
-  }
-
   async function ensureSufficientChatMinutes(): Promise<boolean> {
     setIsCheckingChatMinutes(true)
     try {
@@ -461,7 +982,7 @@ export function SessieDetailScreen({
       const hasMinutes = remainingSeconds > 0
       setIsChatMinutesBlocked(!hasMinutes)
       if (!hasMinutes) {
-        appendNoMinutesAssistantMessage()
+        setIsNoMinutesCtaDismissed(false)
       }
       return hasMinutes
     } catch (error) {
@@ -470,27 +991,6 @@ export function SessieDetailScreen({
     } finally {
       setIsCheckingChatMinutes(false)
     }
-  }
-
-  function handleCopyWrittenReport() {
-    if (typeof navigator === 'undefined') return
-    if (!hasWrittenReportContent) return
-    void navigator.clipboard?.writeText(writtenReportDraft)
-  }
-
-  function handleExportWrittenReport() {
-    if (!hasWrittenReportContent) return
-    handleRequestPdfEdit({ text: writtenReportDraft, title: editableSessionTitle })
-  }
-
-  function handleExportWrittenReportAsWord() {
-    if (!hasWrittenReportContent) return
-    void exportMessageToWord(writtenReportDraft, editableSessionTitle, {
-      practiceName: data.practiceSettings.practiceName,
-      website: data.practiceSettings.website,
-      tintColor: data.practiceSettings.tintColor,
-      logoDataUrl: data.practiceSettings.logoDataUrl,
-    })
   }
 
   function handleTranscriptMentionPress(seconds: number) {
@@ -603,14 +1103,47 @@ export function SessieDetailScreen({
   async function handleSendChatMessage() {
     const trimmedText = composerText.trim()
     if (!trimmedText) return
-    setComposerText('')
     await sendChatMessage(trimmedText)
   }
+
+  useEffect(() => {
+    if (!isChatMinutesBlocked || isNoMinutesCtaDismissed) {
+      noMinutesCtaOpacity.setValue(0)
+      noMinutesCtaTranslateY.setValue(8)
+      return
+    }
+    noMinutesCtaOpacity.setValue(0)
+    noMinutesCtaTranslateY.setValue(8)
+    Animated.parallel([
+      Animated.timing(noMinutesCtaOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.timing(noMinutesCtaTranslateY, { toValue: 0, duration: 220, useNativeDriver: true }),
+    ]).start()
+  }, [isChatMinutesBlocked, isNoMinutesCtaDismissed, noMinutesCtaOpacity, noMinutesCtaTranslateY])
+
+  useEffect(() => {
+    if (isChatMinutesBlocked) return
+    setIsNoMinutesCtaDismissed(false)
+  }, [isChatMinutesBlocked])
 
   function handleRequestPdfEdit(params: { text: string; title?: string }) {
     setPdfEditorDraft(params.text)
     setPdfEditorTitle(params.title)
     setIsPdfEditorOpen(true)
+  }
+
+  function handleRequestWordEdit(params: { text: string; title?: string }) {
+    setWordEditorDraft(params.text)
+    setWordEditorTitle(params.title)
+    setIsWordEditorOpen(true)
+  }
+
+  function handleEditSummaryAction() {
+    if (String(reportText || '').trim()) {
+      setSummaryEditorInitialValue(reportText)
+      setIsSummaryEditorOpen(true)
+      return
+    }
+    openTemplatePickerForWrite()
   }
 
   function beginGenerationRun() {
@@ -809,6 +1342,11 @@ export function SessieDetailScreen({
   }
 
   function handleSaveSummary(value: string) {
+    if (isWrittenSession) {
+      setWrittenReport(sessionId, value)
+      setIsSummaryEditorOpen(false)
+      return
+    }
     updateSession(sessionId, {
       summary: value,
       transcriptionStatus: value ? 'done' : session?.transcriptionStatus ?? 'done',
@@ -985,14 +1523,26 @@ export function SessieDetailScreen({
 
   async function generateReportForTemplate(templateId: string) {
     if (session?.transcriptionStatus === 'transcribing' || session?.transcriptionStatus === 'generating') return
-    const existingTranscript = String(session?.transcript || '').trim()
-    setForcedTranscriptionStatus(existingTranscript ? 'generating' : 'transcribing')
-    if (!existingTranscript && !(await ensureSufficientTranscriptionMinutes())) {
+    if (!session?.coacheeId) {
+      showErrorToast(missingCoacheeGenerateError, missingCoacheeGenerateError)
+      return
+    }
+    const generationSource = String(trajectoryReportSourceText || '').trim()
+    setForcedTranscriptionStatus(generationSource ? 'generating' : 'transcribing')
+    if (isWrittenSession && !generationSource) {
+      setForcedTranscriptionStatus(null)
+      updateSession(sessionId, {
+        transcriptionStatus: 'error',
+        transcriptionError: 'Geen geschreven verslag beschikbaar om te genereren.',
+      })
+      return
+    }
+    if (!generationSource && !(await ensureSufficientTranscriptionMinutes())) {
       setForcedTranscriptionStatus(null)
       return
     }
     const runId = beginGenerationRun()
-    const template = templatesForSession.find((item) => item.id === templateId) ?? null
+    const template = templates.find((item) => item.id === templateId) ?? null
     const templateForSummary = template
       ? {
           name: template.name,
@@ -1010,7 +1560,7 @@ export function SessieDetailScreen({
     try {
       const transcriptionAbortController = new AbortController()
       setTranscriptionAbortController(sessionId, runId, transcriptionAbortController)
-      let transcript = existingTranscript
+      let transcript = generationSource
       if (!transcript) {
         setForcedTranscriptionStatus('transcribing')
         console.log('[transcription][report] audio-download-start', { sessionId, audioId: session?.audioBlobId ?? null })
@@ -1058,11 +1608,19 @@ export function SessieDetailScreen({
         signal: summaryAbortController.signal,
       })
       if (!isGenerationRunActive(runId)) return
-      updateSession(sessionId, {
-        summary,
-        transcriptionStatus: 'done',
-        transcriptionError: null,
-      })
+      if (isWrittenSession) {
+        setWrittenReport(sessionId, summary)
+        updateSession(sessionId, {
+          transcriptionStatus: 'done',
+          transcriptionError: null,
+        })
+      } else {
+        updateSession(sessionId, {
+          summary,
+          transcriptionStatus: 'done',
+          transcriptionError: null,
+        })
+      }
       console.log('[transcription][report] summary-generate-done', { sessionId, summaryLength: summary.length })
       clearGenerationTracking()
     } catch (error) {
@@ -1090,6 +1648,7 @@ export function SessieDetailScreen({
     }
   }
 
+  const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
 
   if (isMobileLayout) {
     return (
@@ -1099,10 +1658,14 @@ export function SessieDetailScreen({
           <View pointerEvents="none" style={styles.headerGradient} />
           <View style={styles.leftHeader}>
             <Pressable
+              ref={backTitleButtonRef}
               onPress={onBack}
+              onHoverIn={() => {
+                updateTitleMenuAnchor()
+                setIsTitleEditorOpen(true)
+              }}
               style={({ hovered }) => [styles.backTitleButton, hovered ? styles.backTitleButtonHovered : undefined]}
             >
-              {/* Back and session title */}
               <ChevronLeftIcon color={colors.text} size={24} />
               <Text numberOfLines={1} isSemibold style={styles.sessionTitle}>
                 {editableSessionTitle}
@@ -1112,60 +1675,6 @@ export function SessieDetailScreen({
 
           <View style={styles.rightHeader}>
             <View style={styles.headerActionsMenuAnchor}>
-              {isWrittenSession ? (
-                <>
-                  <Pressable
-                    onPress={handleCopyWrittenReport}
-                    disabled={!hasWrittenReportContent}
-                    style={({ hovered }) => [
-                      styles.secondaryActionButton,
-                      styles.secondaryActionButtonIconOnly,
-                      !hasWrittenReportContent ? styles.audioActionButtonDisabled : undefined,
-                      hovered ? styles.secondaryActionButtonHovered : undefined,
-                    ]}
-                  >
-                    <CopyIcon color="#656565" size={18} />
-                  </Pressable>
-                  <Pressable
-                    onPress={handleExportWrittenReport}
-                    disabled={!hasWrittenReportContent}
-                    style={({ hovered }) => [
-                      styles.secondaryActionButton,
-                      styles.secondaryActionButtonIconOnly,
-                      !hasWrittenReportContent ? styles.audioActionButtonDisabled : undefined,
-                      hovered ? styles.secondaryActionButtonHovered : undefined,
-                    ]}
-                  >
-                    <SharePdfIcon color="#656565" size={18} />
-                  </Pressable>
-                  <Pressable
-                    onPress={handleExportWrittenReportAsWord}
-                    disabled={!hasWrittenReportContent}
-                    style={({ hovered }) => [
-                      styles.secondaryActionButton,
-                      styles.secondaryActionButtonIconOnly,
-                      !hasWrittenReportContent ? styles.audioActionButtonDisabled : undefined,
-                      hovered ? styles.secondaryActionButtonHovered : undefined,
-                    ]}
-                  >
-                    <ShareTextIcon color="#656565" size={18} />
-                  </Pressable>
-                </>
-              ) : null}
-              {isWrittenSession ? (
-                <Pressable
-                  onPress={() => {
-                    if (!isWrittenReportDirty) return
-                    setWrittenReport(sessionId, writtenReportDraft)
-                  }}
-                  style={({ hovered }) => [styles.secondaryActionButton, hovered ? styles.secondaryActionButtonHovered : undefined]}
-                >
-                  {/* Save */}
-                  <Text isBold style={styles.secondaryActionText}>
-                    Opslaan
-                  </Text>
-                </Pressable>
-              ) : null}
               <Pressable
                 onPress={() => {
                   setIsEditSessieModalVisible(true)
@@ -1180,21 +1689,8 @@ export function SessieDetailScreen({
         </View>
 
         {/* Mobile content */}
-        {isWrittenSession ? (
-          <View style={styles.writtenReportContainer}>
-            <View style={[styles.reportCard, styles.reportCardFill]}>
-              <TextInput
-                value={writtenReportDraft}
-                onChangeText={setWrittenReportDraft}
-                multiline
-                textAlignVertical="top"
-                style={[styles.writtenReportInput, inputWebStyle]}
-              />
-            </View>
-          </View>
-        ) : (
-          <ScrollView style={styles.mobileScroll} contentContainerStyle={styles.mobileScrollContent} showsVerticalScrollIndicator={false}>
-            <>
+        <ScrollView style={styles.mobileScroll} contentContainerStyle={styles.mobileScrollContent} showsVerticalScrollIndicator={false}>
+          <>
               {hasSavedAudio || pendingPreviewAudioUrl ? (
                 <View style={styles.audioCardSection}>
                   <AudioPlayerCard
@@ -1220,38 +1716,27 @@ export function SessieDetailScreen({
               {/* Report */}
                 <View style={styles.reportCard}>
                   <ReportPanel
-                    templateLabel={selectedTemplateLabel}
-                    onPressTemplate={hasTranscript ? () => setIsTemplatePickerModalVisible(true) : undefined}
-                    isCompact
-                    summary={session?.summary ?? null}
-                    hasTranscript={hasTranscript}
+                    onPressTemplate={templatePickerTemplates.length > 0 ? openTemplatePickerForGenerate : undefined}
+                    summary={reportText || null}
+                    hasTranscript={hasTrajectoryReportGenerationSource}
                     transcriptionStatus={effectiveTranscriptionStatus}
                     transcriptionError={session?.transcriptionError ?? null}
-                    onEditSummary={() => setIsSummaryEditorOpen(true)}
-                    onShareSummary={() => handleRequestPdfEdit({ text: session?.summary ?? '', title: editableSessionTitle })}
-                    onExportSummaryAsWord={() => {
-                      void exportMessageToWord(session?.summary ?? '', editableSessionTitle, {
-                        practiceName: data.practiceSettings.practiceName,
-                        website: data.practiceSettings.website,
-                        tintColor: data.practiceSettings.tintColor,
-                        logoDataUrl: data.practiceSettings.logoDataUrl,
-                      })
-                    }}
+                    onEditSummary={handleEditSummaryAction}
+                    onShareSummary={() => handleRequestPdfEdit({ text: reportText, title: editableSessionTitle })}
+                    onExportSummaryAsWord={() => handleRequestWordEdit({ text: reportText, title: editableSessionTitle })}
                     onRetryTranscription={() => {
-                      const templateId = selectedTemplateId ?? defaultTemplateId
-                      if (!templateId) return
-                      void generateReportForTemplate(templateId)
+                      openTemplatePickerForGenerate()
                     }}
                     onCancelGeneration={handleCancelGeneration}
                     suppressErrorToast={isNoMinutesModalVisible}
                   />
                 </View>
               {/* Active tab content */}
-              <View style={styles.mobileTabContentCard}>
-                <View style={styles.tabsRow}>
-                  <View style={styles.tabsLeft}>
-                    <ConversationTabs activeTabKey={activeTabKey} onSelectTab={setActiveTabKey} />
-                  </View>
+                <View style={styles.mobileTabContentCard}>
+                  <View style={styles.tabsRow}>
+                    <View style={styles.tabsLeft}>
+                      <ConversationTabs activeTabKey={activeTabKey} onSelectTab={setActiveTabKey} showFullConversationTab={!isWrittenSession} />
+                    </View>
                   {activeTabKey === 'snelleVragen' ? (
                     <View style={styles.tabsRight}>
                       <Pressable
@@ -1309,8 +1794,21 @@ export function SessieDetailScreen({
                           </>
                         )}
                       </ScrollView>
-                      {isChatMinutesBlocked ? (
-                        <View style={styles.noMinutesChatCtaContainer}>
+                      {isChatMinutesBlocked && !isNoMinutesCtaDismissed ? (
+                        <Animated.View
+                          style={[
+                            styles.noMinutesChatCtaContainer,
+                            { opacity: noMinutesCtaOpacity, transform: [{ translateY: noMinutesCtaTranslateY }] },
+                          ]}
+                        >
+                          <Pressable
+                            onPress={() => setIsNoMinutesCtaDismissed(true)}
+                            style={({ hovered }) => [styles.noMinutesChatCtaCloseButton, hovered ? styles.noMinutesChatCtaCloseButtonHovered : undefined]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Melding sluiten"
+                          >
+                            <CircleCloseIcon size={18} color={colors.textSecondary} />
+                          </Pressable>
                           <Text style={styles.noMinutesChatCtaText}>U heeft geen minuten meer.</Text>
                           <Pressable
                             onPress={onOpenMySubscription}
@@ -1323,14 +1821,14 @@ export function SessieDetailScreen({
                               Mijn abonnement
                             </Text>
                           </Pressable>
-                        </View>
+                        </Animated.View>
                       ) : null}
                       <View style={styles.chatBottom}>
                         <ChatComposer
                           value={composerText}
                           onChangeValue={setComposerText}
                           onSend={handleSendChatMessage}
-                          isSendDisabled={isChatSending || isCheckingChatMinutes || isChatMinutesBlocked || composerText.trim().length === 0}
+                          isSendDisabled={isChatSending || isCheckingChatMinutes || composerText.trim().length === 0}
                           shouldAutoFocus={activeTabKey === 'snelleVragen'}
                           autoFocusKey={activeTabKey}
                           onPressEscape={() => {
@@ -1345,7 +1843,7 @@ export function SessieDetailScreen({
                   {activeTabKey === 'notities' ? (
                     <NotesTabPanel sessionId={sessionId} shouldFillAvailableHeight={false} />
                   ) : null}
-                  {activeTabKey === 'volledigeSessie' ? (
+                  {!isWrittenSession && activeTabKey === 'volledigeSessie' ? (
                     <TranscriptTabPanel
                       searchValue={transcriptSearchText}
                       onChangeSearchValue={setTranscriptSearchText}
@@ -1366,9 +1864,8 @@ export function SessieDetailScreen({
                   ) : null}
                 </AnimatedMainContent>
               </View>
-            </>
-          </ScrollView>
-        )}
+          </>
+        </ScrollView>
 
         <EditSessieModal
           visible={isEditSessieModalVisible}
@@ -1377,8 +1874,8 @@ export function SessieDetailScreen({
           initialTemplateKey={selectedTemplateId ?? ''}
           initialTemplateLabel={selectedTemplateLabel}
           coacheeOptions={activeCoacheeNames}
-          templateOptions={templatesForSession.map((template) => ({ key: template.id, label: template.name }))}
-          isTemplateChangeAllowed={!isWrittenSession}
+          templateOptions={templatesForSession.map((template) => ({ key: template.id, label: getTemplateDisplayName(template.name) }))}
+          isTemplateChangeAllowed
           onClose={() => setIsEditSessieModalVisible(false)}
           onApply={(values) => {
             const nextCoacheeId = isUnassignedCoacheeName(values.coacheeName)
@@ -1391,7 +1888,7 @@ export function SessieDetailScreen({
             onChangeCoachee(nextCoacheeId)
             setEditableSessionTitle(values.sessionTitle)
             setEditableCoacheeName(values.coacheeName)
-            setSelectedTemplateId(values.templateKey)
+            selectTemplateForCurrentSession(values.templateKey)
             setIsEditSessieModalVisible(false)
           }}
           onOpenNewCoachee={onOpenNewCoachee}
@@ -1414,14 +1911,12 @@ export function SessieDetailScreen({
 
         <TemplatePickerModal
           visible={isTemplatePickerModalVisible}
-          templates={templatesForSession.map((template) => ({ id: template.id, name: template.name }))}
-          selectedTemplateId={selectedTemplateId}
+          templates={templatePickerTemplates}
+          selectedTemplateId={templatePickerSelectedTemplateId}
+          emptyOption={templatePickerIntent === 'write' ? { id: emptyTemplateOptionId, name: 'Leeg template' } : null}
+          confirmLabel={templatePickerIntent === 'write' ? 'Schrijven' : 'Genereren'}
           onClose={() => setIsTemplatePickerModalVisible(false)}
-          onContinue={(templateId) => {
-            setSelectedTemplateId(templateId)
-            setIsTemplatePickerModalVisible(false)
-            void generateReportForTemplate(templateId)
-          }}
+          onContinue={handleTemplatePickerContinue}
         />
 
         <AnimatedOverlayModal
@@ -1477,10 +1972,14 @@ export function SessieDetailScreen({
         <View pointerEvents="none" style={styles.headerGradient} />
         <View style={styles.leftHeader}>
           <Pressable
+            ref={backTitleButtonRef}
             onPress={onBack}
+            onHoverIn={() => {
+              updateTitleMenuAnchor()
+              setIsTitleEditorOpen(true)
+            }}
             style={({ hovered }) => [styles.backTitleButton, hovered ? styles.backTitleButtonHovered : undefined]}
           >
-            {/* Back and session title */}
             <ChevronLeftIcon color={colors.text} size={24} />
             <Text numberOfLines={1} isSemibold style={styles.sessionTitle}>
               {editableSessionTitle}
@@ -1508,77 +2007,27 @@ export function SessieDetailScreen({
             </Pressable>
           ) : null}
 
-          {!isVerySmallLayout && !hideDate && dateLabel.length > 0 ? (
-            <View style={styles.dateContainer}>
-              {/* Date */}
+          {!isVerySmallLayout && !hideDate && sessionDateLabel.length > 0 ? (
+            <Pressable
+              ref={dateHoverTargetRef}
+              onHoverIn={() => {
+                const parsed = parseDateInput(editableSessionDateInput)
+                if (parsed) setVisibleDateMonth(parsed)
+                updateDateMenuAnchor()
+                setIsDateCalendarOpen(true)
+              }}
+              style={styles.dateContainer}
+            >
               <CalendarCircleIcon size={24} />
               <Text isSemibold style={styles.dateText}>
-                {dateLabel}
+                {sessionDateLabel}
               </Text>
-            </View>
+            </Pressable>
           ) : null}
         </View>
 
         <View style={styles.rightHeader}>
           <View style={styles.headerActionsMenuAnchor}>
-            {isWrittenSession ? (
-              <>
-                <Pressable
-                  onPress={handleCopyWrittenReport}
-                  disabled={!hasWrittenReportContent}
-                  style={({ hovered }) => [
-                    styles.secondaryActionButton,
-                    styles.secondaryActionButtonIconOnly,
-                    !hasWrittenReportContent ? styles.audioActionButtonDisabled : undefined,
-                    hovered ? styles.secondaryActionButtonHovered : undefined,
-                  ]}
-                >
-                  <CopyIcon color="#656565" size={18} />
-                </Pressable>
-                <Pressable
-                  onPress={handleExportWrittenReport}
-                  disabled={!hasWrittenReportContent}
-                  style={({ hovered }) => [
-                    styles.secondaryActionButton,
-                    styles.secondaryActionButtonIconOnly,
-                    !hasWrittenReportContent ? styles.audioActionButtonDisabled : undefined,
-                    hovered ? styles.secondaryActionButtonHovered : undefined,
-                  ]}
-                >
-                  <SharePdfIcon color="#656565" size={18} />
-                </Pressable>
-                <Pressable
-                  onPress={handleExportWrittenReportAsWord}
-                  disabled={!hasWrittenReportContent}
-                  style={({ hovered }) => [
-                    styles.secondaryActionButton,
-                    styles.secondaryActionButtonIconOnly,
-                    !hasWrittenReportContent ? styles.audioActionButtonDisabled : undefined,
-                    hovered ? styles.secondaryActionButtonHovered : undefined,
-                  ]}
-                >
-                  <ShareTextIcon color="#656565" size={18} />
-                </Pressable>
-              </>
-            ) : null}
-            {isWrittenReportDirty ? (
-              <Pressable
-                onPress={() => {
-                  if (!isWrittenReportDirty) return
-                  setWrittenReport(sessionId, writtenReportDraft)
-                }}
-                style={({ hovered }) => [
-                  styles.secondaryActionButton,
-                  isHeaderActionButtonsCompact ? styles.secondaryActionButtonIconOnly : undefined,
-                  hovered ? styles.secondaryActionButtonHovered : undefined,
-                ]}
-              >
-                {/* Save */}
-                <Text isBold style={styles.secondaryActionText}>
-                  Opslaan
-                </Text>
-              </Pressable>
-            ) : null}
             <Pressable
               onPress={() => {
                 setIsEditSessieModalVisible(true)
@@ -1606,85 +2055,59 @@ export function SessieDetailScreen({
         <View style={styles.mainRow}>
           {/* Left column */}
           <View style={styles.leftColumn}>
-            {isWrittenSession ? (
-              <View style={styles.leftScroll}>
-                <View style={[styles.reportCard, styles.reportCardFill]}>
-                  <TextInput
-                    value={writtenReportDraft}
-                    onChangeText={setWrittenReportDraft}
-                    multiline
-                    textAlignVertical="top"
-                    style={[styles.writtenReportInput, inputWebStyle]}
+            <ScrollView
+              style={[styles.leftScroll, styles.leftScrollGapAligned]}
+              contentContainerStyle={styles.leftScrollContent}
+              showsVerticalScrollIndicator
+            >
+              {hasSavedAudio || pendingPreviewAudioUrl ? (
+                <View style={styles.audioCardSection}>
+                  <AudioPlayerCard
+                    ref={audioPlayerRef}
+                    audioBlobId={session?.audioBlobId ?? null}
+                    audioDurationSeconds={session?.audioDurationSeconds ?? null}
+                    audioUrlOverride={pendingPreviewAudioUrl}
+                    onCurrentSecondsChange={setCurrentAudioSeconds}
+                    onDurationSecondsChange={setCurrentAudioDurationSeconds}
+                    onDownloadAudio={() => {
+                      void handleDownloadSavedAudio()
+                    }}
+                    onDeleteAudio={() => {
+                      void handleDeleteSavedAudio()
+                    }}
+                    isDownloadAudioBusy={isDownloadingAudio}
+                    isDownloadAudioDisabled={!hasDownloadableAudio}
+                    isDeleteAudioBusy={isDeletingAudio}
+                    isDeleteAudioDisabled={!hasSavedAudio || effectiveTranscriptionStatus === 'transcribing' || effectiveTranscriptionStatus === 'generating'}
                   />
                 </View>
+              ) : null}
+              {/* Report card */}
+              <View style={styles.reportCard}>
+                <ReportPanel
+                  onPressTemplate={templatePickerTemplates.length > 0 ? openTemplatePickerForGenerate : undefined}
+                  summary={reportText || null}
+                  hasTranscript={hasTrajectoryReportGenerationSource}
+                  transcriptionStatus={effectiveTranscriptionStatus}
+                  transcriptionError={session?.transcriptionError ?? null}
+                  onEditSummary={handleEditSummaryAction}
+                  onShareSummary={() => handleRequestPdfEdit({ text: reportText, title: editableSessionTitle })}
+                  onExportSummaryAsWord={() => handleRequestWordEdit({ text: reportText, title: editableSessionTitle })}
+                  onRetryTranscription={() => {
+                    openTemplatePickerForGenerate()
+                  }}
+                  onCancelGeneration={handleCancelGeneration}
+                  suppressErrorToast={isNoMinutesModalVisible}
+                />
               </View>
-            ) : (
-              <ScrollView
-                style={[styles.leftScroll, styles.leftScrollGapAligned]}
-                contentContainerStyle={styles.leftScrollContent}
-                showsVerticalScrollIndicator
-              >
-                {hasSavedAudio || pendingPreviewAudioUrl ? (
-                  <View style={styles.audioCardSection}>
-                    <AudioPlayerCard
-                      ref={audioPlayerRef}
-                      audioBlobId={session?.audioBlobId ?? null}
-                      audioDurationSeconds={session?.audioDurationSeconds ?? null}
-                      audioUrlOverride={pendingPreviewAudioUrl}
-                      onCurrentSecondsChange={setCurrentAudioSeconds}
-                      onDurationSecondsChange={setCurrentAudioDurationSeconds}
-                      onDownloadAudio={() => {
-                        void handleDownloadSavedAudio()
-                      }}
-                      onDeleteAudio={() => {
-                        void handleDeleteSavedAudio()
-                      }}
-                      isDownloadAudioBusy={isDownloadingAudio}
-                      isDownloadAudioDisabled={!hasDownloadableAudio}
-                      isDeleteAudioBusy={isDeletingAudio}
-                      isDeleteAudioDisabled={!hasSavedAudio || effectiveTranscriptionStatus === 'transcribing' || effectiveTranscriptionStatus === 'generating'}
-                    />
-                  </View>
-                ) : null}
-                {/* Report card */}
-                <View style={styles.reportCard}>
-                  <ReportPanel
-                    templateLabel={selectedTemplateLabel}
-                    onPressTemplate={hasTranscript ? () => setIsTemplatePickerModalVisible(true) : undefined}
-                    isCompact={isCompactLayout}
-                    summary={session?.summary ?? null}
-                    hasTranscript={hasTranscript}
-                    transcriptionStatus={effectiveTranscriptionStatus}
-                    transcriptionError={session?.transcriptionError ?? null}
-                    onEditSummary={() => setIsSummaryEditorOpen(true)}
-                    onShareSummary={() => handleRequestPdfEdit({ text: session?.summary ?? '', title: editableSessionTitle })}
-                    onExportSummaryAsWord={() => {
-                      void exportMessageToWord(session?.summary ?? '', editableSessionTitle, {
-                        practiceName: data.practiceSettings.practiceName,
-                        website: data.practiceSettings.website,
-                        tintColor: data.practiceSettings.tintColor,
-                        logoDataUrl: data.practiceSettings.logoDataUrl,
-                      })
-                    }}
-                    onRetryTranscription={() => {
-                      const templateId = selectedTemplateId ?? defaultTemplateId
-                      if (!templateId) return
-                      void generateReportForTemplate(templateId)
-                    }}
-                    onCancelGeneration={handleCancelGeneration}
-                    suppressErrorToast={isNoMinutesModalVisible}
-                  />
-                </View>
-              </ScrollView>
-            )}
+            </ScrollView>
           </View>
 
-          {!isWrittenSession ? (
-            <View style={styles.rightColumn}>
+          <View style={styles.rightColumn}>
               <View style={styles.rightCard}>
                 <View style={styles.tabsRow}>
                   <View style={styles.tabsLeft}>
-                    <ConversationTabs activeTabKey={activeTabKey} onSelectTab={setActiveTabKey} />
+                    <ConversationTabs activeTabKey={activeTabKey} onSelectTab={setActiveTabKey} showFullConversationTab={!isWrittenSession} />
                   </View>
                   {activeTabKey === 'snelleVragen' ? (
                     <View style={styles.tabsRight}>
@@ -1743,8 +2166,21 @@ export function SessieDetailScreen({
                         )}
                       </ScrollView>
 
-                      {isChatMinutesBlocked ? (
-                        <View style={styles.noMinutesChatCtaContainer}>
+                      {isChatMinutesBlocked && !isNoMinutesCtaDismissed ? (
+                        <Animated.View
+                          style={[
+                            styles.noMinutesChatCtaContainer,
+                            { opacity: noMinutesCtaOpacity, transform: [{ translateY: noMinutesCtaTranslateY }] },
+                          ]}
+                        >
+                          <Pressable
+                            onPress={() => setIsNoMinutesCtaDismissed(true)}
+                            style={({ hovered }) => [styles.noMinutesChatCtaCloseButton, hovered ? styles.noMinutesChatCtaCloseButtonHovered : undefined]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Melding sluiten"
+                          >
+                            <CircleCloseIcon size={18} color={colors.textSecondary} />
+                          </Pressable>
                           <Text style={styles.noMinutesChatCtaText}>U heeft geen minuten meer.</Text>
                           <Pressable
                             onPress={onOpenMySubscription}
@@ -1757,7 +2193,7 @@ export function SessieDetailScreen({
                               Mijn abonnement
                             </Text>
                           </Pressable>
-                        </View>
+                        </Animated.View>
                       ) : null}
 
                       <View style={styles.chatBottom}>
@@ -1765,7 +2201,7 @@ export function SessieDetailScreen({
                           value={composerText}
                           onChangeValue={setComposerText}
                           onSend={handleSendChatMessage}
-                          isSendDisabled={isChatSending || isCheckingChatMinutes || isChatMinutesBlocked || composerText.trim().length === 0}
+                          isSendDisabled={isChatSending || isCheckingChatMinutes || composerText.trim().length === 0}
                           shouldAutoFocus={activeTabKey === 'snelleVragen'}
                           autoFocusKey={activeTabKey}
                         />
@@ -1775,7 +2211,7 @@ export function SessieDetailScreen({
 
                   {activeTabKey === 'notities' ? <NotesTabPanel sessionId={sessionId} /> : null}
 
-                  {activeTabKey === 'volledigeSessie' ? (
+                  {!isWrittenSession && activeTabKey === 'volledigeSessie' ? (
                     <TranscriptTabPanel
                       searchValue={transcriptSearchText}
                       onChangeSearchValue={setTranscriptSearchText}
@@ -1796,7 +2232,6 @@ export function SessieDetailScreen({
                 </AnimatedMainContent>
               </View>
             </View>
-          ) : null}
         </View>
       </View>
 
@@ -1807,8 +2242,8 @@ export function SessieDetailScreen({
         initialTemplateKey={selectedTemplateId ?? ''}
         initialTemplateLabel={selectedTemplateLabel}
         coacheeOptions={activeCoacheeNames}
-        templateOptions={templatesForSession.map((template) => ({ key: template.id, label: template.name }))}
-        isTemplateChangeAllowed={!isWrittenSession}
+        templateOptions={templatesForSession.map((template) => ({ key: template.id, label: getTemplateDisplayName(template.name) }))}
+        isTemplateChangeAllowed
         onClose={() => setIsEditSessieModalVisible(false)}
         onApply={(values) => {
           const nextCoacheeId = isUnassignedCoacheeName(values.coacheeName)
@@ -1820,7 +2255,7 @@ export function SessieDetailScreen({
           })
           setEditableSessionTitle(values.sessionTitle)
           setEditableCoacheeName(values.coacheeName)
-          setSelectedTemplateId(values.templateKey)
+          selectTemplateForCurrentSession(values.templateKey)
           setIsEditSessieModalVisible(false)
         }}
         onOpenNewCoachee={onOpenNewCoachee}
@@ -1845,20 +2280,18 @@ export function SessieDetailScreen({
 
       <TemplatePickerModal
         visible={isTemplatePickerModalVisible}
-        templates={templatesForSession.map((template) => ({ id: template.id, name: template.name }))}
-        selectedTemplateId={selectedTemplateId}
+        templates={templatePickerTemplates}
+        selectedTemplateId={templatePickerSelectedTemplateId}
+        emptyOption={templatePickerIntent === 'write' ? { id: emptyTemplateOptionId, name: 'Leeg template' } : null}
+        confirmLabel={templatePickerIntent === 'write' ? 'Schrijven' : 'Genereren'}
         onClose={() => setIsTemplatePickerModalVisible(false)}
-        onContinue={(templateId) => {
-          setSelectedTemplateId(templateId)
-          setIsTemplatePickerModalVisible(false)
-          void generateReportForTemplate(templateId)
-        }}
+        onContinue={handleTemplatePickerContinue}
       />
 
       <RichTextEditorModal
         visible={isSummaryEditorOpen}
         title="Verslag bewerken"
-        initialValue={session?.summary ?? ''}
+        initialValue={summaryEditorInitialValue}
         saveLabel="Verslag opslaan"
         onClose={() => setIsSummaryEditorOpen(false)}
         onSave={handleSaveSummary}
@@ -1896,6 +2329,23 @@ export function SessieDetailScreen({
             logoDataUrl: data.practiceSettings.logoDataUrl,
           })
           setIsPdfEditorOpen(false)
+        }}
+      />
+
+      <RichTextEditorModal
+        visible={isWordEditorOpen}
+        title="Word bewerken"
+        initialValue={wordEditorDraft}
+        saveLabel="Exporteer Word"
+        onClose={() => setIsWordEditorOpen(false)}
+        onSave={async (value) => {
+          await exportMessageToWord(value, wordEditorTitle, {
+            practiceName: data.practiceSettings.practiceName,
+            website: data.practiceSettings.website,
+            tintColor: data.practiceSettings.tintColor,
+            logoDataUrl: data.practiceSettings.logoDataUrl,
+          })
+          setIsWordEditorOpen(false)
         }}
       />
 
@@ -2016,8 +2466,21 @@ export function SessieDetailScreen({
                     </>
                   )}
                 </ScrollView>
-                {isChatMinutesBlocked ? (
-                  <View style={styles.noMinutesChatCtaContainer}>
+                {isChatMinutesBlocked && !isNoMinutesCtaDismissed ? (
+                  <Animated.View
+                    style={[
+                      styles.noMinutesChatCtaContainer,
+                      { opacity: noMinutesCtaOpacity, transform: [{ translateY: noMinutesCtaTranslateY }] },
+                    ]}
+                  >
+                    <Pressable
+                      onPress={() => setIsNoMinutesCtaDismissed(true)}
+                      style={({ hovered }) => [styles.noMinutesChatCtaCloseButton, hovered ? styles.noMinutesChatCtaCloseButtonHovered : undefined]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Melding sluiten"
+                    >
+                      <CircleCloseIcon size={18} color={colors.textSecondary} />
+                    </Pressable>
                     <Text style={styles.noMinutesChatCtaText}>U heeft geen minuten meer.</Text>
                     <Pressable
                       onPress={onOpenMySubscription}
@@ -2030,14 +2493,14 @@ export function SessieDetailScreen({
                         Mijn abonnement
                       </Text>
                     </Pressable>
-                  </View>
+                  </Animated.View>
                 ) : null}
                 <View style={styles.chatBottom}>
                   <ChatComposer
                     value={composerText}
                     onChangeValue={setComposerText}
                     onSend={handleSendChatMessage}
-                    isSendDisabled={isChatSending || isCheckingChatMinutes || isChatMinutesBlocked || composerText.trim().length === 0}
+                    isSendDisabled={isChatSending || isCheckingChatMinutes || composerText.trim().length === 0}
                     shouldAutoFocus
                     autoFocusKey="full-screen-chat"
                     onPressEscape={() => setIsChatMaximized(false)}
@@ -2103,6 +2566,117 @@ export function SessieDetailScreen({
                 </Text>
               </Pressable>
             </ScrollView>
+          </AnimatedDropdownPanel>
+        </WebPortal>
+      ) : null}
+
+      {isTitleEditorOpen && titleMenuPosition ? (
+        <WebPortal>
+          <AnimatedDropdownPanel
+            visible={isTitleEditorOpen}
+            style={[styles.titleEditorMenu, { left: titleMenuPosition.left, top: titleMenuPosition.top, width: titleMenuPosition.width } as any]}
+          >
+            <View ref={titleEditorPanelRef} style={styles.titleEditorPanelInner}>
+              <TextInput
+                ref={sessionTitleInputRef}
+                value={editableSessionTitle}
+                onChangeText={setEditableSessionTitle}
+                onBlur={() => {
+                  applySessionTitle(editableSessionTitle)
+                  setIsTitleEditorOpen(false)
+                }}
+                onKeyPress={(event) => {
+                  if (event.nativeEvent.key === 'Enter') {
+                    applySessionTitle(editableSessionTitle)
+                    setIsTitleEditorOpen(false)
+                  }
+                  if (event.nativeEvent.key === 'Escape') {
+                    setEditableSessionTitle(String(session?.title || title))
+                    setIsTitleEditorOpen(false)
+                  }
+                }}
+                placeholder="Verslagtitel"
+                placeholderTextColor={colors.textSecondary}
+                style={[styles.titleEditorInput, inputWebStyle]}
+              />
+            </View>
+          </AnimatedDropdownPanel>
+        </WebPortal>
+      ) : null}
+
+      {isDateCalendarOpen && dateMenuPosition ? (
+        <WebPortal>
+          <AnimatedDropdownPanel
+            visible={isDateCalendarOpen}
+            style={[styles.dateCalendarMenu, { left: dateMenuPosition.left, top: dateMenuPosition.top, width: dateMenuPosition.width } as any]}
+          >
+            <View ref={dateCalendarPanelRef} style={styles.dateCalendarPanelInner}>
+              <View style={styles.dateCalendarHeader}>
+                <Pressable
+                  onPress={() => setVisibleDateMonth((previous) => new Date(previous.getFullYear(), previous.getMonth() - 1, 1))}
+                  style={({ hovered }) => [styles.dateCalendarNavButton, hovered ? styles.dateCalendarNavButtonHovered : undefined]}
+                >
+                  <Text isBold style={styles.dateCalendarNavButtonText}>
+                    {'<'}
+                  </Text>
+                </Pressable>
+                <Text isSemibold style={styles.dateCalendarMonthTitle}>
+                  {dateMonthTitle}
+                </Text>
+                <Pressable
+                  onPress={() => setVisibleDateMonth((previous) => new Date(previous.getFullYear(), previous.getMonth() + 1, 1))}
+                  style={({ hovered }) => [styles.dateCalendarNavButton, hovered ? styles.dateCalendarNavButtonHovered : undefined]}
+                >
+                  <Text isBold style={styles.dateCalendarNavButtonText}>
+                    {'>'}
+                  </Text>
+                </Pressable>
+              </View>
+              <View style={styles.dateCalendarWeekRow}>
+                {dayLabels.map((dayLabel) => (
+                  <View key={dayLabel} style={styles.dateCalendarDayLabelWrap}>
+                    <Text isSemibold style={styles.dateCalendarDayLabel}>
+                      {dayLabel}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.dateCalendarGrid}>
+                {dateCalendarCells.map((cell) => {
+                  const isSelected = cell.isoDate === selectedDateIso
+                  return (
+                    <Pressable
+                      key={cell.isoDate}
+                      onPress={() => {
+                        const [year, month, day] = cell.isoDate.split('-').map(Number)
+                        const selected = new Date(year, month - 1, day)
+                        const nextInput = formatDateToInput(selected)
+                        setEditableSessionDateInput(nextInput)
+                        setVisibleDateMonth(new Date(year, month - 1, 1))
+                        setIsDateCalendarOpen(false)
+                        applySessionDate(nextInput)
+                      }}
+                      style={({ hovered }) => [
+                        styles.dateCalendarDayButton,
+                        !cell.inCurrentMonth ? styles.dateCalendarDayButtonOutside : undefined,
+                        isSelected ? styles.dateCalendarDayButtonSelected : undefined,
+                        hovered ? styles.dateCalendarDayButtonHovered : undefined,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.dateCalendarDayText,
+                          !cell.inCurrentMonth ? styles.dateCalendarDayTextOutside : undefined,
+                          isSelected ? styles.dateCalendarDayTextSelected : undefined,
+                        ]}
+                      >
+                        {cell.dayOfMonth}
+                      </Text>
+                    </Pressable>
+                  )
+                })}
+              </View>
+            </View>
           </AnimatedDropdownPanel>
         </WebPortal>
       ) : null}
@@ -2241,6 +2815,119 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 20,
     color: colors.text,
+  },
+  titleEditorMenu: {
+    ...( { position: 'fixed', zIndex: 9999, boxShadow: '0 20px 60px rgba(0,0,0,0.16)' } as any ),
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  titleEditorPanelInner: {
+    width: '100%',
+    padding: 10,
+    backgroundColor: colors.surface,
+  },
+  titleEditorInput: {
+    width: '100%',
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    lineHeight: 20,
+    color: colors.text,
+    backgroundColor: colors.surface,
+  },
+  dateCalendarMenu: {
+    ...( { position: 'fixed', zIndex: 9999, boxShadow: '0 20px 60px rgba(0,0,0,0.16)' } as any ),
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  dateCalendarPanelInner: {
+    width: '100%',
+    padding: 12,
+    backgroundColor: colors.surface,
+  },
+  dateCalendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  dateCalendarNavButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#E6C1D6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateCalendarNavButtonHovered: {
+    backgroundColor: '#FCEFF6',
+  },
+  dateCalendarNavButtonText: {
+    color: colors.selected,
+    fontSize: 14,
+    lineHeight: 16,
+  },
+  dateCalendarMonthTitle: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+    textTransform: 'capitalize',
+  },
+  dateCalendarWeekRow: {
+    flexDirection: 'row',
+    marginBottom: 6,
+  },
+  dateCalendarDayLabelWrap: {
+    width: `${100 / 7}%` as any,
+    alignItems: 'center',
+  },
+  dateCalendarDayLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    color: '#777777',
+    textTransform: 'uppercase',
+  },
+  dateCalendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: 4,
+  },
+  dateCalendarDayButton: {
+    width: `${100 / 7}%` as any,
+    height: 34,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateCalendarDayButtonOutside: {
+    backgroundColor: '#FAFAFA',
+  },
+  dateCalendarDayButtonSelected: {
+    backgroundColor: colors.selected,
+  },
+  dateCalendarDayButtonHovered: {
+    backgroundColor: '#F8E4EF',
+  },
+  dateCalendarDayText: {
+    fontSize: 13,
+    lineHeight: 16,
+    color: '#1D0A00',
+  },
+  dateCalendarDayTextOutside: {
+    color: '#999999',
+  },
+  dateCalendarDayTextSelected: {
+    color: '#FFFFFF',
   },
   rightHeader: {
     flexDirection: 'row',
@@ -2418,6 +3105,7 @@ const styles = StyleSheet.create({
   chatTab: {
     flex: 1,
     gap: 16,
+    position: 'relative',
   },
   chatTabMobile: {
     flex: 0,
@@ -2437,13 +3125,31 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   noMinutesChatCtaContainer: {
-    width: '100%',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 82,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: '#FFFFFF',
     padding: 12,
+    paddingRight: 36,
     gap: 10,
+    zIndex: 2,
+  },
+  noMinutesChatCtaCloseButton: {
+    position: 'absolute',
+    right: 8,
+    top: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noMinutesChatCtaCloseButtonHovered: {
+    backgroundColor: colors.hoverBackground,
   },
   noMinutesChatCtaText: {
     fontSize: 13,

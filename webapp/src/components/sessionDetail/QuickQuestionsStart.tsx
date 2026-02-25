@@ -18,8 +18,50 @@ type Props = {
   onSelectOption: (option: { text: string; promptText: string; templateId?: string }) => void
 }
 
+const curatedCoachOptions: QuickQuestionOption[] = [
+  { id: 'coach-summary', text: 'een korte samenvatting van dit gesprek', promptText: 'Geef een korte, heldere samenvatting van dit gesprek in maximaal 8 punten.' },
+  { id: 'coach-core-insights', text: 'de belangrijkste inzichten uit dit gesprek', promptText: 'Noem de belangrijkste inzichten uit dit gesprek, geordend op impact voor de client.' },
+  { id: 'coach-actionpoints', text: 'alle actiepunten uit dit gesprek op een rij', promptText: 'Zet alle actiepunten uit dit gesprek overzichtelijk onder elkaar met eigenaar (coach/client).' },
+  { id: 'coach-client-actions', text: 'alleen de actiepunten voor de client', promptText: 'Geef alleen de actiepunten die door de client uitgevoerd moeten worden.' },
+  { id: 'coach-coach-actions', text: 'alleen de actiepunten voor de coach', promptText: 'Geef alleen de actiepunten die door de coach opgepakt moeten worden.' },
+  { id: 'coach-deadlines', text: 'een overzicht met actiepunten en deadlines', promptText: 'Maak een overzicht met actiepunten en realistische deadlines op basis van dit gesprek.' },
+  { id: 'coach-risks', text: 'risicos en aandachtspunten benoemd hebben', promptText: 'Benoem de belangrijkste risicos en aandachtspunten die in dit gesprek naar voren komen.' },
+  { id: 'coach-barriers', text: 'de belangrijkste belemmeringen in kaart', promptText: 'Zet de belangrijkste belemmeringen voor werkhervatting of loopbaanstappen op een rij.' },
+  { id: 'coach-facilitators', text: 'de helpende factoren overzichtelijk zien', promptText: 'Noem de helpende factoren die de voortgang van de client ondersteunen.' },
+  { id: 'coach-strengths', text: 'sterke punten en talenten van de client', promptText: 'Haal uit dit gesprek de sterke punten, competenties en talenten van de client.' },
+  { id: 'coach-values', text: 'waarden en motivatiebronnen van de client', promptText: 'Welke waarden, drijfveren en motivatiebronnen van de client blijken uit dit gesprek?' },
+  { id: 'coach-goals-smart', text: 'de doelen omzetten naar SMART doelen', promptText: 'Zet de besproken doelen om naar SMART geformuleerde doelen.' },
+  { id: 'coach-goal-check', text: 'toetsen of de doelen haalbaar zijn', promptText: 'Beoordeel de haalbaarheid van de besproken doelen en licht kort toe waarom.' },
+  { id: 'coach-week-plan', text: 'een weekplanning voor de client', promptText: 'Maak een praktische weekplanning met concrete taken voor de client.' },
+  { id: 'coach-two-week-plan', text: 'een plan voor de komende 2 weken', promptText: 'Maak een stap-voor-stap plan voor de komende 2 weken op basis van dit gesprek.' },
+  { id: 'coach-thirty-day-plan', text: 'een 30-dagen plan voor reintegratie', promptText: 'Maak een praktisch 30-dagen plan voor reintegratie op basis van dit gesprek.' },
+  { id: 'coach-next-session-questions', text: 'gerichte vragen voor de volgende sessie', promptText: 'Geef 12 gerichte coachvragen voor de volgende sessie, passend bij dit gesprek.' },
+  { id: 'coach-reflection-questions', text: 'reflectievragen voor de client', promptText: 'Formuleer sterke reflectievragen die eigenaarschap en zelfinzicht vergroten.' },
+  { id: 'coach-session-opening', text: 'een sterke opening voor de volgende afspraak', promptText: 'Schrijf een korte, professionele opening voor de volgende sessie.' },
+  { id: 'coach-session-closing', text: 'een duidelijke afsluiting voor de sessie', promptText: 'Schrijf een korte afsluiting met samenvatting en vervolgafspraken.' },
+  { id: 'coach-followup-mail', text: 'een follow-up mail naar de client', promptText: 'Schrijf een nette follow-up mail aan de client met samenvatting en afspraken.' },
+  { id: 'coach-progress-check', text: 'evaluatievragen voor voortgang', promptText: 'Maak een set evaluatievragen om voortgang in de volgende sessie te meten.' },
+  { id: 'coach-priorities', text: 'prioriteiten voor de komende periode', promptText: 'Bepaal de topprioriteiten voor de client voor de komende periode.' },
+  { id: 'coach-first-step', text: 'alles terugbrengen naar de eerste kleine stap', promptText: 'Vertaal de doelen uit dit gesprek naar de eerstvolgende kleinste uitvoerbare stap.' },
+  { id: 'coach-obstacles-alternatives', text: 'per obstakel een alternatief plan', promptText: 'Noem per belemmering een concreet alternatief of back-up scenario.' },
+  { id: 'coach-energy-balance', text: 'balans tussen belastbaarheid en opbouw', promptText: 'Geef advies voor opbouw van activiteiten in balans met belastbaarheid.' },
+  { id: 'coach-relapse-signals', text: 'signalen van terugval en preventie', promptText: 'Noem signalen van mogelijke terugval en passende preventieve acties.' },
+  { id: 'coach-job-directions', text: 'passende functierichtingen verkennen', promptText: 'Noem logische functierichtingen op basis van kwaliteiten en wensen uit dit gesprek.' },
+  { id: 'coach-labour-market-angles', text: 'kansrijke arbeidsmarkthoeken op een rij', promptText: 'Noem kansrijke arbeidsmarkthoeken die passen bij het profiel uit dit gesprek.' },
+  { id: 'coach-cv-focus', text: 'advies voor de focus van het cv', promptText: 'Geef concrete cv-verbeterpunten op basis van het gesprek en het doel van de client.' },
+  { id: 'coach-motivation-letter', text: 'een opzet voor een motivatiebrief', promptText: 'Maak een sterke basisopzet voor een motivatiebrief die past bij dit profiel.' },
+  { id: 'coach-interview-prep', text: 'voorbereiding op een sollicitatiegesprek', promptText: 'Geef een praktische voorbereiding voor een sollicitatiegesprek met voorbeeldvragen.' },
+  { id: 'coach-network-plan', text: 'een netwerkplan met concrete acties', promptText: 'Maak een concreet netwerkplan met acties, frequentie en opvolging.' },
+  { id: 'coach-linkedin-plan', text: 'een verbeterplan voor LinkedIn-profiel', promptText: 'Geef concrete verbeterpunten voor LinkedIn op basis van dit gesprek.' },
+  { id: 'coach-reintegration-track', text: 'opties voor het reintegratietraject', promptText: 'Geef passende opties voor vervolgstappen binnen een reintegratietraject.' },
+  { id: 'coach-employer-feedback', text: 'een neutrale terugkoppeling voor werkgever', promptText: 'Maak een neutrale, professionele terugkoppeling voor een werkgever zonder privacygevoelige details.' },
+  { id: 'coach-case-note', text: 'een nette dossiernotitie van dit gesprek', promptText: 'Schrijf een beknopte en professionele dossiernotitie van dit gesprek.' },
+  { id: 'coach-next-appointment', text: 'een voorstel voor agenda volgende sessie', promptText: 'Stel een concrete agenda op voor de volgende sessie met doel per onderdeel.' },
+  { id: 'coach-communication-plan', text: 'een communicatieplan tussen sessies', promptText: 'Maak een communicatieplan voor contactmomenten tussen nu en de volgende sessie.' },
+]
+
 function buildOptions(templates: { id: string; name: string; promptText?: string; templateId?: string }[]): QuickQuestionOption[] {
-  return templates
+  const templateOptions = templates
     .map((template) => {
       const text = String(template.name || '').trim()
       const promptText = String(template.promptText || '').trim() || text
@@ -27,6 +69,13 @@ function buildOptions(templates: { id: string; name: string; promptText?: string
       return { id: String(template.id || '').trim(), text, promptText, templateId }
     })
     .filter((template) => template.id.length > 0 && template.text.length > 0 && template.promptText.length > 0)
+
+  const uniqueOptions = new Map<string, QuickQuestionOption>()
+  for (const option of [...curatedCoachOptions, ...templateOptions]) {
+    const key = `${option.text.trim().toLowerCase()}||${option.promptText.trim().toLowerCase()}`
+    if (!uniqueOptions.has(key)) uniqueOptions.set(key, option)
+  }
+  return Array.from(uniqueOptions.values())
 }
 
 function shuffleOptions(options: QuickQuestionOption[]) {
@@ -114,7 +163,7 @@ export function QuickQuestionsStart({ templates, onSelectOption }: Props) {
     <View style={styles.container}>
       {/* Intro line */}
       <Text isSemibold style={styles.titleText}>
-        Templates
+        Ik wil...
       </Text>
 
       <Animated.View style={[styles.optionsContainer, { opacity, transform: [{ translateY }] }]}>
@@ -157,7 +206,7 @@ export function QuickQuestionsStart({ templates, onSelectOption }: Props) {
           <View style={styles.modalBody}>
             <View style={styles.modalHeader}>
               <Text isSemibold style={styles.modalTitle}>
-                Templates
+                Ik wil...
               </Text>
             </View>
             <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
@@ -368,3 +417,4 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 })
+

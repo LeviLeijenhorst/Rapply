@@ -670,10 +670,10 @@ const styles = StyleSheet.create({
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 4,
+    rowGap: 4,
   },
   calendarDayButton: {
-    width: 40,
+    width: `${100 / 7}%` as any,
     height: 34,
     borderRadius: 8,
     alignItems: 'center',

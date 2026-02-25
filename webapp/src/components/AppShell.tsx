@@ -66,6 +66,16 @@ function ensurePrefix(value: string, prefix: string) {
   return value.startsWith(`${prefix}-`) ? value : `${prefix}-${value}`
 }
 
+function resolveRouteEntityId(value: string, prefix: string, existingIds: string[]): string | null {
+  if (!value) return null
+  if (existingIds.includes(value)) return value
+  const withPrefix = ensurePrefix(value, prefix)
+  if (existingIds.includes(withPrefix)) return withPrefix
+  const stripped = stripPrefix(value, prefix)
+  if (existingIds.includes(stripped)) return stripped
+  return null
+}
+
 function parseRouteFromPath(pathname: string): RouteState {
   const cleanedPath = pathname.startsWith('/inloggen') ? pathname.slice('/inloggen'.length) : pathname
   const path = cleanedPath.startsWith('/') ? cleanedPath.slice(1) : cleanedPath
@@ -560,6 +570,45 @@ export function AppShell({ onLogout }: Props) {
   const [newlyCreatedCoacheeId, setNewlyCreatedCoacheeId] = useState<string | null>(null)
   const [newlyCreatedCoacheeName, setNewlyCreatedCoacheeName] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (!isAppDataLoaded) return
+
+    if (selectedSessieId) {
+      const resolvedSessieId = resolveRouteEntityId(
+        selectedSessieId,
+        'session',
+        data.sessions.map((item) => item.id),
+      )
+      if (resolvedSessieId && resolvedSessieId !== selectedSessieId) {
+        setSelectedSessieId(resolvedSessieId)
+        if (typeof window !== 'undefined') {
+          const nextPath = buildPathFromRoute({ kind: 'sessie', sessieId: resolvedSessieId })
+          if (window.location.pathname !== nextPath) {
+            window.history.replaceState({ path: nextPath }, '', nextPath)
+          }
+        }
+        return
+      }
+    }
+
+    if (selectedCoacheeId) {
+      const resolvedCoacheeId = resolveRouteEntityId(
+        selectedCoacheeId,
+        'coachee',
+        data.coachees.map((item) => item.id),
+      )
+      if (resolvedCoacheeId && resolvedCoacheeId !== selectedCoacheeId) {
+        setSelectedCoacheeId(resolvedCoacheeId)
+        if (typeof window !== 'undefined') {
+          const nextPath = buildPathFromRoute({ kind: 'coachee', coacheeId: resolvedCoacheeId })
+          if (window.location.pathname !== nextPath) {
+            window.history.replaceState({ path: nextPath }, '', nextPath)
+          }
+        }
+      }
+    }
+  }, [data.coachees, data.sessions, isAppDataLoaded, selectedCoacheeId, selectedSessieId])
+
   const openNewCoacheeModal = useCallback(() => {
     setIsCoacheeModalOpen(true)
   }, [])
@@ -963,12 +1012,6 @@ export function AppShell({ onLogout }: Props) {
             onOpenNewCoachee={openNewCoacheeModal}
             newlyCreatedCoacheeId={newlyCreatedCoacheeId}
             onNewlyCreatedCoacheeHandled={() => setNewlyCreatedCoacheeId(null)}
-            onStartWrittenReport={() => {
-              setIsNewSessionModalOpen(false)
-              setWrittenReportInitialCoacheeId(newSessionCoacheeId)
-              setPreviousRoute(currentRoute)
-              navigateTo({ kind: 'geschrevenVerslag' })
-            }}
             onOpenSession={(sessionId) => {
               setIsNewSessionModalOpen(false)
               setNewSessionCoacheeId(null)

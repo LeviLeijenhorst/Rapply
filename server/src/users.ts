@@ -1,6 +1,7 @@
 import crypto from "crypto"
 import { execute, queryOne } from "./db"
 import { normalizeEmail } from "./admin"
+import { ensureDefaultExampleDataForUser } from "./defaultExampleData"
 
 export type AppUser = {
   userId: string
@@ -162,6 +163,7 @@ export async function ensureUserFromEntra(params: { entraUserId: string; email: 
       if (!updatedUserByEmail?.id) {
         throw new Error("Failed to load user")
       }
+      await ensureDefaultExampleDataForUser(updatedUserByEmail.id)
 
       return {
         userId: updatedUserByEmail.id,
@@ -197,6 +199,7 @@ export async function ensureUserFromEntra(params: { entraUserId: string; email: 
   if (!row?.id) {
     throw new Error("Failed to load user")
   }
+  await ensureDefaultExampleDataForUser(row.id)
 
   return {
     userId: row.id,

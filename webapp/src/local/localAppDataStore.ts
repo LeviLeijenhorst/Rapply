@@ -147,6 +147,7 @@ export function updateSession(
   values: {
     coacheeId?: string | null
     title?: string
+    createdAtUnixMs?: number
     audioBlobId?: string | null
     audioDurationSeconds?: number | null
     uploadFileName?: string | null
@@ -168,6 +169,7 @@ export function updateSession(
         ...s,
         ...(values.coacheeId !== undefined ? { coacheeId: values.coacheeId } : {}),
         ...(values.title !== undefined ? { title: values.title.trim() } : {}),
+        ...(values.createdAtUnixMs !== undefined ? { createdAtUnixMs: values.createdAtUnixMs } : {}),
         ...(values.audioBlobId !== undefined ? { audioBlobId: values.audioBlobId } : {}),
         ...(values.audioDurationSeconds !== undefined ? { audioDurationSeconds: values.audioDurationSeconds } : {}),
         ...(values.uploadFileName !== undefined ? { uploadFileName: values.uploadFileName } : {}),

@@ -28,6 +28,7 @@ export function registerSessionRoutes(app: Express): void {
         updatedAtUnixMs,
         coacheeId: payload.coacheeId === null ? null : readOptionalId(payload.coacheeId),
         title: readOptionalText(payload.title),
+        createdAtUnixMs: readOptionalNumber(payload.createdAtUnixMs) ?? undefined,
         audioBlobId: readOptionalText(payload.audioBlobId, true),
         audioDurationSeconds: readOptionalNumber(payload.audioDurationSeconds),
         uploadFileName: readOptionalText(payload.uploadFileName, true),

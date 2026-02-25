@@ -13,23 +13,42 @@ type Props = {
   selectedTemplateId: string | null
   onClose: () => void
   onContinue: (templateId: string) => void
+  confirmLabel?: string
+  emptyOption?: { id: string; name: string } | null
 }
 
-export function TemplatePickerModal({ visible, templates, selectedTemplateId, onClose, onContinue }: Props) {
+export function TemplatePickerModal({
+  visible,
+  templates,
+  selectedTemplateId,
+  onClose,
+  onContinue,
+  confirmLabel = 'Genereren',
+  emptyOption = null,
+}: Props) {
   const [searchText, setSearchText] = useState('')
-  const [activeTemplateId, setActiveTemplateId] = useState(selectedTemplateId)
+  const [activeTemplateId, setActiveTemplateId] = useState<string | null>(selectedTemplateId)
 
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
+  const templateOptions = useMemo(() => {
+    if (!emptyOption) return templates
+    return [emptyOption, ...templates]
+  }, [emptyOption, templates])
 
   const filteredTemplates = useMemo(() => {
     const query = searchText.trim().toLowerCase()
-    if (query.length === 0) return templates
-    return templates.filter((template) => template.name.toLowerCase().includes(query))
-  }, [searchText, templates])
+    if (query.length === 0) return templateOptions
+    return templateOptions.filter((template) => template.name.toLowerCase().includes(query))
+  }, [searchText, templateOptions])
 
   useEffect(() => {
-    setActiveTemplateId(selectedTemplateId)
-  }, [selectedTemplateId, visible])
+    if (!visible) return
+    if (selectedTemplateId) {
+      setActiveTemplateId(selectedTemplateId)
+      return
+    }
+    setActiveTemplateId(templateOptions[0]?.id ?? null)
+  }, [selectedTemplateId, templateOptions, visible])
 
   if (!visible) return null
 
@@ -100,7 +119,7 @@ export function TemplatePickerModal({ visible, templates, selectedTemplateId, on
           >
             {/* Continue */}
             <Text isBold style={styles.footerPrimaryButtonText}>
-              Genereren
+              {confirmLabel}
             </Text>
           </Pressable>
         </View>

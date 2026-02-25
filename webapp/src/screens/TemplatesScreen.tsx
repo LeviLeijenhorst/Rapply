@@ -24,7 +24,7 @@ type SavedFilterKey = 'all' | 'saved'
 function getTemplateDisplayName(name: string): string {
   const normalized = name.trim().toLowerCase()
   if (normalized === 'voortgangsgespreksverslag') return 'Voortgangsgesprek'
-  if (normalized === 'intakeverslag') return 'Intake'
+  if (normalized === 'intake' || normalized === 'intakeverslag') return 'Intake'
   return name
 }
 

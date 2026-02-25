@@ -57,6 +57,7 @@ export async function updateSession(
     id: string
     coacheeId?: string | null
     title?: string | null
+    createdAtUnixMs?: number
     audioBlobId?: string | null
     audioDurationSeconds?: number | null
     uploadFileName?: string | null
@@ -85,6 +86,11 @@ export async function updateSession(
   if (typeof params.title === "string") {
     updates.push(`title = $${index++}`)
     values.push(params.title)
+  }
+
+  if (params.createdAtUnixMs !== undefined) {
+    updates.push(`created_at_unix_ms = $${index++}`)
+    values.push(params.createdAtUnixMs)
   }
 
   if (params.audioBlobId !== undefined) {

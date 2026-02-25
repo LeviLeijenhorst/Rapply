@@ -39,6 +39,7 @@ export function RichTextEditorModal({ visible, title, initialValue, onClose, onS
   const [htmlDraft, setHtmlDraft] = useState('')
   const [plainDraft, setPlainDraft] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
   const [toolbarState, setToolbarState] = useState<ToolbarState>(defaultToolbarState)
   const inputRef = useRef<TextInput | null>(null)
   const editorRef = useRef<HTMLDivElement | null>(null)
@@ -316,6 +317,11 @@ export function RichTextEditorModal({ visible, title, initialValue, onClose, onS
 
   useEffect(() => {
     if (!visible) return
+    setShowCloseConfirm(false)
+  }, [visible])
+
+  useEffect(() => {
+    if (!visible) return
     const timer = setTimeout(() => {
       if (isWeb) {
         editorRef.current?.focus()
@@ -376,95 +382,161 @@ export function RichTextEditorModal({ visible, title, initialValue, onClose, onS
     }
   }
 
+  function normalizeForCompare(value: string) {
+    return String(value || '')
+      .replace(/\r/g, '')
+      .split('\n')
+      .map((line) => line.replace(/\s+$/g, ''))
+      .join('\n')
+      .trim()
+  }
+
+  function hasUnsavedChanges() {
+    if (isWeb) {
+      const html = editorRef.current?.innerHTML || htmlDraft
+      const currentMarkdown = normalizeForCompare(richTextHtmlToMarkdown(html))
+      const originalMarkdown = normalizeForCompare(initialValue)
+      return currentMarkdown !== originalMarkdown
+    }
+    return normalizeForCompare(plainDraft) !== normalizeForCompare(initialValue)
+  }
+
+  function handleRequestClose() {
+    if (isSaving) return
+    if (!hasUnsavedChanges()) {
+      onClose()
+      return
+    }
+    setShowCloseConfirm(true)
+  }
+
   if (!visible) return null
 
   return (
-    <AnimatedOverlayModal visible={visible} onClose={onClose} contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Text isBold style={styles.title}>
-          {title}
-        </Text>
-        <Pressable disabled={isSaving} onPress={onClose} style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}>
-          <ModalCloseDarkIcon size={34} />
-        </Pressable>
-      </View>
-
-      <View style={styles.toolbar}>
-        {toolbarButtons.map((button, index) => {
-          const showSeparator = index > 0 && button.group !== toolbarButtons[index - 1].group
-          const isActive = toolbarState[button.key as keyof ToolbarState]
-          return (
-            <React.Fragment key={button.key}>
-              {showSeparator ? <View style={styles.toolbarSeparator} /> : null}
-              <ToolbarButton label={button.label} action={button.key} isActive={Boolean(isActive)} onPress={() => runAction(button.key)} />
-            </React.Fragment>
-          )
-        })}
-      </View>
-
-      <View style={styles.body} {...(isWeb ? ({ onClick: () => editorRef.current?.focus() } as any) : {})}>
-        {isWeb ? <style>{editorContentCss}</style> : null}
-        {isWeb ? (
-          <div
-            ref={editorRef}
-            contentEditable
-            suppressContentEditableWarning
-            className={editorClassName}
-            onInput={(event) => {
-              setHtmlDraft((event.target as HTMLDivElement).innerHTML)
-              syncOrderedListOffsets()
-              saveCurrentSelection()
-              refreshToolbarState()
-            }}
-            onMouseUp={() => {
-              saveCurrentSelection()
-              refreshToolbarState()
-            }}
-            onKeyUp={() => {
-              saveCurrentSelection()
-              refreshToolbarState()
-            }}
-            onKeyDown={handleEditorKeyDown}
-            style={editorWebStyle}
-          />
-        ) : (
-          <TextInput
-            ref={inputRef}
-            value={plainDraft}
-            onChangeText={setPlainDraft}
-            multiline
-            textAlignVertical="top"
-            style={[styles.textInput, inputWebStyle]}
-            placeholder="Schrijf of plak hier je tekst..."
-            placeholderTextColor={colors.textSecondary}
-          />
-        )}
-      </View>
-
-      <View style={styles.footer}>
-        <Pressable
-          disabled={isSaving}
-          onPress={onClose}
-          style={({ hovered }) => [styles.secondaryButton, isSaving ? styles.buttonDisabled : undefined, hovered ? styles.secondaryButtonHovered : undefined]}
-        >
-          <Text isBold style={styles.secondaryButtonText}>
-            Annuleren
+    <>
+      <AnimatedOverlayModal visible={visible} onClose={handleRequestClose} contentContainerStyle={styles.container}>
+        <View style={styles.header}>
+          <Text isBold style={styles.title}>
+            {title}
           </Text>
-        </Pressable>
-        <Pressable
-          disabled={isSaving}
-          onPress={() => {
-            void handleSave()
-          }}
-          style={({ hovered }) => [styles.primaryButton, isSaving ? styles.buttonDisabled : undefined, hovered ? styles.primaryButtonHovered : undefined]}
-        >
-          {isSaving ? <LoadingSpinner size="small" color="#FFFFFF" /> : null}
-          <Text isBold style={styles.primaryButtonText}>
-            {isSaving ? `${saveLabel}...` : saveLabel}
+          <Pressable disabled={isSaving} onPress={handleRequestClose} style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}>
+            <ModalCloseDarkIcon size={34} />
+          </Pressable>
+        </View>
+
+        <View style={styles.toolbar}>
+          {toolbarButtons.map((button, index) => {
+            const showSeparator = index > 0 && button.group !== toolbarButtons[index - 1].group
+            const isActive = toolbarState[button.key as keyof ToolbarState]
+            return (
+              <React.Fragment key={button.key}>
+                {showSeparator ? <View style={styles.toolbarSeparator} /> : null}
+                <ToolbarButton label={button.label} action={button.key} isActive={Boolean(isActive)} onPress={() => runAction(button.key)} />
+              </React.Fragment>
+            )
+          })}
+        </View>
+
+        <View style={styles.body} {...(isWeb ? ({ onClick: () => editorRef.current?.focus() } as any) : {})}>
+          {isWeb ? <style>{editorContentCss}</style> : null}
+          {isWeb ? (
+            <div
+              ref={editorRef}
+              contentEditable
+              suppressContentEditableWarning
+              className={editorClassName}
+              onInput={(event) => {
+                setHtmlDraft((event.target as HTMLDivElement).innerHTML)
+                syncOrderedListOffsets()
+                saveCurrentSelection()
+                refreshToolbarState()
+              }}
+              onMouseUp={() => {
+                saveCurrentSelection()
+                refreshToolbarState()
+              }}
+              onKeyUp={() => {
+                saveCurrentSelection()
+                refreshToolbarState()
+              }}
+              onKeyDown={handleEditorKeyDown}
+              style={editorWebStyle}
+            />
+          ) : (
+            <TextInput
+              ref={inputRef}
+              value={plainDraft}
+              onChangeText={setPlainDraft}
+              multiline
+              textAlignVertical="top"
+              style={[styles.textInput, inputWebStyle]}
+              placeholder="Schrijf of plak hier je tekst..."
+              placeholderTextColor={colors.textSecondary}
+            />
+          )}
+        </View>
+
+        <View style={styles.footer}>
+          <Pressable
+            disabled={isSaving}
+            onPress={handleRequestClose}
+            style={({ hovered }) => [styles.secondaryButton, isSaving ? styles.buttonDisabled : undefined, hovered ? styles.secondaryButtonHovered : undefined]}
+          >
+            <Text isBold style={styles.secondaryButtonText}>
+              Annuleren
+            </Text>
+          </Pressable>
+          <Pressable
+            disabled={isSaving}
+            onPress={() => {
+              void handleSave()
+            }}
+            style={({ hovered }) => [styles.primaryButton, isSaving ? styles.buttonDisabled : undefined, hovered ? styles.primaryButtonHovered : undefined]}
+          >
+            {isSaving ? <LoadingSpinner size="small" color="#FFFFFF" /> : null}
+            <Text isBold style={styles.primaryButtonText}>
+              {isSaving ? `${saveLabel}...` : saveLabel}
+            </Text>
+          </Pressable>
+        </View>
+      </AnimatedOverlayModal>
+
+      <AnimatedOverlayModal
+        visible={showCloseConfirm}
+        onClose={() => setShowCloseConfirm(false)}
+        contentContainerStyle={styles.closeWarningContainer}
+      >
+        <View style={styles.closeWarningHeader}>
+          <Text isBold style={styles.closeWarningTitle}>
+            Wijzigingen niet opgeslagen
           </Text>
-        </Pressable>
-      </View>
-    </AnimatedOverlayModal>
+          <Pressable onPress={() => setShowCloseConfirm(false)} style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}>
+            <ModalCloseDarkIcon size={34} />
+          </Pressable>
+        </View>
+        <View style={styles.closeWarningBody}>
+          <Text style={styles.closeWarningText}>Je hebt wijzigingen gemaakt. Als je nu sluit, gaan die verloren.</Text>
+        </View>
+        <View style={styles.footer}>
+          <Pressable onPress={() => setShowCloseConfirm(false)} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]}>
+            <Text isBold style={styles.secondaryButtonText}>
+              Blijven bewerken
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              setShowCloseConfirm(false)
+              onClose()
+            }}
+            style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined]}
+          >
+            <Text isBold style={styles.primaryButtonText}>
+              Sluiten zonder opslaan
+            </Text>
+          </Pressable>
+        </View>
+      </AnimatedOverlayModal>
+    </>
   )
 }
 
@@ -724,5 +796,39 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.7,
+  },
+  closeWarningContainer: {
+    width: 640,
+    maxWidth: '90vw',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    ...( { boxShadow: shadows.modal } as any ),
+    overflow: 'hidden',
+  },
+  closeWarningHeader: {
+    width: '100%',
+    paddingHorizontal: 24,
+    paddingTop: 18,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  closeWarningTitle: {
+    fontSize: 18,
+    lineHeight: 22,
+    color: colors.textStrong,
+  },
+  closeWarningBody: {
+    width: '100%',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+  },
+  closeWarningText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textStrong,
   },
 })

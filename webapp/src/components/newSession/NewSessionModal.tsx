@@ -50,7 +50,6 @@ type Props = {
   onOpenMySubscription: () => void
   restoreDraftFromSubscriptionReturn?: boolean
   onRestoreDraftHandled?: () => void
-  onStartWrittenReport: () => void
   onOpenSession: (sessionId: string) => void
   onOpenNewCoachee: () => void
   initialCoacheeId?: string | null
@@ -69,6 +68,12 @@ function formatTimeLabel(totalSeconds: number) {
   const minutes = Math.floor((normalizedSeconds % 3600) / 60)
   const seconds = normalizedSeconds % 60
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+}
+
+function getTemplateDisplayName(name: string) {
+  const normalizedName = String(name || '').trim().toLowerCase()
+  if (normalizedName === 'intake' || normalizedName === 'intakeverslag') return 'Intake'
+  return name
 }
 
 function buildDefaultSessionTitle(existingTitles: string[]) {
@@ -204,7 +209,6 @@ export function NewSessionModal({
   onOpenMySubscription,
   restoreDraftFromSubscriptionReturn = false,
   onRestoreDraftHandled,
-  onStartWrittenReport,
   onOpenSession,
   onOpenNewCoachee,
   initialCoacheeId,
@@ -1016,6 +1020,24 @@ export function NewSessionModal({
     return createAndOpenSessionInternal(values, { ...options, audioForTranscription: resolvedAudioForTranscription })
   }
 
+  function createAndOpenWrittenSession(): void {
+    const resolvedTitle = String(sessionTitle || '').trim() || buildDefaultSessionTitle(data.sessions.map((session) => session.title))
+    const createdSessionId = createSession({
+      coacheeId: selectedCoachee?.id ?? null,
+      title: resolvedTitle,
+      kind: 'written',
+      audioBlobId: null,
+      audioDurationSeconds: null,
+      uploadFileName: null,
+      transcriptionStatus: 'idle',
+      transcriptionError: null,
+    })
+    if (!createdSessionId) return
+    onOpenSession(createdSessionId)
+    void clearSubscriptionReturnDraft()
+    handleClose()
+  }
+
   useEffect(() => {
     if (step !== 'recording') {
       hasAutoStartedRecordingRef.current = false
@@ -1375,7 +1397,7 @@ export function NewSessionModal({
                   leftIcon={<Mp3UploadIcon />}
                 />
                 <SessionOptionRow
-                  label="Verslag schrijven"
+                  label="Verslag schrijven/genereren"
                   isSelected={selectedOption === 'schrijven'}
                   onPress={() => setSelectedOption('schrijven')}
                   leftIcon={<VerslagSchrijvenIcon />}
@@ -1610,7 +1632,7 @@ export function NewSessionModal({
                     {/* Report type */}
                     <VerslagSchrijvenIcon />
                     <Text isSemibold style={styles.infoRowText}>
-                      {selectedTemplate?.name ?? 'Template'}
+                      {selectedTemplate ? getTemplateDisplayName(selectedTemplate.name) : 'Template'}
                     </Text>
                     <View style={styles.infoRowSpacer} />
                     <ChevronDownIcon color={colors.textStrong} size={20} />
@@ -1640,7 +1662,7 @@ export function NewSessionModal({
                             ]}
                           >
                             {/* Report type item */}
-                            <Text style={styles.reportTypeItemText}>{template.name}</Text>
+                            <Text style={styles.reportTypeItemText}>{getTemplateDisplayName(template.name)}</Text>
                           </Pressable>
                         )
                       })}
@@ -1794,7 +1816,7 @@ export function NewSessionModal({
 
                   if (!selectedOption) return
                   if (selectedOption === 'schrijven') {
-                    onStartWrittenReport()
+                    createAndOpenWrittenSession()
                     return
                   }
                   if (selectedOption === 'verslag') {

@@ -13,7 +13,7 @@ import { colors } from '../theme/colors'
 
 const brandControlSize = 110
 const A4_ASPECT_RATIO = 210 / 297
-const PDF_PREVIEW_HEIGHT = 382
+const PDF_PREVIEW_HEIGHT = 396
 
 function normalizeHexColor(value: string) {
   const trimmed = String(value || '').trim()
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   pdfPreviewColumn: {
-    paddingTop: 40,
+    paddingTop: 28,
   },
   pdfPreviewColumnCompact: {
     paddingTop: 0,
