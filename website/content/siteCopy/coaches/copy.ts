@@ -6,7 +6,7 @@ export const coachesCopy: SiteCopy = {
     heroTitleLine2: "volledige aandacht",
     subheadline:
       "CoachScribe helpt coaches bij verslaglegging van hun sessies en het bewaren van overzicht. Gesprekken worden veilig vastgelegd en georganiseerd, zodat jij je volledig kan focussen op de client.",
-    primaryCta: "Probeer gratis",
+    primaryCta: "Probeer het uit",
     secondaryCta: "Hoe Het Werkt",
     features: [
       {
@@ -106,7 +106,7 @@ export const coachesCopy: SiteCopy = {
     heroTitleLine2: "met onze features",
     heroSubtext:
       "CoachScribe neemt het noteren van gesprekken en verslaggeving uit handen. Jij behoudt de volledige controle, wij helpen je met de details, en het overzicht.",
-    heroCta: "Probeer gratis",
+    heroCta: "Probeer het uit",
     impactItems: [
       {
         title: "Overzicht",
@@ -178,7 +178,7 @@ export const coachesCopy: SiteCopy = {
     heroTitleLine2: "iets voor jou?",
     heroSubtext:
       "Ben jij een coach en ervaar je mentale druk door het bijhouden van sessies en clienten? Ben je teveel tijd kwijt aan voorbereiding en naslagwerk? Wellicht dat wij jou kunnen helpen :)",
-    heroCta: "Probeer gratis",
+    heroCta: "Probeer het uit",
     typesSectionTitle: "Coach: een breed begrip",
     types: [
       {

@@ -12,7 +12,7 @@ const navigationLinks = [
   { label: "Veiligheid", destination: "/veiligheid" },
   { label: "Over Ons", destination: "/over-ons" },
   { label: "Contact", destination: "/contact" },
-  { label: "Probeer het gratis", destination: "https://app.coachscribe.nl" },
+  { label: "Probeer het uit", destination: "https://app.coachscribe.nl" },
 ];
 
 const connectLinks = [

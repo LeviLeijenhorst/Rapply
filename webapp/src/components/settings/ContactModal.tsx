@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
+import { Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
+import { LoadingSpinner } from '../LoadingSpinner'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
@@ -165,7 +166,7 @@ export function ContactModal({ visible, onClose, onSubmitted }: Props) {
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <LoadingSpinner size="small" color="#FFFFFF" />
               ) : (
                 <Text style={styles.submitButtonText}>Verstuur -&gt;</Text>
               )}

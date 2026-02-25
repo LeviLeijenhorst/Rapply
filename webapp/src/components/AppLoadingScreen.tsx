@@ -1,5 +1,6 @@
 import React from 'react'
-import { ActivityIndicator, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
+import { LoadingSpinner } from './LoadingSpinner'
 
 import { Text } from './Text'
 import { colors } from '../theme/colors'
@@ -12,7 +13,7 @@ export function AppLoadingScreen({ label }: Props) {
   return (
     <View style={styles.container}>
       {/* Loading indicator */}
-      <ActivityIndicator size="small" color={colors.selected} />
+      <LoadingSpinner size="small" />
       {/* Loading label */}
       <Text style={styles.label}>{label ?? 'Gegevens laden...'}</Text>
     </View>

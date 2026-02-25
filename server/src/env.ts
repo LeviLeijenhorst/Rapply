@@ -89,7 +89,7 @@ export const env = {
   unlimitedTranscriptionEmails: normalizeEmailList(optionalString("UNLIMITED_TRANSCRIPTION_EMAILS")),
   fixedTranscriptionEmails: normalizeEmailList(optionalString("FIXED_TRANSCRIPTION_EMAILS")),
   fixedTranscriptionTotalMinutes: optionalNumber("FIXED_TRANSCRIPTION_TOTAL_MINUTES") ?? 0,
-  defaultFreeTranscriptionMinutes: optionalNumber("DEFAULT_FREE_TRANSCRIPTION_MINUTES") ?? 90,
+  defaultFreeTranscriptionMinutes: optionalNumber("DEFAULT_FREE_TRANSCRIPTION_MINUTES") ?? 0,
   extraTranscriptionOneTimePriceEur: optionalNumber("EXTRA_TRANSCRIPTION_ONE_TIME_PRICE_EUR"),
   testTranscriptionEmails: normalizeEmailList(optionalString("TEST_TRANSCRIPTION_EMAILS")),
   testTranscriptionTotalHours: optionalNumber("TEST_TRANSCRIPTION_TOTAL_HOURS") ?? 80,

@@ -603,7 +603,7 @@ const impactItems = [
     },
     {
         title: "Connectie",
-        description: "Wanneer je alle details over je cliÃ«nt onthoudt, voelt die zich vertrouwd waardoor de connectie vergroot.",
+        description: "Wanneer je alle details over je cliënt onthoudt, voelt die zich vertrouwd waardoor de connectie vergroot.",
         image: __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$product$2f$coachscribe$2d$3e$2e$jpg$2e$mjs__$7b$__IMAGE__$3d3e$__$225b$project$5d2f$Coachscribe$2f$website$2f$product$2f$coachscribe$2d$3e$2e$jpg__$28$static__in__ecmascript$2c$__tag__client$2922$__$7d$__$5b$app$2d$client$5d$__$28$structured__image__object__with__data__url$2c$__ecmascript$29$__["default"],
         icon: connectionIcon
     },
@@ -701,7 +701,7 @@ function ProductImpactSection() {
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                     className: "mt-10",
                     children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Coachscribe$2f$website$2f$components$2f$Button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
-                        label: "Probeer het gratis",
+                        label: "Probeer het uit",
                         destination: "https://app.coachscribe.nl",
                         variant: "primary",
                         showArrow: true,

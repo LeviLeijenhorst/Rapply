@@ -1,5 +1,6 @@
 import React, { useRef } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native'
+import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native'
+import { LoadingSpinner } from '../LoadingSpinner'
 
 import { colors } from '../../theme/colors'
 import { webTransitionSmooth } from '../../theme/webTransitions'
@@ -88,7 +89,7 @@ export function SessieListItemCard({
         {isTranscriptionActive ? (
           <View style={[styles.statusColumn, !showTranscriptionText ? styles.statusColumnCompact : undefined]}>
             <View style={styles.transcriptionStatus}>
-              <ActivityIndicator size="small" color={colors.selected} />
+              <LoadingSpinner size="small" />
               {showTranscriptionText ? <Text style={styles.transcriptionStatusText}>{transcriptionLabel}</Text> : null}
             </View>
           </View>

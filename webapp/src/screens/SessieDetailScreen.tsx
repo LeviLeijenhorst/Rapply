@@ -136,6 +136,8 @@ export function SessieDetailScreen({
   const [isDownloadingAudio, setIsDownloadingAudio] = useState(false)
   const [isDeletingAudio, setIsDeletingAudio] = useState(false)
   const [isNoMinutesModalVisible, setIsNoMinutesModalVisible] = useState(false)
+  const [isChatMinutesBlocked, setIsChatMinutesBlocked] = useState(false)
+  const [isCheckingChatMinutes, setIsCheckingChatMinutes] = useState(false)
   const [requiredTranscriptionSeconds, setRequiredTranscriptionSeconds] = useState(0)
   const [remainingTranscriptionSeconds, setRemainingTranscriptionSeconds] = useState(0)
   const hasDownloadableAudio = hasSavedAudio || Boolean(pendingPreviewAudioUrl)
@@ -157,10 +159,26 @@ export function SessieDetailScreen({
             return description ? `${index + 1}. ${title}: ${description}` : `${index + 1}. ${title}`
           })
           .join('\n')
+        const sectionStructure = template.sections
+          .map((section, index) => {
+            const title = section.title.trim() || `Onderdeel ${index + 1}`
+            return `### ${title}\n-`
+          })
+          .join('\n\n')
         const promptText = sectionLines
-          ? `Maak een verslag op basis van dit verslagtype:\n${template.name}\n\nOnderdelen:\n${sectionLines}`
-          : `Maak een verslag op basis van dit verslagtype:\n${template.name}`
-        return { id: template.id, name: template.name, promptText }
+          ? [
+              `Maak nu een volledig verslag op basis van dit verslagtype: ${template.name}.`,
+              'Gebruik exact de onderstaande koppen en volgorde.',
+              'Voeg geen extra koppen toe en laat geen kop weg.',
+              '',
+              'Onderdelen met uitleg:',
+              sectionLines,
+              '',
+              'Te gebruiken structuur:',
+              sectionStructure || '### Verslag\n-',
+            ].join('\n')
+          : `Maak nu een volledig verslag op basis van dit verslagtype: ${template.name}.`
+        return { id: template.id, name: template.name, promptText, templateId: template.id }
       }),
     [templatesForSession],
   )
@@ -425,6 +443,35 @@ export function SessieDetailScreen({
     setIsClearChatModalVisible(true)
   }
 
+  function appendNoMinutesAssistantMessage() {
+    const noMinutesText = 'U heeft geen minuten meer. Ga naar Mijn abonnement om extra minuten toe te voegen.'
+    setChatMessages((previousMessages) => {
+      if (previousMessages.some((message) => message.role === 'assistant' && message.text === noMinutesText)) {
+        return previousMessages
+      }
+      return [...previousMessages, { id: createChatMessageId(), role: 'assistant', text: noMinutesText }]
+    })
+  }
+
+  async function ensureSufficientChatMinutes(): Promise<boolean> {
+    setIsCheckingChatMinutes(true)
+    try {
+      const response = await fetchBillingStatus()
+      const remainingSeconds = readRemainingTranscriptionSeconds(response?.billingStatus ?? null)
+      const hasMinutes = remainingSeconds > 0
+      setIsChatMinutesBlocked(!hasMinutes)
+      if (!hasMinutes) {
+        appendNoMinutesAssistantMessage()
+      }
+      return hasMinutes
+    } catch (error) {
+      console.error('[SessieDetailScreen] Failed to read billing status before chat send', error)
+      return true
+    } finally {
+      setIsCheckingChatMinutes(false)
+    }
+  }
+
   function handleCopyWrittenReport() {
     if (typeof navigator === 'undefined') return
     if (!hasWrittenReportContent) return
@@ -450,12 +497,15 @@ export function SessieDetailScreen({
     audioPlayerRef.current?.seekToSeconds(seconds)
   }
 
-  async function sendChatMessage(messageInput: string | { text: string; promptText?: string }) {
+  async function sendChatMessage(messageInput: string | { text: string; promptText?: string; templateId?: string }) {
     const visibleText = typeof messageInput === 'string' ? messageInput : messageInput.text
     const promptText = typeof messageInput === 'string' ? messageInput : messageInput.promptText
+    const templateId = typeof messageInput === 'string' ? undefined : messageInput.templateId
+    const isTemplatePrompt = typeof messageInput !== 'string' && Boolean(String(messageInput.promptText || '').trim())
     const trimmedText = visibleText.trim()
     const trimmedPromptText = String(promptText || '').trim() || trimmedText
     if (!trimmedText || !trimmedPromptText || isChatSending) return
+    if (!(await ensureSufficientChatMinutes())) return
 
     const pdfStartToken = '[[PDF_START]]'
     const pdfEndToken = '[[PDF_END]]'
@@ -484,13 +534,37 @@ export function SessieDetailScreen({
         writtenReportText,
         sessionId,
       })
+      const selectedTemplateForChat = templateId ? templatesForSession.find((template) => template.id === templateId) ?? null : null
+      if (isTemplatePrompt && selectedTemplateForChat) {
+        const templateSections = selectedTemplateForChat.sections
+          .map((section, index) => {
+            const title = section.title.trim()
+            const description = section.description.trim()
+            if (!title && !description) return null
+            return { title: title || `Onderdeel ${index + 1}`, description }
+          })
+          .filter((section): section is { title: string; description: string } => Boolean(section))
+        const transcriptForTemplate = String(session?.transcript || '').trim() || String(writtenReportText || '').trim()
+        if (transcriptForTemplate) {
+          const responseText = await generateSummary({
+            transcript: transcriptForTemplate,
+            template: templateSections.length > 0 ? { name: selectedTemplateForChat.name, sections: templateSections } : undefined,
+          })
+          setChatMessages((previousMessages) => [
+            ...previousMessages,
+            { id: createChatMessageId(), role: 'assistant', text: responseText },
+          ])
+          return
+        }
+      }
+      const chatHistoryForModel = isTemplatePrompt ? [nextUserMessage] : nextChatMessages
       const responseText = await completeChat({
         scope: 'session',
         sessionId,
         messages: [
           ...transcriptSystemMessages,
           systemMessage,
-          ...nextChatMessages.map<LocalChatMessage>((message) => ({
+          ...chatHistoryForModel.map<LocalChatMessage>((message) => ({
             role: message.role,
             text: message.role === 'user' ? String(message.promptText || '').trim() || message.text : message.text,
           })),
@@ -1022,6 +1096,7 @@ export function SessieDetailScreen({
       <View style={styles.container}>
         {/* Detail header */}
         <View style={styles.headerRow}>
+          <View pointerEvents="none" style={styles.headerGradient} />
           <View style={styles.leftHeader}>
             <Pressable
               onPress={onBack}
@@ -1154,6 +1229,14 @@ export function SessieDetailScreen({
                     transcriptionError={session?.transcriptionError ?? null}
                     onEditSummary={() => setIsSummaryEditorOpen(true)}
                     onShareSummary={() => handleRequestPdfEdit({ text: session?.summary ?? '', title: editableSessionTitle })}
+                    onExportSummaryAsWord={() => {
+                      void exportMessageToWord(session?.summary ?? '', editableSessionTitle, {
+                        practiceName: data.practiceSettings.practiceName,
+                        website: data.practiceSettings.website,
+                        tintColor: data.practiceSettings.tintColor,
+                        logoDataUrl: data.practiceSettings.logoDataUrl,
+                      })
+                    }}
                     onRetryTranscription={() => {
                       const templateId = selectedTemplateId ?? defaultTemplateId
                       if (!templateId) return
@@ -1226,12 +1309,28 @@ export function SessieDetailScreen({
                           </>
                         )}
                       </ScrollView>
+                      {isChatMinutesBlocked ? (
+                        <View style={styles.noMinutesChatCtaContainer}>
+                          <Text style={styles.noMinutesChatCtaText}>U heeft geen minuten meer.</Text>
+                          <Pressable
+                            onPress={onOpenMySubscription}
+                            style={({ hovered }) => [
+                              styles.noMinutesChatCtaButton,
+                              hovered ? styles.noMinutesChatCtaButtonHovered : undefined,
+                            ]}
+                          >
+                            <Text isBold style={styles.noMinutesChatCtaButtonText}>
+                              Mijn abonnement
+                            </Text>
+                          </Pressable>
+                        </View>
+                      ) : null}
                       <View style={styles.chatBottom}>
                         <ChatComposer
                           value={composerText}
                           onChangeValue={setComposerText}
                           onSend={handleSendChatMessage}
-                          isSendDisabled={isChatSending || composerText.trim().length === 0}
+                          isSendDisabled={isChatSending || isCheckingChatMinutes || isChatMinutesBlocked || composerText.trim().length === 0}
                           shouldAutoFocus={activeTabKey === 'snelleVragen'}
                           autoFocusKey={activeTabKey}
                           onPressEscape={() => {
@@ -1559,6 +1658,14 @@ export function SessieDetailScreen({
                     transcriptionError={session?.transcriptionError ?? null}
                     onEditSummary={() => setIsSummaryEditorOpen(true)}
                     onShareSummary={() => handleRequestPdfEdit({ text: session?.summary ?? '', title: editableSessionTitle })}
+                    onExportSummaryAsWord={() => {
+                      void exportMessageToWord(session?.summary ?? '', editableSessionTitle, {
+                        practiceName: data.practiceSettings.practiceName,
+                        website: data.practiceSettings.website,
+                        tintColor: data.practiceSettings.tintColor,
+                        logoDataUrl: data.practiceSettings.logoDataUrl,
+                      })
+                    }}
                     onRetryTranscription={() => {
                       const templateId = selectedTemplateId ?? defaultTemplateId
                       if (!templateId) return
@@ -1636,12 +1743,29 @@ export function SessieDetailScreen({
                         )}
                       </ScrollView>
 
+                      {isChatMinutesBlocked ? (
+                        <View style={styles.noMinutesChatCtaContainer}>
+                          <Text style={styles.noMinutesChatCtaText}>U heeft geen minuten meer.</Text>
+                          <Pressable
+                            onPress={onOpenMySubscription}
+                            style={({ hovered }) => [
+                              styles.noMinutesChatCtaButton,
+                              hovered ? styles.noMinutesChatCtaButtonHovered : undefined,
+                            ]}
+                          >
+                            <Text isBold style={styles.noMinutesChatCtaButtonText}>
+                              Mijn abonnement
+                            </Text>
+                          </Pressable>
+                        </View>
+                      ) : null}
+
                       <View style={styles.chatBottom}>
                         <ChatComposer
                           value={composerText}
                           onChangeValue={setComposerText}
                           onSend={handleSendChatMessage}
-                          isSendDisabled={isChatSending || composerText.trim().length === 0}
+                          isSendDisabled={isChatSending || isCheckingChatMinutes || isChatMinutesBlocked || composerText.trim().length === 0}
                           shouldAutoFocus={activeTabKey === 'snelleVragen'}
                           autoFocusKey={activeTabKey}
                         />
@@ -1892,12 +2016,28 @@ export function SessieDetailScreen({
                     </>
                   )}
                 </ScrollView>
+                {isChatMinutesBlocked ? (
+                  <View style={styles.noMinutesChatCtaContainer}>
+                    <Text style={styles.noMinutesChatCtaText}>U heeft geen minuten meer.</Text>
+                    <Pressable
+                      onPress={onOpenMySubscription}
+                      style={({ hovered }) => [
+                        styles.noMinutesChatCtaButton,
+                        hovered ? styles.noMinutesChatCtaButtonHovered : undefined,
+                      ]}
+                    >
+                      <Text isBold style={styles.noMinutesChatCtaButtonText}>
+                        Mijn abonnement
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
                 <View style={styles.chatBottom}>
                   <ChatComposer
                     value={composerText}
                     onChangeValue={setComposerText}
                     onSend={handleSendChatMessage}
-                    isSendDisabled={isChatSending || composerText.trim().length === 0}
+                    isSendDisabled={isChatSending || isCheckingChatMinutes || isChatMinutesBlocked || composerText.trim().length === 0}
                     shouldAutoFocus
                     autoFocusKey="full-screen-chat"
                     onPressEscape={() => setIsChatMaximized(false)}
@@ -1989,7 +2129,7 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    ...( { backgroundImage: `linear-gradient(180deg, ${colors.pageBackground} 0%, rgba(248,249,249,0) 100%)` } as any ),
+    ...( { backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%)' } as any ),
   },
   leftHeader: {
     flexDirection: 'row',
@@ -2159,10 +2299,12 @@ const styles = StyleSheet.create({
   },
   leftScroll: {
     flex: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
     ...( { overflowY: 'auto', scrollbarWidth: 'auto', scrollbarGutter: 'stable', scrollbarColor: `${colors.border} ${colors.pageBackground}` } as any ),
   },
   leftScrollGapAligned: {
-    ...( { marginRight: -14, paddingRight: 14 } as any ),
+    ...( { marginRight: -8, paddingRight: 8 } as any ),
   },
   leftScrollContent: {
     gap: 16,
@@ -2293,6 +2435,38 @@ const styles = StyleSheet.create({
   chatBottom: {
     width: '100%',
     gap: 10,
+  },
+  noMinutesChatCtaContainer: {
+    width: '100%',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    gap: 10,
+  },
+  noMinutesChatCtaText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+  },
+  noMinutesChatCtaButton: {
+    alignSelf: 'flex-start',
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.selected,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noMinutesChatCtaButtonHovered: {
+    backgroundColor: '#A50058',
+  },
+  noMinutesChatCtaButtonText: {
+    fontSize: 13,
+    lineHeight: 16,
+    color: '#FFFFFF',
   },
   chatActionButton: {
     height: 32,

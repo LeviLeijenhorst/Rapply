@@ -8,5 +8,6 @@
   "/(site)/pricing/page": "app/(site)/pricing/page.js",
   "/(site)/product/page": "app/(site)/product/page.js",
   "/(site)/veiligheid/page": "app/(site)/veiligheid/page.js",
-  "/(site)/verwerkersovereenkomst/page": "app/(site)/verwerkersovereenkomst/page.js"
+  "/(site)/verwerkersovereenkomst/page": "app/(site)/verwerkersovereenkomst/page.js",
+  "/_not-found/page": "app/_not-found/page.js"
 }

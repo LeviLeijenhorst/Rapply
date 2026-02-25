@@ -31,6 +31,7 @@ import { ConfirmSessieDeleteModal } from '../components/sessies/ConfirmSessieDel
 import { ConfirmChatClearModal } from '../components/sessionDetail/ConfirmChatClearModal'
 import { CoacheeUpsertModal } from '../components/coachees/CoacheeUpsertModal'
 import { getCoacheeUpsertValues, serializeCoacheeUpsertValues } from '../utils/coacheeProfile'
+import { fetchBillingStatus, type BillingStatus } from '../services/billing'
 
 type SessionListItem = {
   id: string
@@ -48,6 +49,7 @@ type Props = {
   onBack: () => void
   onSelectSession: (sessionId: string) => void
   onPressCreateSession: () => void
+  onOpenMySubscription: () => void
   isCreateSessionDisabled?: boolean
 }
 
@@ -62,7 +64,7 @@ function formatDurationLabel(durationSeconds: number | null): string {
   return hours > 0 ? `${hours}:${paddedMinutes}:${paddedSeconds}` : `${minutes}:${paddedSeconds}`
 }
 
-export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPressCreateSession, isCreateSessionDisabled = false }: Props) {
+export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPressCreateSession, onOpenMySubscription, isCreateSessionDisabled = false }: Props) {
   const { data, deleteSession, updateCoachee } = useLocalAppData()
   const coachee = data.coachees.find((c) => c.id === coacheeId)
   const coacheeName = coachee?.name ?? 'Cliënt'
@@ -96,6 +98,8 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
   const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null)
   const [isClearChatModalVisible, setIsClearChatModalVisible] = useState(false)
   const [isEditCoacheeModalOpen, setIsEditCoacheeModalOpen] = useState(false)
+  const [isChatMinutesBlocked, setIsChatMinutesBlocked] = useState(false)
+  const [isCheckingChatMinutes, setIsCheckingChatMinutes] = useState(false)
 
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const filteredSessions = sessions.filter((item) => item.title.toLowerCase().includes(normalizedQuery))
@@ -151,9 +155,46 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
     setIsClearChatModalVisible(true)
   }
 
+  function readRemainingTranscriptionSeconds(status: BillingStatus | null): number {
+    if (!status) return 0
+    const includedRemainingSeconds = Math.max(0, Math.floor(status.includedSeconds - status.cycleUsedSeconds))
+    const nonExpiringRemainingSeconds = Math.max(0, Math.floor(status.nonExpiringTotalSeconds - status.nonExpiringUsedSeconds))
+    return includedRemainingSeconds + nonExpiringRemainingSeconds
+  }
+
+  function appendNoMinutesAssistantMessage() {
+    const noMinutesText = 'U heeft geen minuten meer. Ga naar Mijn abonnement om extra minuten toe te voegen.'
+    setChatMessages((previousMessages) => {
+      if (previousMessages.some((message) => message.role === 'assistant' && message.text === noMinutesText)) {
+        return previousMessages
+      }
+      return [...previousMessages, { id: createChatMessageId(), role: 'assistant', text: noMinutesText }]
+    })
+  }
+
+  async function ensureSufficientChatMinutes(): Promise<boolean> {
+    setIsCheckingChatMinutes(true)
+    try {
+      const response = await fetchBillingStatus()
+      const remainingSeconds = readRemainingTranscriptionSeconds(response?.billingStatus ?? null)
+      const hasMinutes = remainingSeconds > 0
+      setIsChatMinutesBlocked(!hasMinutes)
+      if (!hasMinutes) {
+        appendNoMinutesAssistantMessage()
+      }
+      return hasMinutes
+    } catch (error) {
+      console.error('[CoacheeDetailScreen] Failed to read billing status before chat send', error)
+      return true
+    } finally {
+      setIsCheckingChatMinutes(false)
+    }
+  }
+
   async function sendChatMessage(messageText: string) {
     const trimmedText = messageText.trim()
     if (!trimmedText || isChatSending) return
+    if (!(await ensureSufficientChatMinutes())) return
 
     const nextUserMessage: ChatStateMessage = {
       id: createChatMessageId(),
@@ -372,13 +413,30 @@ export function CoacheeDetailScreen({ coacheeId, onBack, onSelectSession, onPres
                   )}
                 </ScrollView>
 
+                {isChatMinutesBlocked ? (
+                  <View style={styles.noMinutesCtaContainer}>
+                    <Text style={styles.noMinutesCtaText}>U heeft geen minuten meer.</Text>
+                    <Pressable
+                      onPress={onOpenMySubscription}
+                      style={({ hovered }) => [
+                        styles.noMinutesCtaButton,
+                        hovered ? styles.noMinutesCtaButtonHovered : undefined,
+                      ]}
+                    >
+                      <Text isBold style={styles.noMinutesCtaButtonText}>
+                        Mijn abonnement
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+
                 {/* Chat composer */}
                 <View style={styles.chatBottom}>
                   <ChatComposer
                     value={composerText}
                     onChangeValue={setComposerText}
                     onSend={handleSendChatMessage}
-                    isSendDisabled={isChatSending || composerText.trim().length === 0}
+                    isSendDisabled={isChatSending || isCheckingChatMinutes || isChatMinutesBlocked || composerText.trim().length === 0}
                     shouldAutoFocus={activeTabKey === 'snelleVragen'}
                     autoFocusKey={activeTabKey}
                   />
@@ -658,6 +716,38 @@ const styles = StyleSheet.create({
   chatBottom: {
     width: '100%',
     gap: 10,
+  },
+  noMinutesCtaContainer: {
+    width: '100%',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    gap: 10,
+  },
+  noMinutesCtaText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+  },
+  noMinutesCtaButton: {
+    alignSelf: 'flex-start',
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.selected,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noMinutesCtaButtonHovered: {
+    backgroundColor: '#A50058',
+  },
+  noMinutesCtaButtonText: {
+    fontSize: 13,
+    lineHeight: 16,
+    color: '#FFFFFF',
   },
   chatActionButton: {
     height: 32,

@@ -1,5 +1,5 @@
 Button
-Examples: Probeer gratis and Inloggen buttons in the navigation bar, Hoe het werkt button on the product page.
+Examples: Probeer het uit and Inloggen buttons in the navigation bar, Hoe het werkt button on the product page.
 
 H1
 Example: Betere coaching begint bij volledige aandacht

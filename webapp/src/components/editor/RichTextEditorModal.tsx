@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { LoadingSpinner } from '../LoadingSpinner'
 import Svg, { Path } from 'react-native-svg'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
@@ -457,7 +458,7 @@ export function RichTextEditorModal({ visible, title, initialValue, onClose, onS
           }}
           style={({ hovered }) => [styles.primaryButton, isSaving ? styles.buttonDisabled : undefined, hovered ? styles.primaryButtonHovered : undefined]}
         >
-          {isSaving ? <ActivityIndicator size="small" color="#FFFFFF" /> : null}
+          {isSaving ? <LoadingSpinner size="small" color="#FFFFFF" /> : null}
           <Text isBold style={styles.primaryButtonText}>
             {isSaving ? `${saveLabel}...` : saveLabel}
           </Text>

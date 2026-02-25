@@ -1,4 +1,4 @@
-﻿import Image from "next/image";
+import Image from "next/image";
 import Button from "@/components/Button";
 import SectionContainer from "@/components/home/SectionContainer";
 import productOneImage from "@/home/Product BG 1 2.png";
@@ -79,7 +79,7 @@ export default function FeaturesSection() {
                   {/* Feature action */}
                   <div className="flex w-full">
                     <Button
-                      label="Probeer het gratis"
+                      label="Probeer het uit"
                       destination="https://app.coachscribe.nl"
                       variant="primary"
                       showArrow

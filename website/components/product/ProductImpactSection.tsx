@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Image, { StaticImageData } from "next/image";
 import { ReactNode } from "react";
@@ -237,7 +237,7 @@ const impactItems: ImpactItem[] = [
   {
     title: "Connectie",
     description:
-      "Wanneer je alle details over je cliÃ«nt onthoudt, voelt die zich vertrouwd waardoor de connectie vergroot.",
+      "Wanneer je alle details over je cliënt onthoudt, voelt die zich vertrouwd waardoor de connectie vergroot.",
     image: imageE,
     icon: connectionIcon,
   },
@@ -287,7 +287,7 @@ export default function ProductImpactSection() {
         </div>
         <div className="mt-10">
           <Button
-            label="Probeer het gratis"
+            label="Probeer het uit"
             destination="https://app.coachscribe.nl"
             variant="primary"
             showArrow

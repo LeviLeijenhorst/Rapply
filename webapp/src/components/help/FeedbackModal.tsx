@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { LoadingSpinner } from '../LoadingSpinner'
 
 import { colors } from '../../theme/colors'
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
@@ -98,7 +99,7 @@ export function FeedbackModal({ visible, onClose, onContinue }: Props) {
           disabled={isContinueDisabled}
         >
           {isSubmitting ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <LoadingSpinner size="small" color="#FFFFFF" />
           ) : (
             <Text isBold style={styles.primaryButtonText}>
               Doorgaan

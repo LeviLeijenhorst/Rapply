@@ -344,7 +344,7 @@ export default function PricingSection(props: PricingSectionProps) {
 
               <div className="mt-6">
                 <Button
-                  label="Probeer het gratis"
+                  label="Probeer het uit"
                   destination={APP_URL}
                   variant="primary"
                   className="h-[46px] w-full rounded-[14px] text-[16px] font-semibold"

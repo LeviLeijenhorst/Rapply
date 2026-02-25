@@ -1,5 +1,6 @@
 import React, { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
+import { Pressable, StyleSheet, View } from 'react-native'
+import { LoadingSpinner } from '../LoadingSpinner'
 import { colors } from '../../theme/colors'
 import { useE2ee } from '../../e2ee/E2eeProvider'
 import { loadAudioBlobRemote } from '../../services/audioBlobs'
@@ -531,7 +532,7 @@ export const AudioPlayerCard = React.forwardRef<AudioPlayerHandle, Props>(functi
               style={({ hovered }) => [styles.playButton, hovered ? styles.playButtonHovered : undefined]}
             >
               {showPlaySpinner ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <LoadingSpinner size="small" color="#FFFFFF" />
               ) : isPlaying ? (
                 <PauseIcon size={20} color="#FFFFFF" />
               ) : (

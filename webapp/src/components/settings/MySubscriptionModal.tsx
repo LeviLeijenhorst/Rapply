@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { LoadingSpinner } from '../LoadingSpinner'
 
 import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { colors } from '../../theme/colors'
@@ -136,11 +137,38 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
   const eurSavedYear = eurSavedWeek * weeksPerYear
   const monthlyNetProfit = eurSavedMonth - monthlySubscriptionCost
 
+  const navigateToCheckoutInNewTab = (checkoutUrl: string, checkoutTab: Window | null) => {
+    if (typeof window === 'undefined') return
+
+    if (checkoutTab && !checkoutTab.closed) {
+      checkoutTab.location.replace(checkoutUrl)
+      checkoutTab.focus()
+      return
+    }
+
+    const openedTab = window.open(checkoutUrl, '_blank')
+    if (openedTab) {
+      try {
+        openedTab.opener = null
+      } catch {}
+    }
+    if (!openedTab) {
+      window.location.assign(checkoutUrl)
+    }
+  }
+
   const handleSelectPlan = async (planId: string) => {
+    const checkoutTab = typeof window !== 'undefined' ? window.open('about:blank', '_blank') : null
+    if (checkoutTab) {
+      try {
+        checkoutTab.opener = null
+      } catch {}
+    }
     try {
       setCheckoutLoadingPlanId(planId)
       const response = await createMollieCheckout(planId)
       if (response.requiresRedirect === false) {
+        if (checkoutTab && !checkoutTab.closed) checkoutTab.close()
         const visibilityResponse = await callSecureApi<PricingVisibilityResponse>('/pricing/me-visibility', {})
         setSelectedPlanId(typeof visibilityResponse.planId === 'string' ? visibilityResponse.planId : null)
         setCheckoutLoadingPlanId(null)
@@ -148,13 +176,13 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
       }
       const checkoutUrl = String(response.checkoutUrl || '').trim()
       if (!checkoutUrl) {
+        if (checkoutTab && !checkoutTab.closed) checkoutTab.close()
         throw new Error('Geen checkout URL ontvangen')
       }
-      if (typeof window !== 'undefined') {
-        requestSubscriptionReturnResumeIfDraftAvailable()
-        window.location.assign(checkoutUrl)
-      }
+      requestSubscriptionReturnResumeIfDraftAvailable()
+      navigateToCheckoutInNewTab(checkoutUrl, checkoutTab)
     } catch (error) {
+      if (checkoutTab && !checkoutTab.closed) checkoutTab.close()
       showErrorToast(
         toUserFriendlyErrorMessage(error, { fallback: 'Betalen starten lukt nu niet. Probeer het opnieuw.' }),
         'Betalen starten lukt nu niet. Probeer het opnieuw.',
@@ -180,18 +208,24 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
   }
 
   const handleBuyExtraMinutes = async () => {
+    const checkoutTab = typeof window !== 'undefined' ? window.open('about:blank', '_blank') : null
+    if (checkoutTab) {
+      try {
+        checkoutTab.opener = null
+      } catch {}
+    }
     try {
       setIsExtraMinutesCheckoutBusy(true)
       const response = await createMollieExtraMinutesCheckout()
       const checkoutUrl = String(response.checkoutUrl || '').trim()
       if (!checkoutUrl) {
+        if (checkoutTab && !checkoutTab.closed) checkoutTab.close()
         throw new Error('Geen checkout URL ontvangen')
       }
-      if (typeof window !== 'undefined') {
-        requestSubscriptionReturnResumeIfDraftAvailable()
-        window.location.assign(checkoutUrl)
-      }
+      requestSubscriptionReturnResumeIfDraftAvailable()
+      navigateToCheckoutInNewTab(checkoutUrl, checkoutTab)
     } catch (error) {
+      if (checkoutTab && !checkoutTab.closed) checkoutTab.close()
       showErrorToast(
         toUserFriendlyErrorMessage(error, { fallback: 'Betalen starten lukt nu niet. Probeer het opnieuw.' }),
         'Betalen starten lukt nu niet. Probeer het opnieuw.',
@@ -219,7 +253,7 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
       <View style={styles.body}>
         {isPricingLoading ? (
           <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color={colors.selected} />
+            <LoadingSpinner size="large" />
           </View>
         ) : !canSeePricingPage ? (
           <Text style={styles.infoText}>Prijsinformatie is voor dit account niet zichtbaar.</Text>
@@ -419,7 +453,7 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                     </View>
                     <AppButton
                       label={checkoutLoadingPlanId === primaryPlan.id ? '' : selectedPlanId === primaryPlan.id ? 'geabonneerd' : 'Abonneren'}
-                      leading={checkoutLoadingPlanId === primaryPlan.id ? <ActivityIndicator size="small" color="#FFFFFF" /> : undefined}
+                      leading={checkoutLoadingPlanId === primaryPlan.id ? <LoadingSpinner size="small" color="#FFFFFF" /> : undefined}
                       style={[
                         styles.subscribeButton,
                         selectedPlanId === primaryPlan.id ? styles.subscribeButtonSubscribed : styles.subscribeButtonCta,
@@ -436,7 +470,7 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
               <View style={styles.footerRow}>
                 <AppButton
                   label={isExtraMinutesCheckoutBusy ? '' : 'Koop 60 extra minuten'}
-                  leading={isExtraMinutesCheckoutBusy ? <ActivityIndicator size="small" color="#FFFFFF" /> : undefined}
+                  leading={isExtraMinutesCheckoutBusy ? <LoadingSpinner size="small" color="#FFFFFF" /> : undefined}
                   style={[styles.extraMinutesButton, styles.subscribeButtonCta]}
                   onPress={() => {
                     if (isExtraMinutesCheckoutBusy || !!checkoutLoadingPlanId) return

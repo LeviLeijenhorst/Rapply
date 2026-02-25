@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { Image, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
 
 import { CircleCloseIcon } from '../components/icons/CircleCloseIcon'
 import { PracticeColorPicker } from '../components/PracticeColorPicker'
@@ -12,6 +12,8 @@ import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { colors } from '../theme/colors'
 
 const brandControlSize = 110
+const A4_ASPECT_RATIO = 210 / 297
+const PDF_PREVIEW_HEIGHT = 382
 
 function normalizeHexColor(value: string) {
   const trimmed = String(value || '').trim()
@@ -29,8 +31,10 @@ async function readFileAsDataUrl(file: File): Promise<string> {
 }
 
 export function MijnPraktijkScreen() {
+  const { width } = useWindowDimensions()
   const { data, updatePracticeSettings } = useLocalAppData()
   const settings = data.practiceSettings
+  const useStackedBrandLayout = width < 1360
 
   const [practiceNameDraft, setPracticeNameDraft] = useState(settings.practiceName)
   const [websiteDraft, setWebsiteDraft] = useState(settings.website)
@@ -168,71 +172,77 @@ export function MijnPraktijkScreen() {
         <LabeledInput label="Naam praktijk" value={practiceNameDraft} onChangeText={setPracticeNameDraft} onBlur={() => persistPracticeName(practiceNameDraft)} />
         <LabeledInput label="Website" value={websiteDraft} onChangeText={setWebsiteDraft} onBlur={() => persistWebsite(websiteDraft)} />
 
-        <View style={styles.logoColorRow}>
-          <View style={styles.colorColumn}>
-            <Text isSemibold style={styles.fieldLabelText}>
-              Kleur (De kleur van gegenereerde PDF's)
-            </Text>
-            <View style={styles.colorPickerWrap}>
-              <PracticeColorPicker
-                value={tintColorDraft}
-                onPreviewChange={(nextColor) => setTintColorDraft(normalizeHexColor(nextColor))}
-                onCommit={(nextColor) => {
-                  const normalized = normalizeHexColor(nextColor)
-                  if (normalized === normalizeHexColor(settings.tintColor || '#BE0165')) {
-                    setTintColorDraft(normalized)
-                    return
-                  }
-                  persistTintColor(normalized)
-                }}
-              />
+        <View style={[styles.brandLayout, useStackedBrandLayout ? styles.brandLayoutStacked : undefined]}>
+          <View style={styles.logoColorRow}>
+            <View style={styles.colorColumn}>
+              <Text isSemibold style={styles.fieldLabelText}>
+                Kleur
+              </Text>
+              <View style={styles.colorPickerWrap}>
+                <PracticeColorPicker
+                  value={tintColorDraft}
+                  onPreviewChange={(nextColor) => setTintColorDraft(normalizeHexColor(nextColor))}
+                  onCommit={(nextColor) => {
+                    const normalized = normalizeHexColor(nextColor)
+                    if (normalized === normalizeHexColor(settings.tintColor || '#BE0165')) {
+                      setTintColorDraft(normalized)
+                      return
+                    }
+                    persistTintColor(normalized)
+                  }}
+                />
+              </View>
+            </View>
+
+            <View style={styles.logoColumn}>
+              <Text isSemibold style={styles.fieldLabelText}>
+                Logo
+              </Text>
+              <View
+                ref={logoDropAreaRef}
+                style={[styles.logoUploadBox, isDragActive ? styles.logoUploadBoxActive : undefined]}
+                {...( { onMouseEnter: () => settings.logoDataUrl && setIsLogoHovered(true), onMouseLeave: () => setIsLogoHovered(false) } as any )}
+              >
+                <Pressable
+                  style={({ hovered }) => [styles.logoUploadPressable, hovered ? styles.logoUploadPressableHovered : undefined]}
+                  onPress={() => fileInputRef.current?.click()}
+                >
+                  {settings.logoDataUrl ? (
+                    <View style={styles.logoPreviewWrap}>
+                      <Image source={{ uri: settings.logoDataUrl }} resizeMode="contain" style={styles.logoPreviewImage} />
+                    </View>
+                  ) : (
+                    <View style={styles.logoUploadCenter}>
+                      <PracticeExportIcon />
+                      <Text style={styles.logoUploadHint}>Sleep in of upload van je computer</Text>
+                    </View>
+                  )}
+                </Pressable>
+                {settings.logoDataUrl && isLogoHovered ? (
+                  <Pressable
+                    onPress={() => setIsRemoveLogoConfirmOpen(true)}
+                    style={({ hovered }) => [styles.logoRemoveButton, hovered ? styles.logoRemoveButtonHovered : undefined]}
+                  >
+                    <CircleCloseIcon size={22} color={colors.textStrong} />
+                  </Pressable>
+                ) : (
+                  null
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    void handleLogoFileSelected(event.currentTarget.files?.[0] ?? null)
+                    event.currentTarget.value = ''
+                  }}
+                  style={hiddenFileInputStyle as any}
+                />
+              </View>
             </View>
           </View>
 
-          <View style={styles.logoColumn}>
-            <Text isSemibold style={styles.fieldLabelText}>
-              Logo
-            </Text>
-            <View
-              ref={logoDropAreaRef}
-              style={[styles.logoUploadBox, isDragActive ? styles.logoUploadBoxActive : undefined]}
-              {...( { onMouseEnter: () => settings.logoDataUrl && setIsLogoHovered(true), onMouseLeave: () => setIsLogoHovered(false) } as any )}
-            >
-              <Pressable
-                style={({ hovered }) => [styles.logoUploadPressable, hovered ? styles.logoUploadPressableHovered : undefined]}
-                onPress={() => fileInputRef.current?.click()}
-              >
-                {settings.logoDataUrl ? (
-                  <View style={styles.logoPreviewWrap}>
-                    <Image source={{ uri: settings.logoDataUrl }} resizeMode="contain" style={styles.logoPreviewImage} />
-                  </View>
-                ) : (
-                  <View style={styles.logoUploadCenter}>
-                    <PracticeExportIcon />
-                    <Text style={styles.logoUploadHint}>Sleep in of upload van je computer</Text>
-                  </View>
-                )}
-              </Pressable>
-              {settings.logoDataUrl && isLogoHovered ? (
-                <Pressable
-                  onPress={() => setIsRemoveLogoConfirmOpen(true)}
-                  style={({ hovered }) => [styles.logoRemoveButton, hovered ? styles.logoRemoveButtonHovered : undefined]}
-                >
-                  <CircleCloseIcon size={22} color={colors.textStrong} />
-                </Pressable>
-              ) : null}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={(event) => {
-                  void handleLogoFileSelected(event.currentTarget.files?.[0] ?? null)
-                  event.currentTarget.value = ''
-                }}
-                style={hiddenFileInputStyle as any}
-              />
-            </View>
-          </View>
+          <PdfPreviewExample tintColor={tintColorDraft} logoDataUrl={settings.logoDataUrl} compact={useStackedBrandLayout} />
         </View>
       </View>
 
@@ -305,11 +315,34 @@ function LabeledInput({ label, value, onChangeText, onBlur }: LabeledInputProps)
   )
 }
 
+type PdfPreviewExampleProps = {
+  tintColor: string
+  logoDataUrl: string | null
+  compact: boolean
+}
+
+function PdfPreviewExample({ tintColor, logoDataUrl, compact }: PdfPreviewExampleProps) {
+  return (
+    <View style={[styles.pdfPreviewColumn, compact ? styles.pdfPreviewColumnCompact : undefined]}>
+      <View style={styles.pdfPreviewPaper}>
+        {logoDataUrl ? <Image source={{ uri: logoDataUrl }} resizeMode="contain" style={styles.pdfPreviewLogoImage} /> : null}
+        <View style={styles.pdfPreviewBody}>
+          <View style={[styles.pdfPreviewTitleLine, { backgroundColor: normalizeHexColor(tintColor) }]} />
+          <View style={styles.pdfPreviewTextLine} />
+          <View style={styles.pdfPreviewTextLine} />
+          <View style={styles.pdfPreviewTextLine} />
+          <View style={[styles.pdfPreviewTextLine, styles.pdfPreviewTextLineShort]} />
+        </View>
+      </View>
+    </View>
+  )
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     gap: 14,
-    paddingBottom: 84,
+    paddingBottom: 300,
     ...( { overflow: 'visible' } as any ),
   },
   headerTitle: {
@@ -332,12 +365,13 @@ const styles = StyleSheet.create({
   },
   inputRow: {
     width: '100%',
-    height: 40,
+    minHeight: 44,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: 20,
+    paddingVertical: 6,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -349,8 +383,9 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     padding: 0,
+    paddingVertical: 2,
     fontSize: fontSizes.md,
-    lineHeight: 20,
+    lineHeight: 22,
     color: colors.textStrong,
     ...( { cursor: 'pointer' } as any ),
   },
@@ -364,9 +399,19 @@ const styles = StyleSheet.create({
   editIconButtonHovered: {
     backgroundColor: 'rgba(0,0,0,0.08)',
   },
+  brandLayout: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 28,
+  },
+  brandLayoutStacked: {
+    flexDirection: 'column',
+    gap: 18,
+  },
   logoColorRow: {
     flexDirection: 'column',
     gap: 14,
+    paddingBottom: 28,
   },
   logoColumn: {
     width: brandControlSize * 3,
@@ -437,5 +482,47 @@ const styles = StyleSheet.create({
   colorPickerWrap: {
     width: '100%',
     position: 'relative',
+  },
+  pdfPreviewColumn: {
+    paddingTop: 40,
+  },
+  pdfPreviewColumnCompact: {
+    paddingTop: 0,
+  },
+  pdfPreviewPaper: {
+    height: PDF_PREVIEW_HEIGHT,
+    aspectRatio: A4_ASPECT_RATIO,
+    maxWidth: '100%',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    overflow: 'hidden',
+  },
+  pdfPreviewLogoImage: {
+    ...( { position: 'absolute', top: 20, right: 12 } as any ),
+    width: 44,
+    height: 21,
+  },
+  pdfPreviewBody: {
+    flex: 1,
+    gap: 8,
+    paddingTop: 34,
+  },
+  pdfPreviewTitleLine: {
+    width: '68%',
+    height: 8,
+    borderRadius: 999,
+  },
+  pdfPreviewTextLine: {
+    width: '100%',
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: '#D9D9D9',
+  },
+  pdfPreviewTextLineShort: {
+    width: '74%',
   },
 })

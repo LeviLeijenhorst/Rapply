@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
+import { Pressable, StyleSheet, View } from 'react-native'
+import { LoadingSpinner } from '../LoadingSpinner'
 
 import { Text } from '../Text'
 import { colors } from '../../theme/colors'
@@ -8,6 +9,7 @@ import { CopyIcon } from '../icons/CopyIcon'
 import { CopiedIcon } from '../icons/CopiedIcon'
 import { EditSmallIcon } from '../icons/EditSmallIcon'
 import { SharePdfIcon } from '../icons/SharePdfIcon'
+import { ShareTextIcon } from '../icons/ShareTextIcon'
 import { VerslagGenererenIcon } from '../icons/VerslagGenererenIcon'
 import { VerslagSchrijvenIcon } from '../icons/VerslagSchrijvenIcon'
 import { toUserFriendlyTranscriptionError } from '../../utils/transcriptionError'
@@ -26,6 +28,7 @@ type Props = {
   onEditSummary?: () => void
   onCancelGeneration?: () => void
   onShareSummary?: () => void
+  onExportSummaryAsWord?: () => void
   suppressErrorToast?: boolean
 }
 
@@ -57,6 +60,7 @@ export function ReportPanel({
   onEditSummary,
   onCancelGeneration,
   onShareSummary,
+  onExportSummaryAsWord,
   suppressErrorToast = false,
 }: Props) {
   const [showCopyNotification, setShowCopyNotification] = useState(false)
@@ -126,6 +130,19 @@ export function ReportPanel({
               <SharePdfIcon color="#8E8480" size={18} />
             </Pressable>
           ) : null}
+          {onExportSummaryAsWord ? (
+            <Pressable
+              onPress={onExportSummaryAsWord}
+              disabled={!hasSummary}
+              style={({ hovered }) => [
+                styles.actionButton,
+                !hasSummary ? styles.actionButtonDisabled : undefined,
+                hovered ? styles.actionButtonHovered : undefined,
+              ]}
+            >
+              <ShareTextIcon color="#8E8480" size={18} />
+            </Pressable>
+          ) : null}
           <Pressable
             onPress={() => {
               if (!hasSummary) return
@@ -151,7 +168,7 @@ export function ReportPanel({
         {shouldShowLoading ? (
           <View style={styles.loadingContainer}>
             <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color={colors.selected} />
+              <LoadingSpinner size="small" />
               <Text style={styles.loadingText}>{loadingLabel}</Text>
             </View>
             {onCancelGeneration ? (

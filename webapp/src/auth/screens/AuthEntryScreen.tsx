@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Animated, Easing, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
+import { Animated, Easing, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
+import { LoadingSpinner } from '../../components/LoadingSpinner'
 import Svg, { G, Rect } from 'react-native-svg'
 
 import { AuthCard } from '../components/AuthCard'
@@ -144,7 +145,7 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
                 ]}
               >
                 {isStartingLogin ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <LoadingSpinner size="small" color="#FFFFFF" />
                 ) : (
                   <Text isBold style={styles.actionButtonText}>
                     Doorgaan

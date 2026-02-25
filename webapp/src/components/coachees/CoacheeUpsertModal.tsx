@@ -84,6 +84,7 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
   const CALENDAR_PANEL_WIDTH = 320
   const CALENDAR_PANEL_HEIGHT = 320
   const CALENDAR_PANEL_OFFSET = 24
+  const CALENDAR_PANEL_VERTICAL_NUDGE = 10
   const CALENDAR_ANIMATION_MS = 180
   const [values, setValues] = useState<CoacheeUpsertValues>(initialValues)
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
@@ -263,7 +264,7 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
       containerRef.current as any,
       (left: number, top: number, width: number) => {
         const alignedLeft = left + width - CALENDAR_PANEL_WIDTH
-        const aboveTop = top - CALENDAR_PANEL_HEIGHT - CALENDAR_PANEL_OFFSET
+        const aboveTop = top - CALENDAR_PANEL_HEIGHT - CALENDAR_PANEL_OFFSET - CALENDAR_PANEL_VERTICAL_NUDGE
         setCalendarAnchor({
           left: Math.max(8, alignedLeft),
           top: Math.max(8, aboveTop),
@@ -322,14 +323,14 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
         <Text isSemibold style={styles.sectionTitle}>
           Persoon
         </Text>
-        {renderInputRow('Voornaam', 'firstName', { placeholder: 'Voornaam...', inputRef: firstNameInputRef, required: true })}
-        {renderInputRow('Achternaam', 'lastName', { placeholder: 'Achternaam...' })}
+        {renderInputRow('Voornaam', 'firstName', { placeholder: 'Voornaam', inputRef: firstNameInputRef, required: true })}
+        {renderInputRow('Achternaam', 'lastName', { placeholder: 'Achternaam' })}
 
         <Text isSemibold style={styles.sectionTitle}>
           Cliëntgegevens
         </Text>
         {renderInputRow('E-mail', 'clientEmail', { placeholder: 'naam@voorbeeld.nl' })}
-        {renderInputRow('Telefoon', 'clientPhone', { placeholder: '0622168360' })}
+        {renderInputRow('Telefoon', 'clientPhone', { placeholder: 'Telefoonnummer' })}
         {renderInputRow('Adres', 'clientAddress', { placeholder: 'Straat + huisnummer' })}
         {renderInputRow('Postcode', 'clientPostalCode', { placeholder: '1234 AB' })}
         {renderInputRow('Woonplaats', 'clientCity', { placeholder: 'Plaats' })}

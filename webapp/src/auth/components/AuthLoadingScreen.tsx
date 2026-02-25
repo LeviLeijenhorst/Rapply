@@ -1,5 +1,6 @@
 import React from 'react'
-import { ActivityIndicator, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
+import { LoadingSpinner } from '../../components/LoadingSpinner'
 
 import { Text } from '../../components/Text'
 
@@ -10,7 +11,7 @@ type Props = {
 export function AuthLoadingScreen({ message }: Props) {
   return (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color="#E07A7A" />
+      <LoadingSpinner size="large" />
       <Text style={styles.loadingText}>{message}</Text>
     </View>
   )

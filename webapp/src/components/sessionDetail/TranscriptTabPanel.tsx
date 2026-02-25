@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { LoadingSpinner } from '../LoadingSpinner'
 
 import { FormattedText } from '../FormattedText'
 import { Text } from '../Text'
@@ -172,8 +173,8 @@ export function TranscriptTabPanel({
   const firstSpeakerKey = parsedTranscriptLinesWithResolvedTimes.find((line) => line.speakerKey)?.speakerKey ?? ''
   const hasSearch = searchValue.trim().length > 0
   const shouldShowSpeakerSplitColors = useTintColors && normalizedAudioDurationSeconds !== null
-  const activeLineBorderColor = useTintColors && highlightTintColor ? highlightTintColor : colors.border
-  const activeLineBackgroundColor = useTintColors && highlightTintColor ? `${highlightTintColor}22` : colors.hoverBackground
+  const activeLineBorderColor = colors.border
+  const activeLineBackgroundColor = colors.hoverBackground
 
   useEffect(() => {
     setVisibleLineCount(INITIAL_VISIBLE_LINE_COUNT)
@@ -244,7 +245,7 @@ export function TranscriptTabPanel({
           <View style={styles.loadingContainer}>
             {/* Loading message */}
             <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color={colors.selected} />
+              <LoadingSpinner size="small" />
               <Text style={styles.loadingText}>Transcript wordt gegenereerd</Text>
             </View>
             {onCancelGeneration ? (

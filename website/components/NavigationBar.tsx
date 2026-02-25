@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -103,7 +103,7 @@ export default function NavigationBar() {
               className="font-normal"
             />
             <Button
-              label="Probeer het gratis"
+              label="Probeer het uit"
               destination="https://app.coachscribe.nl"
               variant="primary"
               className="font-normal"
@@ -238,7 +238,7 @@ export default function NavigationBar() {
             </div>
             <div onClick={() => setIsMobileMenuOpen(false)}>
               <Button
-                label="Probeer het gratis"
+                label="Probeer het uit"
                 destination="https://app.coachscribe.nl"
                 variant="primary"
                 className="font-normal"

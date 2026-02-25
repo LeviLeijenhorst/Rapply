@@ -184,8 +184,6 @@ export function AppShell({ onLogout }: Props) {
     }
   }, [])
 
-  const hasActiveSubscription = currentPlanId !== null
-
   useEffect(() => {
     let isCancelled = false
     void callSecureApi<{
@@ -776,6 +774,10 @@ export function AppShell({ onLogout }: Props) {
             }}
             isCreateSessionDisabled={isRecordingBusy}
             onPressCreateSession={() => openNewSessionModal(selectedCoacheeId)}
+            onOpenMySubscription={() => {
+              if (!canOpenSubscription) return
+              setIsMySubscriptionModalOpen(true)
+            }}
           />
         )
       }
@@ -853,7 +855,6 @@ export function AppShell({ onLogout }: Props) {
               selectedSidebarItemKey={selectedSidebarItemKey}
               isSettingsSelected={isSettingsSelected}
               isAdminUser={isCurrentUserAdmin}
-              showSubscribeItem={!hasActiveSubscription}
               onSelectSidebarItem={(sidebarItemKey) => {
                 navigateTo(
                   sidebarItemKey === 'coachees'
@@ -880,11 +881,6 @@ export function AppShell({ onLogout }: Props) {
                 setIsSettingsMenuOpen(false)
                 setSettingsMenuAnchorPoint(null)
                 setIsContactModalOpen(true)
-              }}
-              onOpenSubscription={() => {
-                setIsSettingsMenuOpen(false)
-                setSettingsMenuAnchorPoint(null)
-                setIsMySubscriptionModalOpen(true)
               }}
               onOpenSettingsMenu={(anchorPoint) => {
                 setSettingsMenuAnchorPoint(anchorPoint)

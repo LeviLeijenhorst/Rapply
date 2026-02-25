@@ -39,7 +39,7 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
     heroTitleLine2: "betrouwbare verslaglegging",
     subheadline:
       "CoachScribe helpt loopbaan- en re-integratieprofessionals gesprekken vastleggen, structureren en omzetten naar professionele rapportages - met privacy en controle als uitgangspunt.",
-    primaryCta: "Probeer gratis",
+    primaryCta: "Probeer het uit",
     secondaryCta: "Bekijk hoe het werkt",
     features: [
       {
@@ -109,7 +109,7 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
     heroTitleLine2: "Snel naar een professioneel rapport.",
     heroSubtext:
       "Zet gesprekken om naar gestructureerde verslagen en rapportages die passen bij jouw trajecten en templates.",
-    heroCta: "Probeer gratis",
+    heroCta: "Probeer het uit",
     impactItems: [
       {
         title: "Overzicht",
@@ -150,7 +150,7 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
     heroTitleLine2: "iets voor jou?",
     heroSubtext:
       "Ben je loopbaan- of re-integratieprofessional en wil je sneller, consistenter en AVG-bewust rapporteren? CoachScribe helpt je van gesprek naar dossier en rapportage.",
-    heroCta: "Probeer gratis",
+    heroCta: "Probeer het uit",
     typesSectionTitle: "Professionals: een breed werkveld",
     types: [
       {

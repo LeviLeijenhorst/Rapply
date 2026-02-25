@@ -1,5 +1,6 @@
 import React, { createContext, ReactNode, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { LoadingSpinner } from '../components/LoadingSpinner'
 
 import { EyeIcon } from '../components/icons/EyeIcon'
 import { EyeSlashIcon } from '../components/icons/EyeSlashIcon'
@@ -539,7 +540,7 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
             </View>
             <Pressable onPress={() => void handleSetupPassphrase()} style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined, isBusy ? styles.primaryButtonDisabled : undefined]} disabled={isBusy}>
               <View style={styles.primaryButtonContent}>
-                {isBusy ? <ActivityIndicator size="small" color="#FFFFFF" /> : null}
+                {isBusy ? <LoadingSpinner size="small" color="#FFFFFF" /> : null}
                 <Text isBold style={styles.primaryButtonText}>{isBusy ? 'Bezig...' : 'Doorgaan'}</Text>
               </View>
             </Pressable>
@@ -613,7 +614,7 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
             </View>
             <Pressable onPress={() => void handleUnlockWithPassphrase()} style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined, isBusy ? styles.primaryButtonDisabled : undefined]} disabled={isBusy}>
               <View style={styles.primaryButtonContent}>
-                {isBusy ? <ActivityIndicator size="small" color="#FFFFFF" /> : null}
+                {isBusy ? <LoadingSpinner size="small" color="#FFFFFF" /> : null}
                 <Text isBold style={styles.primaryButtonText}>{isBusy ? 'Bezig...' : 'Ontgrendelen'}</Text>
               </View>
             </Pressable>

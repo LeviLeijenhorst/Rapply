@@ -10,19 +10,21 @@ type QuickQuestionOption = {
   id: string
   text: string
   promptText: string
+  templateId?: string
 }
 
 type Props = {
-  templates: { id: string; name: string; promptText?: string }[]
-  onSelectOption: (option: { text: string; promptText: string }) => void
+  templates: { id: string; name: string; promptText?: string; templateId?: string }[]
+  onSelectOption: (option: { text: string; promptText: string; templateId?: string }) => void
 }
 
-function buildOptions(templates: { id: string; name: string; promptText?: string }[]): QuickQuestionOption[] {
+function buildOptions(templates: { id: string; name: string; promptText?: string; templateId?: string }[]): QuickQuestionOption[] {
   return templates
     .map((template) => {
       const text = String(template.name || '').trim()
       const promptText = String(template.promptText || '').trim() || text
-      return { id: String(template.id || '').trim(), text, promptText }
+      const templateId = String(template.templateId || template.id || '').trim() || undefined
+      return { id: String(template.id || '').trim(), text, promptText, templateId }
     })
     .filter((template) => template.id.length > 0 && template.text.length > 0 && template.promptText.length > 0)
 }
@@ -120,7 +122,7 @@ export function QuickQuestionsStart({ templates, onSelectOption }: Props) {
         {visibleOptions.map((option) => (
           <Pressable
             key={option.id}
-            onPress={() => onSelectOption({ text: option.text, promptText: option.promptText })}
+            onPress={() => onSelectOption({ text: option.text, promptText: option.promptText, templateId: option.templateId })}
             style={({ hovered }) => [styles.optionTextButton, hovered ? styles.optionTextButtonHovered : undefined]}
           >
             {/* Quick option text */}
@@ -189,7 +191,7 @@ export function QuickQuestionsStart({ templates, onSelectOption }: Props) {
             <Pressable
               onPress={() => {
                 if (!selectedOption) return
-                onSelectOption({ text: selectedOption.text, promptText: selectedOption.promptText })
+                onSelectOption({ text: selectedOption.text, promptText: selectedOption.promptText, templateId: selectedOption.templateId })
                 setIsOptionsModalVisible(false)
               }}
               disabled={!selectedOption}
@@ -310,7 +312,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.hoverBackground,
   },
   modalOptionRowSelected: {
-    borderColor: colors.selected,
+    borderColor: 'transparent',
     backgroundColor: '#FFF2F8',
   },
   modalOptionText: {

@@ -1,4 +1,4 @@
-﻿import Button from "@/components/Button";
+import Button from "@/components/Button";
 import SectionContainer from "@/components/home/SectionContainer";
 
 export default function HeroSection() {
@@ -30,7 +30,7 @@ export default function HeroSection() {
           {/* Hero actions */}
           <div className="flex w-full flex-wrap items-center justify-center gap-4">
             <Button
-              label="Probeer het gratis"
+              label="Probeer het uit"
               destination="https://app.coachscribe.nl"
               variant="primary"
               showArrow

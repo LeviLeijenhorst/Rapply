@@ -1,5 +1,6 @@
 import React from 'react'
-import { ActivityIndicator, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
+import { LoadingSpinner } from './LoadingSpinner'
 
 import { fontSizes, radius, spacing } from '../foundation/theme/tokens'
 import { colors } from '../theme/colors'
@@ -18,7 +19,7 @@ export function UsageIndicator({ usedMinutes, totalMinutes, isLoading = false }:
       {isLoading ? (
         <View style={styles.loadingContent}>
           <View style={styles.loadingSpinnerScale}>
-            <ActivityIndicator size="small" color={colors.selected} />
+            <LoadingSpinner size="small" />
           </View>
         </View>
       ) : (

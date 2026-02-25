@@ -49,12 +49,6 @@ function sanitizeHexInput(value: string) {
 
 function normalizeTypedHexInput(value: string) {
   const cleaned = sanitizeHexInput(value)
-  if (cleaned.length === 3) {
-    return `#${cleaned
-      .split('')
-      .map((character) => `${character}${character}`)
-      .join('')}`
-  }
   if (cleaned.length === 6) return `#${cleaned}`
   return null
 }
@@ -339,14 +333,15 @@ export function PracticeColorPicker({ value, onPreviewChange, onCommit }: Props)
   return (
     <View style={styles.container}>
       <View
-        ref={saturationAreaRef}
-        style={[styles.saturationArea, { backgroundColor: saturationBaseColor }]}
+        style={styles.saturationFrame}
         {...({
           onPointerDown: onSaturationStart,
         } as any)}
       >
-        <View style={styles.saturationWhiteOverlay} />
-        <View style={styles.saturationBlackOverlay} />
+        <View ref={saturationAreaRef} style={[styles.saturationArea, { backgroundColor: saturationBaseColor }]}>
+          <View style={styles.saturationWhiteOverlay} />
+          <View style={styles.saturationBlackOverlay} />
+        </View>
         <View
           style={[
             styles.saturationThumb,
@@ -444,21 +439,27 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   saturationArea: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 0,
+    ...( { cursor: 'crosshair', position: 'relative' } as any ),
+  },
+  saturationFrame: {
     width: SATURATION_SIZE,
     height: SATURATION_SIZE,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    ...( { cursor: 'crosshair', position: 'relative', overflow: 'visible' } as any ),
+    ...( { position: 'relative', overflow: 'hidden', cursor: 'crosshair' } as any ),
   },
   saturationWhiteOverlay: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: radius.md,
+    borderRadius: 0,
     ...( { backgroundImage: 'linear-gradient(to right, #FFFFFF, rgba(255,255,255,0))' } as any ),
   },
   saturationBlackOverlay: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: radius.md,
+    borderRadius: 0,
     ...( { backgroundImage: 'linear-gradient(to top, #000000, rgba(0,0,0,0))' } as any ),
   },
   saturationThumb: {
@@ -495,7 +496,7 @@ const styles = StyleSheet.create({
   },
   currentColorInputWrap: {
     flex: 1,
-    height: 32,
+    minHeight: 34,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
@@ -505,9 +506,9 @@ const styles = StyleSheet.create({
   currentColorInput: {
     width: '100%',
     paddingHorizontal: 10,
-    paddingVertical: 0,
+    paddingVertical: 2,
     fontSize: fontSizes.sm,
-    lineHeight: 18,
+    lineHeight: 20,
     color: colors.textStrong,
     ...( { outlineStyle: 'none', outlineWidth: 0 } as any ),
   },
