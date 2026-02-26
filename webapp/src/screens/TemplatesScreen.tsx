@@ -237,7 +237,7 @@ export function TemplatesScreen() {
                 }}
                 style={({ hovered }) => [styles.createMenuItem, hovered ? styles.createMenuItemHovered : undefined]}
               >
-                <Text style={styles.createMenuItemText}>Gespreksverslag template</Text>
+                <Text style={styles.createMenuItemText}>Gespreksverslag</Text>
               </Pressable>
               <Pressable
                 onPress={() => {
@@ -247,7 +247,7 @@ export function TemplatesScreen() {
                 }}
                 style={({ hovered }) => [styles.createMenuItem, hovered ? styles.createMenuItemHovered : undefined]}
               >
-                <Text style={styles.createMenuItemText}>Ander verslag template</Text>
+                <Text style={styles.createMenuItemText}>Ander verslag</Text>
               </Pressable>
             </AnimatedDropdownPanel>
           </View>

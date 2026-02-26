@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   readOnlyHeading: {
-    fontSize: richTextSharedFormatting.headingFontSize,
+    fontSize: richTextSharedFormatting.headingTwoFontSize,
     lineHeight: richTextSharedFormatting.headingLineHeight,
     fontWeight: richTextSharedFormatting.headingFontWeight,
     color: colors.textStrong,

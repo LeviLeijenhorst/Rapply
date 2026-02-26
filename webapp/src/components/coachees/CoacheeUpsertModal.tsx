@@ -6,6 +6,7 @@ import { colors } from '../../theme/colors'
 import { Text } from '../Text'
 import { MijnAccountIcon } from '../icons/MijnAccountIcon'
 import { CalendarCircleIcon } from '../icons/CalendarCircleIcon'
+import { ChevronRightIcon } from '../icons/ChevronRightIcon'
 import type { CoacheeUpsertValues } from '../../utils/coacheeProfile'
 
 type Props = {
@@ -81,8 +82,8 @@ function getCalendarCells(monthDate: Date): CalendarCell[] {
 }
 
 export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSave }: Props) {
-  const CALENDAR_PANEL_WIDTH = 320
-  const CALENDAR_PANEL_HEIGHT = 320
+  const CALENDAR_PANEL_WIDTH = 336
+  const CALENDAR_PANEL_HEIGHT = 362
   const CALENDAR_PANEL_OFFSET = 24
   const CALENDAR_PANEL_VERTICAL_NUDGE = 10
   const CALENDAR_ANIMATION_MS = 180
@@ -413,9 +414,9 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
               onPress={() => setVisibleMonth((previous) => new Date(previous.getFullYear(), previous.getMonth() - 1, 1))}
               style={({ hovered }) => [styles.calendarNavButton, hovered ? styles.calendarNavButtonHovered : undefined]}
             >
-              <Text isBold style={styles.calendarNavButtonText}>
-                {'<'}
-              </Text>
+              <View style={styles.rotatedChevron}>
+                <ChevronRightIcon color={colors.textStrong} size={18} />
+              </View>
             </Pressable>
             <Text isSemibold style={styles.calendarMonthTitle}>
               {monthTitle}
@@ -424,9 +425,7 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
               onPress={() => setVisibleMonth((previous) => new Date(previous.getFullYear(), previous.getMonth() + 1, 1))}
               style={({ hovered }) => [styles.calendarNavButton, hovered ? styles.calendarNavButtonHovered : undefined]}
             >
-              <Text isBold style={styles.calendarNavButtonText}>
-                {'>'}
-              </Text>
+              <ChevronRightIcon color={colors.textStrong} size={18} />
             </Pressable>
           </View>
           <View style={styles.calendarWeekRow}>
@@ -605,7 +604,7 @@ const styles = StyleSheet.create({
   calendarPanel: {
     position: 'absolute',
     zIndex: 50,
-    width: 320,
+    width: 336,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E3E3E3',
@@ -638,6 +637,9 @@ const styles = StyleSheet.create({
     borderColor: '#E6C1D6',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  rotatedChevron: {
+    transform: [{ rotate: '180deg' }],
   },
   calendarNavButtonHovered: {
     backgroundColor: '#FCEFF6',
@@ -674,8 +676,8 @@ const styles = StyleSheet.create({
   },
   calendarDayButton: {
     width: `${100 / 7}%` as any,
-    height: 34,
-    borderRadius: 8,
+    aspectRatio: 1,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -35,6 +35,20 @@ function extractJsonMessage(payload: string): string | null {
   }
 }
 
+function isLikelyConnectivityIssue(message: string): boolean {
+  const lowered = String(message || '').toLowerCase()
+  return (
+    lowered.includes('enotfound') ||
+    lowered.includes('getaddrinfo') ||
+    lowered.includes('err_network') ||
+    lowered.includes('failed to fetch') ||
+    lowered.includes('networkerror when attempting to fetch resource') ||
+    lowered.includes('network request failed') ||
+    lowered.includes('offline') ||
+    lowered.includes('dns')
+  )
+}
+
 function hasRawErrorCode(message: string): boolean {
   const lowered = message.toLowerCase()
   if (lowered.includes('api error:')) return true
@@ -65,6 +79,7 @@ function hasTechnicalEnglishTerms(message: string): boolean {
 export function sanitizeUserFacingErrorMessage(rawMessage: string, fallback: string): string {
   const cleaned = String(rawMessage || '').trim()
   if (!cleaned) return fallback
+  if (isLikelyConnectivityIssue(cleaned)) return 'Het lijkt erop dat je geen internetverbinding hebt :('
   if (hasRawErrorCode(cleaned)) return fallback
   if (hasTechnicalEnglishTerms(cleaned)) return fallback
   return cleaned
@@ -74,9 +89,15 @@ export function toUserFriendlyErrorMessage(error: unknown, options: Options): st
   const { fallback, forbiddenMessage } = options
   const rawMessage = extractMessage(error)
   if (!rawMessage) return fallback
+  if (isLikelyConnectivityIssue(rawMessage)) return 'Het lijkt erop dat je geen internetverbinding hebt :('
 
   const parsedApiError = parseApiError(rawMessage)
   if (parsedApiError) {
+    const decodedPayload = extractJsonMessage(parsedApiError.payload) || parsedApiError.payload
+    if (isLikelyConnectivityIssue(decodedPayload)) {
+      return 'Het lijkt erop dat je geen internetverbinding hebt :('
+    }
+
     const statusCode = parsedApiError.statusCode
     if (statusCode === 401 || statusCode === 403) {
       return forbiddenMessage || 'Je hebt geen toegang om deze actie uit te voeren.'
@@ -91,7 +112,6 @@ export function toUserFriendlyErrorMessage(error: unknown, options: Options): st
       return 'Er ging iets mis op de server. Probeer het later opnieuw.'
     }
 
-    const decodedPayload = extractJsonMessage(parsedApiError.payload) || parsedApiError.payload
     if (!decodedPayload || hasRawErrorCode(decodedPayload)) return fallback
     return decodedPayload
   }

@@ -63,7 +63,9 @@ const curatedCoachOptions: QuickQuestionOption[] = [
 function buildOptions(templates: { id: string; name: string; promptText?: string; templateId?: string }[]): QuickQuestionOption[] {
   const templateOptions = templates
     .map((template) => {
-      const text = String(template.name || '').trim()
+      const rawText = String(template.name || '').trim()
+      const hasArticlePrefix = /^(een|de|het)\s+/i.test(rawText)
+      const text = hasArticlePrefix ? rawText : `een ${rawText}`
       const promptText = String(template.promptText || '').trim() || text
       const templateId = String(template.templateId || template.id || '').trim() || undefined
       return { id: String(template.id || '').trim(), text, promptText, templateId }
@@ -316,7 +318,7 @@ const styles = StyleSheet.create({
   },
   listIconLine: {
     width: '100%',
-    height: 1.5,
+    height: 1.75,
     borderRadius: 999,
     backgroundColor: colors.textSecondary,
   },

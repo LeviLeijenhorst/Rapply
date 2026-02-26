@@ -31,6 +31,7 @@ import {
   type E2eeUserKeyMaterial,
 } from '../services/e2ee'
 import { useToast } from '../toast/ToastProvider'
+import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
 
 type E2eeContextValue = {
   encryptText: (value: string) => Promise<string>
@@ -219,7 +220,11 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
         setIsEnabled(false)
         setActiveKeyVersion(null)
         setUserDataKey(null)
-        setStatusMessage(error instanceof Error ? error.message : 'E2EE initialisatie mislukt')
+        setStatusMessage(
+          toUserFriendlyErrorMessage(error, {
+            fallback: 'E2EE initialisatie mislukt',
+          }),
+        )
         setStage('loading')
       } finally {
         if (isActive) setIsBusy(false)
@@ -336,7 +341,11 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
       }
     } catch (error) {
       console.error('[E2eeProvider] Passphrase setup failed', error)
-      setStatusMessage(error instanceof Error ? error.message : 'Passphrase instellen mislukt')
+      setStatusMessage(
+        toUserFriendlyErrorMessage(error, {
+          fallback: 'Passphrase instellen mislukt',
+        }),
+      )
     } finally {
       setIsBusy(false)
     }
@@ -400,7 +409,11 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
       setStatusMessage('Stel nu een nieuwe passphrase in')
     } catch (error) {
       console.error('[E2eeProvider] Recovery failed', error)
-      setStatusMessage(error instanceof Error ? error.message : 'Herstel mislukt')
+      setStatusMessage(
+        toUserFriendlyErrorMessage(error, {
+          fallback: 'Herstel mislukt',
+        }),
+      )
     } finally {
       setIsBusy(false)
     }

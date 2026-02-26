@@ -53,6 +53,33 @@ function resolveExportableMessageText(text: string) {
   return cleanedText
 }
 
+function shouldOfferExportActions(text: string) {
+  const normalizedText = String(text || '').trim().toLowerCase()
+  if (!normalizedText) return false
+
+  const genericReplies = [
+    'kan ik u van dienst zijn',
+    'kan ik je van dienst zijn',
+    'waarmee kan ik u helpen',
+    'waarmee kan ik je helpen',
+    'laat het me weten',
+    'laat het gerust weten',
+  ]
+  if (genericReplies.some((phrase) => normalizedText.includes(phrase))) return false
+
+  const lines = parseRichTextMarkdown(text || '')
+  const hasStructuredContent = lines.some((line) => line.kind === 'headingTwo' || line.kind === 'headingThree' || line.kind === 'bullet' || line.kind === 'numbered')
+  const sentenceCount = String(text || '')
+    .split(/[.!?]+/)
+    .map((part) => part.trim())
+    .filter(Boolean).length
+  const characterCount = normalizedText.length
+
+  if (hasStructuredContent) return characterCount >= 45
+  if (characterCount >= 120) return true
+  return characterCount >= 60 && sentenceCount >= 2
+}
+
 type MentionToken = {
   kind: 'text' | 'mention'
   text: string
@@ -446,21 +473,74 @@ function escapeHtml(value: string) {
     .replace(/'/g, '&#39;')
 }
 
+function segmentsToWordHtml(segments: DocumentSegment[]) {
+  return segments
+    .map((segment) => {
+      const safeText = escapeHtml(segment.text)
+      return segment.isBold ? `<strong>${safeText}</strong>` : safeText
+    })
+    .join('')
+}
+
 function buildWordBodyHtml(messageText: string) {
   const lines = buildDocumentLines(messageText)
-  return lines
-    .map((line) => {
-      if (line.kind === 'empty') return '<p class="spacer">&nbsp;</p>'
-      if (line.kind === 'divider') return '<hr />'
-      const text = escapeHtml(line.segments.map((s) => s.text).join(''))
-      if (line.kind === 'headingTwo') return `<h2>${text}</h2>`
-      if (line.kind === 'headingThree') return `<h3>${text}</h3>`
-      if (line.kind === 'bullet') return `<p class="bullet">• ${text}</p>`
-      if (line.kind === 'numbered') return `<p class="numbered">${line.number || 1}. ${text}</p>`
-      if (line.kind === 'quote') return `<blockquote>${text}</blockquote>`
-      return `<p>${text}</p>`
-    })
-    .join('\n')
+  const htmlLines: string[] = []
+  let index = 0
+  while (index < lines.length) {
+    const line = lines[index]
+    if (line.kind === 'empty') {
+      htmlLines.push('<p class="spacer">&nbsp;</p>')
+      index += 1
+      continue
+    }
+    if (line.kind === 'divider') {
+      htmlLines.push('<hr />')
+      index += 1
+      continue
+    }
+    if (line.kind === 'headingTwo') {
+      htmlLines.push(`<h2>${segmentsToWordHtml(line.segments)}</h2>`)
+      index += 1
+      continue
+    }
+    if (line.kind === 'headingThree') {
+      htmlLines.push(`<h3>${segmentsToWordHtml(line.segments)}</h3>`)
+      index += 1
+      continue
+    }
+    if (line.kind === 'quote') {
+      htmlLines.push(`<blockquote>${segmentsToWordHtml(line.segments)}</blockquote>`)
+      index += 1
+      continue
+    }
+    if (line.kind === 'bullet') {
+      const items: string[] = []
+      while (index < lines.length && lines[index].kind === 'bullet') {
+        items.push(`<li>${segmentsToWordHtml(lines[index].segments)}</li>`)
+        index += 1
+      }
+      htmlLines.push(`<ul class="list">${items.join('')}</ul>`)
+      continue
+    }
+    if (line.kind === 'numbered') {
+      const items: string[] = []
+      const start = Math.max(1, line.number || 1)
+      let expectedNumber = start
+      while (index < lines.length && lines[index].kind === 'numbered') {
+        const currentLine = lines[index]
+        const currentNumber = Math.max(1, currentLine.number || expectedNumber)
+        if (items.length > 0 && currentNumber !== expectedNumber) break
+        items.push(`<li>${segmentsToWordHtml(currentLine.segments)}</li>`)
+        expectedNumber = currentNumber + 1
+        index += 1
+      }
+      htmlLines.push(`<ol class="list"${start > 1 ? ` start="${start}"` : ''}>${items.join('')}</ol>`)
+      continue
+    }
+    htmlLines.push(`<p>${segmentsToWordHtml(line.segments)}</p>`)
+    index += 1
+  }
+  return htmlLines.join('\n')
 }
 
 export async function exportMessageToWord(messageText: string, reportTitle: string | undefined, _practiceSettings: PdfPracticeSettings) {
@@ -475,8 +555,10 @@ export async function exportMessageToWord(messageText: string, reportTitle: stri
       body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #26343f; margin: 0; }
       p { margin: 0 0 10pt 0; line-height: 1.45; }
       .spacer { margin: 0 0 8pt 0; }
-      h2 { font-size: 16pt; margin: 0 0 8pt 0; color: #26343f; }
-      h3 { font-size: 13pt; margin: 0 0 8pt 0; color: #26343f; }
+      h2 { font-size: 18pt; margin: 0 0 8pt 0; color: #26343f; }
+      h3 { font-size: 14pt; margin: 0 0 8pt 0; color: #26343f; }
+      .list { margin: 0 0 10pt 0; padding-left: 24pt; }
+      .list li { margin: 0; line-height: 1.45; }
       blockquote { margin: 0 0 10pt 0; padding-left: 10pt; border-left: 2pt solid #bdccd8; }
       hr { border: 0; border-top: 1pt solid #d7dee4; margin: 8pt 0; }
     </style>
@@ -516,8 +598,8 @@ export async function exportMessageToPdf(messageText: string, reportTitle: strin
   const accentColor = hexToRgbColor(practiceSettings.tintColor)
 
   const bodyLineHeight = 17
-  const headingTwoFontSize = 16
-  const headingThreeFontSize = 13
+  const headingTwoFontSize = 20
+  const headingThreeFontSize = 14
   const textFontSize = 11.5
   const footerFontSize = 9
 
@@ -580,9 +662,9 @@ export async function exportMessageToPdf(messageText: string, reportTitle: strin
       const color = strongTextColor
       const wrapped = wrapSegmentsToLines(doc, line.segments, maxWidth, fontSize)
       // Keep a section header away from the page bottom by reserving room for the full
-      // header block plus at least one body line that follows the section.
+      // header block plus at least five body lines that follow the section.
       const headingBlockHeight = wrapped.length * lineHeight + (wrapped.length > 0 ? 2 : 0) + spacingAfter
-      const sectionStartMinimumHeight = headingBlockHeight + bodyLineHeight
+      const sectionStartMinimumHeight = headingBlockHeight + bodyLineHeight * 5
       ensureSpace(sectionStartMinimumHeight)
       wrapped.forEach((segments, idx) => {
         ensureSpace(lineHeight)
@@ -617,15 +699,17 @@ export async function exportMessageToPdf(messageText: string, reportTitle: strin
       const marker = `${line.number || 1}.`
       doc.setFont('Helvetica', 'normal')
       doc.setFontSize(textFontSize)
-      const markerWidth = Math.max(14, doc.getTextWidth(`${marker} `))
-      const wrapped = wrapSegmentsToLines(doc, line.segments, maxWidth - markerWidth, textFontSize)
+      const markerGap = 8
+      const markerWidth = Math.max(18, doc.getTextWidth(marker))
+      const markerTotalWidth = markerWidth + markerGap
+      const wrapped = wrapSegmentsToLines(doc, line.segments, maxWidth - markerTotalWidth, textFontSize)
       wrapped.forEach((segments, lineIndex) => {
         ensureSpace(bodyLineHeight)
         if (lineIndex === 0) {
           doc.setTextColor(textColor.r, textColor.g, textColor.b)
           doc.text(marker, contentX, cursorY)
         }
-        drawSegmentsLine(segments, contentX + markerWidth, cursorY, textColor, textFontSize)
+        drawSegmentsLine(segments, contentX + markerTotalWidth, cursorY, textColor, textFontSize)
         cursorY += bodyLineHeight
       })
       cursorY += 2
@@ -748,7 +832,7 @@ export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, e
   const exportableText = resolveExportableMessageText(text)
   const displayText = removeExportMarkers(text)
   const lines = parseRichTextMarkdown(displayText || '')
-  const isExportable = isAssistant && Boolean(exportableText)
+  const isExportable = isAssistant && Boolean(exportableText) && shouldOfferExportActions(exportableText || displayText)
 
   if (isAssistant) {
     return (

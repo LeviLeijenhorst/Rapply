@@ -15,7 +15,8 @@ export type RichTextLine =
   | { kind: 'paragraph'; text: string; segments: RichTextInlineSegment[] }
 
 export const richTextSharedFormatting = {
-  headingFontSize: 18,
+  headingTwoFontSize: 20,
+  headingThreeFontSize: 16,
   headingLineHeight: 24,
   headingFontWeight: '700' as const,
   paragraphFontSize: 14,
@@ -28,16 +29,13 @@ export const richTextSharedFormatting = {
   editorFontSize: 17,
   editorLineHeight: 24,
   editorListIndent: 28,
-  editorNumberMarkerWidth: 20,
+  editorNumberMarkerWidth: 26,
   editorNumberMarkerGap: 8,
 } as const
 
 export function getRichTextEditorCss(className: string) {
   const selector = `.${className}`
   const listIndent = `${richTextSharedFormatting.editorListIndent}px`
-  const markerWidth = `${richTextSharedFormatting.editorNumberMarkerWidth}px`
-  const markerGap = `${richTextSharedFormatting.editorNumberMarkerGap}px`
-  const markerOffset = `calc((${markerWidth} + ${markerGap}) * -1)`
   return [
     `${selector} p, ${selector} div {`,
     `  margin: 0;`,
@@ -45,10 +43,15 @@ export function getRichTextEditorCss(className: string) {
     `  line-height: ${richTextSharedFormatting.editorLineHeight}px;`,
     `}`,
     `${selector} h2, ${selector} h3 {`,
-    `  margin: 0;`,
-    `  font-size: ${richTextSharedFormatting.headingFontSize}px;`,
-    `  line-height: ${richTextSharedFormatting.headingLineHeight}px;`,
-    `  font-weight: ${richTextSharedFormatting.headingFontWeight};`,
+      `  margin: 0;`,
+      `  line-height: ${richTextSharedFormatting.headingLineHeight}px;`,
+      `  font-weight: ${richTextSharedFormatting.headingFontWeight};`,
+    `}`,
+    `${selector} h2 {`,
+    `  font-size: ${richTextSharedFormatting.headingTwoFontSize}px;`,
+    `}`,
+    `${selector} h3 {`,
+    `  font-size: ${richTextSharedFormatting.headingThreeFontSize}px;`,
     `}`,
     `${selector} blockquote {`,
     `  margin: 0;`,
@@ -67,25 +70,10 @@ export function getRichTextEditorCss(className: string) {
     `  line-height: ${richTextSharedFormatting.listLineHeight}px;`,
     `}`,
     `${selector} ul > li::marker {`,
-    `  font-weight: ${richTextSharedFormatting.listMarkerFontWeight};`,
+      `  font-weight: ${richTextSharedFormatting.listMarkerFontWeight};`,
     `}`,
-    `${selector} ol {`,
-    `  list-style: none;`,
-    `  counter-reset: richTextOrdered var(--rich-text-ordered-start, 0);`,
-    `}`,
-    `${selector} ol > li {`,
-    `  position: relative;`,
-    `  counter-increment: richTextOrdered;`,
-    `}`,
-    `${selector} ol > li::before {`,
-    `  content: counter(richTextOrdered) '.';`,
-    `  position: absolute;`,
-    `  left: ${markerOffset};`,
-    `  width: ${markerWidth};`,
-    `  text-align: right;`,
-    `  font-size: ${richTextSharedFormatting.listFontSize}px;`,
-    `  line-height: ${richTextSharedFormatting.listLineHeight}px;`,
-    `  font-weight: ${richTextSharedFormatting.listMarkerFontWeight};`,
+    `${selector} ol > li::marker {`,
+      `  font-weight: ${richTextSharedFormatting.listMarkerFontWeight};`,
     `}`,
   ].join('\n')
 }

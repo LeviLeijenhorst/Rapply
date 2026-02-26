@@ -266,8 +266,11 @@ export function NewSessionModal({
   const { height: windowHeight, width: windowWidth } = useWindowDimensions()
   const templates = data.templates ?? []
   const reportTypeTemplates = useMemo(() => {
+    if (selectedOption === 'verslag') {
+      return templates
+    }
     return templates.filter((template) => isGespreksverslagTemplate(template))
-  }, [templates])
+  }, [selectedOption, templates])
   const defaultTemplateId = useMemo(() => {
     const standardTemplate = reportTypeTemplates.find((template) => {
       const normalizedName = template.name.trim().toLowerCase()

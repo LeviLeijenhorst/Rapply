@@ -16,6 +16,12 @@ function requireTranscript(transcript: string) {
 }
 
 type SummaryTemplate = { name: string; sections: { title: string; description: string }[] }
+type ExtractedReportContext = {
+  clientEmployerLines: string[]
+  reportDate: string
+  wvpWeekNumber: string
+  firstSickDay: string
+}
 
 const conservativeChunkTokenBudget = 8_000
 const conservativeMergeTokenBudget = 10_000
@@ -95,6 +101,135 @@ function removeSpeakerLabelsFromOutput(value: string): string {
     .trim()
 }
 
+function normalizeHeading(value: string): string {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+}
+
+function extractReportContextFromTranscript(transcript: string): ExtractedReportContext | null {
+  const match = String(transcript || "").match(/\[COACHSCRIBE_REPORT_CONTEXT\]([\s\S]*?)\[\/COACHSCRIBE_REPORT_CONTEXT\]/i)
+  if (!match) return null
+  const contextLines = String(match[1] || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const parsed: ExtractedReportContext = {
+    clientEmployerLines: [],
+    reportDate: "",
+    wvpWeekNumber: "",
+    firstSickDay: "",
+  }
+
+  for (const line of contextLines) {
+    if (line.startsWith("CLIENT_EMPLOYER_LINE=")) {
+      const value = normalizeText(line.slice("CLIENT_EMPLOYER_LINE=".length))
+      if (value) parsed.clientEmployerLines.push(value)
+      continue
+    }
+    if (line.startsWith("REPORT_DATE=")) {
+      parsed.reportDate = normalizeText(line.slice("REPORT_DATE=".length))
+      continue
+    }
+    if (line.startsWith("WVP_WEEK_NUMBER=")) {
+      parsed.wvpWeekNumber = normalizeText(line.slice("WVP_WEEK_NUMBER=".length))
+      continue
+    }
+    if (line.startsWith("FIRST_SICK_DAY=")) {
+      parsed.firstSickDay = normalizeText(line.slice("FIRST_SICK_DAY=".length))
+    }
+  }
+  return parsed
+}
+
+function bullets(lines: string[]): string[] {
+  const normalized = lines.map((line) => normalizeText(line)).filter(Boolean)
+  if (!normalized.length) return ["-"]
+  return normalized.map((line) => `- ${line}`)
+}
+
+function buildDateWeekBullets(context: ExtractedReportContext | null): string[] {
+  if (!context) return ["-"]
+  return bullets([
+    context.reportDate ? `Datum: ${context.reportDate}` : "",
+    context.wvpWeekNumber ? `Weeknummer (WvP): ${context.wvpWeekNumber}` : "",
+  ])
+}
+
+function buildFirstSickDayBullets(context: ExtractedReportContext | null): string[] {
+  if (!context) return ["-"]
+  return bullets([context.firstSickDay ? `Eerste ziektedag: ${context.firstSickDay}` : ""])
+}
+
+function buildDateWeekFirstSickDayBullets(context: ExtractedReportContext | null): string[] {
+  if (!context) return ["-"]
+  return bullets([
+    context.reportDate ? `Datum: ${context.reportDate}` : "",
+    context.wvpWeekNumber ? `Weeknummer (WvP): ${context.wvpWeekNumber}` : "",
+    context.firstSickDay ? `Eerste ziektedag: ${context.firstSickDay}` : "",
+  ])
+}
+
+function buildClientEmployerBullets(context: ExtractedReportContext | null): string[] {
+  if (!context) return ["-"]
+  return bullets(context.clientEmployerLines)
+}
+
+function applyReportSectionPolicies(summary: string, context: ExtractedReportContext | null): string {
+  const lines = String(summary || "").split(/\r?\n/)
+  const headingIndexes = lines
+    .map((line, index) => ({ line, index }))
+    .filter((item) => /^###\s+/.test(item.line))
+    .map((item) => item.index)
+  if (headingIndexes.length === 0) return summary
+
+  const sections = headingIndexes.map((start, idx) => ({
+    start,
+    end: idx + 1 < headingIndexes.length ? headingIndexes[idx + 1] - 1 : lines.length - 1,
+    title: lines[start].replace(/^###\s+/, "").trim(),
+  }))
+
+  for (let i = sections.length - 1; i >= 0; i -= 1) {
+    const section = sections[i]
+    const normalizedTitle = normalizeHeading(section.title)
+    const hasDate = normalizedTitle.includes("datum")
+    const hasWeek = normalizedTitle.includes("weeknummer") || normalizedTitle.includes("wvp")
+    const hasFirstSickDay = normalizedTitle.includes("eerste ziektedag")
+    const isClientEmployerSection =
+      (normalizedTitle.includes("client") && normalizedTitle.includes("werkgever")) ||
+      normalizedTitle.includes("clientgegevens")
+    const isAlwaysBlankSection =
+      normalizedTitle.includes("aanwezigen") ||
+      normalizedTitle.includes("deelnemers") ||
+      normalizedTitle.includes("ondertekening")
+
+    let replacementBody: string[] | null = null
+    if (isAlwaysBlankSection) {
+      replacementBody = ["-"]
+    } else if (isClientEmployerSection) {
+      replacementBody = buildClientEmployerBullets(context)
+    } else if (hasDate && hasWeek && hasFirstSickDay) {
+      replacementBody = buildDateWeekFirstSickDayBullets(context)
+    } else if (hasDate && hasWeek) {
+      replacementBody = buildDateWeekBullets(context)
+    } else if (hasFirstSickDay) {
+      replacementBody = buildFirstSickDayBullets(context)
+    }
+    if (!replacementBody) continue
+
+    const bodyStart = section.start + 1
+    const bodyEnd = section.end
+    lines.splice(bodyStart, Math.max(0, bodyEnd - bodyStart + 1), ...replacementBody)
+  }
+
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()
+}
+
 // Intent: generateSummaryWithAzureOpenAi
 export async function generateSummaryWithAzureOpenAi(params: { transcript: string; templateKey?: string; template?: SummaryTemplate }): Promise<string> {
   const deployment = String(env.azureOpenAiSummaryDeployment || "").trim()
@@ -103,6 +238,7 @@ export async function generateSummaryWithAzureOpenAi(params: { transcript: strin
   }
 
   const transcript = requireTranscript(params.transcript)
+  const reportContext = extractReportContextFromTranscript(transcript)
 
   const templateKeyRaw = normalizeText(params.templateKey)
   const templateKey =
@@ -135,7 +271,7 @@ export async function generateSummaryWithAzureOpenAi(params: { transcript: strin
     if (!normalizedSummary) {
       throw new Error("Summary generation failed")
     }
-    return removeSpeakerLabelsFromOutput(normalizedSummary)
+    return applyReportSectionPolicies(removeSpeakerLabelsFromOutput(normalizedSummary), reportContext)
   }
 
   const partialSummaries: string[] = []
@@ -164,7 +300,7 @@ export async function generateSummaryWithAzureOpenAi(params: { transcript: strin
   if (!merged) {
     throw new Error("Summary generation failed")
   }
-  return removeSpeakerLabelsFromOutput(merged)
+  return applyReportSectionPolicies(removeSpeakerLabelsFromOutput(merged), reportContext)
 }
 
 // Intent: buildSummarySystemPrompt
@@ -174,6 +310,8 @@ function buildSummarySystemPrompt() {
     "Noem geen details die niet in de tekst staan. " +
     "Schrijf geen persoonsgegevens zoals e-mailadressen of telefoonnummers. " +
     "Noem of gebruik nooit sprekerlabels zoals 'speaker_1', 'speaker 1', 'spreker 1' of vergelijkbare labels. " +
+    "Als de input een blok [COACHSCRIBE_REPORT_CONTEXT] bevat, gebruik dan uitsluitend die context voor client- en werkgeversgegevens, datum/weeknummer (WvP) en eerste ziektedag. Leid deze gegevens nooit af uit transcript-zinnen. " +
+    "Laat de onderdelen 'Ondertekening door werkgever en werknemer', 'Aanwezigen', 'Deelnemers' en 'Ondertekening' altijd leeg (alleen '-'). " +
     "Gebruik alleen Markdown met kopjes die beginnen met '### ' en bullet points die beginnen met '- '."
   )
 }

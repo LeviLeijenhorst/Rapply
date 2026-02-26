@@ -3,6 +3,7 @@ import { Animated, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimens
 
 import { AnimatedMainContent } from '../components/AnimatedMainContent'
 import { ChevronLeftIcon } from '../components/icons/ChevronLeftIcon'
+import { ChevronRightIcon } from '../components/icons/ChevronRightIcon'
 import { AanpassenIcon } from '../components/icons/AanpassenIcon'
 import { CoacheeAvatarIcon } from '../components/icons/CoacheeAvatarIcon'
 import { CalendarCircleIcon } from '../components/icons/CalendarCircleIcon'
@@ -65,6 +66,7 @@ import { ConfirmChatClearModal } from '../components/sessionDetail/ConfirmChatCl
 import { AnimatedOverlayModal } from '../components/AnimatedOverlayModal'
 import { fetchBillingStatus, type BillingStatus } from '../services/billing'
 import { ReportContextModal } from '../components/sessionDetail/ReportContextModal'
+import { formatCoacheeDetailsForPrompt, formatEmployerDetailsForPrompt } from '../utils/coacheeProfile'
 import { useToast } from '../toast/ToastProvider'
 
 type Props = {
@@ -117,6 +119,18 @@ function inferTemplateIdFromSessionTitle(
   return bestMatch?.score ? bestMatch.id : null
 }
 
+function extractLegacyProfileFallback(rawValue: string | null | undefined): string {
+  const trimmed = String(rawValue || '').trim()
+  if (!trimmed) return ''
+  try {
+    const parsed = JSON.parse(trimmed)
+    if (parsed && typeof parsed === 'object') return ''
+  } catch {
+    return trimmed
+  }
+  return ''
+}
+
 type TemplatePickerIntent = 'generate' | 'write'
 type CalendarCell = {
   isoDate: string
@@ -126,6 +140,14 @@ type CalendarCell = {
 
 const emptyTemplateOptionId = '__empty_template__'
 const dayLabels = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo']
+const missingCoacheeReportsGenerateError = 'Geen verslagen binnen deze cliënt om dit document op te baseren.'
+
+function formatQuickQuestionSelectionText(text: string): string {
+  const trimmed = String(text || '').trim()
+  if (!trimmed) return ''
+  if (trimmed.toLowerCase().startsWith('ik wil')) return trimmed
+  return `Ik wil ${trimmed}`
+}
 const missingCoacheeGenerateError = 'Wijs dit verslag eerst aan een cliënt toe om het te genereren.'
 
 function pad2(value: number): string {
@@ -275,6 +297,7 @@ export function SessieDetailScreen({
   const { showErrorToast } = useToast()
   const e2ee = useE2ee()
   const session = data.sessions.find((item) => item.id === sessionId) ?? null
+  const coachee = session?.coacheeId ? data.coachees.find((item) => item.id === session.coacheeId) ?? null : null
   const isWrittenSession = session?.kind === 'written'
   const writtenReportText = data.writtenReports.find((report) => report.sessionId === sessionId)?.text ?? ''
   const reportText = isWrittenSession ? writtenReportText : (session?.summary ?? '')
@@ -337,16 +360,22 @@ export function SessieDetailScreen({
   const dateHoverTargetRef = useRef<any>(null)
   const dateCalendarPanelRef = useRef<any>(null)
   const templates = data.templates ?? []
+  const isConversationSession = session?.kind === 'recording' || session?.kind === 'upload'
+  const shouldHideTranscriptLinkedTemplates = isWrittenSession && !hasTranscript
+  const templatesForSession = useMemo(() => {
+    if (isConversationSession) {
+      return templates.filter((template) => isGespreksverslagTemplate(template))
+    }
+    if (shouldHideTranscriptLinkedTemplates) {
+      return templates.filter((template) => !isGespreksverslagTemplate(template))
+    }
+    return templates
+  }, [isConversationSession, shouldHideTranscriptLinkedTemplates, templates])
   const templatePickerTemplates = useMemo(
-    () => templates.map((template) => ({ id: template.id, name: getTemplateDisplayName(template.name) })),
-    [templates],
+    () => templatesForSession.map((template) => ({ id: template.id, name: getTemplateDisplayName(template.name) })),
+    [templatesForSession],
   )
   const templatePickerDefaultTemplateId = useMemo(() => templatePickerTemplates[0]?.id ?? null, [templatePickerTemplates])
-  const isConversationSession = session?.kind === 'recording' || session?.kind === 'upload'
-  const templatesForSession = useMemo(() => {
-    if (!isConversationSession) return templates
-    return templates.filter((template) => isGespreksverslagTemplate(template))
-  }, [isConversationSession, templates])
   const quickQuestionTemplates = useMemo(
     () =>
       templatesForSession.map((template) => {
@@ -537,8 +566,8 @@ export function SessieDetailScreen({
     const padding = 12
     const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200
     const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800
-    const width = 320
-    const estimatedHeight = 336
+    const width = 336
+    const estimatedHeight = 380
     const left = Math.min(Math.max(padding, dateMenuAnchor.left), Math.max(padding, viewportWidth - width - padding))
     const top = Math.min(Math.max(padding, dateMenuAnchor.top), Math.max(padding, viewportHeight - estimatedHeight - padding))
     return { left, top, width }
@@ -555,6 +584,38 @@ export function SessieDetailScreen({
     return { left, top, width }
   }, [titleMenuAnchor])
 
+  function buildSummaryInputWithContext(sourceText: string): string {
+    const transcript = String(sourceText || '').trim()
+    if (!transcript) return ''
+
+    const clientEmployerLines: string[] = []
+    const parsedClientLines = formatCoacheeDetailsForPrompt(coachee?.clientDetails ?? '')
+    const parsedEmployerLines = formatEmployerDetailsForPrompt(coachee?.employerDetails ?? '')
+    if (parsedClientLines.length > 0) clientEmployerLines.push(...parsedClientLines)
+    if (parsedEmployerLines.length > 0) clientEmployerLines.push(...parsedEmployerLines)
+    const legacyClientDetails = extractLegacyProfileFallback(coachee?.clientDetails)
+    const legacyEmployerDetails = extractLegacyProfileFallback(coachee?.employerDetails)
+    if (parsedClientLines.length === 0 && legacyClientDetails) {
+      clientEmployerLines.push(`Cliëntgegevens: ${legacyClientDetails}`)
+    }
+    if (parsedEmployerLines.length === 0 && legacyEmployerDetails) {
+      clientEmployerLines.push(`Werkgeversgegevens: ${legacyEmployerDetails}`)
+    }
+
+    const reportDate = String(session?.reportDate || formatSessionDate(session?.createdAtUnixMs ?? Date.now()) || '').trim()
+    const wvpWeekNumber = String(session?.wvpWeekNumber || '').trim()
+    const firstSickDay = String(session?.reportFirstSickDay || coachee?.firstSickDay || '').trim()
+
+    const contextLines: string[] = ['[COACHSCRIBE_REPORT_CONTEXT]']
+    contextLines.push(...clientEmployerLines.map((line) => `CLIENT_EMPLOYER_LINE=${line}`))
+    contextLines.push(`REPORT_DATE=${reportDate}`)
+    contextLines.push(`WVP_WEEK_NUMBER=${wvpWeekNumber}`)
+    contextLines.push(`FIRST_SICK_DAY=${firstSickDay}`)
+    contextLines.push('[/COACHSCRIBE_REPORT_CONTEXT]')
+
+    return `${contextLines.join('\n')}\n\n${transcript}`.trim()
+  }
+
   function updateCoacheeMenuAnchor() {
     const rect = coacheeButtonRef.current?.getBoundingClientRect?.()
     if (!rect) return
@@ -570,7 +631,7 @@ export function SessieDetailScreen({
   function updateDateMenuAnchor() {
     const rect = dateHoverTargetRef.current?.getBoundingClientRect?.()
     if (!rect) return
-    setDateMenuAnchor({ left: rect.left, top: rect.bottom + 8, width: 320 })
+    setDateMenuAnchor({ left: rect.left, top: rect.bottom + 8, width: 336 })
   }
 
   function applySessionTitle(nextTitle: string) {
@@ -617,7 +678,8 @@ export function SessieDetailScreen({
   }
 
   function openTemplatePickerForGenerate() {
-    if (!session?.coacheeId) {
+    const generationSource = String(trajectoryReportSourceText || '').trim()
+    if (!session?.coacheeId && !generationSource) {
       showErrorToast(missingCoacheeGenerateError, missingCoacheeGenerateError)
       return
     }
@@ -998,14 +1060,13 @@ export function SessieDetailScreen({
   }
 
   async function sendChatMessage(messageInput: string | { text: string; promptText?: string; templateId?: string }) {
-    const visibleText = typeof messageInput === 'string' ? messageInput : messageInput.text
+    const visibleText = typeof messageInput === 'string' ? messageInput : formatQuickQuestionSelectionText(messageInput.text)
     const promptText = typeof messageInput === 'string' ? messageInput : messageInput.promptText
     const templateId = typeof messageInput === 'string' ? undefined : messageInput.templateId
     const isTemplatePrompt = typeof messageInput !== 'string' && Boolean(String(messageInput.promptText || '').trim())
     const trimmedText = visibleText.trim()
     const trimmedPromptText = String(promptText || '').trim() || trimmedText
     if (!trimmedText || !trimmedPromptText || isChatSending) return
-    if (!(await ensureSufficientChatMinutes())) return
 
     const pdfStartToken = '[[PDF_START]]'
     const pdfEndToken = '[[PDF_END]]'
@@ -1027,6 +1088,14 @@ export function SessieDetailScreen({
     setChatMessages(nextChatMessages)
     setComposerText('')
     setIsChatSending(true)
+    if (!(await ensureSufficientChatMinutes())) {
+      setChatMessages((previousMessages) => previousMessages.filter((message) => message.id !== nextUserMessage.id))
+      if (typeof messageInput === 'string') {
+        setComposerText(trimmedText)
+      }
+      setIsChatSending(false)
+      return
+    }
 
     try {
       const transcriptSystemMessages = buildConversationTranscriptSystemMessages({
@@ -1047,7 +1116,7 @@ export function SessieDetailScreen({
         const transcriptForTemplate = String(session?.transcript || '').trim() || String(writtenReportText || '').trim()
         if (transcriptForTemplate) {
           const responseText = await generateSummary({
-            transcript: transcriptForTemplate,
+            transcript: buildSummaryInputWithContext(transcriptForTemplate),
             template: templateSections.length > 0 ? { name: selectedTemplateForChat.name, sections: templateSections } : undefined,
           })
           setChatMessages((previousMessages) => [
@@ -1353,9 +1422,6 @@ export function SessieDetailScreen({
       transcriptionError: null,
     })
     setIsSummaryEditorOpen(false)
-    if (session?.kind === 'recording' || session?.kind === 'upload') {
-      setIsReportContextModalVisible(true)
-    }
   }
 
   function formatMinutesLabel(totalSeconds: number): string {
@@ -1484,7 +1550,11 @@ export function SessieDetailScreen({
           transcriptionError: null,
           summary: null,
         })
-        const generatedSummary = await generateSummary({ transcript, template: summaryTemplate, signal: summaryAbortController.signal })
+        const generatedSummary = await generateSummary({
+          transcript: buildSummaryInputWithContext(transcript),
+          template: summaryTemplate,
+          signal: summaryAbortController.signal,
+        })
         if (!isGenerationRunActive(runId)) return
         updateSession(sessionId, {
           summary: generatedSummary,
@@ -1523,18 +1593,16 @@ export function SessieDetailScreen({
 
   async function generateReportForTemplate(templateId: string) {
     if (session?.transcriptionStatus === 'transcribing' || session?.transcriptionStatus === 'generating') return
-    if (!session?.coacheeId) {
+    const generationSource = String(trajectoryReportSourceText || '').trim()
+    if (!session?.coacheeId && !generationSource) {
       showErrorToast(missingCoacheeGenerateError, missingCoacheeGenerateError)
       return
     }
-    const generationSource = String(trajectoryReportSourceText || '').trim()
     setForcedTranscriptionStatus(generationSource ? 'generating' : 'transcribing')
     if (isWrittenSession && !generationSource) {
       setForcedTranscriptionStatus(null)
-      updateSession(sessionId, {
-        transcriptionStatus: 'error',
-        transcriptionError: 'Geen geschreven verslag beschikbaar om te genereren.',
-      })
+      updateSession(sessionId, { transcriptionStatus: 'idle', transcriptionError: null })
+      showErrorToast(missingCoacheeReportsGenerateError, missingCoacheeReportsGenerateError)
       return
     }
     if (!generationSource && !(await ensureSufficientTranscriptionMinutes())) {
@@ -1603,7 +1671,7 @@ export function SessieDetailScreen({
       updateSession(sessionId, { transcriptionStatus: 'generating', transcriptionError: null, summary: null })
       console.log('[transcription][report] summary-generate-start', { sessionId })
       const summary = await generateSummary({
-        transcript,
+        transcript: buildSummaryInputWithContext(transcript),
         template: templateForSummary && templateForSummary.sections.length > 0 ? templateForSummary : undefined,
         signal: summaryAbortController.signal,
       })
@@ -2016,7 +2084,7 @@ export function SessieDetailScreen({
                 updateDateMenuAnchor()
                 setIsDateCalendarOpen(true)
               }}
-              style={styles.dateContainer}
+              style={({ hovered }) => [styles.dateContainer, hovered ? styles.dateContainerHovered : undefined]}
             >
               <CalendarCircleIcon size={24} />
               <Text isSemibold style={styles.dateText}>
@@ -2334,9 +2402,9 @@ export function SessieDetailScreen({
 
       <RichTextEditorModal
         visible={isWordEditorOpen}
-        title="Word bewerken"
+        title="Word-bestand bewerken"
         initialValue={wordEditorDraft}
-        saveLabel="Exporteer Word"
+        saveLabel="Exporteren naar Word"
         onClose={() => setIsWordEditorOpen(false)}
         onSave={async (value) => {
           await exportMessageToWord(value, wordEditorTitle, {
@@ -2616,9 +2684,9 @@ export function SessieDetailScreen({
                   onPress={() => setVisibleDateMonth((previous) => new Date(previous.getFullYear(), previous.getMonth() - 1, 1))}
                   style={({ hovered }) => [styles.dateCalendarNavButton, hovered ? styles.dateCalendarNavButtonHovered : undefined]}
                 >
-                  <Text isBold style={styles.dateCalendarNavButtonText}>
-                    {'<'}
-                  </Text>
+                  <View style={styles.rotatedChevron}>
+                    <ChevronRightIcon color={colors.textStrong} size={18} />
+                  </View>
                 </Pressable>
                 <Text isSemibold style={styles.dateCalendarMonthTitle}>
                   {dateMonthTitle}
@@ -2627,9 +2695,7 @@ export function SessieDetailScreen({
                   onPress={() => setVisibleDateMonth((previous) => new Date(previous.getFullYear(), previous.getMonth() + 1, 1))}
                   style={({ hovered }) => [styles.dateCalendarNavButton, hovered ? styles.dateCalendarNavButtonHovered : undefined]}
                 >
-                  <Text isBold style={styles.dateCalendarNavButtonText}>
-                    {'>'}
-                  </Text>
+                  <ChevronRightIcon color={colors.textStrong} size={18} />
                 </Pressable>
               </View>
               <View style={styles.dateCalendarWeekRow}>
@@ -2811,6 +2877,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  dateContainerHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
   dateText: {
     fontSize: 16,
     lineHeight: 20,
@@ -2869,6 +2938,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  rotatedChevron: {
+    transform: [{ rotate: '180deg' }],
+  },
   dateCalendarNavButtonHovered: {
     backgroundColor: '#FCEFF6',
   },
@@ -2904,8 +2976,8 @@ const styles = StyleSheet.create({
   },
   dateCalendarDayButton: {
     width: `${100 / 7}%` as any,
-    height: 34,
-    borderRadius: 8,
+    aspectRatio: 1,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -18,7 +18,8 @@ type HsvColor = {
 }
 
 const DEFAULT_HEX_COLOR = '#BE0165'
-const SATURATION_SIZE = 168
+const SATURATION_WIDTH = 336
+const SATURATION_HEIGHT = 168
 const HUE_TRACK_HEIGHT = 18
 const SATURATION_THUMB_SIZE = 16
 const SATURATION_THUMB_EXPANDED_HEIGHT = 24
@@ -426,7 +427,7 @@ export function PracticeColorPicker({ value, onPreviewChange, onCommit }: Props)
 
 const styles = StyleSheet.create({
   container: {
-    width: SATURATION_SIZE,
+    width: SATURATION_WIDTH,
     maxWidth: '100%',
     gap: 10,
     ...( { overflow: 'visible' } as any ),
@@ -445,8 +446,8 @@ const styles = StyleSheet.create({
     ...( { cursor: 'crosshair', position: 'relative' } as any ),
   },
   saturationFrame: {
-    width: SATURATION_SIZE,
-    height: SATURATION_SIZE,
+    width: SATURATION_WIDTH,
+    height: SATURATION_HEIGHT,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -472,7 +473,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
   },
   hueArea: {
-    width: SATURATION_SIZE,
+    width: SATURATION_WIDTH,
     height: HUE_TRACK_HEIGHT,
     borderRadius: 999,
     borderWidth: 1,

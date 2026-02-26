@@ -246,7 +246,7 @@ export function ReportPanel({
             <ToolbarIconButton
               onPress={onExportSummaryAsWord}
               disabled={!hasSummary}
-              tooltip="Word exporteren"
+              tooltip="Exporteren naar Word"
               icon={({ isHovered, disabled }) => <ShareTextIcon color={disabled ? '#BDB6B2' : isHovered ? colors.selected : '#8E8480'} size={18} />}
             />
           ) : null}
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   sectionTitle: {
-    fontSize: richTextSharedFormatting.headingFontSize,
+    fontSize: richTextSharedFormatting.headingTwoFontSize,
     lineHeight: richTextSharedFormatting.headingLineHeight,
     fontWeight: richTextSharedFormatting.headingFontWeight,
     color: colors.textStrong,
