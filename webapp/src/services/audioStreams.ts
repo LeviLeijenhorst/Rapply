@@ -51,6 +51,11 @@ export async function appendAudioStreamChunkRemote(params: {
   durationMilliseconds: number
   encryptedChunk: Uint8Array
 }): Promise<{ ok: true }> {
+  const requestBody = (() => {
+    const output = new Uint8Array(params.encryptedChunk.byteLength)
+    output.set(params.encryptedChunk)
+    return output.buffer
+  })()
   const safeId = encodeURIComponent(params.audioStreamId)
   const response = await fetchSecureApi(`/audio-streams/${safeId}/chunks`, {
     method: 'POST',
@@ -60,7 +65,7 @@ export async function appendAudioStreamChunkRemote(params: {
       'x-start-milliseconds': String(params.startMilliseconds),
       'x-duration-milliseconds': String(params.durationMilliseconds),
     },
-    body: params.encryptedChunk,
+    body: requestBody,
   })
   return response.json()
 }

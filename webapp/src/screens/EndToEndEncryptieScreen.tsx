@@ -2,8 +2,8 @@ import React, { useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
 import { useE2ee } from '../e2ee/E2eeProvider'
-import { colors } from '../theme/colors'
-import { Text } from '../components/Text'
+import { colors } from '../design/theme/colors'
+import { Text } from '../ui/Text'
 import { useToast } from '../toast/ToastProvider'
 
 type Props = {
@@ -122,3 +122,4 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
   },
 })
+

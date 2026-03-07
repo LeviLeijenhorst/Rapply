@@ -1,7 +1,7 @@
 import React from 'react'
 
-import { Text } from './Text'
-import { colors } from '../theme/colors'
+import { Text } from '../ui/Text'
+import { colors } from '../design/theme/colors'
 
 type Props = {
   text: string
@@ -106,4 +106,5 @@ const styles = {
     color: colors.selected,
   },
 } as const
+
 

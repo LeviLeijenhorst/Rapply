@@ -31,11 +31,11 @@ function chooseMimeType() {
   }
 
   const candidates = [
-    'audio/mp4',
     'audio/webm;codecs=opus',
     'audio/webm',
     'audio/ogg;codecs=opus',
     'audio/ogg',
+    'audio/mp4',
   ]
 
   for (const candidate of candidates) {
@@ -45,6 +45,11 @@ function chooseMimeType() {
     if (MediaRecorder.isTypeSupported(candidate)) return candidate
   }
   return ''
+}
+
+function chooseFallbackRecordedMimeType() {
+  if (isSafariBrowser()) return 'audio/mp4'
+  return 'audio/webm'
 }
 
 export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blob; durationSeconds: number }) => void }) {
@@ -192,7 +197,8 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
       lastMimeType: lastMimeTypeRef.current || '(empty)',
     })
     const firstChunkMimeType = recordedChunksRef.current.find((chunk) => typeof chunk.type === 'string' && chunk.type.trim().length > 0)?.type || ''
-    const mimeType = lastMimeTypeRef.current || firstChunkMimeType || chosenMimeType || 'audio/mp4'
+    const preferredMimeType = lastMimeTypeRef.current || firstChunkMimeType || chosenMimeType || ''
+    const mimeType = preferredMimeType || chooseFallbackRecordedMimeType()
     const blob = new Blob(recordedChunksRef.current, { type: mimeType })
     if (blob.size <= 0) {
       console.error('[useBrowserAudioRecorder] empty blob after stop', {

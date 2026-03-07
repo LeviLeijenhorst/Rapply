@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
-import { LoadingSpinner } from '../LoadingSpinner'
+import { LoadingSpinner } from '../../ui/LoadingSpinner'
 
-import { colors } from '../../theme/colors'
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
-import { Text } from '../Text'
-import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
+import { colors } from '../../design/theme/colors'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
+import { Text } from '../../ui/Text'
+import { ModalCloseDarkIcon } from '../../icons/ModalCloseDarkIcon'
 import { toUserFriendlyErrorMessage } from '../../utils/userFriendlyError'
 import { useToast } from '../../toast/ToastProvider'
 
@@ -213,3 +213,4 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+

@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native'
 
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
-import { colors } from '../../theme/colors'
-import { Text } from '../Text'
-import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
-import { PlusIcon } from '../icons/PlusIcon'
-import { TemplateEditIcon } from '../icons/TemplateEditIcon'
-import { TrashIcon } from '../icons/TrashIcon'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
+import { colors } from '../../design/theme/colors'
+import { Text } from '../../ui/Text'
+import { ModalCloseDarkIcon } from '../../icons/ModalCloseDarkIcon'
+import { PlusIcon } from '../../icons/PlusIcon'
+import { TemplateEditIcon } from '../../icons/TemplateEditIcon'
+import { TrashIcon } from '../../icons/TrashIcon'
 import { ConfirmDeleteDialog } from '../../foundation/ui/modals/ConfirmDeleteDialog'
 import { RichTextInlineSegment, parseRichTextMarkdown, richTextSharedFormatting } from '../../utils/richTextFormatting'
 
@@ -48,7 +48,7 @@ function renderInlineSegments(segments: RichTextInlineSegment[], textStyle: any)
 // Creates the default template draft used when opening the create flow.
 function createEmptyTemplate(): TemplateEditModalTemplate {
   return {
-    name: 'Custom template #1',
+    name: 'Nieuw formulier',
     description: '',
     sections: [{ id: `section-${Date.now()}`, title: '', description: '' }],
   }
@@ -78,7 +78,7 @@ export function TemplateEditModal({ visible, mode, template, readOnly = false, o
   if (!visible) return null
 
   const isReadOnly = mode === 'edit' && readOnly
-  const title = mode === 'edit' ? activeTemplate.name : 'Template maken'
+  const title = mode === 'edit' ? activeTemplate.name : 'Formulier maken'
   const primaryButtonLabel = mode === 'edit' ? 'Opslaan' : 'Toevoegen'
 
   return (
@@ -101,7 +101,7 @@ export function TemplateEditModal({ visible, mode, template, readOnly = false, o
         <ScrollView showsVerticalScrollIndicator style={styles.sectionsScroll} contentContainerStyle={styles.sectionsScrollContent}>
           {isReadOnly ? (
             <View style={styles.readOnlyContent}>
-              {readOnlyLines.length === 0 ? <Text style={styles.readOnlyDescriptionText}>Geen beschrijving beschikbaar voor deze standaardtemplate.</Text> : null}
+              {readOnlyLines.length === 0 ? <Text style={styles.readOnlyDescriptionText}>Geen beschrijving beschikbaar voor dit standaardformulier.</Text> : null}
               {readOnlyLines.map((line, index) => {
                 if (line.kind === 'empty') return <View key={`empty-${index}`} style={styles.readOnlyEmptyRow} />
                 if (line.kind === 'divider') return <View key={`divider-${index}`} style={styles.readOnlyDivider} />
@@ -136,7 +136,7 @@ export function TemplateEditModal({ visible, mode, template, readOnly = false, o
                     <TextInput
                       value={activeTemplate.name}
                       onChangeText={(name) => setActiveTemplate((previousTemplate) => ({ ...previousTemplate, name }))}
-                      placeholder="Template naam..."
+                      placeholder="Formuliernaam..."
                       placeholderTextColor="#656565"
                       editable={!isReadOnly}
                       style={[styles.textFieldInput, inputWebStyle]}
@@ -150,7 +150,7 @@ export function TemplateEditModal({ visible, mode, template, readOnly = false, o
                     <TextInput
                       value={activeTemplate.description}
                       onChangeText={(description) => setActiveTemplate((previousTemplate) => ({ ...previousTemplate, description }))}
-                      placeholder="Korte beschrijving van deze template..."
+                      placeholder="Korte beschrijving van dit formulier..."
                       placeholderTextColor="#656565"
                       editable={!isReadOnly}
                       style={[styles.textFieldInput, inputWebStyle]}
@@ -584,3 +584,4 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+

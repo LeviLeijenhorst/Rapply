@@ -8,10 +8,10 @@ import {
   ViewStyle,
 } from "react-native";
 
-import { AnimatedWidthContainer } from "../../../components/AnimatedWidthContainer";
-import { SearchIcon } from "../../../components/icons/SearchIcon";
-import { Text } from "../../../components/Text";
-import { colors } from "../../../theme/colors";
+import { AnimatedWidthContainer } from "../../../ui/AnimatedWidthContainer";
+import { SearchIcon } from "../../../icons/SearchIcon";
+import { Text } from "../../../ui/Text";
+import { colors } from "../../../design/theme/colors";
 import { brandColors, fontSizes, radius, spacing } from "../../theme/tokens";
 import { SearchField } from "./SearchField";
 
@@ -100,3 +100,5 @@ const styles = StyleSheet.create({
     color: brandColors.neutral700,
   },
 });
+
+

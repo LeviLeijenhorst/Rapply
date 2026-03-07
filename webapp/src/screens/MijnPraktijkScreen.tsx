@@ -1,15 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Image, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
+import { Image, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
 
-import { CircleCloseIcon } from '../components/icons/CircleCloseIcon'
+import { CircleCloseIcon } from '../icons/CircleCloseIcon'
 import { PracticeColorPicker } from '../components/PracticeColorPicker'
-import { EditSmallIcon } from '../components/icons/EditSmallIcon'
-import { PracticeExportIcon } from '../components/icons/PracticeExportIcon'
-import { Text } from '../components/Text'
+import { PracticeExportIcon } from '../icons/PracticeExportIcon'
+import { Text } from '../ui/Text'
 import { ConfirmDeleteDialog } from '../foundation/ui/modals/ConfirmDeleteDialog'
 import { brandColors, fontSizes, radius } from '../foundation/theme/tokens'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
-import { colors } from '../theme/colors'
+import { colors } from '../design/theme/colors'
 
 const brandControlSize = 110
 const A4_ASPECT_RATIO = 210 / 297
@@ -19,6 +18,71 @@ function normalizeHexColor(value: string) {
   const trimmed = String(value || '').trim()
   if (!/^#[0-9a-fA-F]{6}$/.test(trimmed)) return '#BE0165'
   return trimmed.toUpperCase()
+}
+
+function splitPostalCodeCity(value: string): { postalCode: string; city: string } {
+  const raw = String(value || '').trim()
+  if (!raw) return { postalCode: '', city: '' }
+  const match = raw.match(/\b\d{4}\s?[a-z]{2}\b/i)
+  if (!match || match.index === undefined) return { postalCode: '', city: raw }
+  return {
+    postalCode: String(match[0] || '').toUpperCase().replace(/\s+/g, ''),
+    city: raw
+      .slice(match.index + match[0].length)
+      .replace(/^[,\s-]+/, '')
+      .trim(),
+  }
+}
+
+function splitStreetAndHouseNumber(value: string): { street: string; houseNumber: string } {
+  const raw = String(value || '').trim()
+  if (!raw) return { street: '', houseNumber: '' }
+  const match = raw.match(/^(.*?)(\d+[a-zA-Z0-9\-\/]*)$/)
+  if (!match) return { street: raw, houseNumber: '' }
+  return {
+    street: String(match[1] || '').trim().replace(/,\s*$/, ''),
+    houseNumber: String(match[2] || '').trim(),
+  }
+}
+
+function combineStreetAndHouseNumber(street: string, houseNumber: string): string {
+  return [String(street || '').trim(), String(houseNumber || '').trim()].filter(Boolean).join(' ').trim()
+}
+
+function normalizeNameValue(value: string): string {
+  const raw = String(value || '')
+  if (!raw) return ''
+  return raw.charAt(0).toUpperCase() + raw.slice(1)
+}
+
+function normalizeEmailValue(value: string): string {
+  return String(value || '').trim().toLowerCase()
+}
+
+function normalizePhoneValue(value: string): string {
+  const raw = String(value || '')
+  let sanitized = raw.replace(/[^\d+]/g, '')
+  const hasLeadingPlus = sanitized.startsWith('+')
+  sanitized = sanitized.replace(/\+/g, '')
+  return `${hasLeadingPlus ? '+' : ''}${sanitized}`
+}
+
+function normalizePostalCodeValue(value: string): string {
+  return String(value || '').toUpperCase().replace(/\s+/g, ' ').trim()
+}
+
+function placeholderForOrganizationLabel(label: string): string {
+  if (label === 'Naam organisatie') return 'Bijv. Voorbeeld B.V.'
+  if (label === 'Postadres straatnaam' || label === 'Bezoekadres straatnaam') return 'Bijv. Hoofdstraat'
+  if (label === 'Postadres huisnummer' || label === 'Bezoekadres huisnummer') return 'Bijv. 12A'
+  if (label === 'Postadres postcode' || label === 'Bezoekadres postcode') return 'Bijv. 1234 AB'
+  if (label === 'Postadres plaats' || label === 'Bezoekadres plaats') return 'Bijv. Utrecht'
+  if (label === 'Naam contactpersoon') return 'Bijv. Jan de Vries'
+  if (label === 'Naam contactpersoon re-integratiebedrijf') return 'Bijv. Jan de Vries'
+  if (label === 'Functie contactpersoon') return 'Bijv. Re-integratiecoach'
+  if (label === 'Telefoonnummer contactpersoon') return 'Bijv. 0612345678'
+  if (label === 'E-mailadres contactpersoon') return 'Bijv. naam@organisatie.nl'
+  return 'Typ uw antwoord'
 }
 
 async function readFileAsDataUrl(file: File): Promise<string> {
@@ -35,9 +99,21 @@ export function MijnPraktijkScreen() {
   const { data, updatePracticeSettings } = useLocalAppData()
   const settings = data.practiceSettings
   const useStackedBrandLayout = width < 1360
+  const initialPostalCodeCity = splitPostalCodeCity(settings.postalCodeCity)
 
   const [practiceNameDraft, setPracticeNameDraft] = useState(settings.practiceName)
-  const [websiteDraft, setWebsiteDraft] = useState(settings.website)
+  const [visitStreetDraft, setVisitStreetDraft] = useState(splitStreetAndHouseNumber(settings.visitAddress).street)
+  const [visitHouseNumberDraft, setVisitHouseNumberDraft] = useState(splitStreetAndHouseNumber(settings.visitAddress).houseNumber)
+  const [postStreetDraft, setPostStreetDraft] = useState(splitStreetAndHouseNumber(settings.postalAddress).street)
+  const [postHouseNumberDraft, setPostHouseNumberDraft] = useState(splitStreetAndHouseNumber(settings.postalAddress).houseNumber)
+  const [postPostalCodeDraft, setPostPostalCodeDraft] = useState(initialPostalCodeCity.postalCode)
+  const [postCityDraft, setPostCityDraft] = useState(initialPostalCodeCity.city)
+  const [visitPostalCodeDraft, setVisitPostalCodeDraft] = useState(initialPostalCodeCity.postalCode)
+  const [visitCityDraft, setVisitCityDraft] = useState(initialPostalCodeCity.city)
+  const [contactNameDraft, setContactNameDraft] = useState(settings.contactName)
+  const [contactRoleDraft, setContactRoleDraft] = useState(settings.contactRole)
+  const [contactPhoneDraft, setContactPhoneDraft] = useState(settings.contactPhone)
+  const [contactEmailDraft, setContactEmailDraft] = useState(settings.contactEmail)
   const [tintColorDraft, setTintColorDraft] = useState(normalizeHexColor(settings.tintColor || '#BE0165'))
   const [isDragActive, setIsDragActive] = useState(false)
   const [isLogoHovered, setIsLogoHovered] = useState(false)
@@ -48,12 +124,6 @@ export function MijnPraktijkScreen() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const hiddenFileInputStyle = useMemo(() => ({ position: 'absolute', opacity: 0, width: 0, height: 0 }), [])
-
-  useEffect(() => {
-    setPracticeNameDraft(settings.practiceName)
-    setWebsiteDraft(settings.website)
-    setTintColorDraft(normalizeHexColor(settings.tintColor || '#BE0165'))
-  }, [settings.practiceName, settings.website, settings.tintColor])
 
   useEffect(() => {
     const normalizedDraft = normalizeHexColor(tintColorDraft)
@@ -139,8 +209,29 @@ export function MijnPraktijkScreen() {
     updatePracticeSettings({ practiceName: nextValue })
   }
 
-  function persistWebsite(nextValue: string) {
-    updatePracticeSettings({ website: nextValue })
+  function persistVisitAddress(nextStreet: string, nextHouseNumber: string) {
+    updatePracticeSettings({ visitAddress: combineStreetAndHouseNumber(nextStreet, nextHouseNumber) })
+  }
+  function persistPostalAddress(nextStreet: string, nextHouseNumber: string) {
+    updatePracticeSettings({ postalAddress: combineStreetAndHouseNumber(nextStreet, nextHouseNumber) })
+  }
+  function persistPostalCodeAndCity(nextPostalCode: string, nextCity: string) {
+    const postalCode = String(nextPostalCode || '').trim().toUpperCase()
+    const city = String(nextCity || '').trim()
+    const combined = [postalCode, city].filter(Boolean).join(' ').trim()
+    updatePracticeSettings({ postalCodeCity: combined })
+  }
+  function persistContactName(nextValue: string) {
+    updatePracticeSettings({ contactName: nextValue })
+  }
+  function persistContactRole(nextValue: string) {
+    updatePracticeSettings({ contactRole: nextValue })
+  }
+  function persistContactPhone(nextValue: string) {
+    updatePracticeSettings({ contactPhone: nextValue })
+  }
+  function persistContactEmail(nextValue: string) {
+    updatePracticeSettings({ contactEmail: nextValue })
   }
 
   function persistTintColor(nextColor: string) {
@@ -163,15 +254,167 @@ export function MijnPraktijkScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text isSemibold style={styles.headerTitle}>
-        Huisstijl
-      </Text>
+    <ScrollView style={styles.screenScroll} contentContainerStyle={styles.screenScrollContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.container}>
+        <Text isSemibold style={styles.headerTitle}>
+          Mijn organisatie
+        </Text>
 
-      <View style={styles.formSection}>
-        <LabeledInput label="Naam praktijk" value={practiceNameDraft} onChangeText={setPracticeNameDraft} onBlur={() => persistPracticeName(practiceNameDraft)} />
-        <LabeledInput label="Website" value={websiteDraft} onChangeText={setWebsiteDraft} onBlur={() => persistWebsite(websiteDraft)} />
+        <View style={styles.formSection}>
+          <View style={styles.formCard}>
+            <Text isSemibold style={styles.formCardTitle}>
+              Gegevens re-integratiebedrijf
+            </Text>
+            <View style={styles.fieldGrid}>
+              <LabeledInput
+                label="Naam organisatie"
+                value={practiceNameDraft}
+                onChangeText={(nextValue) => {
+                  setPracticeNameDraft(nextValue)
+                }}
+                onBlur={() => {
+                  const normalized = normalizeNameValue(practiceNameDraft)
+                  setPracticeNameDraft(normalized)
+                  persistPracticeName(normalized)
+                }}
+              />
+              <LabeledInput
+                label="Naam contactpersoon"
+                value={contactNameDraft}
+                onChangeText={(nextValue) => {
+                  setContactNameDraft(nextValue)
+                }}
+                onBlur={() => {
+                  const normalized = normalizeNameValue(contactNameDraft)
+                  setContactNameDraft(normalized)
+                  persistContactName(normalized)
+                }}
+              />
+              <LabeledInput
+                label="Functie contactpersoon"
+                value={contactRoleDraft}
+                onChangeText={(nextValue) => {
+                  setContactRoleDraft(nextValue)
+                }}
+                onBlur={() => {
+                  const normalized = normalizeNameValue(contactRoleDraft)
+                  setContactRoleDraft(normalized)
+                  persistContactRole(normalized)
+                }}
+              />
+              <LabeledInput
+                label="Telefoonnummer contactpersoon"
+                value={contactPhoneDraft}
+                onChangeText={(nextValue) => {
+                  const normalized = normalizePhoneValue(nextValue)
+                  setContactPhoneDraft(normalized)
+                }}
+                onBlur={() => {
+                  const normalized = normalizePhoneValue(contactPhoneDraft)
+                  setContactPhoneDraft(normalized)
+                  persistContactPhone(normalized)
+                }}
+              />
+              <LabeledInput
+                label="E-mailadres contactpersoon"
+                value={contactEmailDraft}
+                onChangeText={(nextValue) => {
+                  setContactEmailDraft(nextValue)
+                }}
+                onBlur={() => {
+                  const normalized = normalizeEmailValue(contactEmailDraft)
+                  setContactEmailDraft(normalized)
+                  persistContactEmail(normalized)
+                }}
+              />
+            </View>
+            <View style={styles.addressSectionsWrap}>
+              <View style={styles.addressSection}>
+                <Text isSemibold style={styles.addressSectionTitle}>Postadres</Text>
+                <View style={styles.addressSectionGrid}>
+                  <LabeledInput
+                    label="Postadres straatnaam"
+                    value={postStreetDraft}
+                    onChangeText={(nextValue) => {
+                      setPostStreetDraft(nextValue)
+                    }}
+                    onBlur={() => persistPostalAddress(postStreetDraft, postHouseNumberDraft)}
+                  />
+                  <LabeledInput
+                    label="Postadres huisnummer"
+                    value={postHouseNumberDraft}
+                    onChangeText={(nextValue) => {
+                      setPostHouseNumberDraft(nextValue)
+                    }}
+                    onBlur={() => persistPostalAddress(postStreetDraft, postHouseNumberDraft)}
+                  />
+                  <LabeledInput
+                    label="Postadres postcode"
+                    value={postPostalCodeDraft}
+                    onChangeText={(nextValue) => {
+                      setPostPostalCodeDraft(nextValue)
+                    }}
+                    onBlur={() => {
+                      const normalized = normalizePostalCodeValue(postPostalCodeDraft)
+                      setPostPostalCodeDraft(normalized)
+                      persistPostalCodeAndCity(normalized, postCityDraft)
+                    }}
+                  />
+                  <LabeledInput
+                    label="Postadres plaats"
+                    value={postCityDraft}
+                    onChangeText={(nextValue) => {
+                      setPostCityDraft(nextValue)
+                    }}
+                    onBlur={() => persistPostalCodeAndCity(postPostalCodeDraft, postCityDraft)}
+                  />
+                </View>
+              </View>
+              <View style={styles.addressSection}>
+                <Text isSemibold style={styles.addressSectionTitle}>Bezoekadres</Text>
+                <View style={styles.addressSectionGrid}>
+                  <LabeledInput
+                    label="Bezoekadres straatnaam"
+                    value={visitStreetDraft}
+                    onChangeText={(nextValue) => {
+                      setVisitStreetDraft(nextValue)
+                    }}
+                    onBlur={() => persistVisitAddress(visitStreetDraft, visitHouseNumberDraft)}
+                  />
+                  <LabeledInput
+                    label="Bezoekadres huisnummer"
+                    value={visitHouseNumberDraft}
+                    onChangeText={(nextValue) => {
+                      setVisitHouseNumberDraft(nextValue)
+                    }}
+                    onBlur={() => persistVisitAddress(visitStreetDraft, visitHouseNumberDraft)}
+                  />
+                  <LabeledInput
+                    label="Bezoekadres postcode"
+                    value={visitPostalCodeDraft}
+                    onChangeText={(nextValue) => {
+                      setVisitPostalCodeDraft(nextValue)
+                    }}
+                    onBlur={() => {
+                      const normalized = normalizePostalCodeValue(visitPostalCodeDraft)
+                      setVisitPostalCodeDraft(normalized)
+                      persistPostalCodeAndCity(normalized, visitCityDraft)
+                    }}
+                  />
+                  <LabeledInput
+                    label="Bezoekadres plaats"
+                    value={visitCityDraft}
+                    onChangeText={(nextValue) => {
+                      setVisitCityDraft(nextValue)
+                    }}
+                    onBlur={() => persistPostalCodeAndCity(visitPostalCodeDraft, visitCityDraft)}
+                  />
+                </View>
+              </View>
+            </View>
+          </View>
 
+          {false ? (
         <View style={[styles.brandLayout, useStackedBrandLayout ? styles.brandLayoutStacked : undefined]}>
           <View style={styles.logoColorRow}>
             <View style={styles.colorColumn}>
@@ -209,7 +452,7 @@ export function MijnPraktijkScreen() {
                 >
                   {settings.logoDataUrl ? (
                     <View style={styles.logoPreviewWrap}>
-                      <Image source={{ uri: settings.logoDataUrl }} resizeMode="contain" style={styles.logoPreviewImage} />
+                      <Image source={{ uri: String(settings.logoDataUrl || '') }} resizeMode="contain" style={styles.logoPreviewImage} />
                     </View>
                   ) : (
                     <View style={styles.logoUploadCenter}>
@@ -244,18 +487,22 @@ export function MijnPraktijkScreen() {
 
           <PdfPreviewExample tintColor={tintColorDraft} logoDataUrl={settings.logoDataUrl} compact={useStackedBrandLayout} />
         </View>
-      </View>
+          ) : null}
+        </View>
 
-      <ConfirmDeleteDialog
-        visible={isRemoveLogoConfirmOpen}
-        title="Logo verwijderen"
-        description="Weet je zeker dat je het logo wilt verwijderen?"
-        confirmLabel="Verwijderen"
-        cancelLabel="Annuleren"
-        onClose={() => setIsRemoveLogoConfirmOpen(false)}
-        onConfirm={handleRemoveLogoConfirm}
-      />
-    </View>
+        {false ? (
+        <ConfirmDeleteDialog
+          visible={isRemoveLogoConfirmOpen}
+          title="Logo verwijderen"
+          description="Weet je zeker dat je het logo wilt verwijderen?"
+          confirmLabel="Verwijderen"
+          cancelLabel="Annuleren"
+          onClose={() => setIsRemoveLogoConfirmOpen(false)}
+          onConfirm={handleRemoveLogoConfirm}
+        />
+        ) : null}
+      </View>
+    </ScrollView>
   )
 }
 
@@ -268,49 +515,23 @@ type LabeledInputProps = {
 
 function LabeledInput({ label, value, onChangeText, onBlur }: LabeledInputProps) {
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
-  const inputRef = useRef<TextInput | null>(null)
-  const [isHovered, setIsHovered] = useState(false)
-  const [isEditHovered, setIsEditHovered] = useState(false)
-
-  function focusInput() {
-    inputRef.current?.focus()
-  }
-
-  function selectAll() {
-    const input = inputRef.current as any
-    input?.focus?.()
-    if (typeof input?.setSelection === 'function') {
-      input.setSelection(0, value.length)
-      return
-    }
-    if (typeof input?.setSelectionRange === 'function') {
-      input.setSelectionRange(0, value.length)
-      return
-    }
-    input?.setNativeProps?.({ selection: { start: 0, end: value.length } })
-  }
+  const multiline = false
 
   return (
-    <View style={styles.inputGroup}>
-      <Text isSemibold style={styles.fieldLabelText}>
+    <View style={styles.fieldItem}>
+      <Text style={styles.fieldLabel}>
         {label}
       </Text>
-      <Pressable
-        onPress={focusInput}
-        onHoverIn={() => setIsHovered(true)}
-        onHoverOut={() => setIsHovered(false)}
-        style={[styles.inputRow, isHovered || isEditHovered ? styles.inputRowHovered : undefined]}
-      >
-        <TextInput ref={inputRef} value={value} onChangeText={onChangeText} onBlur={onBlur} placeholderTextColor="#656565" style={[styles.input, inputWebStyle]} />
-        <Pressable
-          onPress={selectAll}
-          onHoverIn={() => setIsEditHovered(true)}
-          onHoverOut={() => setIsEditHovered(false)}
-          style={({ hovered }) => [styles.editIconButton, hovered ? styles.editIconButtonHovered : undefined]}
-        >
-          <EditSmallIcon color={isEditHovered ? colors.selected : colors.textSecondary} size={17} />
-        </Pressable>
-      </Pressable>
+      <View style={[styles.inputWrap, multiline ? styles.inputWrapMultiline : undefined]}>
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          onBlur={onBlur}
+          placeholder={placeholderForOrganizationLabel(label)}
+          placeholderTextColor="#8E8480"
+          style={[styles.input, multiline ? styles.inputMultiline : undefined, inputWebStyle]}
+        />
+      </View>
     </View>
   )
 }
@@ -339,9 +560,12 @@ function PdfPreviewExample({ tintColor, logoDataUrl, compact }: PdfPreviewExampl
 }
 
 const styles = StyleSheet.create({
+  screenScroll: { flex: 1 },
+  screenScrollContent: { paddingBottom: 24 },
   container: {
-    flex: 1,
+    minHeight: '100%',
     gap: 14,
+    padding: 24,
     paddingBottom: 300,
     ...( { overflow: 'visible' } as any ),
   },
@@ -352,53 +576,23 @@ const styles = StyleSheet.create({
   },
   formSection: {
     width: '100%',
-    ...( { maxWidth: 'min(1260px, 100%)' } as any ),
+    ...( { maxWidth: 'min(1280px, 100%)' } as any ),
     gap: 14,
   },
-  inputGroup: {
-    gap: 6,
-  },
-  fieldLabelText: {
-    fontSize: fontSizes.md,
-    lineHeight: 20,
-    color: '#656565',
-  },
-  inputRow: {
-    width: '100%',
-    minHeight: 44,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 20,
-    paddingVertical: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    ...( { cursor: 'pointer' } as any ),
-  },
-  inputRowHovered: {
-    borderColor: colors.selected,
-  },
-  input: {
-    flex: 1,
-    padding: 0,
-    paddingVertical: 2,
-    fontSize: fontSizes.md,
-    lineHeight: 22,
-    color: colors.textStrong,
-    ...( { cursor: 'pointer' } as any ),
-  },
-  editIconButton: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  editIconButtonHovered: {
-    backgroundColor: 'rgba(0,0,0,0.08)',
-  },
+  formCard: { borderRadius: 12, borderWidth: 1, borderColor: '#DFE0E2', backgroundColor: '#FFFFFF', padding: 16, gap: 12, ...( { boxShadow: '0px 2px 8px rgba(0,0,0,0.08)' } as any ) },
+  formCardTitle: { flex: 1, fontSize: 16, lineHeight: 20, color: '#2C111F' },
+  fieldGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  fieldItem: { width: '48.5%', gap: 6 },
+  fieldLabelText: { fontSize: 14, lineHeight: 18, color: '#2C111F' },
+  fieldLabel: { fontSize: 14, lineHeight: 18, color: '#2C111F' },
+  addressSectionsWrap: { gap: 12 },
+  addressSection: { gap: 8 },
+  addressSectionTitle: { fontSize: 14, lineHeight: 18, color: '#2C111F' },
+  addressSectionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  inputWrap: { minHeight: 48, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', paddingHorizontal: 12, justifyContent: 'center' },
+  inputWrapMultiline: { minHeight: 96, paddingTop: 10, paddingBottom: 10 },
+  input: { width: '100%', padding: 0, fontSize: 14, lineHeight: 20, color: '#2C111F' },
+  inputMultiline: { minHeight: 76, ...( { overflow: 'hidden' } as any ) },
   brandLayout: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -526,3 +720,5 @@ const styles = StyleSheet.create({
     width: '74%',
   },
 })
+
+

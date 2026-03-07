@@ -8,9 +8,9 @@ import {
   ViewStyle,
 } from "react-native";
 
-import { SearchIcon } from "../../../components/icons/SearchIcon";
-import { colors } from "../../../theme/colors";
-import { typography } from "../../../theme/typography";
+import { SearchIcon } from "../../../icons/SearchIcon";
+import { colors } from "../../../design/theme/colors";
+import { typography } from "../../../design/theme/typography";
 import { brandColors, fontSizes, radius, spacing } from "../../theme/tokens";
 
 type Props = {
@@ -80,3 +80,5 @@ const styles = StyleSheet.create({
     padding: 0,
   },
 });
+
+

@@ -1,8 +1,8 @@
 import React from 'react'
 
-import { PopoverMenu } from '../PopoverMenu'
-import { HelpQuestionIcon } from '../icons/HelpQuestionIcon'
-import { FeedbackIcon } from '../icons/FeedbackIcon'
+import { PopoverMenu } from '../../ui/PopoverMenu'
+import { HelpQuestionIcon } from '../../icons/HelpQuestionIcon'
+import { FeedbackIcon } from '../../icons/FeedbackIcon'
 
 type AnchorPoint = { x: number; y: number }
 

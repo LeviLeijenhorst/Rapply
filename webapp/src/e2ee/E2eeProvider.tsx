@@ -1,11 +1,11 @@
 import React, { createContext, ReactNode, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
-import { LoadingSpinner } from '../components/LoadingSpinner'
+import { LoadingSpinner } from '../ui/LoadingSpinner'
 
-import { EyeIcon } from '../components/icons/EyeIcon'
-import { EyeSlashIcon } from '../components/icons/EyeSlashIcon'
-import { Text } from '../components/Text'
-import { colors } from '../theme/colors'
+import { EyeIcon } from '../icons/EyeIcon'
+import { EyeSlashIcon } from '../icons/EyeSlashIcon'
+import { Text } from '../ui/Text'
+import { colors } from '../design/theme/colors'
 import { decryptAudioChunkFromStorage, decryptAudioFromStorage, decryptAudioStreamFromStorage, encryptAudioChunkForStorage, encryptAudioForStorage } from './audioCrypto'
 import {
   createRecoveryKey,
@@ -858,3 +858,4 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
   },
 })
+

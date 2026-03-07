@@ -1,13 +1,13 @@
 import React, { useMemo, useState } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 
-import { AuthBackButton } from '../components/AuthBackButton'
+import { BackButton } from '../components/BackButton'
 import { AuthCard } from '../components/AuthCard'
 import { AuthCodeEntry } from '../components/AuthCodeEntry'
 import { AuthProgressIndicator } from '../components/AuthProgressIndicator'
 import { AuthResendLink } from '../components/AuthResendLink'
-import { Text } from '../../components/Text'
-import { colors } from '../../theme/colors'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
 import { maskPhoneNumber } from '../utils/masking'
 
 type Props = {
@@ -17,6 +17,8 @@ type Props = {
 }
 
 export function SmsCodeScreen({ phoneNumber, onBack, onContinue }: Props) {
+  const { width } = useWindowDimensions()
+  const isCompact = width < 900
   const [code, setCode] = useState('')
 
   const maskedPhoneNumber = useMemo(() => maskPhoneNumber(phoneNumber), [phoneNumber])
@@ -24,11 +26,11 @@ export function SmsCodeScreen({ phoneNumber, onBack, onContinue }: Props) {
 
   return (
     <AuthCard>
-      <View style={styles.container}>
+      <View style={[styles.container, isCompact ? styles.containerCompact : undefined]}>
         {/* Header */}
         <View style={styles.headerRow}>
           {/* Back */}
-          <AuthBackButton onPress={onBack} />
+          <BackButton onPress={onBack} />
           {/* Progress */}
           <View style={styles.progressContainer}>
             <AuthProgressIndicator stepsCount={3} activeStepsCount={3} />
@@ -39,7 +41,7 @@ export function SmsCodeScreen({ phoneNumber, onBack, onContinue }: Props) {
         {/* Content */}
         <View style={styles.content}>
           {/* Title */}
-          <Text isBold style={styles.title}>
+          <Text isBold style={[styles.title, isCompact ? styles.titleCompact : undefined]}>
             Er is een SMS met een code verstuurd naar {maskedPhoneNumber}
           </Text>
           {/* Subtitle */}
@@ -48,7 +50,7 @@ export function SmsCodeScreen({ phoneNumber, onBack, onContinue }: Props) {
           </Text>
 
           {/* Code entry */}
-          <View style={styles.codeEntryContainer}>
+          <View style={[styles.codeEntryContainer, isCompact ? styles.codeEntryContainerCompact : undefined]}>
             <AuthCodeEntry value={code} onChangeValue={setCode} length={6} />
           </View>
 
@@ -64,7 +66,16 @@ export function SmsCodeScreen({ phoneNumber, onBack, onContinue }: Props) {
         {/* Footer */}
         <View style={styles.footerRow}>
           <View style={styles.footerSpacer} />
-          <Pressable disabled={!canContinue} onPress={onContinue} style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined, !canContinue ? styles.primaryButtonDisabled : undefined]}>
+          <Pressable
+            disabled={!canContinue}
+            onPress={onContinue}
+            style={({ hovered }) => [
+              styles.primaryButton,
+              isCompact ? styles.primaryButtonCompact : undefined,
+              hovered ? styles.primaryButtonHovered : undefined,
+              !canContinue ? styles.primaryButtonDisabled : undefined,
+            ]}
+          >
             {/* Continue */}
             <Text isBold style={styles.primaryButtonText}>
               Doorgaan
@@ -84,6 +95,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     justifyContent: 'space-between',
     gap: 24,
+  },
+  containerCompact: {
+    minHeight: 0,
+    padding: 20,
+    gap: 18,
   },
   headerRow: {
     width: '100%',
@@ -114,6 +130,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 820,
   },
+  titleCompact: {
+    fontSize: 19,
+    lineHeight: 24,
+  },
   subtitle: {
     fontSize: 14,
     lineHeight: 18,
@@ -125,6 +145,9 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  codeEntryContainerCompact: {
+    padding: 12,
   },
   resendContainer: {
     alignItems: 'center',
@@ -154,6 +177,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  primaryButtonCompact: {
+    width: '100%',
+    minWidth: 0,
+    height: 52,
+  },
   primaryButtonHovered: {
     backgroundColor: '#A50058',
   },
@@ -166,4 +194,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+
 

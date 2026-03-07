@@ -1,9 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 
-import { Text } from '../components/Text'
-import { callSecureApi } from '../services/secureApi'
-import { colors } from '../theme/colors'
+import { Text } from '../ui/Text'
+import {
+  addAccountAllowlistEmail,
+  addAdminUserMonthlyMinutes,
+  getAdminAnalyticsOverview,
+  getAdminTranscriptionMode,
+  listAccountAllowlist,
+  listAdminFeedback,
+  listAdminPlans,
+  listAdminUsers,
+  removeAccountAllowlistEmail,
+  setAdminTranscriptionMode,
+  updateAdminUserPricingControls,
+  upsertAdminPlan,
+} from '../api/admin'
+import { colors } from '../design/theme/colors'
 import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
 import { useToast } from '../toast/ToastProvider'
 
@@ -52,7 +65,8 @@ type FeedbackItem = {
 }
 type FeedbackListResponse = { items: FeedbackItem[] }
 type TranscriptionMode = 'azure-fast-batch' | 'azure-realtime-live'
-type TranscriptionModeResponse = { mode?: string; updatedAt?: string | null; updatedBy?: string | null }
+type TranscriptionProvider = 'azure' | 'speechmatics'
+type TranscriptionModeResponse = { mode?: string; provider?: string; updatedAt?: string | null; updatedBy?: string | null }
 type AnalyticsCounters = {
   websiteVisits: number
   websiteClicks: number
@@ -151,6 +165,7 @@ export function AdminRevenueScreen() {
   const [allowlistEmailInput, setAllowlistEmailInput] = useState('')
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>('azure-fast-batch')
+  const [transcriptionProvider, setTranscriptionProvider] = useState<TranscriptionProvider>('azure')
   const [transcriptionModeUpdatedAt, setTranscriptionModeUpdatedAt] = useState<string | null>(null)
   const [isTranscriptionModeBusy, setIsTranscriptionModeBusy] = useState(false)
   const [addMonthlyMinutesInput, setAddMonthlyMinutesInput] = useState('')
@@ -170,17 +185,20 @@ export function AdminRevenueScreen() {
   function normalizeTranscriptionMode(value: unknown): TranscriptionMode {
     return String(value || '').trim().toLowerCase() === 'azure-realtime-live' ? 'azure-realtime-live' : 'azure-fast-batch'
   }
+  function normalizeTranscriptionProvider(value: unknown): TranscriptionProvider {
+    return String(value || '').trim().toLowerCase() === 'speechmatics' ? 'speechmatics' : 'azure'
+  }
 
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true)
       setErrorMessage(null)
       const [plansResponse, usersResponse, feedbackResponse, transcriptionModeResponse, analyticsResponse] = await Promise.all([
-        callSecureApi<PlanListResponse>('/admin/plans/list', {}),
-        callSecureApi<UserListResponse>('/admin/users/list', {}),
-        callSecureApi<FeedbackListResponse>('/admin/feedback/list', { limit: 200 }),
-        callSecureApi<TranscriptionModeResponse>('/admin/transcription/mode/get', {}),
-        callSecureApi<AnalyticsOverviewResponse>('/admin/analytics/overview', { days: 30 }),
+        listAdminPlans() as Promise<PlanListResponse>,
+        listAdminUsers() as Promise<UserListResponse>,
+        listAdminFeedback(200) as Promise<FeedbackListResponse>,
+        getAdminTranscriptionMode() as Promise<TranscriptionModeResponse>,
+        getAdminAnalyticsOverview(30) as Promise<AnalyticsOverviewResponse>,
       ])
       const nextPlans = Array.isArray(plansResponse.items) ? plansResponse.items : []
       const nextUsers = Array.isArray(usersResponse.items) ? usersResponse.items : []
@@ -189,6 +207,7 @@ export function AdminRevenueScreen() {
       setUsers(nextUsers)
       setFeedbackItems(nextFeedbackItems)
       setTranscriptionMode(normalizeTranscriptionMode(transcriptionModeResponse?.mode))
+      setTranscriptionProvider(normalizeTranscriptionProvider(transcriptionModeResponse?.provider))
       setTranscriptionModeUpdatedAt(transcriptionModeResponse?.updatedAt ?? null)
       setAnalyticsWindowDays(Number(analyticsResponse?.windowDays || 30))
       setAnalyticsCounters({
@@ -211,6 +230,7 @@ export function AdminRevenueScreen() {
       setUsers([])
       setFeedbackItems([])
       setTranscriptionMode('azure-fast-batch')
+      setTranscriptionProvider('azure')
       setTranscriptionModeUpdatedAt(null)
       setAnalyticsWindowDays(30)
       setAnalyticsCounters({
@@ -234,7 +254,7 @@ export function AdminRevenueScreen() {
     try {
       setIsAllowlistLoading(true)
       setAllowlistErrorMessage(null)
-      const response = await callSecureApi<AllowlistResponse>('/admin/account-allowlist/list', {})
+      const response = await listAccountAllowlist() as AllowlistResponse
       setAllowlistItems(Array.isArray(response.items) ? response.items : [])
     } catch (error) {
       setAllowlistItems([])
@@ -264,14 +284,19 @@ export function AdminRevenueScreen() {
     showErrorToast(allowlistErrorMessage, 'Allowlist ophalen mislukt.')
   }, [allowlistErrorMessage, showErrorToast])
 
-  const saveTranscriptionMode = useCallback(async (mode: TranscriptionMode) => {
+  const saveTranscriptionSettings = useCallback(async (settings: { mode?: TranscriptionMode; provider?: TranscriptionProvider }) => {
     try {
       setIsTranscriptionModeBusy(true)
       setStatusMessage(null)
-      const response = await callSecureApi<TranscriptionModeResponse>('/admin/transcription/mode/set', { mode })
+      const response = await setAdminTranscriptionMode(settings) as TranscriptionModeResponse
       setTranscriptionMode(normalizeTranscriptionMode(response?.mode))
+      setTranscriptionProvider(normalizeTranscriptionProvider(response?.provider))
       setTranscriptionModeUpdatedAt(response?.updatedAt ?? null)
-      setStatusMessage(`Transcriptiemodus opgeslagen: ${mode === 'azure-realtime-live' ? 'Realtime tijdens opname' : 'Batch na opname'}`)
+      if (settings.provider) {
+        setStatusMessage(`Transcriptieprovider opgeslagen: ${settings.provider === 'speechmatics' ? 'Speechmatics' : 'Azure'}`)
+      } else if (settings.mode) {
+        setStatusMessage(`Transcriptiemodus opgeslagen: ${settings.mode === 'azure-realtime-live' ? 'Realtime tijdens opname' : 'Batch na opname'}`)
+      }
     } catch (error) {
       showErrorToast(parseError(error), 'Instellingen opslaan mislukt.')
     } finally {
@@ -294,7 +319,7 @@ export function AdminRevenueScreen() {
     try {
       setIsAllowlistBusy(true)
       setAllowlistStatusMessage(null)
-      await callSecureApi<{ ok: true }>('/admin/account-allowlist/add', { email: trimmedEmail })
+      await addAccountAllowlistEmail(trimmedEmail)
       setAllowlistEmailInput('')
       setAllowlistStatusMessage('E-mailadres toegevoegd aan de allowlist.')
       await loadAllowlist()
@@ -316,7 +341,7 @@ export function AdminRevenueScreen() {
       try {
         setIsAllowlistBusy(true)
         setAllowlistStatusMessage(null)
-        await callSecureApi<{ ok: true }>('/admin/account-allowlist/remove', { email })
+        await removeAccountAllowlistEmail(email)
         setAllowlistStatusMessage('E-mailadres verwijderd uit de allowlist.')
         await loadAllowlist()
       } catch (error) {
@@ -370,7 +395,7 @@ export function AdminRevenueScreen() {
     try {
       setIsBusy(true)
       setStatusMessage(null)
-      await callSecureApi<{ ok: true }>('/admin/plans/upsert', {
+      await upsertAdminPlan({
         id: plan.id,
         name,
         description: plan.description || '',
@@ -405,7 +430,7 @@ export function AdminRevenueScreen() {
     try {
       setIsBusy(true)
       setStatusMessage(null)
-      await callSecureApi<{ ok: true }>('/admin/users/update-pricing-controls', {
+      await updateAdminUserPricingControls({
         userId: selectedUser.userId,
         planId: selectedUserForm.planId,
         customMonthlyPrice: parsedCustomMonthlyPrice,
@@ -436,13 +461,10 @@ export function AdminRevenueScreen() {
     try {
       setIsBusy(true)
       setStatusMessage(null)
-      const response = await callSecureApi<{ ok: true; addedMinutes: number; extraMinutes: number; availableMinutesPerMonth: number }>(
-        '/admin/users/add-monthly-minutes',
-        {
-          userId: selectedUser.userId,
-          additionalMinutes: Math.trunc(additionalMinutesRaw),
-        },
-      )
+      const response = await addAdminUserMonthlyMinutes({
+        userId: selectedUser.userId,
+        additionalMinutes: Math.trunc(additionalMinutesRaw),
+      }) as { ok: true; addedMinutes: number; extraMinutes: number; availableMinutesPerMonth: number }
       setStatusMessage(
         `${response.addedMinutes} minuten per maand toegevoegd. Nieuw extra totaal: ${response.extraMinutes} min. Beschikbaar per maand: ${response.availableMinutesPerMonth} min.`,
       )
@@ -639,7 +661,7 @@ export function AdminRevenueScreen() {
           <Text style={styles.cardSubtitle}>Kies tussen batch na opname of realtime tijdens opname met sprekerlabels.</Text>
           <View style={styles.toggleRow}>
             <Pressable
-              onPress={() => void saveTranscriptionMode('azure-fast-batch')}
+              onPress={() => void saveTranscriptionSettings({ mode: 'azure-fast-batch' })}
               style={({ hovered }) => [
                 styles.accountTypeButton,
                 transcriptionMode === 'azure-fast-batch' ? styles.accountTypeButtonSelected : undefined,
@@ -653,7 +675,7 @@ export function AdminRevenueScreen() {
               </Text>
             </Pressable>
             <Pressable
-              onPress={() => void saveTranscriptionMode('azure-realtime-live')}
+              onPress={() => void saveTranscriptionSettings({ mode: 'azure-realtime-live' })}
               style={({ hovered }) => [
                 styles.accountTypeButton,
                 transcriptionMode === 'azure-realtime-live' ? styles.accountTypeButtonSelected : undefined,
@@ -664,6 +686,37 @@ export function AdminRevenueScreen() {
             >
               <Text isBold style={transcriptionMode === 'azure-realtime-live' ? styles.accountTypeButtonTextSelected : styles.accountTypeButtonText}>
                 Realtime tijdens opname
+              </Text>
+            </Pressable>
+          </View>
+          <Text isSemibold style={styles.fieldLabel}>Provider</Text>
+          <View style={styles.toggleRow}>
+            <Pressable
+              onPress={() => void saveTranscriptionSettings({ provider: 'azure' })}
+              style={({ hovered }) => [
+                styles.accountTypeButton,
+                transcriptionProvider === 'azure' ? styles.accountTypeButtonSelected : undefined,
+                hovered ? styles.secondaryButtonHovered : undefined,
+                isTranscriptionModeBusy ? styles.buttonDisabled : undefined,
+              ]}
+              disabled={isTranscriptionModeBusy}
+            >
+              <Text isBold style={transcriptionProvider === 'azure' ? styles.accountTypeButtonTextSelected : styles.accountTypeButtonText}>
+                Azure
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => void saveTranscriptionSettings({ provider: 'speechmatics' })}
+              style={({ hovered }) => [
+                styles.accountTypeButton,
+                transcriptionProvider === 'speechmatics' ? styles.accountTypeButtonSelected : undefined,
+                hovered ? styles.secondaryButtonHovered : undefined,
+                isTranscriptionModeBusy ? styles.buttonDisabled : undefined,
+              ]}
+              disabled={isTranscriptionModeBusy}
+            >
+              <Text isBold style={transcriptionProvider === 'speechmatics' ? styles.accountTypeButtonTextSelected : styles.accountTypeButtonText}>
+                Speechmatics
               </Text>
             </Pressable>
           </View>
@@ -1220,3 +1273,4 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+

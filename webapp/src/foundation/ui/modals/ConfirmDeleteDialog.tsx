@@ -8,10 +8,10 @@ import {
   spacing,
   brandColors,
 } from "../../theme/tokens";
-import { colors } from "../../../theme/colors";
-import { Text } from "../../../components/Text";
-import { AnimatedOverlayModal } from "../../../components/AnimatedOverlayModal";
-import { ModalCloseDarkIcon } from "../../../components/icons/ModalCloseDarkIcon";
+import { colors } from "../../../design/theme/colors";
+import { Text } from "../../../ui/Text";
+import { AnimatedOverlayModal } from "../../../ui/AnimatedOverlayModal";
+import { ModalCloseDarkIcon } from "../../../icons/ModalCloseDarkIcon";
 
 type Props = {
   visible: boolean;
@@ -177,3 +177,5 @@ const styles = StyleSheet.create({
     color: brandColors.white,
   },
 });
+
+

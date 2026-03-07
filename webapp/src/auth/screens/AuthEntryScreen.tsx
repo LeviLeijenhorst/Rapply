@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { Animated, Easing, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
-import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { LoadingSpinner } from '../../ui/LoadingSpinner'
 import Svg, { G, Rect } from 'react-native-svg'
 
 import { AuthCard } from '../components/AuthCard'
 import { CoachscribeLogo } from '../../components/CoachscribeLogo'
-import { Text } from '../../components/Text'
-import { colors } from '../../theme/colors'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
 import { useToast } from '../../toast/ToastProvider'
 
 type Props = {
@@ -23,7 +23,7 @@ function AuthEntryBackgroundPattern({ size }: { size: number }) {
   const radius = size * BACKGROUND_RECT_RADIUS_RATIO
 
   return (
-    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} overflow="visible">
+    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       {BACKGROUND_RECT_ROTATIONS.map((angle) => (
         <G key={angle} rotation={angle} originX={center} originY={center}>
           <Rect
@@ -46,7 +46,8 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
   const { width, height } = useWindowDimensions()
   const [isStartingLogin, setIsStartingLogin] = useState(false)
   const { showErrorToast } = useToast()
-  const squareSize = Math.min(640, width - 140, height - 140)
+  const isCompact = width < 900
+  const squareSize = Math.max(320, Math.min(640, width - (isCompact ? 24 : 140), height - (isCompact ? 24 : 140)))
   const entranceProgress = React.useRef(new Animated.Value(0)).current
 
   useEffect(() => {
@@ -109,10 +110,10 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
         </View>
         <AuthCard style={styles.squareCard}>
           {/* Welcome panel */}
-          <View style={styles.welcomePanel}>
+          <View style={[styles.welcomePanel, isCompact ? styles.welcomePanelCompact : undefined]}>
             {/* Welcome content */}
             <View style={styles.welcomeContent}>
-              <View style={styles.topContent}>
+              <View style={[styles.topContent, isCompact ? styles.topContentCompact : undefined]}>
                 {/* Brand header */}
                 <View style={styles.brandHeader}>
                   {/* Brand logo */}
@@ -121,15 +122,15 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
                   <Text style={styles.brandTagline}>Focus op de mens</Text>
                 </View>
                 {/* Welcome title */}
-                <Text isBold style={styles.welcomeTitle}>
+                <Text isBold style={[styles.welcomeTitle, isCompact ? styles.welcomeTitleCompact : undefined]}>
                   Welkom
                 </Text>
                 {/* Welcome description */}
-                <Text style={styles.welcomeParagraph}>
+                <Text style={[styles.welcomeParagraph, isCompact ? styles.welcomeParagraphCompact : undefined]}>
                   CoachScribe ondersteunt <Text isBold style={styles.welcomeParagraphBold}>loopbaan- en re-integratieprofessionals</Text> bij heldere dossiervorming en het bewaren van overzicht.
                 </Text>
                 {/* Welcome description */}
-                <Text style={styles.welcomeParagraph}>
+                <Text style={[styles.welcomeParagraph, isCompact ? styles.welcomeParagraphCompact : undefined]}>
                   Gesprekken en afspraken worden veilig vastgelegd en gestructureerd, zodat jij meer tijd houdt voor de begeleiding van je client.
                 </Text>
               </View>
@@ -140,6 +141,7 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
                 style={({ hovered }) => [
                   styles.actionButton,
                   styles.actionButtonBottom,
+                  isCompact ? styles.actionButtonCompact : undefined,
                   isStartingLogin ? styles.actionButtonDisabled : undefined,
                   !isStartingLogin && hovered ? styles.actionButtonHovered : undefined,
                 ]}
@@ -207,6 +209,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
   },
+  welcomePanelCompact: {
+    paddingHorizontal: 18,
+    paddingTop: 20,
+    paddingBottom: 20,
+  },
   welcomeContent: {
     flex: 1,
     width: '100%',
@@ -219,17 +226,28 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     gap: 24,
   },
+  topContentCompact: {
+    gap: 16,
+  },
   welcomeTitle: {
     fontSize: 44,
     lineHeight: 52,
     color: '#1C0E0A',
     textAlign: 'left',
   },
+  welcomeTitleCompact: {
+    fontSize: 34,
+    lineHeight: 40,
+  },
   welcomeParagraph: {
     fontSize: 15,
     lineHeight: 22,
     color: '#1C0E0A',
     textAlign: 'left',
+  },
+  welcomeParagraphCompact: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   welcomeParagraphBold: {
     fontSize: 15,
@@ -249,6 +267,9 @@ const styles = StyleSheet.create({
   actionButtonHovered: {
     opacity: 0.9,
   },
+  actionButtonCompact: {
+    height: 52,
+  },
   actionButtonDisabled: {
     opacity: 0.85,
   },
@@ -261,5 +282,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+
 
 

@@ -1,7 +1,7 @@
 import React from 'react'
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native'
 
-import { colors } from '../../theme/colors'
+import { colors } from '../../design/theme/colors'
 
 type Props = {
   children: React.ReactNode
@@ -32,4 +32,5 @@ const styles = StyleSheet.create({
     ...( { boxShadow: '0 20px 60px rgba(0,0,0,0.16)' } as any ),
   },
 })
+
 

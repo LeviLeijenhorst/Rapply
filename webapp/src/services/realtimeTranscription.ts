@@ -1,17 +1,24 @@
 import { callSecureApi } from './secureApi'
 
 export type TranscriptionMode = 'azure-fast-batch' | 'azure-realtime-live'
+export type TranscriptionProvider = 'azure' | 'speechmatics'
 
 type RuntimeConfigResponse = {
   mode?: string
+  provider?: string
+  providerConfigured?: boolean
   azureSpeechConfigured?: boolean
+  speechmaticsConfigured?: boolean
 }
 
-type AzureRealtimeTokenResponse = {
+type RealtimeTokenResponse = {
   mode?: string
+  provider?: string
   token?: string
   region?: string
   expiresInSeconds?: number
+  jwt?: string
+  realtimeUrl?: string
 }
 
 type ChargeRealtimeResponse = {
@@ -42,12 +49,24 @@ function normalizeMode(value: unknown): TranscriptionMode {
   return 'azure-fast-batch'
 }
 
-function normalizeLanguage(value: string | undefined): string {
+function normalizeProvider(value: unknown): TranscriptionProvider {
+  return String(value || '').trim().toLowerCase() === 'speechmatics' ? 'speechmatics' : 'azure'
+}
+
+function normalizeLanguageForAzure(value: string | undefined): string {
   const trimmed = String(value || '').trim().toLowerCase()
   if (!trimmed || trimmed === 'nl') return 'nl-NL'
   if (trimmed === 'en') return 'en-US'
   if (trimmed === 'fr') return 'fr-FR'
   return trimmed
+}
+
+function normalizeLanguageForSpeechmatics(value: string | undefined): string {
+  const trimmed = String(value || '').trim().toLowerCase()
+  if (!trimmed || trimmed === 'nl-nl') return 'nl'
+  if (trimmed === 'en-us') return 'en'
+  if (trimmed === 'fr-fr') return 'fr'
+  return trimmed || 'nl'
 }
 
 function toFriendlyRealtimeError(error: unknown): string {
@@ -63,11 +82,84 @@ function normalizeSpeakerLabel(raw: string, nextSpeakerIndex: number): string {
   return normalized ? normalized : `speaker_${nextSpeakerIndex}`
 }
 
-export async function fetchTranscriptionRuntimeConfig(): Promise<{ mode: TranscriptionMode; azureSpeechConfigured: boolean }> {
+function buildWsUrl(baseUrl: string, jwt: string): string {
+  const separator = baseUrl.includes('?') ? '&' : '?'
+  return `${baseUrl}${separator}jwt=${encodeURIComponent(jwt)}`
+}
+
+function appendToken(parts: string[], token: string, isPunctuation: boolean): void {
+  const cleaned = String(token || '').trim()
+  if (!cleaned) return
+  if (parts.length === 0) {
+    parts.push(cleaned)
+    return
+  }
+  if (isPunctuation) {
+    parts[parts.length - 1] = `${parts[parts.length - 1]}${cleaned}`
+    return
+  }
+  parts.push(cleaned)
+}
+
+function extractSpeechmaticsFinalSegment(payload: any): RealtimeSegment | null {
+  const messageType = String(payload?.message || '').trim()
+  if (messageType !== 'AddTranscript') return null
+  const results = Array.isArray(payload?.results) ? payload.results : []
+  const parts: string[] = []
+  let speakerRaw = ''
+
+  for (const item of results) {
+    const alternatives = Array.isArray(item?.alternatives) ? item.alternatives : []
+    const alternative = alternatives[0] || {}
+    const content = String(alternative?.content || item?.content || '').trim()
+    if (!content) continue
+    if (!speakerRaw) {
+      const nextSpeaker = String(alternative?.speaker || item?.speaker || '').trim()
+      if (nextSpeaker) speakerRaw = nextSpeaker
+    }
+    const type = String(item?.type || '').trim().toLowerCase()
+    const punctuation = type === 'punctuation' || /^[,.;:!?]+$/.test(content)
+    appendToken(parts, content, punctuation)
+  }
+
+  const text = parts.join(' ').replace(/\s+([,.;:!?])/g, '$1').trim()
+  if (!text) return null
+  const numericSpeaker = Number(speakerRaw)
+  const speaker = Number.isFinite(numericSpeaker) ? `speaker_${numericSpeaker + 1}` : speakerRaw || 'speaker_1'
+  return {
+    speaker,
+    text,
+  }
+}
+
+function convertFloat32ToPcm16(input: Float32Array): Int16Array {
+  const output = new Int16Array(input.length)
+  for (let index = 0; index < input.length; index += 1) {
+    const sample = Math.max(-1, Math.min(1, input[index]))
+    output[index] = sample < 0 ? sample * 32768 : sample * 32767
+  }
+  return output
+}
+
+export async function fetchTranscriptionRuntimeConfig(): Promise<{
+  mode: TranscriptionMode
+  provider: TranscriptionProvider
+  providerConfigured: boolean
+  azureSpeechConfigured: boolean
+  speechmaticsConfigured: boolean
+}> {
   const response = await callSecureApi<RuntimeConfigResponse>('/transcription/runtime-config', {})
+  const provider = normalizeProvider(response?.provider)
+  const azureSpeechConfigured = response?.azureSpeechConfigured === true
+  const speechmaticsConfigured = response?.speechmaticsConfigured === true
   return {
     mode: normalizeMode(response?.mode),
-    azureSpeechConfigured: response?.azureSpeechConfigured === true,
+    provider,
+    providerConfigured:
+      response?.providerConfigured === true ||
+      (provider === 'azure' ? azureSpeechConfigured : speechmaticsConfigured),
+    azureSpeechConfigured,
+    speechmaticsConfigured,
   }
 }
 
@@ -78,8 +170,7 @@ export async function chargeRealtimeTranscription(params: { operationId: string;
   })
 }
 
-export async function startRealtimeTranscriber(params: StartRealtimeTranscriberParams): Promise<RealtimeTranscriberSession> {
-  const tokenResponse = await callSecureApi<AzureRealtimeTokenResponse>('/transcription/realtime/token', {})
+async function startAzureRealtimeTranscriber(params: StartRealtimeTranscriberParams, tokenResponse: RealtimeTokenResponse): Promise<RealtimeTranscriberSession> {
   const token = String(tokenResponse?.token || '').trim()
   const region = String(tokenResponse?.region || '').trim()
   if (!token || !region) {
@@ -88,7 +179,7 @@ export async function startRealtimeTranscriber(params: StartRealtimeTranscriberP
 
   const sdk: any = await import('microsoft-cognitiveservices-speech-sdk')
   const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(token, region)
-  speechConfig.speechRecognitionLanguage = normalizeLanguage(params.languageCode)
+  speechConfig.speechRecognitionLanguage = normalizeLanguageForAzure(params.languageCode)
   if (sdk.PropertyId?.SpeechServiceResponse_DiarizeIntermediateResults) {
     speechConfig.setProperty(sdk.PropertyId.SpeechServiceResponse_DiarizeIntermediateResults, 'true')
   }
@@ -145,4 +236,121 @@ export async function startRealtimeTranscriber(params: StartRealtimeTranscriberP
   }
 
   return { stop }
+}
+
+async function startSpeechmaticsRealtimeTranscriber(params: StartRealtimeTranscriberParams, tokenResponse: RealtimeTokenResponse): Promise<RealtimeTranscriberSession> {
+  const jwt = String(tokenResponse?.jwt || '').trim()
+  const realtimeUrl = String(tokenResponse?.realtimeUrl || '').trim()
+  if (!jwt || !realtimeUrl) {
+    throw new Error('Kon geen Speechmatics realtime token ophalen.')
+  }
+
+  const wsUrl = buildWsUrl(realtimeUrl, jwt)
+  const socket = new WebSocket(wsUrl)
+
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  const AudioContextConstructor = window.AudioContext || (window as any).webkitAudioContext
+  if (!AudioContextConstructor) {
+    throw new Error('Realtime audio wordt niet ondersteund in deze browser.')
+  }
+
+  const audioContext = new AudioContextConstructor()
+  const source = audioContext.createMediaStreamSource(stream)
+  const processor = audioContext.createScriptProcessor(4096, 1, 1)
+  const sinkGain = audioContext.createGain()
+  sinkGain.gain.value = 0
+
+  source.connect(processor)
+  processor.connect(sinkGain)
+  sinkGain.connect(audioContext.destination)
+
+  let openResolved = false
+  const openPromise = new Promise<void>((resolve, reject) => {
+    socket.onopen = () => {
+      openResolved = true
+      resolve()
+    }
+    socket.onerror = () => {
+      if (!openResolved) {
+        reject(new Error('Realtime verbinding kon niet worden opgezet.'))
+      }
+    }
+  })
+
+  socket.onmessage = (event) => {
+    try {
+      const payload = JSON.parse(String(event.data || '{}'))
+      if (String(payload?.message || '').trim() === 'Error') {
+        const reason = String(payload?.reason || payload?.error || '').trim()
+        params.onError?.(reason ? `Realtime transcriptie is gestopt: ${reason}` : 'Realtime transcriptie is gestopt.')
+        return
+      }
+      const segment = extractSpeechmaticsFinalSegment(payload)
+      if (!segment) return
+      params.onFinalSegment(segment)
+    } catch (error) {
+      params.onError?.(toFriendlyRealtimeError(error))
+    }
+  }
+
+  await openPromise
+
+  const sampleRate = Number.isFinite(audioContext.sampleRate) ? Math.floor(audioContext.sampleRate) : 16000
+  socket.send(
+    JSON.stringify({
+      message: 'StartRecognition',
+      audio_format: {
+        type: 'raw',
+        encoding: 'pcm_s16le',
+        sample_rate: sampleRate,
+      },
+      transcription_config: {
+        language: normalizeLanguageForSpeechmatics(params.languageCode),
+        diarization: 'speaker',
+      },
+    }),
+  )
+
+  processor.onaudioprocess = (event) => {
+    if (socket.readyState !== WebSocket.OPEN) return
+    const channel = event.inputBuffer.getChannelData(0)
+    const pcm16 = convertFloat32ToPcm16(channel)
+    socket.send(pcm16.buffer)
+  }
+
+  const stop = async () => {
+    processor.onaudioprocess = null
+    try {
+      socket.send(JSON.stringify({ message: 'EndOfStream' }))
+    } catch {}
+    try {
+      source.disconnect()
+    } catch {}
+    try {
+      processor.disconnect()
+    } catch {}
+    try {
+      sinkGain.disconnect()
+    } catch {}
+    stream.getTracks().forEach((track) => {
+      try {
+        track.stop()
+      } catch {}
+    })
+    await audioContext.close().catch(() => undefined)
+    try {
+      socket.close()
+    } catch {}
+  }
+
+  return { stop }
+}
+
+export async function startRealtimeTranscriber(params: StartRealtimeTranscriberParams): Promise<RealtimeTranscriberSession> {
+  const tokenResponse = await callSecureApi<RealtimeTokenResponse>('/transcription/realtime/token', {})
+  const provider = normalizeProvider(tokenResponse?.provider)
+  if (provider === 'speechmatics') {
+    return startSpeechmaticsRealtimeTranscriber(params, tokenResponse)
+  }
+  return startAzureRealtimeTranscriber(params, tokenResponse)
 }

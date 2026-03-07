@@ -3,9 +3,16 @@ const textDecoder = new TextDecoder()
 const authTagLengthBytes = 16
 const audioChunkSizeBytes = 64 * 1024
 
-function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  const slice = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
-  return slice as ArrayBuffer
+function toArrayBuffer(bytes: Uint8Array<ArrayBufferLike>): ArrayBuffer {
+  const output = new Uint8Array(bytes.byteLength)
+  output.set(bytes)
+  return output.buffer
+}
+
+function toBytes(bytes: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBuffer> {
+  const output = new Uint8Array(new ArrayBuffer(bytes.byteLength))
+  output.set(bytes)
+  return output
 }
 
 function concatBytes(parts: Uint8Array[]) {
@@ -42,7 +49,7 @@ function decodeUint32(bytes: Uint8Array) {
 }
 
 function createStreamReader(reader: ReadableStreamDefaultReader<Uint8Array>) {
-  let buffer = new Uint8Array(0)
+  let buffer = toBytes(new Uint8Array(0))
 
   async function readBytes(length: number): Promise<Uint8Array> {
     if (length <= 0) {
@@ -53,7 +60,7 @@ function createStreamReader(reader: ReadableStreamDefaultReader<Uint8Array>) {
       if (result.done) {
         break
       }
-      const value = result.value || new Uint8Array(0)
+      const value = toBytes(result.value || new Uint8Array(0))
       buffer = buffer.length ? concatBytes([buffer, value]) : value
     }
     if (buffer.length < length) {
@@ -65,15 +72,15 @@ function createStreamReader(reader: ReadableStreamDefaultReader<Uint8Array>) {
   }
 
   async function readRemaining(): Promise<Uint8Array> {
-    const parts: Uint8Array[] = buffer.length ? [buffer] : []
-    buffer = new Uint8Array(0)
+    const parts: Uint8Array[] = buffer.length ? [toBytes(buffer)] : []
+    buffer = toBytes(new Uint8Array(0))
     while (true) {
       const result = await reader.read()
       if (result.done) {
         break
       }
       if (result.value && result.value.length) {
-        parts.push(result.value)
+        parts.push(toBytes(result.value))
       }
     }
     return parts.length ? concatBytes(parts) : new Uint8Array(0)
@@ -108,15 +115,15 @@ export async function encryptAudioForStorage(params: { key: CryptoKey; audioBlob
     encodeUint32(audioChunkSizeBytes),
     encodeUint32(totalLength),
   ]
-  const parts: Uint8Array[] = [...headerParts]
+  const parts: BlobPart[] = headerParts.map((part) => toArrayBuffer(part))
 
   let offset = 0
   while (offset < totalLength) {
     const nextSize = Math.min(audioChunkSizeBytes, totalLength - offset)
     const chunk = new Uint8Array(await params.audioBlob.slice(offset, offset + nextSize).arrayBuffer())
-    const initializationVector = crypto.getRandomValues(new Uint8Array(12))
-    const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: initializationVector }, params.key, toArrayBuffer(chunk))
-    parts.push(initializationVector, new Uint8Array(ciphertext))
+    const initializationVector = toBytes(crypto.getRandomValues(new Uint8Array(12)))
+    const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: toArrayBuffer(initializationVector) }, params.key, toArrayBuffer(chunk))
+    parts.push(toArrayBuffer(initializationVector), ciphertext)
     offset += nextSize
   }
 
@@ -124,13 +131,13 @@ export async function encryptAudioForStorage(params: { key: CryptoKey; audioBlob
 }
 
 export async function encryptAudioChunkForStorage(params: { key: CryptoKey; audioBytes: Uint8Array }): Promise<Uint8Array> {
-  const initializationVector = crypto.getRandomValues(new Uint8Array(12))
+  const initializationVector = toBytes(crypto.getRandomValues(new Uint8Array(12)))
   const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: initializationVector },
+    { name: 'AES-GCM', iv: toArrayBuffer(initializationVector) },
     params.key,
     toArrayBuffer(params.audioBytes),
   )
-  return concatBytes([initializationVector, new Uint8Array(ciphertext)])
+  return concatBytes([initializationVector, toBytes(new Uint8Array(ciphertext))])
 }
 
 export async function decryptAudioChunkFromStorage(params: { key: CryptoKey; encryptedChunk: Uint8Array }): Promise<Uint8Array> {
@@ -140,7 +147,7 @@ export async function decryptAudioChunkFromStorage(params: { key: CryptoKey; enc
   const initializationVector = params.encryptedChunk.slice(0, 12)
   const ciphertext = params.encryptedChunk.slice(12)
   const plaintextBuffer = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: initializationVector },
+    { name: 'AES-GCM', iv: toArrayBuffer(initializationVector) },
     params.key,
     toArrayBuffer(ciphertext),
   )
@@ -160,13 +167,13 @@ export async function decryptAudioFromStorage(params: { key: CryptoKey; encrypte
     }
     const initializationVector = combined.slice(5, 17)
     const ciphertext = combined.slice(17)
-    const plaintextBuffer = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: initializationVector }, params.key, toArrayBuffer(ciphertext))
+    const plaintextBuffer = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: toArrayBuffer(initializationVector) }, params.key, toArrayBuffer(ciphertext))
     const plaintext = new Uint8Array(plaintextBuffer)
     const mimeTypeLength = decodeUint16(plaintext.slice(0, 2))
     const mimeTypeBytes = plaintext.slice(2, 2 + mimeTypeLength)
     const audioBytes = plaintext.slice(2 + mimeTypeLength)
     const mimeType = textDecoder.decode(mimeTypeBytes) || 'application/octet-stream'
-    return { audioBlob: new Blob([audioBytes], { type: mimeType }), mimeType }
+    return { audioBlob: new Blob([toArrayBuffer(audioBytes)], { type: mimeType }), mimeType }
   }
   if (magic !== 'E2A02') {
     throw new Error('Ongeldige audio versleuteling')
@@ -193,15 +200,15 @@ export async function decryptAudioFromStorage(params: { key: CryptoKey; encrypte
     const initializationVector = await streamReader.readBytes(12)
     const ciphertext = await streamReader.readBytes(ciphertextLength)
     try {
-      const plaintextBuffer = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: initializationVector }, params.key, toArrayBuffer(ciphertext))
-      audioParts.push(new Uint8Array(plaintextBuffer))
+      const plaintextBuffer = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: toArrayBuffer(initializationVector) }, params.key, toArrayBuffer(ciphertext))
+      audioParts.push(toBytes(new Uint8Array(plaintextBuffer)))
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       throw new Error(`Audio chunk decryptie mislukt (${index + 1}/${chunkCount}): ${message}`)
     }
   }
 
-  return { audioBlob: new Blob(audioParts, { type: mimeType }), mimeType }
+  return { audioBlob: new Blob(audioParts.map((part) => toArrayBuffer(part)), { type: mimeType }), mimeType }
 }
 
 export async function decryptAudioStreamFromStorage(params: {
@@ -217,7 +224,7 @@ export async function decryptAudioStreamFromStorage(params: {
     const combined = concatBytes([magicBytes, remaining])
     const initializationVector = combined.slice(5, 17)
     const ciphertext = combined.slice(17)
-    const plaintextBuffer = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: initializationVector }, params.key, toArrayBuffer(ciphertext))
+    const plaintextBuffer = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: toArrayBuffer(initializationVector) }, params.key, toArrayBuffer(ciphertext))
     const plaintext = new Uint8Array(plaintextBuffer)
     const mimeTypeLength = decodeUint16(plaintext.slice(0, 2))
     const mimeTypeBytes = plaintext.slice(2, 2 + mimeTypeLength)
@@ -225,7 +232,7 @@ export async function decryptAudioStreamFromStorage(params: {
     const mimeType = textDecoder.decode(mimeTypeBytes) || 'application/octet-stream'
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
-        controller.enqueue(audioBytes)
+        controller.enqueue(toBytes(audioBytes))
         controller.close()
       },
     })
@@ -257,7 +264,7 @@ export async function decryptAudioStreamFromStorage(params: {
         const initializationVector = await streamReader.readBytes(12)
         const ciphertext = await streamReader.readBytes(ciphertextLength)
         try {
-          const plaintextBuffer = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: initializationVector }, params.key, toArrayBuffer(ciphertext))
+          const plaintextBuffer = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: toArrayBuffer(initializationVector) }, params.key, toArrayBuffer(ciphertext))
           controller.enqueue(new Uint8Array(plaintextBuffer))
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)

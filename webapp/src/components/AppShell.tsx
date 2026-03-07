@@ -1,21 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Linking, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
+import { Image, Linking, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 
-import { colors } from '../theme/colors'
-import { AnimatedMainContent } from './AnimatedMainContent'
+import { colors } from '../design/theme/colors'
+import { AnimatedMainContent } from '../ui/AnimatedMainContent'
 import { Navbar } from './Navbar'
 import { Sidebar, SidebarItemKey } from './Sidebar'
-import { Text } from './Text'
-import { BreadcrumbBar } from './BreadcrumbBar'
-import { getCoacheeDisplayName } from '../utils/coachee'
-import { CoacheeDetailScreen } from '../screens/CoacheeDetailScreen'
-import { CoacheesScreen } from '../screens/CoacheesScreen'
-import { SessieDetailScreen } from '../screens/SessieDetailScreen'
-import { SessiesScreen } from '../screens/SessiesScreen'
+import { Text } from '../ui/Text'
+import type { CoacheeTabKey } from './coacheeDetail/CoacheeTabs'
 import { NewSessionModal } from './newSession/NewSessionModal'
-import { GeschrevenVerslagScreen } from '../screens/GeschrevenVerslagScreen'
-import { TemplatesScreen } from '../screens/TemplatesScreen'
-import { MijnPraktijkScreen } from '../screens/MijnPraktijkScreen'
 import { FeedbackModal } from './help/FeedbackModal'
 import { SettingsMenu } from './settings/SettingsMenu'
 import { MyAccountModal } from './settings/MyAccountModal'
@@ -23,94 +15,40 @@ import { MySubscriptionModal } from './settings/MySubscriptionModal'
 import { ShareCoachscribeModal } from './settings/ShareCoachscribeModal'
 import { ContactModal } from './settings/ContactModal'
 import { DeleteAccountConfirmModal } from './settings/DeleteAccountConfirmModal'
-import { ArchiefScreen } from '../screens/ArchiefScreen'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { CoacheeUpsertModal } from './coachees/CoacheeUpsertModal'
-import { EmptyPageMessage } from './EmptyPageMessage'
-import { AppLoadingScreen } from './AppLoadingScreen'
+import { saveCoacheeFromUpsert } from '../logic/coachees/coacheesScreenFunctionality'
+import {
+  fetchCurrentUserProfile,
+  fetchSubscriptionAccess,
+  requestDeleteAccount,
+  resumePendingPreviewAudioTasks,
+  submitFeedbackMessage,
+} from '../logic/appShell/appShellBackend'
 import { useBillingUsage } from '../hooks/useBillingUsage'
 import { useAudioUploadQueue } from '../audio/useAudioUploadQueue'
-import { callSecureApi } from '../services/secureApi'
 import { useE2ee } from '../e2ee/E2eeProvider'
-import { clearPendingPreviewAudio, clearPendingPreviewAudioIfEligible, listPendingPreviewAudioTasks } from '../audio/pendingPreviewStore'
-import { processSessionAudio } from '../audio/processSessionAudio'
-import { AdminRevenueScreen } from '../screens/AdminRevenueScreen'
-import { AdminContactSubmissionsScreen } from '../screens/AdminContactSubmissionsScreen'
-import { AdminWachtlijstScreen } from '../screens/AdminWachtlijstScreen'
 import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
-import { EndToEndEncryptieScreen } from '../screens/EndToEndEncryptieScreen'
 import { useToast } from '../toast/ToastProvider'
 import { consumeSubscriptionReturnResumeRequest } from './newSession/subscriptionReturnDraftStore'
-import { getCoacheeUpsertValues, serializeCoacheeUpsertValues } from '../utils/coacheeProfile'
+import { getCoacheeUpsertValues } from '../utils/coacheeProfile'
+import { CoachscribeLogo } from './CoachscribeLogo'
+import { MonitorIcon } from '../icons/MonitorIcon'
+import { AppShellRouteView } from './appShell/AppShellRouteView'
+import {
+  type RouteState,
+  buildPathFromRoute,
+  normalizeRouteForAvailability,
+  parseRouteFromPath,
+  resolveRouteEntityId,
+  routeFromSidebarItemKey,
+} from './appShell/routeHelpers'
+import { getCurrentRouteFromSelection, getMainContentKey } from './appShell/navigationHelpers'
+import { applyRouteToShell } from './appShell/applyRoute'
+import { buildBreadcrumbItems } from './appShell/breadcrumbHelpers'
 
 type AnchorPoint = { x: number; y: number }
 type OverlayScreenKey = 'archief'
-type RouteState =
-  | { kind: 'sessies' }
-  | { kind: 'sessie'; sessieId: string }
-  | { kind: 'coachees' }
-  | { kind: 'coachee'; coacheeId: string }
-  | { kind: 'templates' }
-  | { kind: 'mijn-praktijk' }
-  | { kind: 'geschrevenVerslag' }
-  | { kind: 'archief' }
-  | { kind: 'admin' }
-  | { kind: 'admin-contact' }
-  | { kind: 'admin-wachtlijst' }
-
-function stripPrefix(value: string, prefix: string) {
-  return value.startsWith(`${prefix}-`) ? value.slice(prefix.length + 1) : value
-}
-
-function ensurePrefix(value: string, prefix: string) {
-  return value.startsWith(`${prefix}-`) ? value : `${prefix}-${value}`
-}
-
-function resolveRouteEntityId(value: string, prefix: string, existingIds: string[]): string | null {
-  if (!value) return null
-  if (existingIds.includes(value)) return value
-  const withPrefix = ensurePrefix(value, prefix)
-  if (existingIds.includes(withPrefix)) return withPrefix
-  const stripped = stripPrefix(value, prefix)
-  if (existingIds.includes(stripped)) return stripped
-  return null
-}
-
-function parseRouteFromPath(pathname: string): RouteState {
-  const cleanedPath = pathname.startsWith('/inloggen') ? pathname.slice('/inloggen'.length) : pathname
-  const path = cleanedPath.startsWith('/') ? cleanedPath.slice(1) : cleanedPath
-  const parts = path.split('/').filter(Boolean)
-  if (parts[0] === 'coachees') {
-    if (parts[1]) return { kind: 'coachee', coacheeId: ensurePrefix(parts[1], 'coachee') }
-    return { kind: 'coachees' }
-  }
-  if (parts[0] === 'sessies') {
-    if (parts[1]) return { kind: 'sessie', sessieId: ensurePrefix(parts[1], 'session') }
-    return { kind: 'sessies' }
-  }
-  if (parts[0] === 'templates') return { kind: 'templates' }
-  if (parts[0] === 'mijn-praktijk') return { kind: 'mijn-praktijk' }
-  if (parts[0] === 'geschreven-verslag') return { kind: 'geschrevenVerslag' }
-  if (parts[0] === 'archief') return { kind: 'archief' }
-  if (parts[0] === 'admin') return { kind: 'admin' }
-  if (parts[0] === 'admin-contact') return { kind: 'admin-contact' }
-  if (parts[0] === 'admin-wachtlijst') return { kind: 'admin-wachtlijst' }
-  return { kind: 'coachees' }
-}
-
-function buildPathFromRoute(route: RouteState): string {
-  if (route.kind === 'sessies') return '/sessies'
-  if (route.kind === 'sessie') return `/sessies/${stripPrefix(route.sessieId, 'session')}`
-  if (route.kind === 'coachees') return '/coachees'
-  if (route.kind === 'coachee') return `/coachees/${stripPrefix(route.coacheeId, 'coachee')}`
-  if (route.kind === 'templates') return '/templates'
-  if (route.kind === 'mijn-praktijk') return '/mijn-praktijk'
-  if (route.kind === 'geschrevenVerslag') return '/geschreven-verslag'
-  if (route.kind === 'admin') return '/admin'
-  if (route.kind === 'admin-contact') return '/admin-contact'
-  if (route.kind === 'admin-wachtlijst') return '/admin-wachtlijst'
-  return '/archief'
-}
 
 type Props = {
   onLogout: () => void
@@ -124,20 +62,11 @@ function parseDeleteAccountErrorMessage(error: unknown): string {
   })
 }
 
-function normalizeOptionalName(value: unknown): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  if (!trimmed) return null
-  const normalized = trimmed.toLowerCase()
-  if (normalized === 'unknown' || normalized === 'onbekend' || normalized === 'n/a' || normalized === 'na') return null
-  return trimmed
-}
-
 export function AppShell({ onLogout }: Props) {
   const { width } = useWindowDimensions()
   const isTooSmall = width < 1100
   const isSidebarCompact = width < 700
-  const { data, createCoachee, isAppDataLoaded, updateSession } = useLocalAppData()
+  const { data, createCoachee, createSession, createTrajectory, isAppDataLoaded, updateSession } = useLocalAppData()
   const e2ee = useE2ee()
   const { usedMinutes, totalMinutes, isLoading: isUsageLoading } = useBillingUsage()
   useAudioUploadQueue(true)
@@ -145,12 +74,21 @@ export function AppShell({ onLogout }: Props) {
 
   const [selectedSidebarItemKey, setSelectedSidebarItemKey] = useState<SidebarItemKey>('coachees')
   const [selectedSessieId, setSelectedSessieId] = useState<string | null>(null)
+  const [sessionIdPendingTemplatePicker, setSessionIdPendingTemplatePicker] = useState<string | null>(null)
+  const [rapportageOnlySessionId, setRapportageOnlySessionId] = useState<string | null>(null)
+  const [rapportageScreenMode, setRapportageScreenMode] = useState<'controleren' | 'bewerken'>('controleren')
+  const [rapportageEditSessionId, setRapportageEditSessionId] = useState<string | null>(null)
   const [selectedCoacheeId, setSelectedCoacheeId] = useState<string | null>(null)
+  const [selectedTrajectoryId, setSelectedTrajectoryId] = useState<string | null>(null)
   const [sessionOriginRoute, setSessionOriginRoute] = useState<RouteState | null>(null)
+  const [coacheeTabById, setCoacheeTabById] = useState<Record<string, CoacheeTabKey>>({})
   const [isNewSessionModalOpen, setIsNewSessionModalOpen] = useState(false)
+  const [mobileSessionInitialOption, setMobileSessionInitialOption] = useState<'gesprek' | 'gespreksverslag' | null>(null)
   const [newSessionCoacheeId, setNewSessionCoacheeId] = useState<string | null>(null)
+  const [newSessionTrajectoryId, setNewSessionTrajectoryId] = useState<string | null>(null)
   const [writtenReportInitialCoacheeId, setWrittenReportInitialCoacheeId] = useState<string | null>(null)
   const [isGeschrevenVerslagOpen, setIsGeschrevenVerslagOpen] = useState(false)
+  const [isNieuweRapportageOpen, setIsNieuweRapportageOpen] = useState(false)
   const [overlayScreenKey, setOverlayScreenKey] = useState<OverlayScreenKey | null>(null)
   const [isAdminScreenOpen, setIsAdminScreenOpen] = useState(false)
   const [isAdminContactScreenOpen, setIsAdminContactScreenOpen] = useState(false)
@@ -183,10 +121,9 @@ export function AppShell({ onLogout }: Props) {
 
   const refreshSubscriptionAccess = useCallback(async () => {
     try {
-      const response = await callSecureApi<{ planId?: string | null; canSeePricingPage?: boolean }>('/pricing/me-visibility', {})
-      const canSeePricingPage = Boolean(response?.canSeePricingPage)
-      setCanOpenSubscription(canSeePricingPage)
-      setCurrentPlanId(typeof response?.planId === 'string' ? response.planId : null)
+      const response = await fetchSubscriptionAccess()
+      setCanOpenSubscription(response.canOpenSubscription)
+      setCurrentPlanId(response.currentPlanId)
     } catch (error) {
       console.warn('[pricing] failed to refresh subscription access; keeping pricing page available', error)
       setCanOpenSubscription(true)
@@ -196,33 +133,14 @@ export function AppShell({ onLogout }: Props) {
 
   useEffect(() => {
     let isCancelled = false
-    void callSecureApi<{
-      email: string | null
-      name?: string | null
-      displayName?: string | null
-      givenName?: string | null
-      surname?: string | null
-      accountType?: 'admin' | 'paid' | 'test' | null
-    }>('/auth/me', {})
+    void fetchCurrentUserProfile()
       .then((response) => {
         if (isCancelled) return
-        const email = typeof response?.email === 'string' ? response.email : null
-        setCurrentUserEmail(email)
-        const accountType = response?.accountType === 'admin' || response?.accountType === 'paid' || response?.accountType === 'test'
-          ? response.accountType
-          : null
-        setCurrentUserAccountType(accountType)
-        const givenName = normalizeOptionalName(response?.givenName)
-        const surname = normalizeOptionalName(response?.surname)
-        setCurrentUserGivenName(givenName)
-        setCurrentUserSurname(surname)
-        const fullNameFromEntra = [givenName, surname].filter(Boolean).join(' ').trim()
-        const preferredName =
-          fullNameFromEntra.length > 0
-            ? fullNameFromEntra
-            : normalizeOptionalName(response?.name) ??
-              normalizeOptionalName(response?.displayName)
-        setCurrentUserName(preferredName)
+        setCurrentUserEmail(response.email)
+        setCurrentUserAccountType(response.accountType)
+        setCurrentUserGivenName(response.givenName)
+        setCurrentUserSurname(response.surname)
+        setCurrentUserName(response.displayName)
       })
       .catch(() => {
         if (isCancelled) return
@@ -254,38 +172,12 @@ export function AppShell({ onLogout }: Props) {
     let isCancelled = false
     void (async () => {
       try {
-        const tasks = await listPendingPreviewAudioTasks()
-        for (const task of tasks) {
-          if (isCancelled) return
-          const session = data.sessions.find((item) => item.id === task.sessionId)
-          if (!session) {
-            await clearPendingPreviewAudio(task.sessionId)
-            continue
-          }
-          if (session.transcriptionStatus === 'done' && !task.shouldSaveAudio) {
-            await clearPendingPreviewAudio(task.sessionId)
-            continue
-          }
-          if (session.transcriptionStatus === 'done' && Boolean(session.audioBlobId)) {
-            await clearPendingPreviewAudioIfEligible(task.sessionId)
-            continue
-          }
-
-          try {
-            await processSessionAudio({
-              sessionId: task.sessionId,
-              audioBlob: task.blob,
-              mimeType: task.mimeType,
-              shouldSaveAudio: task.shouldSaveAudio,
-              summaryTemplate: task.summaryTemplate,
-              initialAudioBlobId: session.audioBlobId ?? null,
-              e2ee,
-              updateSession,
-            })
-          } catch (error) {
-            console.error('[AppShell] Pending audio resume failed', { sessionId: task.sessionId, error })
-          }
-        }
+        await resumePendingPreviewAudioTasks({
+          sessions: data.sessions,
+          e2ee,
+          updateSession,
+        })
+        if (isCancelled) return
       } catch (error) {
         console.error('[AppShell] Failed to load pending audio tasks', error)
       }
@@ -312,201 +204,56 @@ export function AppShell({ onLogout }: Props) {
   }, [])
 
   const applyRoute = useCallback(
-    (route: RouteState) => {
-      if (route.kind === 'archief') {
-        setIsEndToEndEncryptiePageOpen(false)
-        setSelectedSidebarItemKey('archief')
-        setIsAdminScreenOpen(false)
-        setIsAdminContactScreenOpen(false)
-        setIsAdminWachtlijstScreenOpen(false)
-        setOverlayScreenKey('archief')
-        setIsGeschrevenVerslagOpen(false)
-        setSelectedSessieId(null)
-        setSelectedCoacheeId(null)
-        setSessionOriginRoute(null)
-        return
-      }
-      if (route.kind === 'geschrevenVerslag') {
-        setIsEndToEndEncryptiePageOpen(false)
-        setIsAdminScreenOpen(false)
-        setIsAdminContactScreenOpen(false)
-        setIsAdminWachtlijstScreenOpen(false)
-        setOverlayScreenKey(null)
-        setIsGeschrevenVerslagOpen(true)
-        setSelectedSidebarItemKey('sessies')
-        setSelectedSessieId(null)
-        setSelectedCoacheeId(null)
-        setSessionOriginRoute(null)
-        return
-      }
-
-      if (route.kind === 'admin') {
-        if (!isCurrentUserAdmin) {
-          setIsEndToEndEncryptiePageOpen(false)
-          setIsAdminScreenOpen(false)
-          setIsAdminContactScreenOpen(false)
-          setIsAdminWachtlijstScreenOpen(false)
-          setOverlayScreenKey(null)
-          setIsGeschrevenVerslagOpen(false)
-          setSelectedSidebarItemKey('coachees')
-          setSelectedSessieId(null)
-          setSelectedCoacheeId(null)
-          setSessionOriginRoute(null)
-          return
-        }
-        setIsEndToEndEncryptiePageOpen(false)
-        setIsAdminScreenOpen(true)
-        setIsAdminContactScreenOpen(false)
-        setIsAdminWachtlijstScreenOpen(false)
-        setOverlayScreenKey(null)
-        setIsGeschrevenVerslagOpen(false)
-        setSelectedSidebarItemKey('admin')
-        setSelectedSessieId(null)
-        setSelectedCoacheeId(null)
-        setSessionOriginRoute(null)
-        return
-      }
-
-      if (route.kind === 'admin-contact') {
-        if (!isCurrentUserAdmin) {
-          setIsEndToEndEncryptiePageOpen(false)
-          setIsAdminScreenOpen(false)
-          setIsAdminContactScreenOpen(false)
-          setIsAdminWachtlijstScreenOpen(false)
-          setOverlayScreenKey(null)
-          setIsGeschrevenVerslagOpen(false)
-          setSelectedSidebarItemKey('coachees')
-          setSelectedSessieId(null)
-          setSelectedCoacheeId(null)
-          setSessionOriginRoute(null)
-          return
-        }
-        setIsEndToEndEncryptiePageOpen(false)
-        setIsAdminScreenOpen(false)
-        setIsAdminContactScreenOpen(true)
-        setIsAdminWachtlijstScreenOpen(false)
-        setOverlayScreenKey(null)
-        setIsGeschrevenVerslagOpen(false)
-        setSelectedSidebarItemKey('adminContact')
-        setSelectedSessieId(null)
-        setSelectedCoacheeId(null)
-        setSessionOriginRoute(null)
-        return
-      }
-
-      if (route.kind === 'admin-wachtlijst') {
-        if (!isCurrentUserAdmin) {
-          setIsEndToEndEncryptiePageOpen(false)
-          setIsAdminScreenOpen(false)
-          setIsAdminContactScreenOpen(false)
-          setIsAdminWachtlijstScreenOpen(false)
-          setOverlayScreenKey(null)
-          setIsGeschrevenVerslagOpen(false)
-          setSelectedSidebarItemKey('coachees')
-          setSelectedSessieId(null)
-          setSelectedCoacheeId(null)
-          setSessionOriginRoute(null)
-          return
-        }
-        setIsEndToEndEncryptiePageOpen(false)
-        setIsAdminScreenOpen(false)
-        setIsAdminContactScreenOpen(false)
-        setIsAdminWachtlijstScreenOpen(true)
-        setOverlayScreenKey(null)
-        setIsGeschrevenVerslagOpen(false)
-        setSelectedSidebarItemKey('adminWachtlijst')
-        setSelectedSessieId(null)
-        setSelectedCoacheeId(null)
-        setSessionOriginRoute(null)
-        return
-      }
-
-      setIsAdminScreenOpen(false)
-      setIsAdminContactScreenOpen(false)
-      setIsAdminWachtlijstScreenOpen(false)
-      setIsEndToEndEncryptiePageOpen(false)
-      setOverlayScreenKey(null)
-      setIsGeschrevenVerslagOpen(false)
-
-      if (route.kind === 'coachees') {
-        setSelectedSidebarItemKey('coachees')
-        setSelectedCoacheeId(null)
-        setSelectedSessieId(null)
-        setSessionOriginRoute(null)
-        return
-      }
-      if (route.kind === 'coachee') {
-        setSelectedSidebarItemKey('coachees')
-        setSelectedCoacheeId(route.coacheeId)
-        setSelectedSessieId(null)
-        setSessionOriginRoute(null)
-        return
-      }
-      if (route.kind === 'templates') {
-        setSelectedSidebarItemKey('templates')
-        setSelectedCoacheeId(null)
-        setSelectedSessieId(null)
-        setSessionOriginRoute(null)
-        return
-      }
-      if (route.kind === 'mijn-praktijk') {
-        setSelectedSidebarItemKey('mijnPraktijk')
-        setSelectedCoacheeId(null)
-        setSelectedSessieId(null)
-        setSessionOriginRoute(null)
-        return
-      }
-      if (route.kind === 'sessie') {
-        setSelectedSidebarItemKey('sessies')
-        setSelectedSessieId(route.sessieId)
-        setSelectedCoacheeId(null)
-        setSessionOriginRoute(null)
-        return
-      }
-      setSelectedSidebarItemKey('sessies')
-      setSelectedSessieId(null)
-      setSelectedCoacheeId(null)
-      setSessionOriginRoute(null)
+    (routeInput: RouteState) => {
+      applyRouteToShell({
+        isCurrentUserAdmin,
+        routeInput,
+        setIsNieuweRapportageOpen,
+        setRapportageScreenMode,
+        setRapportageEditSessionId,
+        setIsEndToEndEncryptiePageOpen,
+        setSelectedSidebarItemKey,
+        setIsAdminScreenOpen,
+        setIsAdminContactScreenOpen,
+        setIsAdminWachtlijstScreenOpen,
+        setOverlayScreenKey,
+        setIsGeschrevenVerslagOpen,
+        setSelectedSessieId,
+        setSessionIdPendingTemplatePicker,
+        setSelectedCoacheeId,
+        setSelectedTrajectoryId,
+        setSessionOriginRoute,
+      })
     },
-    [
-      isCurrentUserAdmin,
-      setIsAdminContactScreenOpen,
-      setIsAdminScreenOpen,
-      setIsEndToEndEncryptiePageOpen,
-      setOverlayScreenKey,
-      setIsGeschrevenVerslagOpen,
-      setSelectedCoacheeId,
-      setSelectedSessieId,
-      setSelectedSidebarItemKey,
-      setSessionOriginRoute,
-      setIsAdminWachtlijstScreenOpen,
-    ],
+    [isCurrentUserAdmin],
   )
 
   const navigateTo = useCallback(
     (route: RouteState) => {
+      const normalizedRoute = normalizeRouteForAvailability(route)
       if (typeof window === 'undefined') {
-        applyRoute(route)
+        applyRoute(normalizedRoute)
         return
       }
-      const nextPath = buildPathFromRoute(route)
+      const nextPath = buildPathFromRoute(normalizedRoute)
       if (window.location.pathname !== nextPath) {
         window.history.pushState({ path: nextPath }, '', nextPath)
       }
-      applyRoute(route)
+      applyRoute(normalizedRoute)
     },
     [applyRoute],
   )
 
   const navigateToReplacingHistory = useCallback(
     (route: RouteState) => {
+      const normalizedRoute = normalizeRouteForAvailability(route)
       if (typeof window === 'undefined') {
-        applyRoute(route)
+        applyRoute(normalizedRoute)
         return
       }
-      const nextPath = buildPathFromRoute(route)
+      const nextPath = buildPathFromRoute(normalizedRoute)
       window.history.replaceState({ path: nextPath }, '', nextPath)
-      applyRoute(route)
+      applyRoute(normalizedRoute)
     },
     [applyRoute],
   )
@@ -525,18 +272,23 @@ export function AppShell({ onLogout }: Props) {
       navigateTo({ kind: 'coachees' })
       return
     }
-    if (selectedSidebarItemKey === 'sessies' && selectedSessieId) {
-      navigateTo({ kind: 'sessies' })
+    if (selectedSidebarItemKey === 'coachees' && selectedTrajectoryId && selectedCoacheeId) {
+      navigateTo({ kind: 'coachee', coacheeId: selectedCoacheeId })
       return
     }
-    navigateTo({ kind: 'sessies' })
-  }, [navigateTo, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey, sessionOriginRoute, setSessionOriginRoute])
+    navigateTo({ kind: 'coachees' })
+  }, [navigateTo, selectedCoacheeId, selectedSidebarItemKey, selectedTrajectoryId, sessionOriginRoute, selectedSessieId, setSessionOriginRoute])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     const handlePopState = () => {
-      const route = parseRouteFromPath(window.location.pathname)
-      applyRoute(route)
+      const rawRoute = parseRouteFromPath(window.location.pathname)
+      const normalizedRoute = normalizeRouteForAvailability(rawRoute)
+      const normalizedPath = buildPathFromRoute(normalizedRoute)
+      if (window.location.pathname !== normalizedPath) {
+        window.history.replaceState({ path: normalizedPath }, '', normalizedPath)
+      }
+      applyRoute(normalizedRoute)
     }
     if (
       !window.location.pathname ||
@@ -553,19 +305,22 @@ export function AppShell({ onLogout }: Props) {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [applyRoute])
 
-  const mainContentKey = useMemo(() => {
-    if (overlayScreenKey) return overlayScreenKey
-    if (isAdminScreenOpen) return 'admin'
-    if (isAdminContactScreenOpen) return 'admin-contact'
-    if (isAdminWachtlijstScreenOpen) return 'admin-wachtlijst'
-    if (isGeschrevenVerslagOpen) return 'geschreven-verslag'
-    if (selectedSessieId) return `sessie-${selectedSessieId}`
-    if (selectedSidebarItemKey === 'sessies') return 'sessies'
-    if (selectedSidebarItemKey === 'coachees') {
-      return selectedCoacheeId ? `coachee-${selectedCoacheeId}` : 'coachees'
-    }
-    return selectedSidebarItemKey
-  }, [isAdminContactScreenOpen, isAdminScreenOpen, isAdminWachtlijstScreenOpen, isGeschrevenVerslagOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
+  const mainContentKey = useMemo(
+    () =>
+      getMainContentKey({
+        isAdminContactScreenOpen,
+        isAdminScreenOpen,
+        isAdminWachtlijstScreenOpen,
+        isGeschrevenVerslagOpen,
+        isNieuweRapportageOpen,
+        overlayScreenKey,
+        selectedCoacheeId,
+        selectedSessieId,
+        selectedSidebarItemKey,
+        selectedTrajectoryId,
+      }),
+    [isAdminContactScreenOpen, isAdminScreenOpen, isAdminWachtlijstScreenOpen, isGeschrevenVerslagOpen, isNieuweRapportageOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey, selectedTrajectoryId],
+  )
 
   const [newlyCreatedCoacheeId, setNewlyCreatedCoacheeId] = useState<string | null>(null)
   const [newlyCreatedCoacheeName, setNewlyCreatedCoacheeName] = useState<string | null>(null)
@@ -582,7 +337,10 @@ export function AppShell({ onLogout }: Props) {
       if (resolvedSessieId && resolvedSessieId !== selectedSessieId) {
         setSelectedSessieId(resolvedSessieId)
         if (typeof window !== 'undefined') {
-          const nextPath = buildPathFromRoute({ kind: 'sessie', sessieId: resolvedSessieId })
+          const nextPath =
+            selectedCoacheeId && selectedTrajectoryId
+              ? buildPathFromRoute({ kind: 'item', coacheeId: selectedCoacheeId, trajectoryId: selectedTrajectoryId, itemId: resolvedSessieId })
+              : buildPathFromRoute({ kind: 'sessie', sessieId: resolvedSessieId })
           if (window.location.pathname !== nextPath) {
             window.history.replaceState({ path: nextPath }, '', nextPath)
           }
@@ -607,39 +365,46 @@ export function AppShell({ onLogout }: Props) {
         }
       }
     }
-  }, [data.coachees, data.sessions, isAppDataLoaded, selectedCoacheeId, selectedSessieId])
+    if (selectedTrajectoryId) {
+      const resolvedTrajectoryId = resolveRouteEntityId(
+        selectedTrajectoryId,
+        'trajectory',
+        data.trajectories.map((item) => item.id),
+      )
+      if (resolvedTrajectoryId && resolvedTrajectoryId !== selectedTrajectoryId && selectedCoacheeId) {
+        setSelectedTrajectoryId(resolvedTrajectoryId)
+        if (typeof window !== 'undefined') {
+          const nextPath = buildPathFromRoute({ kind: 'trajectory', coacheeId: selectedCoacheeId, trajectoryId: resolvedTrajectoryId })
+          if (window.location.pathname !== nextPath) {
+            window.history.replaceState({ path: nextPath }, '', nextPath)
+          }
+        }
+      }
+    }
+  }, [data.coachees, data.sessions, data.trajectories, isAppDataLoaded, selectedCoacheeId, selectedSessieId, selectedTrajectoryId])
 
   const openNewCoacheeModal = useCallback(() => {
     setIsCoacheeModalOpen(true)
   }, [])
 
   const openNewSessionModal = useCallback(
-    (coacheeId: string | null) => {
+    (coacheeId: string | null, trajectoryId: string | null = null, initialOption: 'gesprek' | 'gespreksverslag' | null = null) => {
       if (isRecordingBusy) return
+      setMobileSessionInitialOption(initialOption)
       setNewSessionCoacheeId(coacheeId)
+      setNewSessionTrajectoryId(trajectoryId)
       setIsNewSessionModalOpen(true)
     },
     [isRecordingBusy],
   )
 
-  const openSessionFromCoachee = useCallback(
-    (sessionId: string, coacheeId: string) => {
-      const nextRoute: RouteState = { kind: 'sessie', sessieId: sessionId }
-      if (typeof window !== 'undefined') {
-        const nextPath = buildPathFromRoute(nextRoute)
-        if (window.location.pathname !== nextPath) {
-          window.history.pushState({ path: nextPath }, '', nextPath)
-        }
-      }
-      setOverlayScreenKey(null)
-      setIsGeschrevenVerslagOpen(false)
-      setSessionOriginRoute({ kind: 'coachee', coacheeId })
-      setSelectedSessieId(sessionId)
-      setSelectedSidebarItemKey('coachees')
-      setSelectedCoacheeId(coacheeId)
-    },
-    [setIsGeschrevenVerslagOpen, setOverlayScreenKey, setSelectedCoacheeId, setSelectedSessieId, setSelectedSidebarItemKey, setSessionOriginRoute],
-  )
+  const openMobileLimitedSession = useCallback((option: 'gesprek' | 'gespreksverslag') => {
+    if (isRecordingBusy) return
+    setMobileSessionInitialOption(option)
+    setNewSessionCoacheeId(null)
+    setNewSessionTrajectoryId(null)
+    setIsNewSessionModalOpen(true)
+  }, [isRecordingBusy])
 
   useEffect(() => {
     if (newlyCreatedCoacheeId) {
@@ -650,53 +415,43 @@ export function AppShell({ onLogout }: Props) {
     }
   }, [data.coachees, newlyCreatedCoacheeId])
 
-  const currentRoute = useMemo<RouteState>(() => {
-    if (overlayScreenKey === 'archief') return { kind: 'archief' }
-    if (isAdminScreenOpen) return { kind: 'admin' }
-    if (isAdminContactScreenOpen) return { kind: 'admin-contact' }
-    if (isAdminWachtlijstScreenOpen) return { kind: 'admin-wachtlijst' }
-    if (isGeschrevenVerslagOpen) return { kind: 'geschrevenVerslag' }
-    if (selectedSessieId) return { kind: 'sessie', sessieId: selectedSessieId }
-    if (selectedSidebarItemKey === 'coachees') {
-      return selectedCoacheeId ? { kind: 'coachee', coacheeId: selectedCoacheeId } : { kind: 'coachees' }
-    }
-    if (selectedSidebarItemKey === 'templates') return { kind: 'templates' }
-    if (selectedSidebarItemKey === 'mijnPraktijk') return { kind: 'mijn-praktijk' }
-    if (selectedSidebarItemKey === 'admin') return { kind: 'admin' }
-    if (selectedSidebarItemKey === 'adminContact') return { kind: 'admin-contact' }
-    if (selectedSidebarItemKey === 'adminWachtlijst') return { kind: 'admin-wachtlijst' }
-    return { kind: 'sessies' }
-  }, [isAdminContactScreenOpen, isAdminScreenOpen, isAdminWachtlijstScreenOpen, isGeschrevenVerslagOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey])
-
-  const breadcrumbItems = useMemo(() => {
-    if (selectedSessieId) {
-      const session = data.sessions.find((item) => item.id === selectedSessieId)
-      if (!session) return []
-      const sessionTitle = session.title ?? 'Verslag'
-      const coacheeName = getCoacheeDisplayName(data.coachees, session.coacheeId)
-      if (sessionOriginRoute?.kind === 'coachee' && session.coacheeId) {
-        return [
-          { label: 'Cliënten', onPress: () => navigateTo({ kind: 'coachees' }) },
-          { label: coacheeName, onPress: () => navigateTo({ kind: 'coachee', coacheeId: sessionOriginRoute.coacheeId }) },
-          { label: sessionTitle, onPress: () => navigateTo({ kind: 'sessie', sessieId: selectedSessieId }) },
-        ]
-      }
-      return [
-        { label: 'Verslagen', onPress: () => navigateTo({ kind: 'sessies' }) },
-        { label: sessionTitle, onPress: () => navigateTo({ kind: 'sessie', sessieId: selectedSessieId }) },
-      ]
-    }
-    if (selectedSidebarItemKey === 'coachees' && selectedCoacheeId) {
-      const coacheeName = data.coachees.find((item) => item.id === selectedCoacheeId)?.name ?? 'Cliënt'
-      return [
-        { label: 'Cliënten', onPress: () => navigateTo({ kind: 'coachees' }) },
-        { label: coacheeName, onPress: () => navigateTo({ kind: 'coachee', coacheeId: selectedCoacheeId }) },
-      ]
-    }
-    return []
-  }, [data.coachees, data.sessions, navigateTo, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey, sessionOriginRoute])
+  const currentRoute = useMemo<RouteState>(
+    () =>
+      getCurrentRouteFromSelection({
+        isAdminContactScreenOpen,
+        isAdminScreenOpen,
+        isAdminWachtlijstScreenOpen,
+        isGeschrevenVerslagOpen,
+        isNieuweRapportageOpen,
+        overlayScreenKey,
+        selectedCoacheeId,
+        selectedSessieId,
+        selectedSidebarItemKey,
+        selectedTrajectoryId,
+      }),
+    [isAdminContactScreenOpen, isAdminScreenOpen, isAdminWachtlijstScreenOpen, isGeschrevenVerslagOpen, isNieuweRapportageOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey, selectedTrajectoryId],
+  )
+  const breadcrumbItems = useMemo(
+    () =>
+      buildBreadcrumbItems({
+        coachees: data.coachees,
+        sessions: data.sessions,
+        trajectories: data.trajectories,
+        isNieuweRapportageOpen,
+        rapportageScreenMode,
+        selectedCoacheeId,
+        selectedSessieId,
+        selectedSidebarItemKey,
+        selectedTrajectoryId,
+        writtenReportInitialCoacheeId,
+        navigateTo,
+      }),
+    [data.coachees, data.sessions, data.trajectories, isNieuweRapportageOpen, navigateTo, rapportageScreenMode, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey, selectedTrajectoryId, writtenReportInitialCoacheeId],
+  )
 
   const hasBreadcrumbs = breadcrumbItems.length >= 2 && !isEndToEndEncryptiePageOpen
+  const isCoacheeOverviewPage = selectedSidebarItemKey === 'coachees' && !!selectedCoacheeId && !selectedTrajectoryId && !selectedSessieId
+  const isCoacheeDetailPage = selectedSidebarItemKey === 'coachees' && !!selectedCoacheeId
   const isE2eeSetupBannerVisible = false
   const isSettingsSelected = isEndToEndEncryptiePageOpen
 
@@ -705,7 +460,7 @@ export function AppShell({ onLogout }: Props) {
 
     try {
       setIsDeletingAccount(true)
-      await callSecureApi<{ ok: boolean }>('/account/delete', { confirmText: 'VERWIJDEREN' })
+      await requestDeleteAccount()
       setIsDeleteAccountConfirmModalOpen(false)
       setIsMyAccountModalOpen(false)
       onLogout()
@@ -719,154 +474,91 @@ export function AppShell({ onLogout }: Props) {
   }, [isDeletingAccount, onLogout, showErrorToast])
 
   const submitFeedback = useCallback(async (feedback: string) => {
-    await callSecureApi<{ ok: true }>('/feedback', { message: feedback })
+    await submitFeedbackMessage(feedback)
     showToast('Feedback verzonden! Bedankt voor je hulp.')
   }, [showToast])
 
-  function renderMainContent() {
-    if (!isAppDataLoaded) {
-      return <AppLoadingScreen />
-    }
-    if (isEndToEndEncryptiePageOpen) {
-      return <EndToEndEncryptieScreen onBack={() => setIsEndToEndEncryptiePageOpen(false)} />
-    }
-    if (isAdminScreenOpen) {
-      return <AdminRevenueScreen />
-    }
-    if (isAdminContactScreenOpen) {
-      return <AdminContactSubmissionsScreen />
-    }
-    if (isAdminWachtlijstScreenOpen) {
-      return <AdminWachtlijstScreen />
-    }
-    if (overlayScreenKey === 'archief') {
-      return <ArchiefScreen />
-    }
-
-    if (isGeschrevenVerslagOpen) {
-      return (
-        <GeschrevenVerslagScreen
-          initialCoacheeId={writtenReportInitialCoacheeId}
-          onBack={() => {
-            setWrittenReportInitialCoacheeId(null)
-            if (previousRoute) {
-              navigateTo(previousRoute)
-              setPreviousRoute(null)
-              return
-            }
-            goBack()
-          }}
-          onOpenNewCoachee={openNewCoacheeModal}
-          onOpenSession={(sessionId) => {
-            setWrittenReportInitialCoacheeId(null)
-            setPreviousRoute(null)
-            navigateToReplacingHistory({ kind: 'sessie', sessieId: sessionId })
-          }}
-        />
-      )
-    }
-
-    if (selectedSessieId) {
-      const selectedSessie = data.sessions.find((item) => item.id === selectedSessieId)
-      if (!selectedSessie) {
-        return (
-          <EmptyPageMessage
-            message="Dit verslag bestaat niet meer."
-            onGoHome={() => navigateTo({ kind: 'sessies' })}
-          />
-        )
-      }
-      const sessieTitle = selectedSessie.title ?? 'Verslag'
-      const coacheeName = getCoacheeDisplayName(data.coachees, selectedSessie.coacheeId)
-      const dateLabel = new Date(selectedSessie.createdAtUnixMs).toLocaleDateString('nl-NL')
-      return (
-        <SessieDetailScreen
-          sessionId={selectedSessieId}
-          title={sessieTitle}
-          coacheeName={coacheeName}
-          dateLabel={dateLabel}
-          onBack={goBack}
-          onOpenNewCoachee={openNewCoacheeModal}
-          onOpenMySubscription={() => setIsMySubscriptionModalOpen(true)}
-          onChangeCoachee={(nextCoacheeId) => {
-            if (!nextCoacheeId) {
-              setSelectedSidebarItemKey('sessies')
-              setSessionOriginRoute(null)
-            }
-          }}
-          newlyCreatedCoacheeName={newlyCreatedCoacheeName}
-          onNewlyCreatedCoacheeHandled={() => {
-            setNewlyCreatedCoacheeId(null)
-            setNewlyCreatedCoacheeName(null)
-          }}
-        />
-      )
-    }
-
-    if (selectedSidebarItemKey === 'coachees') {
-      if (selectedCoacheeId) {
-        const selectedCoachee = data.coachees.find((c) => c.id === selectedCoacheeId)
-        if (!selectedCoachee) {
-          return (
-            <EmptyPageMessage
-              message="Deze cliënt bestaat niet meer."
-              onGoHome={() => navigateTo({ kind: 'coachees' })}
-            />
-          )
-        }
-        return (
-          <CoacheeDetailScreen
-            coacheeId={selectedCoacheeId}
-            onBack={goBack}
-            onSelectSession={(sessionId) => {
-              openSessionFromCoachee(sessionId, selectedCoacheeId)
-            }}
-            isCreateSessionDisabled={isRecordingBusy}
-            onPressCreateSession={() => openNewSessionModal(selectedCoacheeId)}
-            onOpenMySubscription={() => {
-              if (!canOpenSubscription) return
-              setIsMySubscriptionModalOpen(true)
-            }}
-          />
-        )
-      }
-
-      return (
-        <CoacheesScreen
-          onSelectCoachee={(coacheeId) => {
-            navigateTo({ kind: 'coachee', coacheeId })
-          }}
-        />
-      )
-    }
-
-    if (selectedSidebarItemKey === 'sessies') {
-      return (
-        <SessiesScreen
-          onSelectSessie={(sessieId) => {
-            navigateTo({ kind: 'sessie', sessieId })
-          }}
-          isCreateSessionDisabled={isRecordingBusy}
-          onPressCreateSession={() => openNewSessionModal(null)}
-        />
-      )
-    }
-
-    if (selectedSidebarItemKey === 'templates') {
-      return <TemplatesScreen />
-    }
-    if (selectedSidebarItemKey === 'mijnPraktijk') {
-      return <MijnPraktijkScreen />
-    }
-    return <Text style={styles.mainContentText}>{selectedSidebarItemKey}</Text>
-  }
 
   if (isTooSmall) {
     return (
-      <View style={styles.page}>
-        <View style={styles.tooSmallContainer}>
-          <Text style={styles.tooSmallText}>Deze webapp is niet zichtbaar op schermen smaller dan 1100px.</Text>
+      <View style={styles.mobileLimitedPage}>
+        <View style={styles.mobileLimitedTop}>
+          <CoachscribeLogo />
         </View>
+        <View style={styles.mobileLimitedCenter}>
+          <View style={styles.mobileLimitedMonitorIcon}>
+            <MonitorIcon size={26} />
+          </View>
+          <Text isBold style={styles.mobileLimitedDesktopMessage}>
+            Gebruik de desktop versie{'\n'}voor alle functies
+          </Text>
+          <Image
+            source={require('../../assets/mobile-limited/desktop-illustration.png')}
+            resizeMode="contain"
+            style={styles.mobileLimitedDesktopImage}
+          />
+        </View>
+        <View style={styles.mobileLimitedFooter}>
+          <Pressable
+            onPress={() => openMobileLimitedSession('gesprek')}
+            style={({ hovered }) => [styles.mobileLimitedPrimaryButton, hovered ? styles.mobileLimitedPrimaryButtonHovered : undefined]}
+          >
+            <Text isBold style={styles.mobileLimitedPrimaryButtonText}>Gesprek opnemen</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => openMobileLimitedSession('gespreksverslag')}
+            style={({ hovered }) => [styles.mobileLimitedPrimaryButton, hovered ? styles.mobileLimitedPrimaryButtonHovered : undefined]}
+          >
+            <Text isBold style={styles.mobileLimitedPrimaryButtonText}>Verslag opnemen</Text>
+          </Pressable>
+        </View>
+
+        <NewSessionModal
+          visible={isNewSessionModalOpen}
+          limitedMode
+          initialOption={mobileSessionInitialOption}
+          onRecordingBusyChange={setIsRecordingBusy}
+          initialCoacheeId={null}
+          initialTrajectoryId={null}
+          onOpenGeschrevenGespreksverslag={() => undefined}
+          restoreDraftFromSubscriptionReturn={restoreNewSessionDraftFromSubscriptionReturn}
+          onRestoreDraftHandled={() => setRestoreNewSessionDraftFromSubscriptionReturn(false)}
+          onClose={() => {
+            setIsRecordingBusy(false)
+            setIsNewSessionModalOpen(false)
+            setMobileSessionInitialOption(null)
+            setNewlyCreatedCoacheeId(null)
+            setNewSessionCoacheeId(null)
+            setNewSessionTrajectoryId(null)
+          }}
+          onOpenMySubscription={() => {
+            if (!canOpenSubscription) return
+            setIsMySubscriptionModalOpen(true)
+          }}
+          onOpenNewCoachee={openNewCoacheeModal}
+          newlyCreatedCoacheeId={newlyCreatedCoacheeId}
+          onNewlyCreatedCoacheeHandled={() => setNewlyCreatedCoacheeId(null)}
+          onOpenSession={(sessionId) => {
+            const openedSession = data.sessions.find((item) => item.id === sessionId)
+            const nextRoute =
+              openedSession?.coacheeId && openedSession?.trajectoryId
+                ? ({ kind: 'item', coacheeId: openedSession.coacheeId, trajectoryId: openedSession.trajectoryId, itemId: sessionId } as const)
+                : ({ kind: 'sessie', sessieId: sessionId } as const)
+            setIsNewSessionModalOpen(false)
+            setMobileSessionInitialOption(null)
+            setNewSessionTrajectoryId(null)
+            setSessionOriginRoute(null)
+            navigateTo(nextRoute)
+          }}
+        />
+
+        <MySubscriptionModal
+          visible={isMySubscriptionModalOpen}
+          onClose={() => {
+            setIsMySubscriptionModalOpen(false)
+            void refreshSubscriptionAccess()
+          }}
+        />
       </View>
     )
   }
@@ -883,19 +575,12 @@ export function AppShell({ onLogout }: Props) {
           if (!canOpenSubscription) return
           setIsMySubscriptionModalOpen(true)
         }}
+        breadcrumbItems={breadcrumbItems}
+        onPressNieuweRapportage={() => navigateTo({ kind: 'nieuwe-rapportage' })}
+        isNieuweRapportageDisabled
+        onPressRecord={() => openNewSessionModal(selectedCoacheeId ?? null, null, 'gesprek')}
+        isRecordDisabled={isRecordingBusy}
       />
-      {hasBreadcrumbs ? (
-        <View
-          style={[
-            styles.breadcrumbContainer,
-            isSidebarCompact ? styles.breadcrumbContainerCompact : undefined,
-            isE2eeSetupBannerVisible ? styles.breadcrumbContainerWithE2eeBar : undefined,
-          ]}
-        >
-          {/* Breadcrumb bar */}
-          <BreadcrumbBar items={breadcrumbItems} />
-        </View>
-      ) : null}
       <>
         {/* Page content */}
         <View style={styles.contentRow}>
@@ -905,31 +590,8 @@ export function AppShell({ onLogout }: Props) {
               isSettingsSelected={isSettingsSelected}
               isAdminUser={isCurrentUserAdmin}
               onSelectSidebarItem={(sidebarItemKey) => {
-                navigateTo(
-                  sidebarItemKey === 'coachees'
-                    ? { kind: 'coachees' }
-                    : sidebarItemKey === 'templates'
-                      ? { kind: 'templates' }
-                      : sidebarItemKey === 'admin'
-                        ? { kind: 'admin' }
-                      : sidebarItemKey === 'adminContact'
-                        ? { kind: 'admin-contact' }
-                      : sidebarItemKey === 'adminWachtlijst'
-                        ? { kind: 'admin-wachtlijst' }
-                      : sidebarItemKey === 'mijnPraktijk'
-                        ? { kind: 'mijn-praktijk' }
-                      : sidebarItemKey === 'archief'
-                        ? { kind: 'archief' }
-                      : { kind: 'sessies' },
-                )
+                navigateTo(routeFromSidebarItemKey(sidebarItemKey))
                 setIsSettingsMenuOpen(false)
-              }}
-              onPressCreateSession={() => openNewSessionModal(null)}
-              isCreateSessionDisabled={isRecordingBusy}
-              onOpenContact={() => {
-                setIsSettingsMenuOpen(false)
-                setSettingsMenuAnchorPoint(null)
-                setIsContactModalOpen(true)
               }}
               onOpenSettingsMenu={(anchorPoint) => {
                 setSettingsMenuAnchorPoint(anchorPoint)
@@ -940,11 +602,69 @@ export function AppShell({ onLogout }: Props) {
             <View
               style={[
                 styles.mainContent,
-                hasBreadcrumbs ? styles.mainContentWithBreadcrumbs : undefined,
-                isE2eeSetupBannerVisible ? (hasBreadcrumbs ? styles.mainContentWithE2eeBarAndBreadcrumbs : styles.mainContentWithE2eeBar) : undefined,
+                isCoacheeDetailPage || isNieuweRapportageOpen ? styles.mainContentNoFrame : undefined,
+                hasBreadcrumbs && !isCoacheeOverviewPage && !isNieuweRapportageOpen ? styles.mainContentWithBreadcrumbs : undefined,
+                isE2eeSetupBannerVisible
+                  ? (hasBreadcrumbs && !isCoacheeOverviewPage && !isNieuweRapportageOpen ? styles.mainContentWithE2eeBarAndBreadcrumbs : styles.mainContentWithE2eeBar)
+                  : undefined,
               ]}
             >
-              <AnimatedMainContent contentKey={mainContentKey}>{renderMainContent()}</AnimatedMainContent>
+              <AnimatedMainContent contentKey={mainContentKey}>
+                <AppShellRouteView
+                  canOpenSubscription={canOpenSubscription}
+                  coacheeTabById={coacheeTabById}
+                  data={data}
+                  goBack={goBack}
+                  isAdminContactScreenOpen={isAdminContactScreenOpen}
+                  isAdminScreenOpen={isAdminScreenOpen}
+                  isAdminWachtlijstScreenOpen={isAdminWachtlijstScreenOpen}
+                  isAppDataLoaded={isAppDataLoaded}
+                  isEndToEndEncryptiePageOpen={isEndToEndEncryptiePageOpen}
+                  isGeschrevenVerslagOpen={isGeschrevenVerslagOpen}
+                  isNieuweRapportageOpen={isNieuweRapportageOpen}
+                  isRecordingBusy={isRecordingBusy}
+                  mainContentTextStyle={styles.mainContentText}
+                  navigateTo={navigateTo}
+                  navigateToReplacingHistory={navigateToReplacingHistory}
+                  newlyCreatedCoacheeName={newlyCreatedCoacheeName}
+                  onClearNewlyCreatedCoachee={() => {
+                    setNewlyCreatedCoacheeId(null)
+                    setNewlyCreatedCoacheeName(null)
+                  }}
+                  onOpenMySubscription={() => {
+                    if (!canOpenSubscription) return
+                    setIsMySubscriptionModalOpen(true)
+                  }}
+                  onOpenNewCoachee={openNewCoacheeModal}
+                  onOpenNewSessionModal={openNewSessionModal}
+                  onSetCoacheeTabById={(coacheeId, tabKey) => {
+                    setCoacheeTabById((previous) => {
+                      if (previous[coacheeId] === tabKey) return previous
+                      return { ...previous, [coacheeId]: tabKey }
+                    })
+                  }}
+                  onSetPreviousRoute={setPreviousRoute}
+                  onSetRapportageEditSessionId={setRapportageEditSessionId}
+                  onSetRapportageOnlySessionId={setRapportageOnlySessionId}
+                  onSetRapportageScreenMode={setRapportageScreenMode}
+                  onSetSelectedSidebarItemKey={setSelectedSidebarItemKey}
+                  onSetSessionIdPendingTemplatePicker={setSessionIdPendingTemplatePicker}
+                  onSetSessionOriginRoute={setSessionOriginRoute}
+                  onSetWrittenReportInitialCoacheeId={setWrittenReportInitialCoacheeId}
+                  onToggleE2eePage={setIsEndToEndEncryptiePageOpen}
+                  overlayScreenKey={overlayScreenKey}
+                  previousRoute={previousRoute}
+                  rapportageEditSessionId={rapportageEditSessionId}
+                  rapportageOnlySessionId={rapportageOnlySessionId}
+                  rapportageScreenMode={rapportageScreenMode}
+                  selectedCoacheeId={selectedCoacheeId}
+                  selectedSidebarItemKey={selectedSidebarItemKey}
+                  selectedSessieId={selectedSessieId}
+                  selectedTrajectoryId={selectedTrajectoryId}
+                  sessionIdPendingTemplatePicker={sessionIdPendingTemplatePicker}
+                  writtenReportInitialCoacheeId={writtenReportInitialCoacheeId}
+                />
+              </AnimatedMainContent>
             </View>
           </View>
 
@@ -976,6 +696,11 @@ export function AppShell({ onLogout }: Props) {
               setSettingsMenuAnchorPoint(null)
               setIsFeedbackModalOpen(true)
             }}
+            onOpenContact={() => {
+              setIsSettingsMenuOpen(false)
+              setSettingsMenuAnchorPoint(null)
+              setIsContactModalOpen(true)
+            }}
             onOpenShare={() => {
               setIsSettingsMenuOpen(false)
               setSettingsMenuAnchorPoint(null)
@@ -997,13 +722,26 @@ export function AppShell({ onLogout }: Props) {
             visible={isNewSessionModalOpen}
             onRecordingBusyChange={setIsRecordingBusy}
             initialCoacheeId={newSessionCoacheeId}
+            initialTrajectoryId={newSessionTrajectoryId}
+            onOpenGeschrevenGespreksverslag={(coacheeId) => {
+              setIsNewSessionModalOpen(false)
+              setMobileSessionInitialOption(null)
+              setNewSessionCoacheeId(null)
+              setNewSessionTrajectoryId(null)
+              setRapportageOnlySessionId(null)
+              setWrittenReportInitialCoacheeId(coacheeId)
+              setPreviousRoute(currentRoute)
+              navigateTo({ kind: 'geschrevenVerslag' })
+            }}
             restoreDraftFromSubscriptionReturn={restoreNewSessionDraftFromSubscriptionReturn}
             onRestoreDraftHandled={() => setRestoreNewSessionDraftFromSubscriptionReturn(false)}
             onClose={() => {
               setIsRecordingBusy(false)
               setIsNewSessionModalOpen(false)
+              setMobileSessionInitialOption(null)
               setNewlyCreatedCoacheeId(null)
               setNewSessionCoacheeId(null)
+              setNewSessionTrajectoryId(null)
             }}
             onOpenMySubscription={() => {
               if (!canOpenSubscription) return
@@ -1013,10 +751,18 @@ export function AppShell({ onLogout }: Props) {
             newlyCreatedCoacheeId={newlyCreatedCoacheeId}
             onNewlyCreatedCoacheeHandled={() => setNewlyCreatedCoacheeId(null)}
             onOpenSession={(sessionId) => {
+              const openedSession = data.sessions.find((item) => item.id === sessionId)
+              const nextRoute =
+                openedSession?.coacheeId && openedSession?.trajectoryId
+                  ? ({ kind: 'item', coacheeId: openedSession.coacheeId, trajectoryId: openedSession.trajectoryId, itemId: sessionId } as const)
+                  : ({ kind: 'sessie', sessieId: sessionId } as const)
               setIsNewSessionModalOpen(false)
+              setMobileSessionInitialOption(null)
               setNewSessionCoacheeId(null)
+              setNewSessionTrajectoryId(null)
+              setRapportageOnlySessionId(null)
               setSessionOriginRoute(null)
-              navigateTo({ kind: 'sessie', sessieId: sessionId })
+              navigateTo(nextRoute)
             }}
           />
 
@@ -1073,18 +819,22 @@ export function AppShell({ onLogout }: Props) {
             visible={isCoacheeModalOpen}
             mode="create"
             initialValues={getCoacheeUpsertValues(null)}
+            trajectoryOptions={data.trajectories.map((trajectory) => ({ id: trajectory.id, label: String(trajectory.name || '').trim() || 'Traject' }))}
             onClose={() => setIsCoacheeModalOpen(false)}
             onSave={(values) => {
-              const serialized = serializeCoacheeUpsertValues(values)
-              const trimmedName = serialized.name.trim()
-              if (!trimmedName) {
-                setIsCoacheeModalOpen(false)
-                return
-              }
-              const createdCoacheeId = createCoachee(serialized)
-              if (createdCoacheeId) {
-                setNewlyCreatedCoacheeId(createdCoacheeId)
-              }
+              const result = saveCoacheeFromUpsert({
+                api: {
+                  createCoachee,
+                  createTrajectory,
+                  updateCoachee: (_coacheeId, _values) => undefined,
+                  updateTrajectory: (_trajectoryId, _values) => undefined,
+                },
+                data,
+                mode: 'create',
+                editCoacheeId: null,
+                values,
+              })
+              if (result.createdCoacheeId) setNewlyCreatedCoacheeId(result.createdCoacheeId)
               setIsCoacheeModalOpen(false)
             }}
           />
@@ -1097,7 +847,7 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
     backgroundColor: colors.pageBackground,
-    ...( { height: '100vh', overflow: 'hidden' } as any ),
+    ...( { height: '100vh', overflow: 'visible' } as any ),
   },
   breadcrumbContainer: {
     height: 40,
@@ -1107,6 +857,7 @@ const styles = StyleSheet.create({
     top: 80,
     ...( { left: 264, right: 24 } as any ),
     zIndex: 2,
+    backgroundColor: 'transparent',
   },
   breadcrumbContainerWithE2eeBar: {
     top: 112,
@@ -1168,13 +919,16 @@ const styles = StyleSheet.create({
   contentRow: {
     flex: 1,
     flexDirection: 'row',
-    ...( { overflow: 'hidden' } as any ),
+    ...( { overflow: 'visible' } as any ),
   },
   mainContent: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.pageBackground,
     padding: 24,
-    ...( { overflow: 'auto' } as any ),
+    ...( { overflow: 'visible' } as any ),
+  },
+  mainContentNoFrame: {
+    padding: 0,
   },
   mainContentWithBreadcrumbs: {
     paddingTop: 48,
@@ -1189,16 +943,64 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
   },
-  tooSmallContainer: {
+  emptyDashboardContent: {
+    flex: 1,
+  },
+  mobileLimitedPage: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  mobileLimitedTop: {
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 56,
+  },
+  mobileLimitedCenter: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
   },
-  tooSmallText: {
-    fontSize: 16,
-    lineHeight: 20,
-    color: colors.text,
+  mobileLimitedMonitorIcon: {
+    marginBottom: 12,
+  },
+  mobileLimitedDesktopMessage: {
+    fontSize: 18,
+    lineHeight: 26,
+    color: colors.textStrong,
     textAlign: 'center',
   },
+  mobileLimitedDesktopImage: {
+    width: '92%',
+    maxWidth: 420,
+    height: 300,
+    marginTop: 16,
+  },
+  mobileLimitedFooter: {
+    width: '100%',
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    gap: 12,
+  },
+  mobileLimitedPrimaryButton: {
+    width: '100%',
+    height: 56,
+    borderRadius: 10,
+    backgroundColor: colors.selected,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mobileLimitedPrimaryButtonHovered: {
+    backgroundColor: '#A50058',
+  },
+  mobileLimitedPrimaryButtonText: {
+    fontSize: 18,
+    lineHeight: 22,
+    color: '#FFFFFF',
+  },
 })
+
+
+
+
+

@@ -10,7 +10,7 @@ export const brandColors = {
 
 export const semanticColorTokens = {
   light: {
-    pageBackground: "#F8F9F9",
+    pageBackground: "#F7F5F8",
     surface: "#FEFEFE",
     assistantBubble: "#F2F2F2",
     border: "#E0E0E0",

@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native'
 
 import { useReducedMotion } from '../../hooks/useReducedMotion'
-import { colors } from '../../theme/colors'
-import { Text } from '../Text'
-import { ShareAudioIcon } from '../icons/ShareAudioIcon'
-import { ShareTextIcon } from '../icons/ShareTextIcon'
+import { colors } from '../../design/theme/colors'
+import { Text } from '../../ui/Text'
+import { ShareAudioIcon } from '../../icons/ShareAudioIcon'
+import { ShareTextIcon } from '../../icons/ShareTextIcon'
 
 type ShareMenuItemKey = 'audio' | 'summary'
 
@@ -148,4 +148,5 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
   },
 })
+
 

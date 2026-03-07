@@ -2,8 +2,8 @@ import React from 'react'
 import { StyleSheet, View } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 
-import { colors } from '../theme/colors'
-import { Text } from './Text'
+import { colors } from '../design/theme/colors'
+import { Text } from '../ui/Text'
 
 type Props = {
   label: string
@@ -47,4 +47,5 @@ const styles = StyleSheet.create({
     color: colors.selected,
   },
 })
+
 

@@ -1,219 +1,90 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
+import { Animated, Easing, Pressable, TextInput, useWindowDimensions, View } from 'react-native'
 
-import { AnimatedDropdownPanel } from '../AnimatedDropdownPanel'
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
 import { useBrowserAudioRecorder } from '../../hooks/useBrowserAudioRecorder'
 import { useLiveAudioWaveformBars } from '../../hooks/useLiveAudioWaveformBars'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import { useLocalAppData } from '../../local/LocalAppDataProvider'
 import { useE2ee } from '../../e2ee/E2eeProvider'
-import { colors } from '../../theme/colors'
-import { webTransitionSmooth, webTransitionSlow } from '../../theme/webTransitions'
-import { Text } from '../Text'
-import { MicrophoneSmallIcon } from '../icons/MicrophoneSmallIcon'
-import { ChevronDownIcon } from '../icons/ChevronDownIcon'
-import { ModalCloseIcon } from '../icons/ModalCloseIcon'
-import { MinimizeIcon } from '../icons/MinimizeIcon'
-import { PauseIcon } from '../icons/PauseIcon'
-import { StopSquareIcon } from '../icons/StopSquareIcon'
-import { PlaySmallIcon } from '../icons/PlaySmallIcon'
-import { ProfileCircleIcon } from '../icons/ProfileCircleIcon'
-import { Mp3UploadIcon } from '../icons/Mp3UploadIcon'
-import { VerslagSchrijvenIcon } from '../icons/VerslagSchrijvenIcon'
-import { SendSquareIcon } from '../icons/SendSquareIcon'
-import { FolderOpenIcon } from '../icons/FolderOpenIcon'
-import { CheckmarkIcon } from '../icons/CheckmarkIcon'
+import { colors } from '../../design/theme/colors'
+import { webTransitionSmooth } from '../../design/theme/webTransitions'
+import { Text } from '../../ui/Text'
+import { MinimizeIcon } from '../../icons/MinimizeIcon'
+import { FolderOpenIcon } from '../../icons/FolderOpenIcon'
 import { unassignedCoacheeLabel } from '../../utils/coachee'
-import { AudioPlayerCard } from '../sessionDetail/AudioPlayerCard'
 import { setPendingPreviewAudio } from '../../audio/pendingPreviewStore'
 import { processSessionAudio } from '../../audio/processSessionAudio'
-import { AnimatedMainContent } from '../AnimatedMainContent'
-import { fetchBillingStatus, type BillingStatus } from '../../services/billing'
+import { AnimatedMainContent } from '../../ui/AnimatedMainContent'
+import { fetchBillingStatus } from '../../api/billing'
 import { clearSubscriptionReturnDraft, readAndClearSubscriptionReturnDraft, saveSubscriptionReturnDraft } from './subscriptionReturnDraftStore'
 import {
   fetchTranscriptionRuntimeConfig,
-  startRealtimeTranscriber,
   type RealtimeTranscriberSession,
   type TranscriptionMode,
-} from '../../services/realtimeTranscription'
+} from '../../api/transcription'
 import { useToast } from '../../toast/ToastProvider'
 import { isGespreksverslagTemplate } from '../../utils/templateCategories'
-
-type Step = 'select' | 'consent' | 'upload' | 'recording' | 'recorded'
-type OptionKey = 'gesprek' | 'verslag' | 'upload' | 'schrijven'
+import type { Session } from '../../local/types'
+import { MinimizedRecordingLayer } from './components/MinimizedRecordingLayer'
+import { NewSessionAuxiliaryModals } from './components/NewSessionAuxiliaryModals'
+import { NewSessionStepBody } from './NewSessionStepBody'
+import { runPrimaryFooterAction } from '../../logic/newSession/newSessionModalActions'
+import { styles } from './newSessionModalStyles'
+import type { NewSessionStep } from './newSessionModalTypes'
+import { useNewSessionRecordingFlow } from '../../hooks/newSession/useNewSessionRecordingFlow'
+import {
+  buildDefaultSessionTitle,
+  createOperationId,
+  formatDurationLabel,
+  formatTimeLabel,
+  getAudioMimeTypeFromFile,
+  isAudioFile,
+  maxDuration,
+  maxRecordingSeconds,
+  maxTranscriptionDurationSeconds,
+  normalizeDraftOption,
+  normalizeFileExtensionFromMimeType,
+  readAudioDurationSeconds,
+  readRemainingTranscriptionSeconds,
+  recordingWarningStartSeconds,
+  type OptionKey,
+} from './newSessionModalUtils'
 
 type Props = {
   visible: boolean
   onClose: () => void
   onRecordingBusyChange?: (isBusy: boolean) => void
+  onOpenGeschrevenGespreksverslag: (coacheeId: string | null) => void
   onOpenMySubscription: () => void
   restoreDraftFromSubscriptionReturn?: boolean
   onRestoreDraftHandled?: () => void
   onOpenSession: (sessionId: string) => void
   onOpenNewCoachee: () => void
   initialCoacheeId?: string | null
+  initialTrajectoryId?: string | null
   newlyCreatedCoacheeId?: string | null
   onNewlyCreatedCoacheeHandled: () => void
+  limitedMode?: boolean
+  initialOption?: 'gesprek' | 'gespreksverslag' | null
 }
 
-const maxRecordingSeconds = 1 * 60 * 60 + 54 * 60 + 59
-const recordingWarningLeadSeconds = 5 * 60
-const recordingWarningStartSeconds = maxRecordingSeconds - recordingWarningLeadSeconds
-const maxTranscriptionDurationSeconds = 115 * 60
-
-function formatTimeLabel(totalSeconds: number) {
-  const normalizedSeconds = Math.max(0, Math.floor(totalSeconds))
-  const hours = Math.floor(normalizedSeconds / 3600)
-  const minutes = Math.floor((normalizedSeconds % 3600) / 60)
-  const seconds = normalizedSeconds % 60
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-}
-
-function getTemplateDisplayName(name: string) {
-  const normalizedName = String(name || '').trim().toLowerCase()
-  if (normalizedName === 'intake' || normalizedName === 'intakeverslag') return 'Intake'
-  return name
-}
-
-function buildDefaultSessionTitle(existingTitles: string[]) {
-  const numberedUntitledSessionPattern = /^Verslag #(\d+) \(naamloos\)$/
-  let maxSessionNumber = 0
-
-  existingTitles.forEach((title) => {
-    const match = numberedUntitledSessionPattern.exec(title.trim())
-    if (!match) return
-    const sessionNumber = Number(match[1])
-    if (!Number.isFinite(sessionNumber) || sessionNumber <= 0) return
-    maxSessionNumber = Math.max(maxSessionNumber, sessionNumber)
-  })
-
-  return `Verslag #${maxSessionNumber + 1} (naamloos)`
-}
-
-const knownAudioMimeByExtension: Record<string, string> = {
-  mp3: 'audio/mpeg',
-  m4a: 'audio/mp4',
-  mp4: 'audio/mp4',
-  aac: 'audio/aac',
-  wav: 'audio/wav',
-  ogg: 'audio/ogg',
-  opus: 'audio/opus',
-  webm: 'audio/webm',
-  flac: 'audio/flac',
-}
-
-function getFileExtension(fileName: string) {
-  const trimmed = String(fileName || '').trim().toLowerCase()
-  const dotIndex = trimmed.lastIndexOf('.')
-  if (dotIndex < 0 || dotIndex === trimmed.length - 1) return ''
-  return trimmed.slice(dotIndex + 1)
-}
-
-function getAudioMimeTypeFromFile(file: File) {
-  if (file.type && file.type.toLowerCase().startsWith('audio/')) {
-    return file.type
-  }
-  const extension = getFileExtension(file.name)
-  return knownAudioMimeByExtension[extension] ?? 'audio/mpeg'
-}
-
-async function readAudioDurationSeconds(blob: Blob): Promise<number | null> {
-  if (typeof window === 'undefined') return null
-  const audio = document.createElement('audio')
-  const objectUrl = URL.createObjectURL(blob)
-  audio.preload = 'metadata'
-  audio.src = objectUrl
-
-  try {
-    const duration = await new Promise<number | null>((resolve) => {
-      let isResolved = false
-      const timeoutId = window.setTimeout(() => {
-        if (isResolved) return
-        isResolved = true
-        resolve(null)
-      }, 6000)
-
-      const cleanup = () => {
-        window.clearTimeout(timeoutId)
-        audio.removeAttribute('src')
-      }
-
-      audio.onloadedmetadata = () => {
-        if (isResolved) return
-        isResolved = true
-        const nextDuration = Number.isFinite(audio.duration) ? Math.max(0, Math.round(audio.duration)) : null
-        cleanup()
-        resolve(nextDuration)
-      }
-
-      audio.onerror = () => {
-        if (isResolved) return
-        isResolved = true
-        cleanup()
-        resolve(null)
-      }
-    })
-    return duration
-  } finally {
-    URL.revokeObjectURL(objectUrl)
-  }
-}
-
-function readRemainingTranscriptionSeconds(status: BillingStatus | null): number {
-  if (!status) return 0
-  const includedRemainingSeconds = Math.max(0, Math.floor(status.includedSeconds - status.cycleUsedSeconds))
-  const nonExpiringRemainingSeconds = Math.max(0, Math.floor(status.nonExpiringTotalSeconds - status.nonExpiringUsedSeconds))
-  return includedRemainingSeconds + nonExpiringRemainingSeconds
-}
-
-function normalizeFileExtensionFromMimeType(mimeType: string): string {
-  const normalized = String(mimeType || '').toLowerCase()
-  if (normalized.includes('wav')) return 'wav'
-  if (normalized.includes('ogg') || normalized.includes('opus')) return 'ogg'
-  if (normalized.includes('webm')) return 'webm'
-  if (normalized.includes('mpeg') || normalized.includes('mp3')) return 'mp3'
-  if (normalized.includes('mp4') || normalized.includes('m4a') || normalized.includes('aac')) return 'm4a'
-  return 'mp3'
-}
-
-function formatDurationLabel(totalSeconds: number) {
-  const normalizedSeconds = Math.max(0, Math.floor(totalSeconds))
-  const hours = Math.floor(normalizedSeconds / 3600)
-  const minutes = Math.floor((normalizedSeconds % 3600) / 60)
-  const seconds = normalizedSeconds % 60
-  const hoursLabel = String(hours).padStart(2, '0')
-  const minutesLabel = String(minutes).padStart(2, '0')
-  const secondsLabel = String(seconds).padStart(2, '0')
-  return `${hoursLabel}:${minutesLabel}:${secondsLabel}`
-}
-
-function formatMinutesLabel(totalSeconds: number): string {
-  const minutes = Math.ceil(Math.max(0, Number(totalSeconds) || 0) / 60)
-  if (minutes <= 0) return 'minder dan 1 minuut'
-  if (minutes === 1) return '1 minuut'
-  return `${minutes} minuten`
-}
-
-function createOperationId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID()
-  }
-  return `op_${Date.now()}_${Math.floor(Math.random() * 1_000_000_000)}`
-}
 
 export function NewSessionModal({
   visible,
   onClose,
   onRecordingBusyChange,
+  onOpenGeschrevenGespreksverslag,
   onOpenMySubscription,
   restoreDraftFromSubscriptionReturn = false,
   onRestoreDraftHandled,
   onOpenSession,
   onOpenNewCoachee,
   initialCoacheeId,
+  initialTrajectoryId,
   newlyCreatedCoacheeId,
   onNewlyCreatedCoacheeHandled,
+  limitedMode = false,
+  initialOption = null,
 }: Props) {
   const isReducedMotionEnabled = useReducedMotion()
   const { data, createSession, updateSession } = useLocalAppData()
@@ -222,13 +93,15 @@ export function NewSessionModal({
   const { showErrorToast } = useToast()
 
   const [isRendered, setIsRendered] = useState(visible)
-  const [step, setStep] = useState<Step>('select')
+  const [step, setStep] = useState<NewSessionStep>('select')
   const [selectedOption, setSelectedOption] = useState<OptionKey | null>(null)
+  const [selectedOptionGroup, setSelectedOptionGroup] = useState<'gesprek' | 'gespreksverslag' | null>(null)
+  const [, setOpenOptionGroup] = useState<'gesprek' | 'gespreksverslag' | null>(null)
   const [isCoacheeOpen, setIsCoacheeOpen] = useState(false)
   const [selectedCoacheeId, setSelectedCoacheeId] = useState<string | null>(null)
-  const [isReportTypeOpen, setIsReportTypeOpen] = useState(false)
+  const [selectedTrajectoryId, setSelectedTrajectoryId] = useState<string | null>(null)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
-  const [sessionTitle, setSessionTitle] = useState(() => buildDefaultSessionTitle(data.sessions.map((session) => session.title)))
+  const [sessionTitle, setSessionTitle] = useState(() => buildDefaultSessionTitle(null))
   const [selectedAudioFile, setSelectedAudioFile] = useState<File | null>(null)
   const [selectedUploadFileDurationSeconds, setSelectedUploadFileDurationSeconds] = useState<number | null>(null)
   const [uploadFileDurationWarning, setUploadFileDurationWarning] = useState<string | null>(null)
@@ -241,11 +114,9 @@ export function NewSessionModal({
   const uploadDropAreaRef = useRef<View | null>(null)
   const isUploadDragActiveRef = useRef(false)
   const coacheeTriggerRef = useRef<any>(null)
-  const reportTypeTriggerRef = useRef<any>(null)
   const hasAutoStartedRecordingRef = useRef(false)
   const hasAutoSubmittedRecordingRef = useRef(false)
   const [coacheeDropdownMaxHeight, setCoacheeDropdownMaxHeight] = useState<number | null>(null)
-  const [reportTypeDropdownMaxHeight, setReportTypeDropdownMaxHeight] = useState<number | null>(null)
 
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null)
   const [audioDurationSeconds, setAudioDurationSeconds] = useState<number | null>(null)
@@ -265,12 +136,8 @@ export function NewSessionModal({
   const realtimeOperationIdRef = useRef<string | null>(null)
   const { height: windowHeight, width: windowWidth } = useWindowDimensions()
   const templates = data.templates ?? []
-  const reportTypeTemplates = useMemo(() => {
-    if (selectedOption === 'verslag') {
-      return templates
-    }
-    return templates.filter((template) => isGespreksverslagTemplate(template))
-  }, [selectedOption, templates])
+  const gesprekReportTemplates = useMemo(() => templates.filter((template) => isGespreksverslagTemplate(template)), [templates])
+  const reportTypeTemplates = useMemo(() => gesprekReportTemplates, [gesprekReportTemplates])
   const defaultTemplateId = useMemo(() => {
     const standardTemplate = reportTypeTemplates.find((template) => {
       const normalizedName = template.name.trim().toLowerCase()
@@ -278,19 +145,6 @@ export function NewSessionModal({
     })
     return (standardTemplate ?? reportTypeTemplates[0])?.id ?? null
   }, [reportTypeTemplates])
-  const selectedTemplate = useMemo(
-    () => reportTypeTemplates.find((template) => template.id === selectedTemplateId) ?? null,
-    [reportTypeTemplates, selectedTemplateId],
-  )
-  const summaryTemplate = useMemo(() => {
-    if (!selectedTemplate) return undefined
-    const sections = selectedTemplate.sections
-      .map((section) => ({ title: section.title.trim(), description: section.description }))
-      .filter((section) => section.title.length > 0)
-    if (sections.length === 0) return undefined
-    return { name: selectedTemplate.name, sections }
-  }, [selectedTemplate])
-
   const backdropOpacity = useRef(new Animated.Value(0)).current
   const modalOpacity = useRef(new Animated.Value(0)).current
   const modalScale = useRef(new Animated.Value(0.98)).current
@@ -313,11 +167,13 @@ export function NewSessionModal({
     recorder.reset()
     setStep('select')
     setSelectedOption(null)
+    setSelectedOptionGroup(null)
+    setOpenOptionGroup(null)
     setIsCoacheeOpen(false)
-    setIsReportTypeOpen(false)
     setSelectedCoacheeId(null)
+    setSelectedTrajectoryId(initialTrajectoryId ?? null)
     setSelectedTemplateId(defaultTemplateId)
-    setSessionTitle(buildDefaultSessionTitle(data.sessions.map((session) => session.title)))
+    setSessionTitle(buildDefaultSessionTitle(null))
     setSelectedAudioFile(null)
     setSelectedUploadFileDurationSeconds(null)
     setUploadFileDurationWarning(null)
@@ -338,10 +194,26 @@ export function NewSessionModal({
     setHasRecordingConsent(false)
     setIsUploadDragActive(false)
     setCoacheeDropdownMaxHeight(null)
-    setReportTypeDropdownMaxHeight(null)
     hasAutoStartedRecordingRef.current = false
     hasAutoSubmittedRecordingRef.current = false
-  }, [visible])
+  }, [initialTrajectoryId, visible])
+
+  useEffect(() => {
+    if (!visible) return
+    if (!limitedMode) return
+    if (!initialOption) return
+    if (restoreDraftFromSubscriptionReturn) return
+    setSelectedOption(initialOption)
+    setSessionTitle(buildDefaultSessionTitle(initialOption))
+    if (initialOption === 'gespreksverslag') {
+      setStep('recording')
+      setSelectedOptionGroup('gespreksverslag')
+      return
+    }
+    setSelectedOptionGroup('gesprek')
+    setHasRecordingConsent(false)
+    setStep('consent')
+  }, [initialOption, limitedMode, restoreDraftFromSubscriptionReturn, visible])
 
   useEffect(() => {
     if (!visible) return
@@ -354,10 +226,13 @@ export function NewSessionModal({
         if (isCancelled) return
         if (!draft) return
 
-        setSelectedOption(draft.selectedOption)
+        const restoredOption = normalizeDraftOption(draft.selectedOption)
+        setSelectedOption(restoredOption)
+        setSelectedOptionGroup(restoredOption === 'gespreksverslag' ? 'gespreksverslag' : 'gesprek')
+        setOpenOptionGroup(null)
         setSelectedCoacheeId(draft.selectedCoacheeId)
         setSelectedTemplateId(draft.selectedTemplateId ?? defaultTemplateId)
-        setSessionTitle(String(draft.sessionTitle || '').trim() || buildDefaultSessionTitle(data.sessions.map((session) => session.title)))
+        setSessionTitle(String(draft.sessionTitle || '').trim() || buildDefaultSessionTitle(restoredOption))
         setAudioDurationSeconds(draft.audioDurationSeconds)
         setShouldSaveAudio(draft.shouldSaveAudio !== false)
         setAudioForTranscription({ blob: draft.blob, mimeType: draft.mimeType || 'application/octet-stream' })
@@ -460,13 +335,6 @@ export function NewSessionModal({
   }, [visible])
 
   useEffect(() => {
-    return () => {
-      void stopLiveTranscriber()
-    }
-  }, [])
-
-
-  useEffect(() => {
     if (visible) setIsRendered(true)
   }, [visible])
 
@@ -487,17 +355,38 @@ export function NewSessionModal({
   }, [handleClose, startMinimizeModal, step, visible])
 
   const activeCoachees = useMemo(() => data.coachees.filter((c) => !c.isArchived), [data.coachees])
+  const trajectoriesByCoacheeId = useMemo(() => {
+    const map = new Map<string, typeof data.trajectories>()
+    for (const coachee of activeCoachees) {
+      map.set(
+        coachee.id,
+        data.trajectories
+          .filter((trajectory) => trajectory.coacheeId === coachee.id)
+          .sort((a, b) => a.createdAtUnixMs - b.createdAtUnixMs),
+      )
+    }
+    return map
+  }, [activeCoachees, data.trajectories])
+
+  const resolveDefaultTrajectoryIdForCoachee = (coacheeId: string | null | undefined): string | null => {
+    if (!coacheeId) return null
+    const trajectories = trajectoriesByCoacheeId.get(coacheeId) ?? []
+    if (trajectories.length === 0) return null
+    const matchingInitial = initialTrajectoryId ? trajectories.find((trajectory) => trajectory.id === initialTrajectoryId) : null
+    return matchingInitial?.id ?? trajectories[0].id
+  }
 
   useEffect(() => {
     if (newlyCreatedCoacheeId && visible) {
       const coachee = activeCoachees.find((c) => c.id === newlyCreatedCoacheeId)
       if (coachee) {
         setSelectedCoacheeId(newlyCreatedCoacheeId)
+        setSelectedTrajectoryId(resolveDefaultTrajectoryIdForCoachee(newlyCreatedCoacheeId))
         setIsCoacheeOpen(false)
         onNewlyCreatedCoacheeHandled()
       }
     }
-  }, [newlyCreatedCoacheeId, visible, activeCoachees, onNewlyCreatedCoacheeHandled])
+  }, [activeCoachees, newlyCreatedCoacheeId, onNewlyCreatedCoacheeHandled, visible])
 
   useEffect(() => {
     if (!visible) return
@@ -505,7 +394,23 @@ export function NewSessionModal({
     const coachee = activeCoachees.find((item) => item.id === initialCoacheeId)
     if (!coachee) return
     setSelectedCoacheeId(initialCoacheeId)
+    setSelectedTrajectoryId(resolveDefaultTrajectoryIdForCoachee(initialCoacheeId))
   }, [activeCoachees, initialCoacheeId, visible])
+
+  useEffect(() => {
+    if (!visible) return
+    if (!selectedCoacheeId) {
+      setSelectedTrajectoryId(null)
+      return
+    }
+    const trajectories = trajectoriesByCoacheeId.get(selectedCoacheeId) ?? []
+    if (trajectories.length === 0) {
+      setSelectedTrajectoryId(null)
+      return
+    }
+    if (selectedTrajectoryId && trajectories.some((trajectory) => trajectory.id === selectedTrajectoryId)) return
+    setSelectedTrajectoryId(resolveDefaultTrajectoryIdForCoachee(selectedCoacheeId))
+  }, [selectedCoacheeId, selectedTrajectoryId, trajectoriesByCoacheeId, visible])
 
   useEffect(() => {
     if (!isRendered) return
@@ -643,7 +548,7 @@ export function NewSessionModal({
 
   const title =
     step === 'select'
-      ? 'Nieuw verslag'
+      ? 'Nieuw item'
         : step === 'consent'
         ? 'Toestemming voor opname bevestigen'
         : step === 'upload'
@@ -652,13 +557,24 @@ export function NewSessionModal({
             ? 'Opnemen'
             : selectedOption === 'gesprek'
               ? 'Gesprek opgenomen'
+              : selectedOption === 'intake'
+                ? 'Intake opgenomen'
               : 'Verslag opgenomen'
-  const showFooter = step !== 'recording'
+  const showFooter = limitedMode ? step === 'consent' || step === 'recorded' || step === 'upload' : step !== 'recording'
   const isUploadStep = step === 'upload'
   const isConsentStep = step === 'consent'
+  const isLimitedFooter = limitedMode && (step === 'consent' || step === 'recorded')
   const isCompactUploadFooter = isUploadStep && windowWidth <= 700
-  const isCompactFooter = windowWidth <= 520
-  const isCompactConsent = step === 'consent' && windowWidth <= 520
+  const isCompactFooter = limitedMode || windowWidth <= 520
+  const isCompactConsent = limitedMode || (step === 'consent' && windowWidth <= 520)
+  const gesprekOptionLabel = 'Gesprek opnemen'
+  const gespreksverslagOptionLabel = 'Gespreksverslag opnemen'
+  const isSessionTitleEmpty = sessionTitle.trim().length === 0
+  const isPrimaryActionDisabled =
+    (step === 'upload' && (!selectedAudioFile || !!uploadFileDurationWarning)) ||
+    (!selectedOption && step === 'select' && !limitedMode) ||
+    (step === 'consent' && !hasRecordingConsent) ||
+    (step === 'recorded' && (!audioForTranscription || isSessionTitleEmpty))
   const modalHeight = Math.min(533, windowHeight * 0.9)
   const modalWidth = Math.min(1088, windowWidth * 0.9)
   const modalTop = (windowHeight - modalHeight) / 2
@@ -674,6 +590,94 @@ export function NewSessionModal({
   const minimizeScaleY = 40 / Math.max(1, modalHeight)
   const dropdownSafeBottom = 12
   const defaultDropdownMaxHeight = Math.max(120, windowHeight - modalTop - 72 - dropdownSafeBottom)
+
+  function handleSelectOption(option: OptionKey) {
+    if (option === 'gesprek') {
+      setSelectedOptionGroup('gesprek')
+      setSelectedOption('gesprek')
+      setOpenOptionGroup(null)
+      setSessionTitle(limitedMode ? buildDefaultSessionTitle('gesprek') : 'Voortgangsgesprek')
+      if (limitedMode) {
+        setHasRecordingConsent(false)
+        setStep('consent')
+      }
+      return
+    }
+    if (option === 'gespreksverslag') {
+      setSelectedOptionGroup('gespreksverslag')
+      setSelectedOption('gespreksverslag')
+      setOpenOptionGroup(null)
+      setSessionTitle(limitedMode ? buildDefaultSessionTitle('gespreksverslag') : 'Voortgangsverslag')
+      if (limitedMode) {
+        setStep('recording')
+      }
+      return
+    }
+    if (option === 'upload') {
+      setSelectedOption('upload')
+      setSelectedOptionGroup(null)
+      setOpenOptionGroup(null)
+      setSessionTitle('Bestand uploaden')
+    }
+  }
+
+  function handlePrimaryActionPress() {
+    runPrimaryFooterAction({
+      hasRecordingConsent,
+      isPrimaryActionDisabled,
+      limitedMode,
+      selectedCoacheeId,
+      selectedCoacheeResolvedId: selectedCoachee?.id ?? null,
+      selectedOption,
+      step,
+      createAndOpenSession,
+      handleClose,
+      onOpenGeschrevenGespreksverslag,
+      saveSelectedFileToAudioStore,
+      setHasRecordingConsent: (value) => setHasRecordingConsent(value),
+      setStep,
+      clearSubscriptionReturnDraft,
+    })
+  }
+
+  function handleSelectCoachee(coacheeId: string | null) {
+    setSelectedCoacheeId(coacheeId)
+    setSelectedTrajectoryId(resolveDefaultTrajectoryIdForCoachee(coacheeId))
+    setIsCoacheeOpen(false)
+  }
+
+  function handleOpenSubscriptionFromInsufficientMinutes() {
+    void (async () => {
+      const selectedOptionForRestore =
+        selectedOption === 'gesprek' ||
+        selectedOption === 'gespreksverslag' ||
+        selectedOption === 'upload'
+          ? selectedOption
+          : selectedOption === 'intake'
+            ? 'gesprek'
+            : insufficientMinutesContext?.kind === 'upload'
+              ? 'upload'
+              : 'gespreksverslag'
+      if (audioForTranscription) {
+        try {
+          await saveSubscriptionReturnDraft({
+            selectedOption: selectedOptionForRestore,
+            selectedCoacheeId,
+            selectedTemplateId,
+            sessionTitle,
+            shouldSaveAudio,
+            audioDurationSeconds,
+            mimeType: audioForTranscription.mimeType,
+            blob: audioForTranscription.blob,
+          })
+        } catch (error) {
+          console.error('[NewSessionModal] Failed to persist subscription return draft', error)
+        }
+      }
+      setIsInsufficientMinutesWarningVisible(false)
+      onOpenMySubscription()
+    })()
+  }
 
   function startMinimizeModal() {
     if (isMinimizeAnimating || isRestoringFromMinimized) return
@@ -736,12 +740,10 @@ export function NewSessionModal({
 
   useEffect(() => {
     if (typeof document === 'undefined') return
-    if (!isCoacheeOpen && !isReportTypeOpen) return
+    if (!isCoacheeOpen) return
 
     const coacheeTriggerId = 'new-session-coachee-trigger'
     const coacheePanelId = 'new-session-coachee-panel'
-    const reportTriggerId = 'new-session-report-trigger'
-    const reportPanelId = 'new-session-report-panel'
 
     const isInside = (id: string, target: Node | null) => {
       if (!target) return false
@@ -751,16 +753,18 @@ export function NewSessionModal({
 
     const handleMouseDown = (event: MouseEvent) => {
       const target = event.target as Node | null
-      if (isInside(coacheeTriggerId, target) || isInside(coacheePanelId, target) || isInside(reportTriggerId, target) || isInside(reportPanelId, target)) {
+      if (
+        isInside(coacheeTriggerId, target) ||
+        isInside(coacheePanelId, target)
+      ) {
         return
       }
       setIsCoacheeOpen(false)
-      setIsReportTypeOpen(false)
     }
 
     document.addEventListener('mousedown', handleMouseDown)
     return () => document.removeEventListener('mousedown', handleMouseDown)
-  }, [isCoacheeOpen, isReportTypeOpen])
+  }, [isCoacheeOpen])
 
   function openFilePicker() {
     if (typeof document === 'undefined') return
@@ -778,13 +782,6 @@ export function NewSessionModal({
   function openConsentHelpPage() {
     if (typeof window === 'undefined') return
     window.open('https://www.coachscribe.nl/toestemming-vragen', '_blank', 'noopener,noreferrer')
-  }
-
-  function isAudioFile(file: File) {
-    if (!file) return false
-    if (file.type && file.type.toLowerCase().startsWith('audio/')) return true
-    const extension = getFileExtension(file.name)
-    return Boolean(knownAudioMimeByExtension[extension])
   }
 
   function handleDroppedFile(file: File | null) {
@@ -918,17 +915,28 @@ export function NewSessionModal({
     }
   }
 
-  async function stopLiveTranscriber() {
-    const activeTranscriber = liveTranscriberRef.current
-    if (!activeTranscriber) return
-    liveTranscriberRef.current = null
-    setIsRealtimeTranscriberStarting(false)
-    await activeTranscriber.stop().catch(() => undefined)
+  async function resolveRecordingDurationSeconds(params: {
+    recordingDurationSeconds?: number | null
+    audioBlob?: Blob | null
+  }): Promise<number> {
+    const chunkDurationSeconds = recorder.recordedChunkDurationsSeconds.reduce(
+      (sum, value) => sum + (Number.isFinite(value) ? Math.max(0, Number(value)) : 0),
+      0,
+    )
+    const detectedDurationSeconds = params.audioBlob ? await readAudioDurationSeconds(params.audioBlob).catch(() => null) : null
+    return maxDuration([
+      params.recordingDurationSeconds,
+      audioDurationSeconds,
+      chunkDurationSeconds,
+      recorder.elapsedSeconds,
+      detectedDurationSeconds,
+    ])
   }
 
   async function createAndOpenSessionInternal(
     values: { kind: 'recording' | 'upload' },
     options?: {
+      sessionKind?: Session['kind']
       overrideShouldSaveAudio?: boolean
       audioForTranscription?: { blob: Blob; mimeType: string }
       recordingDurationSeconds?: number | null
@@ -937,15 +945,23 @@ export function NewSessionModal({
     const resolvedAudioForTranscription = options?.audioForTranscription ?? audioForTranscription
     if (!resolvedAudioForTranscription) return false
     const effectiveShouldSaveAudio = options?.overrideShouldSaveAudio ?? shouldSaveAudio
+    const resolvedRecordingDurationSeconds =
+      values.kind === 'recording'
+        ? await resolveRecordingDurationSeconds({
+            recordingDurationSeconds: options?.recordingDurationSeconds,
+            audioBlob: resolvedAudioForTranscription.blob,
+          })
+        : 0
     const nextAudioDurationSeconds =
       values.kind === 'recording'
-        ? Math.max(0, options?.recordingDurationSeconds ?? recorder.elapsedSeconds)
+        ? Math.max(0, resolvedRecordingDurationSeconds)
         : (Number.isFinite(audioDurationSeconds) ? audioDurationSeconds : null)
 
     const createdSessionId = createSession({
       coacheeId: selectedCoachee?.id ?? null,
+      trajectoryId: selectedTrajectoryId ?? null,
       title: sessionTitle,
-      kind: values.kind,
+      kind: options?.sessionKind ?? values.kind,
       audioBlobId: null,
       audioDurationSeconds: nextAudioDurationSeconds,
       uploadFileName: values.kind === 'upload' ? selectedAudioFile?.name ?? null : null,
@@ -961,7 +977,7 @@ export function NewSessionModal({
         blob: resolvedAudioForTranscription.blob,
         mimeType: resolvedAudioForTranscription.mimeType,
         shouldSaveAudio: effectiveShouldSaveAudio,
-        summaryTemplate,
+        summaryTemplate: undefined,
       })
     } catch (error) {
       console.error('[NewSessionModal] Failed to persist raw audio preview', error)
@@ -989,7 +1005,7 @@ export function NewSessionModal({
               durationSeconds: Math.max(1, Math.ceil(nextAudioDurationSeconds || 0)),
             }
           : null,
-      summaryTemplate,
+      summaryTemplate: undefined,
       initialAudioBlobId: null,
       e2ee,
       updateSession,
@@ -1003,6 +1019,7 @@ export function NewSessionModal({
   async function createAndOpenSession(
     values: { kind: 'recording' | 'upload' },
     options?: {
+      sessionKind?: Session['kind']
       overrideShouldSaveAudio?: boolean
       audioForTranscription?: { blob: Blob; mimeType: string }
       recordingDurationSeconds?: number | null
@@ -1010,9 +1027,16 @@ export function NewSessionModal({
   ): Promise<boolean> {
     const resolvedAudioForTranscription = options?.audioForTranscription ?? audioForTranscription
     if (!resolvedAudioForTranscription) return false
+    const resolvedRecordingDurationSeconds =
+      values.kind === 'recording'
+        ? await resolveRecordingDurationSeconds({
+            recordingDurationSeconds: options?.recordingDurationSeconds,
+            audioBlob: resolvedAudioForTranscription.blob,
+          })
+        : 0
     const requiredSeconds = Math.max(
       1,
-      Math.ceil(values.kind === 'recording' ? (options?.recordingDurationSeconds ?? recorder.elapsedSeconds) : audioDurationSeconds || 0),
+      Math.ceil(values.kind === 'recording' ? resolvedRecordingDurationSeconds : audioDurationSeconds || 0),
     )
     const remainingSeconds = await readRemainingSecondsBeforeStart()
     if (remainingSeconds !== null && remainingSeconds < requiredSeconds) {
@@ -1023,117 +1047,24 @@ export function NewSessionModal({
     return createAndOpenSessionInternal(values, { ...options, audioForTranscription: resolvedAudioForTranscription })
   }
 
-  function createAndOpenWrittenSession(): void {
-    const resolvedTitle = String(sessionTitle || '').trim() || buildDefaultSessionTitle(data.sessions.map((session) => session.title))
-    const createdSessionId = createSession({
-      coacheeId: selectedCoachee?.id ?? null,
-      title: resolvedTitle,
-      kind: 'written',
-      audioBlobId: null,
-      audioDurationSeconds: null,
-      uploadFileName: null,
-      transcriptionStatus: 'idle',
-      transcriptionError: null,
-    })
-    if (!createdSessionId) return
-    onOpenSession(createdSessionId)
-    void clearSubscriptionReturnDraft()
-    handleClose()
-  }
-
-  useEffect(() => {
-    if (step !== 'recording') {
-      hasAutoStartedRecordingRef.current = false
-      hasAutoSubmittedRecordingRef.current = false
-    }
-  }, [step])
-
-  useEffect(() => {
-    if (!visible) return
-    if (step !== 'recording') return
-    if (hasAutoStartedRecordingRef.current) return
-    if (recorder.status !== 'idle') return
-    if (isRealtimeModeActive) {
-      realtimeOperationIdRef.current = createOperationId()
-      setLiveTranscriptText('')
-      setLiveTranscriptError(null)
-    }
-    hasAutoStartedRecordingRef.current = true
-    recorder.start()
-  }, [isRealtimeModeActive, recorder, step, visible])
-
-  useEffect(() => {
-    if (!visible) return
-    if (step !== 'recording') return
-    if (recorder.status !== 'recording' && recorder.status !== 'paused') return
-    if (recorder.elapsedSeconds < maxRecordingSeconds) return
-    recorder.stop()
-  }, [recorder, recorder.elapsedSeconds, recorder.status, step, visible])
-
-  useEffect(() => {
-    const shouldRunRealtime =
-      visible &&
-      step === 'recording' &&
-      recorder.status === 'recording' &&
-      isRealtimeModeActive
-
-    if (!shouldRunRealtime) {
-      void stopLiveTranscriber()
-      return
-    }
-    if (liveTranscriberRef.current || isRealtimeTranscriberStarting) return
-
-    let cancelled = false
-    setIsRealtimeTranscriberStarting(true)
-    setLiveTranscriptError(null)
-
-    void startRealtimeTranscriber({
-      languageCode: 'nl',
-      onFinalSegment: (segment) => {
-        if (cancelled) return
-        const line = `${segment.speaker}: ${segment.text}`.trim()
-        if (!line) return
-        setLiveTranscriptText((prev) => (prev ? `${prev}\n${line}` : line))
-      },
-      onError: (message) => {
-        if (cancelled) return
-        setLiveTranscriptError(message)
-      },
-    })
-      .then((session) => {
-        if (cancelled) {
-          void session.stop()
-          return
-        }
-        liveTranscriberRef.current = session
-      })
-      .catch((error) => {
-        if (cancelled) return
-        setLiveTranscriptError(error instanceof Error ? error.message : String(error || 'Realtime transcriptie is mislukt.'))
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsRealtimeTranscriberStarting(false)
-        }
-      })
-
-    return () => {
-      cancelled = true
-      void stopLiveTranscriber()
-    }
-  }, [isRealtimeModeActive, recorder.status, step, visible])
-
-  function retryRecordingAfterError() {
-    recorder.reset()
-    if (isRealtimeModeActive) {
-      realtimeOperationIdRef.current = createOperationId()
-      setLiveTranscriptText('')
-      setLiveTranscriptError(null)
-    }
-    hasAutoStartedRecordingRef.current = true
-    hasAutoSubmittedRecordingRef.current = false
-    recorder.start()
-  }
+  const { retryRecordingAfterError } = useNewSessionRecordingFlow({
+    hasAutoStartedRecordingRef,
+    hasAutoSubmittedRecordingRef,
+    isRealtimeModeActive,
+    isRealtimeTranscriberStarting,
+    liveTranscriberRef,
+    realtimeOperationIdRef,
+    recorder,
+    setAudioDurationSeconds,
+    setAudioForTranscription,
+    setAudioPreviewUrl,
+    setIsRealtimeTranscriberStarting,
+    setLiveTranscriptError,
+    setLiveTranscriptText,
+    setStep,
+    step,
+    visible,
+  })
 
   useEffect(() => {
     if (!visible) return
@@ -1142,169 +1073,47 @@ export function NewSessionModal({
     }
   }, [step, visible])
 
-  useEffect(() => {
-    if (step !== 'recording') return
-    if (recorder.status !== 'ready') return
-    if (!recorder.recordedBlob || !recorder.recordedMimeType) return
-
-    const blob = recorder.recordedBlob as Blob
-    const mimeType = recorder.recordedMimeType as string
-    const recordingDurationSeconds = Math.max(0, recorder.elapsedSeconds)
-    setAudioForTranscription({ blob, mimeType })
-    setAudioDurationSeconds(recordingDurationSeconds)
-    setAudioPreviewUrl(URL.createObjectURL(blob))
-    hasAutoSubmittedRecordingRef.current = false
-    setStep('recorded')
-  }, [recorder.elapsedSeconds, recorder.recordedBlob, recorder.recordedMimeType, recorder.status, selectedOption, step])
-
   if (!isRendered) return null
 
   if (shouldShowMinimized) {
     return (
-      <>
-        <View style={styles.minimizedOverlay} pointerEvents="box-none">
-          {/* Minimized recording bar */}
-          <Pressable onPress={startRestoreModal} style={styles.minimizedBar}>
-            <View style={styles.minimizedInfo}>
-              {/* Recording time */}
-              <View style={styles.minimizedTimeContainer}>
-                <Text isSemibold style={styles.minimizedTimeText}>
-                  {formatTimeLabel(displayedRecordingElapsedSeconds)}
-                </Text>
-              </View>
-              {/* Recording waveform */}
-              <View style={styles.minimizedWaveform}>
-                {bars.map((index) => {
-                  const rawHeight = liveWaveHeights[index] ?? 6
-                  if (rawHeight <= 8) {
-                    return <View key={index} style={[styles.minimizedWaveBar, styles.minimizedWaveBarSilent]} />
-                  }
-                  const normalizedHeight = Math.min(1, Math.max(0, (rawHeight - 6) / 194))
-                  const height = 4 + normalizedHeight * 12
-                  return <View key={index} style={[styles.minimizedWaveBar, { height }]} />
-                })}
-              </View>
-            </View>
-            {/* Minimized controls */}
-            <View style={styles.minimizedControls}>
-              <Pressable
-                onPress={(event) => {
-                  event.stopPropagation?.()
-                  if (recorder.status === 'recording') {
-                    recorder.pause()
-                    return
-                  }
-                  if (recorder.status === 'paused') {
-                    recorder.resume()
-                  }
-                }}
-                style={({ hovered }) => [
-                  styles.minimizedControlButton,
-                  styles.minimizedSoftButton,
-                  hovered ? styles.minimizedSoftButtonHovered : undefined,
-                ]}
-              >
-                {/* Pause or play */}
-                {isRecordingPaused ? (
-                  <View style={styles.minimizedPlayIconWrapper}>
-                    <PlaySmallIcon size={10} />
-                  </View>
-                ) : (
-                  <PauseIcon size={12} />
-                )}
-              </Pressable>
-              <Pressable
-                onPress={(event) => {
-                  event.stopPropagation?.()
-                  if (recorder.status === 'error') {
-                    retryRecordingAfterError()
-                    return
-                  }
-                  recorder.stop()
-                }}
-                style={({ hovered }) => [styles.minimizedStopButton, hovered ? styles.minimizedStopButtonHovered : undefined]}
-              >
-                {/* Stop */}
-                <StopSquareIcon size={12} />
-              </Pressable>
-              <Pressable
-                onPress={(event) => {
-                  event.stopPropagation?.()
-                  setIsMinimizedCloseWarningVisible(true)
-                }}
-                style={({ hovered }) => [
-                  styles.minimizedControlButton,
-                  styles.minimizedSoftButton,
-                  hovered ? styles.minimizedSoftButtonHovered : undefined,
-                ]}
-              >
-                {/* Close */}
-                <ModalCloseIcon size={22} />
-              </Pressable>
-            </View>
-          </Pressable>
-        </View>
-
-        <AnimatedOverlayModal
-          visible={isMinimizedCloseWarningVisible}
-          onClose={() => setIsMinimizedCloseWarningVisible(false)}
-          contentContainerStyle={styles.closeWarningContainer}
-        >
-          {/* Close warning */}
-          <View style={styles.closeWarningContent}>
-            {/* Warning title */}
-            <Text isBold style={styles.closeWarningTitle}>
-              Weet je zeker dat je wil sluiten?
-            </Text>
-            {/* Warning text */}
-            <Text style={styles.closeWarningText}>
-              Als je sluit, gaat je huidige opname of invoer verloren.
-            </Text>
-            {/* Warning actions */}
-            <View style={styles.closeWarningActions}>
-              <Pressable
-                onPress={() => setIsMinimizedCloseWarningVisible(false)}
-                style={({ hovered }) => [
-                  styles.closeWarningButton,
-                  styles.closeWarningButtonSecondary,
-                  hovered ? styles.closeWarningButtonSecondaryHovered : undefined,
-                ]}
-              >
-                {/* Keep */}
-                <Text isBold style={styles.closeWarningButtonSecondaryText}>
-                  Annuleren
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setIsMinimizedCloseWarningVisible(false)
-                  handleClose()
-                }}
-                style={({ hovered }) => [
-                  styles.closeWarningButton,
-                  styles.closeWarningButtonPrimary,
-                  hovered ? styles.closeWarningButtonPrimaryHovered : undefined,
-                ]}
-              >
-                {/* Close */}
-                <Text isBold style={styles.closeWarningButtonPrimaryText}>
-                  Sluiten
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        </AnimatedOverlayModal>
-      </>
+      <MinimizedRecordingLayer
+        bars={bars}
+        displayedRecordingElapsedSeconds={displayedRecordingElapsedSeconds}
+        isMinimizedCloseWarningVisible={isMinimizedCloseWarningVisible}
+        isRecordingPaused={isRecordingPaused}
+        liveWaveHeights={liveWaveHeights}
+        recorderStatus={recorder.status}
+        onPauseOrResume={() => {
+          if (recorder.status === 'recording') {
+            recorder.pause()
+            return
+          }
+          if (recorder.status === 'paused') {
+            recorder.resume()
+          }
+        }}
+        onRetryRecordingAfterError={retryRecordingAfterError}
+        onShowCloseWarning={() => setIsMinimizedCloseWarningVisible(true)}
+        onStopRecording={() => recorder.stop()}
+        onRestore={startRestoreModal}
+        onCloseWarningCancel={() => setIsMinimizedCloseWarningVisible(false)}
+        onCloseWarningConfirm={() => {
+          setIsMinimizedCloseWarningVisible(false)
+          handleClose()
+        }}
+      />
     )
   }
   return (
-    <View style={styles.overlay} pointerEvents="auto">
-      <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} pointerEvents="none" />
-      <Pressable onPress={handleBackdropPress} style={styles.backdropPressable} pointerEvents="auto" />
+    <View style={[styles.overlay, limitedMode ? styles.overlayLimited : undefined]} pointerEvents="auto">
+      {!limitedMode ? <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} pointerEvents="none" /> : null}
+      {!limitedMode ? <Pressable onPress={handleBackdropPress} style={styles.backdropPressable} pointerEvents="auto" /> : null}
       <Animated.View
         pointerEvents="auto"
         style={[
           styles.container,
+          limitedMode ? styles.containerLimited : undefined,
           {
             opacity: modalOpacity,
             transform: [
@@ -1339,7 +1148,7 @@ export function NewSessionModal({
         ]}
       >
         {/* Modal header */}
-        <View style={styles.header}>
+        {!limitedMode ? <View style={styles.header}>
           <Text isBold style={styles.headerTitle}>
             {title}
           </Text>
@@ -1362,7 +1171,7 @@ export function NewSessionModal({
             ) : null}
 
           </View>
-        </View>
+        </View> : null}
 
         {step === 'recording' && shouldShowRecordingLimitWarning ? (
           <View pointerEvents="none" style={styles.recordingWarningOverlay}>
@@ -1376,340 +1185,61 @@ export function NewSessionModal({
         ) : null}
 
         {/* Modal body */}
-        <View style={styles.body}>
+        <View style={[styles.body, step === 'select' ? styles.bodySelect : undefined]}>
           <AnimatedMainContent contentKey={step} style={styles.stepContent}>
-            {step === 'select' ? (
-            <ScrollView style={styles.stepScroll} contentContainerStyle={styles.stepScrollContent} showsVerticalScrollIndicator={false}>
-              <View style={styles.selectList}>
-                <SessionOptionRow
-                  label="Gesprek opnemen"
-                  isSelected={selectedOption === 'gesprek'}
-                  onPress={() => setSelectedOption('gesprek')}
-                  leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
-                />
-                <SessionOptionRow
-                  label="Verslag opnemen"
-                  isSelected={selectedOption === 'verslag'}
-                  onPress={() => setSelectedOption('verslag')}
-                  leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
-                />
-                <SessionOptionRow
-                  label="Bestand uploaden"
-                  isSelected={selectedOption === 'upload'}
-                  onPress={() => setSelectedOption('upload')}
-                  leftIcon={<Mp3UploadIcon />}
-                />
-                <SessionOptionRow
-                  label="Verslag schrijven/genereren"
-                  isSelected={selectedOption === 'schrijven'}
-                  onPress={() => setSelectedOption('schrijven')}
-                  leftIcon={<VerslagSchrijvenIcon />}
-                />
-              </View>
-            </ScrollView>
-            ) : null}
-
-            {step === 'upload' ? (
-            <ScrollView style={styles.stepScroll} contentContainerStyle={styles.stepScrollContent} showsVerticalScrollIndicator={false}>
-              <View style={styles.uploadBody}>
-                {/* Upload drop area */}
-                <View ref={uploadDropAreaRef} style={[styles.uploadDropArea, isUploadDragActive ? styles.uploadDropAreaActive : undefined]}>
-                  <Pressable
-                    onPress={openFilePicker}
-                    style={({ hovered }) => [styles.uploadPressable, hovered ? styles.uploadDropAreaHovered : undefined]}
-                  >
-                    <View style={styles.uploadCenter}>
-                      {/* Upload icon */}
-                      <SendSquareIcon size={80} color="#656565" />
-                      <Text isSemibold style={styles.uploadHintText}>
-                        Sleep bestand hierin
-                      </Text>
-                      {selectedAudioFile ? (
-                        <Text style={styles.uploadFileNameText} numberOfLines={1}>
-                          {selectedAudioFile.name}
-                        </Text>
-                      ) : null}
-                      {uploadFileDurationWarning ? (
-                        <Text style={styles.uploadDurationWarningText}>{uploadFileDurationWarning}</Text>
-                      ) : null}
-                    </View>
-                  </Pressable>
-                </View>
-              </View>
-            </ScrollView>
-            ) : null}
-
-            {step === 'recording' ? (
-            <View style={styles.recordingBody}>
-              {/* Recording waveform */}
-              <View
-                style={styles.waveformContainer}
-                onLayout={(event) => {
-                  const width = event.nativeEvent.layout.width
-                  const padding = 48
-                  const barWidth = 8
-                  const gap = 8
-                  const available = Math.max(0, width - padding * 2)
-                  const nextCount = Math.max(10, Math.floor((available + gap) / (barWidth + gap)))
-                  if (nextCount !== waveBarCount) setWaveBarCount(nextCount)
-                }}
-              >
-                {bars.map((index) => {
-                  const rawHeight = liveWaveHeights[index] ?? 8
-                  const height = rawHeight <= 8 ? 8 : rawHeight
-                  return <View key={index} style={[styles.waveBar, { height, borderRadius: height <= 8 ? 4 : 8 }]} />
-                })}
-              </View>
-
-              {/* Recording timer */}
-              <Text isSemibold style={styles.timerText}>
-                {formatTimeLabel(displayedRecordingElapsedSeconds)}
-              </Text>
-
-              {/* Recording controls */}
-              <View style={styles.recordingControls}>
-                <Pressable
-                  onPress={() => {
-                    recorder.reset()
-                    setStep('select')
-                  }}
-                  style={({ hovered }) => [styles.softCircle, hovered ? styles.softCircleHovered : undefined]}
-                >
-                  {/* Cancel */}
-                  <ModalCloseIcon size={55} />
-                </Pressable>
-
-                <Pressable
-                  onPress={() => {
-                    if (recorder.status === 'error') {
-                      retryRecordingAfterError()
-                      return
-                    }
-                    recorder.stop()
-                  }}
-                  style={({ hovered }) => [styles.primaryCircle, webTransitionSmooth, hovered ? styles.primaryCircleHovered : undefined]}
-                >
-                  {/* Stop */}
-                  <StopSquareIcon />
-                </Pressable>
-
-                <Pressable
-                  onPress={() => {
-                    if (recorder.status === 'recording') {
-                      recorder.pause()
-                      return
-                    }
-                    if (recorder.status === 'paused') {
-                      recorder.resume()
-                    }
-                  }}
-                  style={({ hovered }) => [styles.softCircle, hovered ? styles.softCircleHovered : undefined]}
-                >
-                  {/* Pause or play */}
-                  {isRecordingPaused ? <PlaySmallIcon size={24} /> : <PauseIcon />}
-                </Pressable>
-              </View>
-
-            </View>
-            ) : null}
-
-            {step === 'recorded' ? (
-            <View style={styles.recordedBody}>
-              {audioPreviewUrl ? (
-                <View style={styles.audioPreviewCard}>
-                  {/* Audio preview */}
-                  <AudioPlayerCard
-                    audioBlobId={null}
-                    audioDurationSeconds={audioDurationSeconds}
-                    audioUrlOverride={audioPreviewUrl}
-                  />
-                  <Pressable
-                    onPress={() => setShouldSaveAudio((value) => !value)}
-                    style={({ hovered }) => [styles.audioSaveToggleRow, hovered ? styles.audioSaveToggleRowHovered : undefined]}
-                  >
-                    <Text isSemibold style={styles.audioSaveToggleLabel}>
-                      Audio opslaan
-                    </Text>
-                    <View style={[styles.audioSaveToggleTrack, shouldSaveAudio ? styles.audioSaveToggleTrackOn : styles.audioSaveToggleTrackOff]}>
-                      <View style={[styles.audioSaveToggleThumb, shouldSaveAudio ? styles.audioSaveToggleThumbOn : styles.audioSaveToggleThumbOff]} />
-                    </View>
-                  </Pressable>
-                </View>
-              ) : null}
-              <Pressable
-                onPress={() => sessionTitleInputRef.current?.focus()}
-                style={styles.infoRow}
-              >
-                {/* Session name */}
-                <MicrophoneSmallIcon color={colors.textStrong} size={20} />
-                <TextInput
-                  ref={sessionTitleInputRef}
-                  value={sessionTitle}
-                  onChangeText={setSessionTitle}
-                  placeholder="Verslagnaam..."
-                  placeholderTextColor="#656565"
-                  style={[styles.sessionTitleInput, ({ outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any)]}
-                />
-              </Pressable>
-
-              <View style={styles.recordedDropdownsRow}>
-                <View style={[styles.dropdownArea, styles.dropdownAreaHalf, isCoacheeOpen ? styles.dropdownAreaRaised : undefined]}>
-                  <Pressable
-                    ref={coacheeTriggerRef}
-                    id="new-session-coachee-trigger"
-                    onPress={() => {
-                      updateDropdownMaxHeight(coacheeTriggerRef, setCoacheeDropdownMaxHeight)
-                      setIsCoacheeOpen((value) => !value)
-                      setIsReportTypeOpen(false)
-                    }}
-                    style={({ hovered }) => [styles.infoRow, hovered ? styles.infoRowHovered : undefined]}
-                  >
-                    {/* Coachee */}
-                    <ProfileCircleIcon />
-                    <Text isSemibold style={styles.infoRowText}>
-                      {selectedCoachee?.name ?? unassignedCoacheeLabel}
-                    </Text>
-                    <View style={styles.infoRowSpacer} />
-                    <ChevronDownIcon color={colors.textStrong} size={20} />
-                  </Pressable>
-
-                  <AnimatedDropdownPanel
-                    visible={isCoacheeOpen}
-                    id="new-session-coachee-panel"
-                    style={[styles.coacheePanel, { maxHeight: coacheeDropdownMaxHeight ?? defaultDropdownMaxHeight }]}
-                  >
-                    <ScrollView style={styles.coacheeList} contentContainerStyle={styles.coacheeListContent} showsVerticalScrollIndicator={false}>
-                      {coacheeOptions.map((coachee, index) => {
-                        const isFirst = index === 0
-                        return (
-                          <Pressable
-                            key={coachee.id ?? 'coachee-unassigned'}
-                            onPress={() => {
-                              setSelectedCoacheeId(coachee.id)
-                              setIsCoacheeOpen(false)
-                            }}
-                            style={({ hovered }) => [
-                              styles.coacheeItem,
-                              isFirst ? styles.coacheeItemTop : undefined,
-                              hovered ? styles.coacheeItemHovered : undefined,
-                            ]}
-                          >
-                            {/* Coachee list item */}
-                            <ProfileCircleIcon />
-                            <Text style={styles.coacheeItemText}>{coachee.name}</Text>
-                          </Pressable>
-                        )
-                      })}
-                      <Pressable
-                        onPress={() => {
-                          setIsCoacheeOpen(false)
-                          onOpenNewCoachee()
-                        }}
-                        style={({ hovered }) => [
-                          styles.coacheeItem,
-                          styles.coacheeItemAdd,
-                          coacheeOptions.length === 0 ? styles.coacheeItemTop : undefined,
-                          styles.coacheeItemBottom,
-                          hovered ? styles.coacheeItemAddHovered : undefined,
-                        ]}
-                      >
-                        {/* Add client */}
-                        <ProfileCircleIcon />
-                        <Text style={styles.coacheeItemAddText}>+ Nieuwe cliënt</Text>
-                      </Pressable>
-                    </ScrollView>
-                  </AnimatedDropdownPanel>
-                </View>
-
-                <View style={[styles.dropdownArea, styles.dropdownAreaHalf, isReportTypeOpen ? styles.dropdownAreaRaised : undefined]}>
-                  <Pressable
-                    ref={reportTypeTriggerRef}
-                    id="new-session-report-trigger"
-                    onPress={() => {
-                      updateDropdownMaxHeight(reportTypeTriggerRef, setReportTypeDropdownMaxHeight)
-                      setIsReportTypeOpen((value) => !value)
-                      setIsCoacheeOpen(false)
-                    }}
-                    style={({ hovered }) => [styles.infoRow, hovered ? styles.infoRowHovered : undefined]}
-                  >
-                    {/* Report type */}
-                    <VerslagSchrijvenIcon />
-                    <Text isSemibold style={styles.infoRowText}>
-                      {selectedTemplate ? getTemplateDisplayName(selectedTemplate.name) : 'Template'}
-                    </Text>
-                    <View style={styles.infoRowSpacer} />
-                    <ChevronDownIcon color={colors.textStrong} size={20} />
-                  </Pressable>
-
-                  <AnimatedDropdownPanel
-                    visible={isReportTypeOpen}
-                    id="new-session-report-panel"
-                    style={[styles.reportTypePanel, { maxHeight: reportTypeDropdownMaxHeight ?? defaultDropdownMaxHeight }]}
-                  >
-                    <ScrollView style={styles.reportTypeList} contentContainerStyle={styles.reportTypeListContent} showsVerticalScrollIndicator={false}>
-                      {reportTypeTemplates.map((template, index, items) => {
-                        const isFirst = index === 0
-                        const isLast = index === items.length - 1
-                        return (
-                          <Pressable
-                            key={template.id}
-                            onPress={() => {
-                              setSelectedTemplateId(template.id)
-                              setIsReportTypeOpen(false)
-                            }}
-                            style={({ hovered }) => [
-                              styles.reportTypeItem,
-                              isFirst ? styles.reportTypeItemTop : undefined,
-                              isLast ? styles.reportTypeItemBottom : undefined,
-                              hovered ? styles.reportTypeItemHovered : undefined,
-                            ]}
-                          >
-                            {/* Report type item */}
-                            <Text style={styles.reportTypeItemText}>{getTemplateDisplayName(template.name)}</Text>
-                          </Pressable>
-                        )
-                      })}
-                    </ScrollView>
-                  </AnimatedDropdownPanel>
-                </View>
-              </View>
-            </View>
-            ) : null}
-
-            {step === 'consent' ? (
-            <ScrollView style={styles.stepScroll} contentContainerStyle={styles.stepScrollContent} showsVerticalScrollIndicator={false}>
-              <View style={styles.consentBody}>
-                <View style={styles.consentIconCircle}>
-                  <MicrophoneSmallIcon color={colors.textStrong} size={28} />
-                </View>
-                <Text isBold style={[styles.consentTitle, isCompactConsent ? styles.consentTitleCompact : undefined]}>
-                  Ik heb expliciete toestemming van mijn cliënt
-                </Text>
-                <Text style={[styles.consentDescription, isCompactConsent ? styles.consentDescriptionCompact : undefined]}>
-                  Door verder te gaan bevestig je dat alle deelnemers vooraf zijn geinformeerd over de opname en vrijwillig toestemming hebben gegeven.
-                </Text>
-                <Pressable
-                  onPress={() => setHasRecordingConsent((value) => !value)}
-                  style={({ hovered }) => [styles.consentCheckboxRow, hovered ? styles.consentCheckboxRowHovered : undefined]}
-                >
-                  <View style={[styles.consentCheckbox, hasRecordingConsent ? styles.consentCheckboxChecked : undefined]}>
-                    {hasRecordingConsent ? <CheckmarkIcon color={colors.selected} width={14} height={12} /> : null}
-                  </View>
-                  <Text style={styles.consentCheckboxLabel}>
-                    Ik bevestig dat ik toestemming heb.
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={openConsentHelpPage}
-                  style={({ hovered }) => [styles.consentHelpLinkRow, hovered ? styles.consentHelpLinkRowHovered : undefined]}
-                >
-                  <Text isSemibold style={styles.consentHelpLinkText}>
-                    Hoe vraag ik toestemming?
-                  </Text>
-                </Pressable>
-              </View>
-            </ScrollView>
-            ) : null}
+            <NewSessionStepBody
+              audioDurationSeconds={audioDurationSeconds}
+              audioPreviewUrl={audioPreviewUrl}
+              bars={bars}
+              coacheeDropdownMaxHeight={coacheeDropdownMaxHeight}
+              coacheeOptions={coacheeOptions}
+              defaultDropdownMaxHeight={defaultDropdownMaxHeight}
+              displayedRecordingElapsedSeconds={displayedRecordingElapsedSeconds}
+              gesprekOptionLabel={gesprekOptionLabel}
+              gespreksverslagOptionLabel={gespreksverslagOptionLabel}
+              hasRecordingConsent={hasRecordingConsent}
+              isCoacheeOpen={isCoacheeOpen}
+              isCompactConsent={isCompactConsent}
+              isRecordingPaused={isRecordingPaused}
+              isUploadDragActive={isUploadDragActive}
+              limitedMode={limitedMode}
+              liveWaveHeights={liveWaveHeights}
+              recorder={recorder}
+              selectedAudioFile={selectedAudioFile}
+              selectedCoacheeName={selectedCoachee?.name ?? unassignedCoacheeLabel}
+              selectedOption={selectedOption}
+              selectedOptionGroup={selectedOptionGroup}
+              sessionTitle={sessionTitle}
+              sessionTitleInputRef={sessionTitleInputRef}
+              shouldSaveAudio={shouldSaveAudio}
+              step={step}
+              uploadDropAreaRef={uploadDropAreaRef}
+              uploadFileDurationWarning={uploadFileDurationWarning}
+              waveBarCount={waveBarCount}
+              coacheeTriggerRef={coacheeTriggerRef}
+              onAddCoachee={() => {
+                setIsCoacheeOpen(false)
+                onOpenNewCoachee()
+              }}
+              onCancelRecording={() => {
+                recorder.reset()
+                setStep('select')
+              }}
+              onOpenConsentHelpPage={openConsentHelpPage}
+              onOpenFilePicker={openFilePicker}
+              onRetryRecordingAfterError={retryRecordingAfterError}
+              onSelectCoachee={handleSelectCoachee}
+              onSelectOption={handleSelectOption}
+              onSessionTitleChange={setSessionTitle}
+              onSetWaveBarCount={setWaveBarCount}
+              onToggleAudioSave={() => setShouldSaveAudio((value) => !value)}
+              onToggleCoacheeDropdown={() => {
+                updateDropdownMaxHeight(coacheeTriggerRef, setCoacheeDropdownMaxHeight)
+                setIsCoacheeOpen((value) => !value)
+              }}
+              onToggleConsent={() => setHasRecordingConsent((value) => !value)}
+              onUpdateAudioDuration={setAudioDurationSeconds}
+            />
           </AnimatedMainContent>
         </View>
 
@@ -1720,11 +1250,16 @@ export function NewSessionModal({
               step === 'recorded' ? styles.footerInline : styles.footerFloating,
               (isUploadStep && !isCompactUploadFooter) || isConsentStep ? styles.footerSplit : undefined,
               isCompactUploadFooter ? styles.footerStacked : undefined,
+              isLimitedFooter ? styles.mobileFooterContainer : undefined,
             ]}
           >
-            {isConsentStep ? (
+            {isConsentStep && !limitedMode ? (
               <Pressable
                 onPress={() => {
+                  if (limitedMode) {
+                    requestClose()
+                    return
+                  }
                   setHasRecordingConsent(false)
                   setStep('select')
                 }}
@@ -1739,7 +1274,7 @@ export function NewSessionModal({
                 ]}
               >
                 <Text isBold style={styles.footerButtonSecondaryText}>
-                  Terug
+                  {limitedMode ? 'Annuleren' : 'Terug'}
                 </Text>
               </Pressable>
             ) : null}
@@ -1768,1153 +1303,112 @@ export function NewSessionModal({
                 styles.footerRightGroup,
                 isCompactUploadFooter ? styles.footerRightGroupStacked : undefined,
                 isUploadStep ? undefined : styles.footerRightGroupAlignEnd,
+                isLimitedFooter ? styles.mobileFooterRightGroup : undefined,
               ]}
             >
-              <Pressable
-                onPress={requestClose}
-                style={({ hovered, pressed }) => [
-                  styles.footerButtonBase,
-                  styles.footerButtonSecondary,
-                  isUploadStep && !isCompactUploadFooter ? styles.footerButtonMiddle : styles.footerButtonLeft,
-                  isCompactUploadFooter ? styles.footerButtonStackedSplit : undefined,
-                  isCompactFooter ? styles.footerButtonCompact : undefined,
-                  webTransitionSmooth,
-                  hovered ? styles.footerButtonSecondaryHovered : undefined,
-                  pressed ? styles.footerButtonSecondaryPressed : undefined,
-                ]}
-              >
-                {/* Cancel */}
-                <Text isBold style={styles.footerButtonSecondaryText}>
-                  Annuleren
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  if (step === 'recorded') {
-                    if (selectedOption === 'upload') {
-                      createAndOpenSession({ kind: 'upload' })
-                      return
-                    }
-                    if (selectedOption === 'gesprek' || selectedOption === 'verslag') {
-                      createAndOpenSession({ kind: 'recording' })
-                    }
-                    return
-                  }
-
-                  if (step === 'upload') {
-                    if (!selectedAudioFile) return
-                    saveSelectedFileToAudioStore()
-                    return
-                  }
-
-                  if (step === 'consent') {
-                    if (!selectedOption || !hasRecordingConsent) return
-                    if (selectedOption === 'upload') {
-                      setStep('upload')
-                      return
-                    }
-                    setStep('recording')
-                    return
-                  }
-
-                  if (!selectedOption) return
-                  if (selectedOption === 'schrijven') {
-                    createAndOpenWrittenSession()
-                    return
-                  }
-                  if (selectedOption === 'verslag') {
-                    setStep('recording')
-                    return
-                  }
-                  setHasRecordingConsent(false)
-                  setStep('consent')
-                }}
-                style={({ hovered, pressed }) => [
-                  styles.footerButtonBase,
-                  styles.footerButtonPrimary,
-                  styles.footerButtonRight,
-                  isCompactUploadFooter ? styles.footerButtonStackedSplit : undefined,
-                  isCompactFooter ? styles.footerButtonCompact : undefined,
-                  step === 'upload' && (!selectedAudioFile || !!uploadFileDurationWarning) ? styles.primaryButtonDisabled : undefined,
-                  !selectedOption && step === 'select' ? styles.primaryButtonDisabled : undefined,
-                  step === 'consent' && !hasRecordingConsent ? styles.primaryButtonDisabled : undefined,
-                  hovered &&
-                    (step === 'select'
-                      ? !!selectedOption
-                      : step === 'consent'
-                        ? hasRecordingConsent
-                        : step === 'upload'
-                          ? !!selectedAudioFile && !uploadFileDurationWarning
-                          : step === 'recorded'
-                            ? !!audioForTranscription
-                            : false)
-                    ? styles.footerButtonPrimaryHovered
-                    : undefined,
-                  pressed &&
-                  !(step === 'upload' && (!selectedAudioFile || !!uploadFileDurationWarning)) &&
-                  !(!selectedOption && step === 'select') &&
-                  !(step === 'consent' && !hasRecordingConsent)
-                    ? styles.footerButtonPrimaryPressed
-                    : undefined,
-                ]}
-              >
-                {/* Continue */}
-                <Text isBold style={styles.footerButtonPrimaryText}>
-                  {step === 'recorded' ? 'Verslag aanmaken' : 'Doorgaan'}
-                </Text>
-              </Pressable>
+              {isLimitedFooter ? (
+                <>
+                  <Pressable
+                    disabled={isPrimaryActionDisabled}
+                    onPress={handlePrimaryActionPress}
+                    style={({ hovered, pressed }) => [
+                      styles.footerButtonBase,
+                      styles.footerButtonPrimary,
+                      styles.footerButtonRight,
+                      styles.mobileFooterButtonBase,
+                      styles.mobileFooterPrimaryButton,
+                      isPrimaryActionDisabled ? styles.primaryButtonDisabled : undefined,
+                      hovered && !isPrimaryActionDisabled ? styles.footerButtonPrimaryHovered : undefined,
+                      pressed && !isPrimaryActionDisabled ? styles.footerButtonPrimaryPressed : undefined,
+                    ]}
+                  >
+                    <Text isBold style={[styles.footerButtonPrimaryText, styles.mobileFooterButtonText]}>
+                      Doorgaan
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={requestClose}
+                    style={({ hovered, pressed }) => [
+                      styles.footerButtonBase,
+                      styles.footerButtonSecondary,
+                      styles.footerButtonLeft,
+                      styles.cancelButtonNoBottomLeftRadius,
+                      styles.mobileFooterButtonBase,
+                      styles.mobileFooterSecondaryButton,
+                      webTransitionSmooth,
+                      hovered ? styles.footerButtonSecondaryHovered : undefined,
+                      pressed ? styles.footerButtonSecondaryPressed : undefined,
+                    ]}
+                  >
+                    <Text isBold style={[styles.footerButtonSecondaryText, styles.mobileFooterButtonText]}>
+                      Annuleren
+                    </Text>
+                  </Pressable>
+                </>
+              ) : (
+                <>
+                  <Pressable
+                    onPress={requestClose}
+                    style={({ hovered, pressed }) => [
+                      styles.footerButtonBase,
+                      styles.footerButtonSecondary,
+                      isUploadStep && !isCompactUploadFooter ? styles.footerButtonMiddle : styles.footerButtonLeft,
+                      styles.cancelButtonNoBottomLeftRadius,
+                      isCompactUploadFooter ? styles.footerButtonStackedSplit : undefined,
+                      isCompactFooter ? styles.footerButtonCompact : undefined,
+                      webTransitionSmooth,
+                      hovered ? styles.footerButtonSecondaryHovered : undefined,
+                      pressed ? styles.footerButtonSecondaryPressed : undefined,
+                    ]}
+                  >
+                    <Text isBold style={styles.footerButtonSecondaryText}>
+                      Annuleren
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    disabled={isPrimaryActionDisabled}
+                    onPress={handlePrimaryActionPress}
+                    style={({ hovered, pressed }) => [
+                      styles.footerButtonBase,
+                      styles.footerButtonPrimary,
+                      styles.footerButtonRight,
+                      isCompactUploadFooter ? styles.footerButtonStackedSplit : undefined,
+                      isCompactFooter ? styles.footerButtonCompact : undefined,
+                      isPrimaryActionDisabled ? styles.primaryButtonDisabled : undefined,
+                      hovered && !isPrimaryActionDisabled ? styles.footerButtonPrimaryHovered : undefined,
+                      pressed && !isPrimaryActionDisabled ? styles.footerButtonPrimaryPressed : undefined,
+                    ]}
+                  >
+                    <Text isBold style={styles.footerButtonPrimaryText}>
+                      {step === 'recorded' ? 'Verslag aanmaken' : 'Doorgaan'}
+                    </Text>
+                  </Pressable>
+                </>
+              )}
             </View>
           </View>
         ) : null}
       </Animated.View>
-      <AnimatedOverlayModal
-        visible={isRecordedCloseWarningVisible}
-        onClose={() => setIsRecordedCloseWarningVisible(false)}
-        contentContainerStyle={styles.closeWarningContainer}
-      >
-        <View style={styles.closeWarningContent}>
-          <Text isBold style={styles.closeWarningTitle}>
-            Weet je zeker dat je de opname wil verwijderen?
-          </Text>
-          <Text style={styles.closeWarningText}>
-            Als je verwijdert, gaat je huidige opname of invoer verloren.
-          </Text>
-        </View>
-        <View style={styles.recordedCloseWarningFooter}>
-            <Pressable
-              onPress={() => setIsRecordedCloseWarningVisible(false)}
-              style={({ hovered }) => [
-                styles.recordedCloseWarningSecondaryButton,
-                hovered ? styles.recordedCloseWarningSecondaryButtonHovered : undefined,
-              ]}
-            >
-              <Text isBold style={styles.recordedCloseWarningSecondaryButtonText}>
-                Annuleren
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                setIsRecordedCloseWarningVisible(false)
-                handleClose()
-              }}
-              style={({ hovered }) => [
-                styles.recordedCloseWarningPrimaryButton,
-                hovered ? styles.recordedCloseWarningPrimaryButtonHovered : undefined,
-              ]}
-            >
-              <Text isBold style={styles.recordedCloseWarningPrimaryButtonText}>
-                Verwijderen
-              </Text>
-            </Pressable>
-        </View>
-      </AnimatedOverlayModal>
-      <AnimatedOverlayModal
-        visible={isInsufficientMinutesWarningVisible}
-        onClose={() => {
-          setIsInsufficientMinutesWarningVisible(false)
+      <NewSessionAuxiliaryModals
+        insufficientMinutesContext={insufficientMinutesContext}
+        isInsufficientMinutesWarningVisible={isInsufficientMinutesWarningVisible}
+        isRecordedCloseWarningVisible={isRecordedCloseWarningVisible}
+        onCloseInsufficientMinutes={() => setIsInsufficientMinutesWarningVisible(false)}
+        onCloseRecordedWarning={() => setIsRecordedCloseWarningVisible(false)}
+        onConfirmRecordedDelete={() => {
+          setIsRecordedCloseWarningVisible(false)
+          handleClose()
         }}
-        contentContainerStyle={styles.insufficientMinutesModalContainer}
-      >
-        <View style={styles.insufficientMinutesModalContent}>
-          <Text isBold style={styles.insufficientMinutesModalTitle}>
-            Onvoldoende minuten voor transcriptie
-          </Text>
-          <Text style={styles.insufficientMinutesModalText}>
-            Deze opname duurt ongeveer {insufficientMinutesContext ? formatMinutesLabel(insufficientMinutesContext.requiredSeconds) : '0 minuten'} en je hebt nog{' '}
-            {insufficientMinutesContext ? formatMinutesLabel(insufficientMinutesContext.remainingSeconds) : '0 minuten'} over.
-          </Text>
-        </View>
-        <View style={styles.insufficientMinutesFooter}>
-          <Pressable
-            onPress={() => {
-              if (!insufficientMinutesContext) return
-              downloadCurrentAudio(insufficientMinutesContext.kind)
-            }}
-            style={({ hovered }) => [
-              styles.insufficientMinutesFooterSecondaryButton,
-              hovered ? styles.insufficientMinutesFooterSecondaryButtonHovered : undefined,
-            ]}
-          >
-            <Text isBold style={styles.insufficientMinutesFooterSecondaryButtonText}>
-              Audio downloaden
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              void (async () => {
-                const selectedOptionForRestore =
-                  selectedOption === 'gesprek' || selectedOption === 'verslag' || selectedOption === 'upload'
-                    ? selectedOption
-                    : insufficientMinutesContext?.kind === 'upload'
-                      ? 'upload'
-                      : 'verslag'
-                if (audioForTranscription) {
-                  try {
-                    await saveSubscriptionReturnDraft({
-                      selectedOption: selectedOptionForRestore,
-                      selectedCoacheeId,
-                      selectedTemplateId,
-                      sessionTitle,
-                      shouldSaveAudio,
-                      audioDurationSeconds,
-                      mimeType: audioForTranscription.mimeType,
-                      blob: audioForTranscription.blob,
-                    })
-                  } catch (error) {
-                    console.error('[NewSessionModal] Failed to persist subscription return draft', error)
-                  }
-                }
-                setIsInsufficientMinutesWarningVisible(false)
-                onOpenMySubscription()
-              })()
-            }}
-            style={({ hovered }) => [
-              styles.insufficientMinutesFooterPrimaryButton,
-              hovered ? styles.insufficientMinutesFooterPrimaryButtonHovered : undefined,
-            ]}
-          >
-            <Text isBold style={styles.insufficientMinutesFooterPrimaryButtonText}>
-              Mijn abonnement
-            </Text>
-          </Pressable>
-        </View>
-      </AnimatedOverlayModal>
+        onDownloadAudioForInsufficientMinutes={() => {
+          if (!insufficientMinutesContext) return
+          downloadCurrentAudio(insufficientMinutesContext.kind)
+        }}
+        onOpenSubscriptionFromInsufficientMinutes={handleOpenSubscriptionFromInsufficientMinutes}
+      />
     </View>
   )
 }
 
-type SessionOptionRowProps = {
-  label: string
-  leftIcon: React.ReactNode
-  isSelected: boolean
-  onPress: () => void
-}
 
-function SessionOptionRow({ label, leftIcon, isSelected, onPress }: SessionOptionRowProps) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ hovered }) => [
-        styles.optionRow,
-        webTransitionSmooth,
-        isSelected ? styles.optionRowSelected : styles.optionRowUnselected,
-        hovered ? styles.optionRowHovered : undefined,
-      ]}
-    >
-      {/* Session option row */}
-      <View style={styles.optionRowContent}>
-        {leftIcon}
-        <Text isSemibold style={styles.optionRowText}>
-          {label}
-        </Text>
-      </View>
-    </Pressable>
-  )
-}
 
-const styles = StyleSheet.create({
-  overlay: {
-    ...( { position: 'fixed', inset: 0, zIndex: 9000 } as any ),
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  backdrop: {
-    ...( { position: 'absolute', inset: 0 } as any ),
-    backgroundColor: 'rgba(16,18,20,0.22)',
-    ...( { backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' } as any ),
-    zIndex: 0,
-  },
-  backdropPressable: {
-    ...( { position: 'absolute', inset: 0 } as any ),
-    zIndex: 0,
-  },
-  container: {
-    width: 1088,
-    maxWidth: '90vw',
-    height: 533,
-    ...( { height: 'min(533px, 90vh)' } as any ),
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    ...( { boxShadow: '0 20px 60px rgba(0,0,0,0.3)' } as any ),
-    overflow: 'visible',
-    position: 'relative',
-    zIndex: 2,
-  },
-  minimizedOverlay: {
-    ...( { position: 'fixed', top: 16, left: 240, right: 24, zIndex: 9000 } as any ),
-    alignItems: 'flex-start',
-    height: 40,
-  },
-  minimizedBar: {
-    width: 520,
-    ...( { maxWidth: '70vw' } as any ),
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#F8F9F9',
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  minimizedInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  minimizedTimeText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-  },
-  minimizedTimeContainer: {
-    width: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  minimizedWaveform: {
-    flex: 1,
-    height: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    overflow: 'hidden',
-  },
-  minimizedWaveBar: {
-    width: 2,
-    borderRadius: 8,
-    backgroundColor: '#F2BBD9',
-  },
-  minimizedWaveBarSilent: {
-    height: 2,
-    borderRadius: 1,
-  },
-  minimizedControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  minimizedControlButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  minimizedSoftButton: {
-    backgroundColor: '#FCE3F2',
-  },
-  minimizedSoftButtonHovered: {
-    backgroundColor: '#F8D2EA',
-  },
-  minimizedStopButtonHovered: {
-    backgroundColor: '#A50058',
-  },
-  minimizedStopButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.selected,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  minimizedPlayIconWrapper: {
-    marginLeft: 2,
-  },
-  header: {
-    width: '100%',
-    height: 72,
-    padding: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    position: 'relative',
-    zIndex: 2,
-  },
-  headerTitle: {
-    fontSize: 20,
-    lineHeight: 24,
-    color: colors.textStrong,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  recordingWarningOverlay: {
-    ...( { position: 'absolute', top: 24, left: 0, right: 0, zIndex: 3 } as any ),
-    alignItems: 'center',
-  },
-  recordingWarningBanner: {
-    padding: 0,
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    gap: 2,
-  },
-  recordingWarningTitle: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-    textAlign: 'center',
-  },
-  recordingWarningText: {
-    fontSize: 13,
-    lineHeight: 17,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  headerMetaText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  iconButtonHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  iconButtonPressed: {},
-  iconButtonOverlay: {
-    ...( { position: 'absolute', inset: 0 } as any ),
-    backgroundColor: 'rgba(190, 1, 101, 0.08)',
-  },
-  body: {
-    width: '100%',
-    flex: 1,
-    padding: 24,
-    paddingBottom: 96,
-    ...( { overflow: 'visible' } as any ),
-    zIndex: 1,
-  },
-  stepContent: {
-    width: '100%',
-    flex: 1,
-  },
-  stepScroll: {
-    width: '100%',
-    flex: 1,
-  },
-  stepScrollContent: {
-    paddingBottom: 8,
-  },
-  selectList: {
-    gap: 16,
-  },
-  optionRow: {
-    width: '100%',
-    height: 72,
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    justifyContent: 'center',
-  },
-  optionRowSelected: {
-    borderColor: colors.selected,
-    borderWidth: 2,
-  },
-  optionRowUnselected: {
-    borderColor: colors.border,
-  },
-  optionRowHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  optionRowContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  optionRowText: {
-    fontSize: 16,
-    lineHeight: 20,
-    color: colors.textStrong,
-  },
-  footerFloating: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 0,
-    zIndex: 2,
-  },
-  footerInline: {
-    marginTop: 16,
-    paddingBottom: 0,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 0,
-    zIndex: 0,
-  },
-  footerSplit: {
-    justifyContent: 'space-between',
-  },
-  footerStacked: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    justifyContent: 'flex-end',
-  },
-  footerButtonBase: {
-    height: 48,
-    borderRadius: 0,
-    paddingHorizontal: 24,
-    paddingVertical: 0,
-    minWidth: 180,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  footerButtonLeft: {
-    borderBottomLeftRadius: 16,
-  },
-  footerButtonMiddle: {},
-  footerButtonRight: {
-    borderBottomRightRadius: 16,
-  },
-  footerRightGroup: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  footerRightGroupStacked: {
-    width: '100%',
-  },
-  footerRightGroupAlignEnd: {
-    marginLeft: 'auto',
-  },
-  footerButtonStackedSplit: {
-    flex: 1,
-    minWidth: 0,
-  },
-  footerButtonUploadTop: {
-    width: '100%',
-    borderRadius: 0,
-  },
-  footerButtonSecondary: {
-    backgroundColor: colors.surface,
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-  footerButtonSecondaryHovered: {
-    backgroundColor: 'rgba(0,0,0,0.06)',
-  },
-  footerButtonSecondaryPressed: {},
-  footerButtonSecondaryText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-  },
-  footerButtonPrimary: {
-    backgroundColor: colors.selected,
-  },
-  footerButtonPrimaryHovered: {
-    backgroundColor: '#A50058',
-  },
-  footerButtonPrimaryPressed: {},
-  primaryButtonDisabled: {
-    opacity: 0.5,
-  },
-  footerButtonPrimaryText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: '#FFFFFF',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-  },
-  buttonOverlay: {
-    ...( { position: 'absolute', inset: 0 } as any ),
-    backgroundColor: 'rgba(190, 1, 101, 0.08)',
-  },
-  recordingBody: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 28,
-    paddingVertical: 40,
-  },
-  waveformContainer: {
-    width: '100%',
-    height: 180,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 48,
-    overflow: 'hidden',
-  },
-  waveBar: {
-    width: 8,
-    borderRadius: 8,
-    backgroundColor: '#F2BBD9',
-  },
-  timerText: {
-    fontSize: 44,
-    lineHeight: 48,
-    color: colors.textStrong,
-  },
-  recordingControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 24,
-  },
-  closeWarningContainer: {
-    width: 520,
-  },
-  closeWarningContent: {
-    padding: 24,
-    gap: 16,
-  },
-  closeWarningTitle: {
-    fontSize: 18,
-    lineHeight: 22,
-    color: colors.textStrong,
-  },
-  closeWarningText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.text,
-  },
-  closeWarningActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 12,
-  },
-  closeWarningButton: {
-    height: 40,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeWarningButtonSecondary: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  closeWarningButtonSecondaryHovered: {
-    backgroundColor: 'rgba(0,0,0,0.06)',
-  },
-  closeWarningButtonSecondaryText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-  },
-  closeWarningButtonPrimary: {
-    backgroundColor: colors.selected,
-  },
-  closeWarningButtonPrimaryHovered: {
-    backgroundColor: '#A50058',
-  },
-  closeWarningButtonPrimaryText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: '#FFFFFF',
-  },
-  recordedCloseWarningFooter: {
-    width: '100%',
-    padding: 0,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 0,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  recordedCloseWarningSecondaryButton: {
-    height: 48,
-    borderRadius: 0,
-    borderBottomLeftRadius: 16,
-    backgroundColor: colors.surface,
-    borderWidth: 0,
-    borderColor: 'transparent',
-    paddingHorizontal: 24,
-    paddingVertical: 0,
-    minWidth: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  recordedCloseWarningSecondaryButtonHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  recordedCloseWarningSecondaryButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-  },
-  recordedCloseWarningPrimaryButton: {
-    height: 48,
-    borderRadius: 0,
-    borderBottomRightRadius: 16,
-    backgroundColor: colors.selected,
-    paddingHorizontal: 24,
-    paddingVertical: 0,
-    minWidth: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  recordedCloseWarningPrimaryButtonHovered: {
-    backgroundColor: '#A50058',
-  },
-  recordedCloseWarningPrimaryButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: '#FFFFFF',
-  },
-  insufficientMinutesModalContainer: {
-    width: 560,
-  },
-  insufficientMinutesModalContent: {
-    padding: 24,
-    gap: 16,
-  },
-  insufficientMinutesModalTitle: {
-    fontSize: 18,
-    lineHeight: 22,
-    color: colors.textStrong,
-  },
-  insufficientMinutesModalText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.text,
-  },
-  insufficientMinutesFooter: {
-    width: '100%',
-    padding: 0,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 0,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  insufficientMinutesFooterSecondaryButton: {
-    height: 48,
-    borderRadius: 0,
-    borderBottomLeftRadius: 16,
-    backgroundColor: colors.surface,
-    borderWidth: 0,
-    borderColor: 'transparent',
-    paddingHorizontal: 24,
-    paddingVertical: 0,
-    minWidth: 180,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  insufficientMinutesFooterSecondaryButtonHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  insufficientMinutesFooterSecondaryButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-  },
-  insufficientMinutesFooterPrimaryButton: {
-    height: 48,
-    borderRadius: 0,
-    borderBottomRightRadius: 16,
-    backgroundColor: colors.selected,
-    paddingHorizontal: 24,
-    paddingVertical: 0,
-    minWidth: 180,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  insufficientMinutesFooterPrimaryButtonHovered: {
-    backgroundColor: '#A50058',
-  },
-  insufficientMinutesFooterPrimaryButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: '#FFFFFF',
-  },
-  softCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#FCE3F2',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  softCircleHovered: {
-    backgroundColor: '#F8D2EA',
-  },
-  primaryCircle: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
-    backgroundColor: colors.selected,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryCircleHovered: {
-    backgroundColor: '#A50058',
-  },
-  recordedBody: {
-    width: '100%',
-    gap: 16,
-  },
-  recordedDropdownsRow: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  audioPreviewCard: {
-    width: '100%',
-    padding: 0,
-    position: 'relative',
-  },
-  footerButtonCompact: {
-    minWidth: 0,
-    flex: 1,
-    paddingHorizontal: 12,
-  },
-  audioSaveToggleRow: {
-    position: 'absolute',
-    right: 12,
-    bottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-  },
-  audioSaveToggleRowHovered: {
-    backgroundColor: 'rgba(249,249,249,0.98)',
-  },
-  audioSaveToggleLabel: {
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.textStrong,
-  },
-  audioSaveToggleTrack: {
-    width: 34,
-    height: 20,
-    borderRadius: 999,
-    paddingHorizontal: 2,
-    justifyContent: 'center',
-  },
-  audioSaveToggleTrackOff: {
-    backgroundColor: '#D2D2D2',
-  },
-  audioSaveToggleTrackOn: {
-    backgroundColor: colors.selected,
-  },
-  audioSaveToggleThumb: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-  },
-  audioSaveToggleThumbOff: {
-    alignSelf: 'flex-start',
-  },
-  audioSaveToggleThumbOn: {
-    alignSelf: 'flex-end',
-  },
-  uploadBody: {
-    width: '100%',
-    gap: 16,
-  },
-  consentBody: {
-    width: '100%',
-    maxWidth: 760,
-    alignSelf: 'center',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
-  consentIconCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: '#FCE3F2',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  consentTitle: {
-    fontSize: 30,
-    lineHeight: 36,
-    color: colors.textStrong,
-    textAlign: 'center',
-  },
-  consentTitleCompact: {
-    fontSize: 22,
-    lineHeight: 30,
-  },
-  consentDescription: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.text,
-    textAlign: 'center',
-    maxWidth: 640,
-  },
-  consentDescriptionCompact: {
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  consentCheckboxRow: {
-    width: '100%',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 8,
-  },
-  consentCheckboxRowHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  consentCheckbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    flexShrink: 0,
-  },
-  consentCheckboxChecked: {
-    borderColor: '#FFFFFF',
-    backgroundColor: '#FFFFFF',
-  },
-  consentCheckboxLabel: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textStrong,
-  },
-  consentHelpLinkRow: {
-    marginTop: 2,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-  },
-  consentHelpLinkRowHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  consentHelpLinkText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.selected,
-    textDecorationLine: 'underline',
-  },
-  uploadDropArea: {
-    width: '100%',
-    borderRadius: 12,
-    backgroundColor: '#F0F0F0',
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 24,
-    height: 320,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  uploadPressable: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  uploadDropAreaHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  uploadDropAreaActive: {
-    backgroundColor: 'rgba(190,1,101,0.08)',
-    borderColor: colors.selected,
-  },
-  uploadCenter: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  uploadHintText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-  },
-  uploadFileNameText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: '#656565',
-    maxWidth: 520,
-    textAlign: 'center',
-  },
-  uploadDurationWarningText: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.selected,
-    maxWidth: 700,
-    textAlign: 'center',
-  },
-  footerButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  dropdownArea: {
-    width: '100%',
-    position: 'relative',
-    zIndex: 1,
-  },
-  dropdownAreaHalf: {
-    flex: 1,
-    width: undefined as any,
-  },
-  dropdownAreaRaised: {
-    zIndex: 2,
-  },
-  infoRow: {
-    width: '100%',
-    height: 64,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  infoRowHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  infoRowText: {
-    fontSize: 16,
-    lineHeight: 20,
-    color: colors.textStrong,
-  },
-  infoRowSpacer: {
-    flex: 1,
-  },
-  sessionTitleInput: {
-    flex: 1,
-    padding: 0,
-    fontSize: 16,
-    lineHeight: 20,
-    color: colors.textStrong,
-  },
-  coacheePanel: {
-    width: '100%',
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 72,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 0,
-    gap: 0,
-    ...( { boxShadow: '0 8px 20px rgba(0,0,0,0.12)' } as any ),
-    zIndex: 30,
-    overflow: 'hidden',
-  },
-  reportTypePanel: {
-    width: '100%',
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 72,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 0,
-    gap: 0,
-    ...( { boxShadow: '0 8px 20px rgba(0,0,0,0.12)' } as any ),
-    zIndex: 30,
-    overflow: 'hidden',
-  },
-  reportTypeList: {
-    width: '100%',
-  },
-  reportTypeListContent: {
-    paddingVertical: 0,
-  },
-  reportTypeItem: {
-    width: '100%',
-    height: 48,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-  },
-  reportTypeItemTop: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  reportTypeItemBottom: {
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-  },
-  reportTypeItemHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  reportTypeItemText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-  },
-  coacheeList: {
-    width: '100%',
-  },
-  coacheeListContent: {
-    paddingVertical: 0,
-  },
-  coacheeItem: {
-    width: '100%',
-    height: 48,
-    paddingHorizontal: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  coacheeItemTop: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  coacheeItemBottom: {
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-  },
-  coacheeItemHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  coacheeItemText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-  },
-  coacheeItemAdd: {
-    backgroundColor: colors.selected,
-  },
-  coacheeItemAddHovered: {
-    backgroundColor: '#A50058',
-  },
-  coacheeItemAddText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: '#FFFFFF',
-  },
-})
+

@@ -1,7 +1,7 @@
 import React from 'react'
 import { StyleSheet, View } from 'react-native'
 
-import { colors } from '../../theme/colors'
+import { colors } from '../../design/theme/colors'
 
 type Props = {
   stepsCount: number
@@ -43,4 +43,5 @@ const styles = StyleSheet.create({
     borderColor: colors.selected,
   },
 })
+
 

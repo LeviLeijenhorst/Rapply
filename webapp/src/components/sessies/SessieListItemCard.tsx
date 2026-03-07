@@ -1,18 +1,18 @@
 import React, { useRef } from 'react'
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native'
-import { LoadingSpinner } from '../LoadingSpinner'
+import { LoadingSpinner } from '../../ui/LoadingSpinner'
 
-import { colors } from '../../theme/colors'
-import { webTransitionSmooth } from '../../theme/webTransitions'
-import { CoacheeAvatarIcon } from '../icons/CoacheeAvatarIcon'
-import { EditActionIcon } from '../icons/EditActionIcon'
-import { MicrophoneSmallIcon } from '../icons/MicrophoneSmallIcon'
-import { MoreOptionsIcon } from '../icons/MoreOptionsIcon'
-import { StandaardVerslagIcon } from '../icons/StandaardVerslagIcon'
-import { Text } from '../Text'
+import { colors } from '../../design/theme/colors'
+import { webTransitionSmooth } from '../../design/theme/webTransitions'
+import { CoacheeAvatarIcon } from '../../icons/CoacheeAvatarIcon'
+import { MicrophoneSmallIcon } from '../../icons/MicrophoneSmallIcon'
+import { MoreOptionsIcon } from '../../icons/MoreOptionsIcon'
+import { StandaardVerslagIcon } from '../../icons/StandaardVerslagIcon'
+import { Text } from '../../ui/Text'
 
 type Props = {
   title: string
+  subtitle?: string
   dateLabel: string
   timeLabel: string
   durationLabel: string
@@ -20,13 +20,13 @@ type Props = {
   isReport: boolean
   transcriptionStatus?: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
   onPress: () => void
-  onPressEdit: (anchorPoint: { x: number; y: number }) => void
   onPressMore: (anchorPoint: { x: number; y: number }) => void
   showCoachee?: boolean
 }
 
 export function SessieListItemCard({
   title,
+  subtitle,
   dateLabel,
   timeLabel,
   durationLabel,
@@ -34,7 +34,6 @@ export function SessieListItemCard({
   isReport,
   transcriptionStatus = 'idle',
   onPress,
-  onPressEdit,
   onPressMore,
   showCoachee = true,
 }: Props) {
@@ -47,8 +46,6 @@ export function SessieListItemCard({
   const showTranscriptionText = !shouldCompactForNarrowView || windowWidth > 1180
   const showDateTime = !shouldCompactForNarrowView || windowWidth > 1060
   const showCoacheeInfo = showCoachee && windowWidth > 930
-  const showEditButton = !shouldCompactForNarrowView || windowWidth > 820
-
   function getMenuAnchorPointFromEvent(event: any): { x: number; y: number } {
     const rectFromRef = moreButtonRef.current?.getBoundingClientRect?.()
     const rectFromCurrentTarget = event?.currentTarget?.getBoundingClientRect?.()
@@ -72,18 +69,30 @@ export function SessieListItemCard({
   }
 
   return (
-    <Pressable onPress={onPress} style={({ hovered }) => [styles.card, webTransitionSmooth, hovered ? styles.cardHovered : undefined]}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Open item ${title}`}
+      style={({ hovered }) => [styles.card, webTransitionSmooth, hovered ? styles.cardHovered : undefined]}
+    >
       {/* Session row */}
       <View style={styles.sessionInfoRow}>
         <View style={styles.titleColumn}>
-          {/* Session icon */}
-          <View style={styles.iconContainer}>
-            {isReport ? <StandaardVerslagIcon color={colors.selected} size={20} /> : <MicrophoneSmallIcon color={colors.selected} size={20} />}
+          <View style={styles.titleRow}>
+            {/* Session icon */}
+            <View style={styles.iconContainer}>
+              {isReport ? <StandaardVerslagIcon color={colors.selected} size={20} /> : <MicrophoneSmallIcon color={colors.selected} size={20} />}
+            </View>
+            {/* Session title */}
+            <Text numberOfLines={1} style={styles.title}>
+              {title}
+            </Text>
           </View>
-          {/* Session title */}
-          <Text numberOfLines={1} style={styles.title}>
-            {title}
-          </Text>
+          {subtitle ? (
+            <Text numberOfLines={1} style={styles.subtitle}>
+              {subtitle}
+            </Text>
+          ) : null}
         </View>
 
         {isTranscriptionActive ? (
@@ -121,23 +130,6 @@ export function SessieListItemCard({
 
       {/* Actions */}
       <View style={styles.actionsColumn}>
-        {showEditButton ? (
-          <Pressable
-            onPress={(event) => {
-              ;(event as any)?.stopPropagation?.()
-              onPressEdit(getMenuAnchorPointFromEvent(event))
-            }}
-            style={({ hovered }) => [styles.editButton, webTransitionSmooth, hovered ? styles.editButtonHovered : undefined]}
-          >
-            {/* Edit action */}
-            <View style={styles.editButtonContent}>
-              <EditActionIcon color="#656565" size={18} />
-              <Text style={styles.editButtonText}>
-                Bewerken
-              </Text>
-            </View>
-          </Pressable>
-        ) : null}
         <Pressable
           ref={moreButtonRef}
           onPress={(event) => {
@@ -166,7 +158,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     gap: 12,
     width: '100%',
-    height: 80,
+    minHeight: 80,
+    ...( { cursor: 'pointer' } as any ),
   },
   cardHovered: {
     backgroundColor: colors.hoverBackground,
@@ -185,18 +178,31 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   titleColumn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 4,
     maxWidth: 320,
     minWidth: 0,
     flexShrink: 1,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minWidth: 0,
   },
   title: {
     fontSize: 16,
     lineHeight: 20,
     color: colors.text,
     flexShrink: 1,
+  },
+  subtitle: {
+    marginLeft: 40,
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
+    maxWidth: 280,
   },
   statusColumn: {
     flex: 1,
@@ -251,30 +257,7 @@ const styles = StyleSheet.create({
   actionsColumn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  editButton: {
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: colors.pageBackground,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 10,
-    justifyContent: 'center',
-  },
-  editButtonHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  editButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  editButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: '#656565',
+    gap: 0,
   },
   moreButton: {
     height: 36,
@@ -287,4 +270,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.hoverBackground,
   },
 })
+
+
 

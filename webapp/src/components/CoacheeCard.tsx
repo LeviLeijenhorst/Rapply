@@ -1,19 +1,19 @@
 import React, { useRef } from 'react'
 import { GestureResponderEvent, Pressable, StyleSheet, View } from 'react-native'
 
-import { colors } from '../theme/colors'
-import { webTransitionSmooth } from '../theme/webTransitions'
-import { CoacheeAvatarIcon } from './icons/CoacheeAvatarIcon'
-import { EditActionIcon } from './icons/EditActionIcon'
-import { MoreOptionsIcon } from './icons/MoreOptionsIcon'
-import { Text } from './Text'
+import { colors } from '../design/theme/colors'
+import { webTransitionSmooth } from '../design/theme/webTransitions'
+import { CoacheeAvatarIcon } from '../icons/CoacheeAvatarIcon'
+import { EditActionIcon } from '../icons/EditActionIcon'
+import { MoreOptionsIcon } from '../icons/MoreOptionsIcon'
+import { Text } from '../ui/Text'
 
 type Props = {
   name: string
   detailLabel: string
   onPress: () => void
-  onPressEdit: () => void
-  onPressMore: (anchorPoint: { x: number; y: number }) => void
+  onPressEdit?: () => void
+  onPressMore?: (anchorPoint: { x: number; y: number }) => void
 }
 
 export function CoacheeCard({ name, detailLabel, onPress, onPressEdit, onPressMore }: Props) {
@@ -62,34 +62,38 @@ export function CoacheeCard({ name, detailLabel, onPress, onPressEdit, onPressMo
 
       {/* Coachee actions */}
       <View style={styles.actions}>
-        <Pressable
-          onPress={(event) => {
-            event?.stopPropagation?.()
-            onPressEdit()
-          }}
-          style={({ hovered }) => [styles.editButton, webTransitionSmooth, hovered ? styles.editButtonHovered : undefined]}
-        >
-          {/* Edit coachee button */}
-          <View style={styles.editButtonContent}>
-            {/* Edit icon */}
-            <EditActionIcon color="#656565" size={18} />
-            {/* Edit label */}
-            <Text style={styles.editButtonText}>
-              Bewerken
-            </Text>
-          </View>
-        </Pressable>
-        <Pressable
-          ref={moreButtonRef}
-          onPress={(event) => {
-            event?.stopPropagation?.()
-            onPressMore(getMenuAnchorPointFromEvent(event))
-          }}
-          style={({ hovered }) => [styles.moreButton, webTransitionSmooth, hovered ? styles.moreButtonHovered : undefined]}
-        >
-          {/* More options */}
-          <MoreOptionsIcon color="#656565" size={24} />
-        </Pressable>
+        {onPressEdit ? (
+          <Pressable
+            onPress={(event) => {
+              event?.stopPropagation?.()
+              onPressEdit()
+            }}
+            style={({ hovered }) => [styles.editButton, webTransitionSmooth, hovered ? styles.editButtonHovered : undefined]}
+          >
+            {/* Edit coachee button */}
+            <View style={styles.editButtonContent}>
+              {/* Edit icon */}
+              <EditActionIcon color="#656565" size={18} />
+              {/* Edit label */}
+              <Text style={styles.editButtonText}>
+                Bewerken
+              </Text>
+            </View>
+          </Pressable>
+        ) : null}
+        {onPressMore ? (
+          <Pressable
+            ref={moreButtonRef}
+            onPress={(event) => {
+              event?.stopPropagation?.()
+              onPressMore(getMenuAnchorPointFromEvent(event))
+            }}
+            style={({ hovered }) => [styles.moreButton, webTransitionSmooth, hovered ? styles.moreButtonHovered : undefined]}
+          >
+            {/* More options */}
+            <MoreOptionsIcon color="#656565" size={24} />
+          </Pressable>
+        ) : null}
       </View>
     </Pressable>
   )
@@ -171,4 +175,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.hoverBackground,
   },
 })
+
 

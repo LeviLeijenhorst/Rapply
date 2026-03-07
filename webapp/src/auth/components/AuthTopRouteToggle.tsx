@@ -1,7 +1,7 @@
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { Text } from '../../components/Text'
+import { Text } from '../../ui/Text'
 
 type Option = {
   label: string
@@ -80,4 +80,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 })
+
 

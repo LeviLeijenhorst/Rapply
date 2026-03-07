@@ -1,8 +1,8 @@
 import React, { useMemo, useRef } from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 
-import { Text } from '../../components/Text'
-import { colors } from '../../theme/colors'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
 
 type Props = {
   value: string
@@ -83,4 +83,5 @@ const styles = StyleSheet.create({
     color: colors.selected,
   },
 })
+
 

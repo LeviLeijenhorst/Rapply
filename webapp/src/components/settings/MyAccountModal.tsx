@@ -1,13 +1,13 @@
 import React from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
-import { colors } from '../../theme/colors'
-import { Text } from '../Text'
-import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
-import { TrashIcon } from '../icons/TrashIcon'
-import { MijnAccountIcon } from '../icons/MijnAccountIcon'
-import { LogoutIcon } from '../icons/LogoutIcon'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
+import { colors } from '../../design/theme/colors'
+import { Text } from '../../ui/Text'
+import { ModalCloseDarkIcon } from '../../icons/ModalCloseDarkIcon'
+import { TrashIcon } from '../../icons/TrashIcon'
+import { MijnAccountIcon } from '../../icons/MijnAccountIcon'
+import { LogoutIcon } from '../../icons/LogoutIcon'
 
 type Props = {
   visible: boolean
@@ -261,3 +261,4 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
   },
 })
+

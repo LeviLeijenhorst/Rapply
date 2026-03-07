@@ -6,17 +6,19 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web --https --host localhost"
   },
   "dependencies": {
     "@expo-google-fonts/catamaran": "^0.4.1",
     "@noble/hashes": "^2.0.1",
+    "docxtemplater": "^3.68.3",
     "expo": "~54.0.25",
     "expo-font": "~14.0.10",
     "expo-status-bar": "~3.0.9",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.1.0",
     "microsoft-cognitiveservices-speech-sdk": "^1.48.0",
+    "pizzip": "^3.2.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-native": "^0.81.5",

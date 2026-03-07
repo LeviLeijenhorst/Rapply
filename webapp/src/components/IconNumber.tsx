@@ -1,8 +1,8 @@
 import React from 'react'
 import { StyleSheet, View } from 'react-native'
 
-import { colors } from '../theme/colors'
-import { Text } from './Text'
+import { colors } from '../design/theme/colors'
+import { Text } from '../ui/Text'
 
 type Props = {
   value: number
@@ -32,4 +32,5 @@ const styles = StyleSheet.create({
     color: colors.selected,
   },
 })
+
 

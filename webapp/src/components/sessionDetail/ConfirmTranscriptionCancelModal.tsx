@@ -1,10 +1,10 @@
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
-import { Text } from '../Text'
-import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
-import { colors } from '../../theme/colors'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
+import { Text } from '../../ui/Text'
+import { ModalCloseDarkIcon } from '../../icons/ModalCloseDarkIcon'
+import { colors } from '../../design/theme/colors'
 
 type Props = {
   visible: boolean
@@ -141,3 +141,4 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+

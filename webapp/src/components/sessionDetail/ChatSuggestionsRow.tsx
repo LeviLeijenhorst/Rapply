@@ -1,8 +1,8 @@
 import React from 'react'
 import { Pressable, ScrollView, StyleSheet } from 'react-native'
 
-import { Text } from '../Text'
-import { colors } from '../../theme/colors'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
 
 type Props = {
   onSelectSuggestion: (text: string) => void
@@ -53,4 +53,5 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 })
+
 

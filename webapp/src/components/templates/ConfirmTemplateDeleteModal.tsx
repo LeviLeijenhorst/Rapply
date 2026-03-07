@@ -9,7 +9,7 @@ type Props = {
   onConfirm: () => void;
 };
 
-// Confirms permanent removal of a template while keeping the existing feature-specific copy.
+// Confirms permanent removal of a form while keeping the existing feature-specific copy.
 export function ConfirmTemplateDeleteModal({
   visible,
   templateName,
@@ -20,12 +20,12 @@ export function ConfirmTemplateDeleteModal({
 
   const description = templateName
     ? `Weet je zeker dat je ${templateName} wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`
-    : "Weet je zeker dat je deze template wilt verwijderen? Dit kan niet ongedaan worden gemaakt.";
+    : "Weet je zeker dat je dit formulier wilt verwijderen? Dit kan niet ongedaan worden gemaakt.";
 
   return (
     <ConfirmDeleteDialog
       visible={visible}
-      title="Template verwijderen"
+      title="Formulier verwijderen"
       description={description}
       onClose={onClose}
       onConfirm={onConfirm}

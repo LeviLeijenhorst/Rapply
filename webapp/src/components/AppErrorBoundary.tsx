@@ -1,8 +1,8 @@
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { Text } from './Text'
-import { colors } from '../theme/colors'
+import { Text } from '../ui/Text'
+import { colors } from '../design/theme/colors'
 import { trackWebappError } from '../services/analytics'
 
 type Props = {
@@ -135,4 +135,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+
 

@@ -1,7 +1,7 @@
 import React from 'react'
 import { Pressable, StyleSheet } from 'react-native'
 
-import { Text } from '../../components/Text'
+import { Text } from '../../ui/Text'
 
 type Props = {
   label: string
@@ -42,4 +42,5 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 })
+
 

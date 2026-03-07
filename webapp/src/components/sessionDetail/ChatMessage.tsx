@@ -1,13 +1,13 @@
 import React, { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
-import { LoadingSpinner } from '../LoadingSpinner'
+import { LoadingSpinner } from '../../ui/LoadingSpinner'
 
-import { Text } from '../Text'
-import { colors } from '../../theme/colors'
-import { CopyIcon } from '../icons/CopyIcon'
-import { CopiedIcon } from '../icons/CopiedIcon'
-import { SharePdfIcon } from '../icons/SharePdfIcon'
-import { ShareTextIcon } from '../icons/ShareTextIcon'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
+import { CopyIcon } from '../../icons/CopyIcon'
+import { CopiedIcon } from '../../icons/CopiedIcon'
+import { SharePdfIcon } from '../../icons/SharePdfIcon'
+import { ShareTextIcon } from '../../icons/ShareTextIcon'
 import { parseTimeLabelToSeconds } from '../../utils/time'
 import { useLocalAppData } from '../../local/LocalAppDataProvider'
 import { parseRichTextMarkdown, RichTextInlineSegment } from '../../utils/richTextFormatting'
@@ -832,7 +832,7 @@ export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, e
   const exportableText = resolveExportableMessageText(text)
   const displayText = removeExportMarkers(text)
   const lines = parseRichTextMarkdown(displayText || '')
-  const isExportable = isAssistant && Boolean(exportableText) && shouldOfferExportActions(exportableText || displayText)
+  const isExportable = false
 
   if (isAssistant) {
     return (
@@ -1071,4 +1071,5 @@ const styles = StyleSheet.create({
     color: colors.selected,
   },
 })
+
 

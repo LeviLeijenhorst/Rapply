@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
-import { colors } from '../../theme/colors'
-import { Text } from '../Text'
-import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
-import { EditActionIcon } from '../icons/EditActionIcon'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
+import { colors } from '../../design/theme/colors'
+import { Text } from '../../ui/Text'
+import { ModalCloseDarkIcon } from '../../icons/ModalCloseDarkIcon'
+import { EditActionIcon } from '../../icons/EditActionIcon'
 import { focusAndSelectAll } from '../../utils/textInput'
 
 type Props = {
@@ -267,3 +267,4 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+

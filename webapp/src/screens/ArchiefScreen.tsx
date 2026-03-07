@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native'
 
-import { AnimatedWidthContainer } from '../components/AnimatedWidthContainer'
+import { AnimatedWidthContainer } from '../ui/AnimatedWidthContainer'
 import { ArchivedCoacheeCard } from '../components/ArchivedCoacheeCard'
-import { SearchIcon } from '../components/icons/SearchIcon'
-import { Text } from '../components/Text'
-import { colors } from '../theme/colors'
-import { typography } from '../theme/typography'
+import { SearchIcon } from '../icons/SearchIcon'
+import { Text } from '../ui/Text'
+import { colors } from '../design/theme/colors'
+import { typography } from '../design/theme/typography'
 import { ConfirmCoacheeDeleteModal } from '../components/coachees/ConfirmCoacheeDeleteModal'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
 
@@ -222,4 +222,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 })
+
+
+
 

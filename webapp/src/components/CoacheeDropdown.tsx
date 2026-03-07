@@ -1,11 +1,11 @@
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { colors } from '../theme/colors'
-import { webTransitionSmooth } from '../theme/webTransitions'
-import { ChevronDownIcon } from './icons/ChevronDownIcon'
-import { UserSquareIcon } from './icons/UserSquareIcon'
-import { Text } from './Text'
+import { colors } from '../design/theme/colors'
+import { webTransitionSmooth } from '../design/theme/webTransitions'
+import { ChevronDownIcon } from '../icons/ChevronDownIcon'
+import { UserSquareIcon } from '../icons/UserSquareIcon'
+import { Text } from '../ui/Text'
 
 type Props = {
   coacheeName: string
@@ -59,4 +59,5 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 })
+
 

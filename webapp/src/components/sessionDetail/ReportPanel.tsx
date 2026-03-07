@@ -1,48 +1,41 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native'
-import { LoadingSpinner } from '../LoadingSpinner'
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { LoadingSpinner } from '../../ui/LoadingSpinner'
 
-import { Text } from '../Text'
-import { colors } from '../../theme/colors'
-import { CopyIcon } from '../icons/CopyIcon'
-import { CopiedIcon } from '../icons/CopiedIcon'
-import { EditSmallIcon } from '../icons/EditSmallIcon'
-import { SharePdfIcon } from '../icons/SharePdfIcon'
-import { ShareTextIcon } from '../icons/ShareTextIcon'
-import { VerslagGenererenIcon } from '../icons/VerslagGenererenIcon'
-import { VerslagSchrijvenIcon } from '../icons/VerslagSchrijvenIcon'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
+import { CopyIcon } from '../../icons/CopyIcon'
+import { CopiedIcon } from '../../icons/CopiedIcon'
+import { EditSmallIcon } from '../../icons/EditSmallIcon'
+import { SharePdfIcon } from '../../icons/SharePdfIcon'
+import { ShareTextIcon } from '../../icons/ShareTextIcon'
+import { VerslagGenererenIcon } from '../../icons/VerslagGenererenIcon'
+import { VerslagSchrijvenIcon } from '../../icons/VerslagSchrijvenIcon'
+import { RotateLeftIcon } from '../../icons/RotateLeftIcon'
 import { toUserFriendlyTranscriptionError } from '../../utils/transcriptionError'
-import { parseRichTextMarkdown, RichTextInlineSegment, richTextMarkdownToHtml, richTextSharedFormatting } from '../../utils/richTextFormatting'
+import { richTextMarkdownToHtml } from '../../utils/richTextFormatting'
 import { useToast } from '../../toast/ToastProvider'
+import { parseReportSections, serializeReportSections } from '../../utils/reportStructure'
+import { legacySummaryFallbackTitle, structuredSummaryFieldOrder, type StructuredSessionSummary } from '../../utils/structuredSummary'
 
 type Props = {
   onPressTemplate?: () => void
+  onPressRegenerate?: () => void
   summary: string | null
+  summaryStructured?: StructuredSessionSummary | null
   hasTranscript: boolean
   transcriptionStatus: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
   transcriptionError: string | null
   onRetryTranscription?: () => void
   onEditSummary?: () => void
+  onChangeSummary?: (value: string) => void
   onCancelGeneration?: () => void
   onShareSummary?: () => void
   onExportSummaryAsWord?: () => void
+  documentNoun?: 'samenvatting' | 'rapportage'
   suppressErrorToast?: boolean
-}
-
-function renderInlineSegments(segments: RichTextInlineSegment[], textStyle: any) {
-  return (
-    <Text style={textStyle}>
-      {segments.map((segment, index) => (
-        <Text
-          key={`${segment.text}-${index}`}
-          isBold={segment.isBold}
-          style={segment.isItalic ? styles.italicText : undefined}
-        >
-          {segment.text}
-        </Text>
-      ))}
-    </Text>
-  )
+  showCopyAction?: boolean
+  fillHeight?: boolean
 }
 
 function buildClipboardHtml(markdown: string) {
@@ -151,33 +144,89 @@ function ToolbarIconButton({
 
 export function ReportPanel({
   onPressTemplate,
+  onPressRegenerate,
   summary,
+  summaryStructured,
   hasTranscript,
   transcriptionStatus,
   transcriptionError,
   onRetryTranscription,
   onEditSummary,
+  onChangeSummary,
   onCancelGeneration,
   onShareSummary,
   onExportSummaryAsWord,
+  documentNoun = 'samenvatting',
   suppressErrorToast = false,
+  showCopyAction = true,
+  fillHeight = false,
 }: Props) {
   const [showCopyNotification, setShowCopyNotification] = useState(false)
+  const [sectionDrafts, setSectionDrafts] = useState(() => parseReportSections(summary || ''))
+  const [sectionInputHeights, setSectionInputHeights] = useState<Record<string, number>>({})
   const { showErrorToast } = useToast()
+  const readyRevealOpacity = useRef(new Animated.Value(1)).current
+  const readyRevealTranslateY = useRef(new Animated.Value(0)).current
+  const previousShouldShowLoadingRef = useRef(false)
 
-  const hasSummary = Boolean(summary && summary.trim())
+  const hasSummary = sectionDrafts.length > 0
   const isTranscribing = transcriptionStatus === 'transcribing'
   const isGenerating = transcriptionStatus === 'generating'
   const hasError = transcriptionStatus === 'error'
   const shouldShowLoading = (isTranscribing || isGenerating) && !hasError
-  const loadingLabel = !hasTranscript || isTranscribing ? 'Transcript wordt gegenereerd' : 'Verslag wordt gegenereerd'
+  const nounLower = documentNoun === 'rapportage' ? 'rapportage' : 'samenvatting'
+  const nounUpper = documentNoun === 'rapportage' ? 'Rapportage' : 'Samenvatting'
+  const generationErrorMessage =
+    documentNoun === 'rapportage'
+      ? 'Er is een fout opgetreden bij het genereren van de rapportage.'
+      : 'Er is een fout opgetreden bij het genereren van de samenvatting.'
+  const loadingLabel = !hasTranscript || isTranscribing ? 'Transcript wordt gegenereerd' : `${nounUpper} wordt gegenereerd`
 
-  const reportCopyText = summary || ''
+  const reportCopyText = serializeReportSections(sectionDrafts)
   const showEditSummaryButton = !shouldShowLoading && !!onEditSummary
-
-  const summaryLines = parseRichTextMarkdown(summary || '')
-  const reportErrorMessage = toUserFriendlyTranscriptionError(transcriptionError, 'Er is een fout opgetreden bij het genereren van het verslag.')
+  const reportErrorMessage = toUserFriendlyTranscriptionError(transcriptionError, generationErrorMessage)
   const isInsufficientMinutesError = reportErrorMessage.toLowerCase().includes('niet genoeg minuten over voor transcriptie')
+
+  useEffect(() => {
+    const hasStructuredSummary = Boolean(
+      summaryStructured &&
+      structuredSummaryFieldOrder.some((field) => String(summaryStructured[field.key] || '').trim().length > 0),
+    )
+    if (hasStructuredSummary && summaryStructured) {
+      const structuredSections = structuredSummaryFieldOrder
+        .map((field) => {
+          const content = String(summaryStructured[field.key] || '').trim()
+          if (!content) return null
+          return { title: field.label, content }
+        })
+        .filter((item): item is { title: string; content: string } => Boolean(item))
+      setSectionDrafts(structuredSections)
+      return
+    }
+    if (summary && summary.trim()) {
+      setSectionDrafts(parseReportSections(summary || ''))
+      return
+    }
+    setSectionDrafts([])
+  }, [summary, summaryStructured])
+
+  useEffect(() => {
+    const wasShowingLoading = previousShouldShowLoadingRef.current
+    previousShouldShowLoadingRef.current = shouldShowLoading
+    const shouldAnimateReadyReveal = wasShowingLoading && !shouldShowLoading && !hasError && hasSummary
+    if (!shouldAnimateReadyReveal) {
+      readyRevealOpacity.setValue(1)
+      readyRevealTranslateY.setValue(0)
+      return
+    }
+
+    readyRevealOpacity.setValue(0)
+    readyRevealTranslateY.setValue(6)
+    Animated.parallel([
+      Animated.timing(readyRevealOpacity, { toValue: 1, duration: 200, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(readyRevealTranslateY, { toValue: 0, duration: 200, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]).start()
+  }, [hasError, hasSummary, readyRevealOpacity, readyRevealTranslateY, shouldShowLoading])
 
   async function handleCopy() {
     if (!hasSummary) return
@@ -209,25 +258,32 @@ export function ReportPanel({
     if (!hasError) return
     if (suppressErrorToast) return
     if (isInsufficientMinutesError) return
-    showErrorToast(reportErrorMessage, 'Er is een fout opgetreden bij het genereren van het verslag.')
-  }, [hasError, isInsufficientMinutesError, reportErrorMessage, showErrorToast, suppressErrorToast])
+    showErrorToast(reportErrorMessage, generationErrorMessage)
+  }, [generationErrorMessage, hasError, isInsufficientMinutesError, reportErrorMessage, showErrorToast, suppressErrorToast])
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, fillHeight ? styles.containerFill : undefined]}>
       {/* Report panel */}
       <View style={styles.toolbarRow}>
         <View style={styles.toolbarActions}>
           {onPressTemplate ? (
             <ToolbarIconButton
               onPress={onPressTemplate}
-              tooltip="Verslag genereren"
+              tooltip={`${nounUpper} genereren`}
               icon={({ isHovered, disabled }) => <VerslagGenererenIcon size={18} color={disabled ? '#BDB6B2' : isHovered ? colors.selected : '#8E8480'} />}
+            />
+          ) : null}
+          {onPressRegenerate ? (
+            <ToolbarIconButton
+              onPress={onPressRegenerate}
+              tooltip={`${nounUpper} hergenereren`}
+              icon={({ isHovered, disabled }) => <RotateLeftIcon size={18} color={disabled ? '#BDB6B2' : isHovered ? colors.selected : '#8E8480'} />}
             />
           ) : null}
           {showEditSummaryButton ? (
             <ToolbarIconButton
               onPress={onEditSummary}
-              tooltip="Verslag bewerken"
+              tooltip={`${nounUpper} bewerken`}
               style={styles.editButton}
               icon={({ isHovered, disabled }) => (
                 <EditSmallIcon color={disabled ? '#BDB6B2' : isHovered ? colors.selected : colors.textSecondary} size={17} />
@@ -250,24 +306,33 @@ export function ReportPanel({
               icon={({ isHovered, disabled }) => <ShareTextIcon color={disabled ? '#BDB6B2' : isHovered ? colors.selected : '#8E8480'} size={18} />}
             />
           ) : null}
-          <ToolbarIconButton
-            onPress={() => {
-              void handleCopy()
-            }}
-            disabled={!hasSummary}
-            tooltip="Kopieer verslag"
-            icon={({ isHovered, disabled }) =>
-              showCopyNotification ? (
-                <CopiedIcon size={18} />
-              ) : (
-                <CopyIcon color={disabled ? '#BDB6B2' : isHovered ? colors.selected : '#8E8480'} size={18} />
-              )
-            }
-          />
+          {showCopyAction ? (
+            <ToolbarIconButton
+              onPress={() => {
+                void handleCopy()
+              }}
+              disabled={!hasSummary}
+              tooltip={`Kopieer ${nounLower}`}
+              icon={({ isHovered, disabled }) =>
+                showCopyNotification ? (
+                  <CopiedIcon size={18} />
+                ) : (
+                  <CopyIcon color={disabled ? '#BDB6B2' : isHovered ? colors.selected : '#8E8480'} size={18} />
+                )
+              }
+            />
+          ) : null}
         </View>
       </View>
 
-      <View style={styles.reportContent} id="report-panel-content">
+      <Animated.View
+        style={[
+          styles.reportContent,
+          fillHeight ? styles.reportContentFill : undefined,
+          { opacity: readyRevealOpacity, transform: [{ translateY: readyRevealTranslateY }] },
+        ]}
+        id="report-panel-content"
+      >
         {shouldShowLoading ? (
           <View style={styles.loadingContainer}>
             <View style={styles.loadingRow}>
@@ -286,7 +351,7 @@ export function ReportPanel({
             ) : null}
           </View>
         ) : hasError ? (
-          <View style={styles.errorContainer}>
+          <View style={[styles.errorContainer, fillHeight ? styles.stateContainerFill : undefined]}>
             <View style={styles.errorActions}>
               {onRetryTranscription ? (
                 <Pressable
@@ -295,7 +360,7 @@ export function ReportPanel({
                 >
                   <VerslagGenererenIcon size={24} color={colors.selected} />
                   <Text isBold style={styles.emptyActionText}>
-                    Verslag genereren
+                    {nounUpper} genereren
                   </Text>
                 </Pressable>
               ) : null}
@@ -306,56 +371,50 @@ export function ReportPanel({
                 >
                   <VerslagSchrijvenIcon size={24} color={colors.selected} />
                   <Text isBold style={styles.emptyActionText}>
-                    Verslag schrijven
+                    {nounUpper} schrijven
                   </Text>
                 </Pressable>
               ) : null}
             </View>
           </View>
         ) : hasSummary ? (
-          <View style={styles.summaryContent}>
-            <View style={styles.summaryInner}>
-              {summaryLines.map((line, index) => {
-                if (line.kind === 'empty') return <View key={`empty-${index}`} style={styles.emptyRow} />
-                if (line.kind === 'divider') {
-                  return (
-                    <View key={`divider-${index}`} style={styles.dividerRow}>
-                      <View style={styles.dividerLine} />
-                    </View>
-                  )
-                }
-                if (line.kind === 'headingTwo' || line.kind === 'headingThree') {
-                  return <View key={`heading-${index}`}>{renderInlineSegments(line.segments, styles.sectionTitle)}</View>
-                }
-                if (line.kind === 'bullet') {
-                  return (
-                    <View key={`bullet-${index}`} style={styles.bulletRow}>
-                      <View style={styles.bulletSymbol} />
-                      <View style={styles.bulletTextContainer}>{renderInlineSegments(line.segments, styles.bulletText)}</View>
-                    </View>
-                  )
-                }
-                if (line.kind === 'numbered') {
-                  return (
-                    <View key={`numbered-${index}`} style={styles.bulletRow}>
-                      <Text style={styles.bulletNumber}>{`${line.number}.`}</Text>
-                      <View style={styles.bulletTextContainer}>{renderInlineSegments(line.segments, styles.bulletText)}</View>
-                    </View>
-                  )
-                }
-                if (line.kind === 'quote') {
-                  return (
-                    <View key={`quote-${index}`} style={styles.quoteRow}>
-                      {renderInlineSegments(line.segments, styles.quoteText)}
-                    </View>
-                  )
-                }
-                return <View key={`paragraph-${index}`}>{renderInlineSegments(line.segments, styles.paragraph)}</View>
-              })}
+          <ScrollView style={styles.summaryScroll} contentContainerStyle={styles.summaryScrollContent} showsVerticalScrollIndicator>
+            <View style={styles.summaryContent}>
+              {sectionDrafts.map((section, index) => (
+                <View key={`${section.title}-${index}`} style={styles.sectionBlock}>
+                  <Text isSemibold style={styles.sectionTitle}>
+                    {section.title || legacySummaryFallbackTitle}
+                  </Text>
+                  <TextInput
+                    multiline
+                    scrollEnabled={false}
+                    value={section.content}
+                    placeholder="Vul dit onderdeel in..."
+                    placeholderTextColor={colors.textSecondary}
+                    onContentSizeChange={(event) => {
+                      const targetHeight = Math.max(88, Math.ceil(event.nativeEvent.contentSize.height))
+                      const key = `${section.title}-${index}`
+                      setSectionInputHeights((current) => (current[key] === targetHeight ? current : { ...current, [key]: targetHeight }))
+                    }}
+                    style={[
+                      styles.sectionInput,
+                      sectionInputHeights[`${section.title}-${index}`] ? { height: sectionInputHeights[`${section.title}-${index}`] } : undefined,
+                    ]}
+                    onChangeText={(nextValue) => {
+                      const nextDrafts = sectionDrafts.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, content: nextValue } : item,
+                      )
+                      setSectionDrafts(nextDrafts)
+                      if (!onChangeSummary) return
+                      onChangeSummary(serializeReportSections(nextDrafts))
+                    }}
+                  />
+                </View>
+              ))}
             </View>
-          </View>
+          </ScrollView>
         ) : (
-          <View style={styles.emptyContainer}>
+          <View style={[styles.emptyContainer, fillHeight ? styles.stateContainerFill : undefined]}>
             <View style={styles.emptyActions}>
               {onRetryTranscription ? (
                 <Pressable
@@ -364,7 +423,7 @@ export function ReportPanel({
                 >
                   <VerslagGenererenIcon size={24} color={colors.selected} />
                   <Text isBold style={styles.emptyActionText}>
-                    Verslag genereren
+                    {nounUpper} genereren
                   </Text>
                 </Pressable>
               ) : null}
@@ -375,14 +434,14 @@ export function ReportPanel({
                 >
                   <VerslagSchrijvenIcon size={24} color={colors.selected} />
                   <Text isBold style={styles.emptyActionText}>
-                    Verslag schrijven
+                    {nounUpper} schrijven
                   </Text>
                 </Pressable>
               ) : null}
             </View>
           </View>
         )}
-      </View>
+      </Animated.View>
     </View>
   )
 }
@@ -392,13 +451,20 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 16,
   },
+  containerFill: {
+    flex: 1,
+  },
   toolbarRow: {
     width: '100%',
+    alignSelf: 'stretch',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
     position: 'relative',
     zIndex: 30,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingBottom: 10,
   },
   toolbarActions: {
     flexDirection: 'row',
@@ -422,83 +488,52 @@ const styles = StyleSheet.create({
   },
   reportContent: {
     width: '100%',
-    gap: 12,
     position: 'relative',
     zIndex: 1,
+    minHeight: 0,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  reportContentFill: {
+    flex: 1,
+    minHeight: 0,
+  },
+  summaryScroll: {
+    width: '100%',
+    flex: 1,
+    minHeight: 0,
+    borderRadius: 12,
+    ...( { overflowY: 'auto' } as any ),
+  },
+  summaryScrollContent: {
+    paddingBottom: 12,
   },
   summaryContent: {
     width: '100%',
+    gap: 12,
     paddingRight: 4,
   },
-  summaryInner: {
-    width: '100%',
+  sectionBlock: {
     gap: 8,
-  },
-  paragraph: {
-    fontSize: richTextSharedFormatting.editorFontSize,
-    lineHeight: richTextSharedFormatting.editorLineHeight,
-    color: colors.text,
   },
   sectionTitle: {
-    fontSize: richTextSharedFormatting.headingTwoFontSize,
-    lineHeight: richTextSharedFormatting.headingLineHeight,
-    fontWeight: richTextSharedFormatting.headingFontWeight,
+    fontSize: 16,
+    lineHeight: 22,
     color: colors.textStrong,
   },
-  dividerRow: {
+  sectionInput: {
     width: '100%',
-    paddingVertical: 8,
-  },
-  dividerLine: {
-    width: '100%',
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  bullets: {
-    gap: 8,
-  },
-  bulletRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  bulletSymbol: {
-    width: 5,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: colors.text,
-    marginTop: 10,
-  },
-  bulletText: {
-    fontSize: richTextSharedFormatting.listFontSize,
-    lineHeight: richTextSharedFormatting.listLineHeight,
+    minHeight: 88,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.text,
-  },
-  bulletTextContainer: {
-    flex: 1,
-  },
-  bulletNumber: {
-    fontSize: richTextSharedFormatting.listFontSize,
-    lineHeight: richTextSharedFormatting.listLineHeight,
-    fontWeight: richTextSharedFormatting.listMarkerFontWeight,
-    color: colors.text,
-    minWidth: 20,
-  },
-  italicText: {
-    fontStyle: 'italic',
-  },
-  emptyRow: {
-    height: 8,
-  },
-  quoteRow: {
-    borderLeftWidth: 2,
-    borderLeftColor: colors.border,
-    paddingLeft: 10,
-  },
-  quoteText: {
-    fontSize: richTextSharedFormatting.editorFontSize,
-    lineHeight: richTextSharedFormatting.editorLineHeight,
-    color: colors.textSecondary,
+    textAlignVertical: 'top',
   },
   actionButton: {
     width: 32,
@@ -600,6 +635,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
+  stateContainerFill: {
+    flex: 1,
+  },
   emptyActions: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -623,3 +661,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 })
+

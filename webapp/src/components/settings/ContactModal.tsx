@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
-import { LoadingSpinner } from '../LoadingSpinner'
+import { LoadingSpinner } from '../../ui/LoadingSpinner'
 
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
-import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
-import { Text } from '../Text'
-import { callSecureApi } from '../../services/secureApi'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
+import { ModalCloseDarkIcon } from '../../icons/ModalCloseDarkIcon'
+import { Text } from '../../ui/Text'
+import { submitContactSubmission } from '../../api/settings'
 import { useToast } from '../../toast/ToastProvider'
 
 type Props = {
@@ -67,7 +67,7 @@ export function ContactModal({ visible, onClose, onSubmitted }: Props) {
     const validated = validateForm()
     if (!validated) return
     setIsSubmitting(true)
-    void callSecureApi<{ ok: true }>('/contact/submission', {
+    void submitContactSubmission({
       name: validated.name,
       email: validated.email,
       phone: validated.phone || null,
@@ -295,3 +295,4 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+

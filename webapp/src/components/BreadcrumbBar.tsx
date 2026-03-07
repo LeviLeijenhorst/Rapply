@@ -1,9 +1,9 @@
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { colors } from '../theme/colors'
-import { Text } from './Text'
-import { ChevronLeftIcon } from './icons/ChevronLeftIcon'
+import { colors } from '../design/theme/colors'
+import { Text } from '../ui/Text'
+import { ChevronLeftIcon } from '../icons/ChevronLeftIcon'
 
 type BreadcrumbItem = {
   label: string
@@ -21,7 +21,7 @@ export function BreadcrumbBar({ items }: Props) {
     <View style={styles.container}>
       {/* Breadcrumb items */}
       {items.map((item, index) => {
-        const isEven = index % 2 === 0
+        const isAccent = index % 2 === 1
         const isFirst = index === 0
         return (
           <View key={`${item.label}-${index}`} style={styles.itemRow}>
@@ -35,7 +35,7 @@ export function BreadcrumbBar({ items }: Props) {
             ) : null}
             <Pressable onPress={item.onPress} style={({ hovered }) => [styles.itemPressable, hovered ? styles.itemPressableHovered : undefined]}>
               {/* Breadcrumb label */}
-              <Text isSemibold style={[styles.itemText, isEven ? styles.itemTextMagenta : styles.itemTextDefault]}>
+              <Text isSemibold style={[styles.itemText, isAccent ? styles.itemTextMagenta : styles.itemTextDefault]}>
                 {item.label}
               </Text>
             </Pressable>
@@ -68,7 +68,8 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '180deg' }],
   },
   itemPressable: {
-    padding: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -83,6 +84,7 @@ const styles = StyleSheet.create({
     color: colors.selected,
   },
   itemTextDefault: {
-    color: colors.text,
+    color: '#000000',
   },
 })
+

@@ -1,10 +1,10 @@
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { colors } from '../theme/colors'
-import { webTransitionSmooth } from '../theme/webTransitions'
-import { MicrophoneSmallIcon } from './icons/MicrophoneSmallIcon'
-import { Text } from './Text'
+import { colors } from '../design/theme/colors'
+import { webTransitionSmooth } from '../design/theme/webTransitions'
+import { MicrophoneSmallIcon } from '../icons/MicrophoneSmallIcon'
+import { Text } from '../ui/Text'
 
 type Props = {
   title: string
@@ -91,4 +91,5 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 })
+
 

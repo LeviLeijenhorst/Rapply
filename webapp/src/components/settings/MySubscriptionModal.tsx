@@ -1,21 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
-import { LoadingSpinner } from '../LoadingSpinner'
+import { LoadingSpinner } from '../../ui/LoadingSpinner'
 
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
-import { colors } from '../../theme/colors'
-import { Text } from '../Text'
-import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
-import { MijnAbonnementIcon } from '../icons/MijnAbonnementIcon'
-import { HoursPerMonthIcon } from '../icons/HoursPerMonthIcon'
-import { VerslagGenererenIcon } from '../icons/VerslagGenererenIcon'
-import { CalendarCircleIcon } from '../icons/CalendarCircleIcon'
-import { StandaardVerslagIcon } from '../icons/StandaardVerslagIcon'
-import { CoacheesIcon } from '../icons/CoacheesIcon'
-import { SecuritySafeIcon } from '../icons/SecuritySafeIcon'
-import { callSecureApi } from '../../services/secureApi'
-import { AppButton } from '../AppButton'
-import { cancelMollieSubscription, createMollieCheckout, createMollieExtraMinutesCheckout } from '../../services/billing'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
+import { colors } from '../../design/theme/colors'
+import { Text } from '../../ui/Text'
+import { ModalCloseDarkIcon } from '../../icons/ModalCloseDarkIcon'
+import { MijnAbonnementIcon } from '../../icons/MijnAbonnementIcon'
+import { HoursPerMonthIcon } from '../../icons/HoursPerMonthIcon'
+import { VerslagGenererenIcon } from '../../icons/VerslagGenererenIcon'
+import { CalendarCircleIcon } from '../../icons/CalendarCircleIcon'
+import { StandaardVerslagIcon } from '../../icons/StandaardVerslagIcon'
+import { CoacheesIcon } from '../../icons/CoacheesIcon'
+import { SecuritySafeIcon } from '../../icons/SecuritySafeIcon'
+import { fetchPricingPlansAndVisibility, fetchPricingVisibility } from '../../api/settings'
+import { AppButton } from '../../ui/AppButton'
+import { cancelMollieSubscription, createMollieCheckout, createMollieExtraMinutesCheckout } from '../../api/billing'
 import { toUserFriendlyErrorMessage } from '../../utils/userFriendlyError'
 import { useToast } from '../../toast/ToastProvider'
 import { requestSubscriptionReturnResumeIfDraftAvailable } from '../newSession/subscriptionReturnDraftStore'
@@ -31,15 +31,6 @@ type PricingPlan = {
   description: string | null
   monthlyPrice: number
   minutesPerMonth: number
-}
-
-type PricingPlansResponse = {
-  items: PricingPlan[]
-}
-
-type PricingVisibilityResponse = {
-  canSeePricingPage: boolean
-  planId: string | null
 }
 
 function formatEuroPrice(value: number): string {
@@ -82,15 +73,11 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
     const loadPricing = async () => {
       try {
         setIsPricingLoading(true)
-        const [plansResponse, visibilityResponse] = await Promise.all([
-          callSecureApi<PricingPlansResponse>('/pricing/plans/public', {}),
-          callSecureApi<PricingVisibilityResponse>('/pricing/me-visibility', {}),
-        ])
+        const { plans, visibility } = await fetchPricingPlansAndVisibility()
         if (isCancelled) return
-        const nextPlans = Array.isArray(plansResponse.items) ? plansResponse.items : []
-        setPricingPlans(nextPlans)
-        setCanSeePricingPage(Boolean(visibilityResponse.canSeePricingPage))
-        setSelectedPlanId(typeof visibilityResponse.planId === 'string' ? visibilityResponse.planId : null)
+        setPricingPlans(plans)
+        setCanSeePricingPage(visibility.canSeePricingPage)
+        setSelectedPlanId(visibility.planId)
       } catch {
         if (isCancelled) return
         setPricingPlans([])
@@ -169,8 +156,8 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
       const response = await createMollieCheckout(planId)
       if (response.requiresRedirect === false) {
         if (checkoutTab && !checkoutTab.closed) checkoutTab.close()
-        const visibilityResponse = await callSecureApi<PricingVisibilityResponse>('/pricing/me-visibility', {})
-        setSelectedPlanId(typeof visibilityResponse.planId === 'string' ? visibilityResponse.planId : null)
+        const visibilityResponse = await fetchPricingVisibility()
+        setSelectedPlanId(visibilityResponse.planId)
         setCheckoutLoadingPlanId(null)
         return
       }
@@ -195,8 +182,8 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
     try {
       setIsCancelBusy(true)
       await cancelMollieSubscription()
-      const visibilityResponse = await callSecureApi<PricingVisibilityResponse>('/pricing/me-visibility', {})
-      setSelectedPlanId(typeof visibilityResponse.planId === 'string' ? visibilityResponse.planId : null)
+      const visibilityResponse = await fetchPricingVisibility()
+      setSelectedPlanId(visibilityResponse.planId)
     } catch (error) {
       showErrorToast(
         toUserFriendlyErrorMessage(error, { fallback: 'Opzeggen lukt nu niet. Probeer het opnieuw.' }),
@@ -783,3 +770,4 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 })
+

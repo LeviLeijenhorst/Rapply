@@ -1,9 +1,9 @@
 import React from 'react'
 import { StyleSheet, View } from 'react-native'
-import { LoadingSpinner } from './LoadingSpinner'
+import { LoadingSpinner } from '../ui/LoadingSpinner'
 
-import { Text } from './Text'
-import { colors } from '../theme/colors'
+import { Text } from '../ui/Text'
+import { colors } from '../design/theme/colors'
 
 type Props = {
   label?: string
@@ -35,4 +35,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 })
+
 

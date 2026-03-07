@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
 import { FormattedText } from '../FormattedText'
-import { Text } from '../Text'
-import { colors } from '../../theme/colors'
-import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
+import { ModalCloseDarkIcon } from '../../icons/ModalCloseDarkIcon'
 
 type Props = {
   visible: boolean
@@ -184,4 +184,5 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
   },
 })
+
 

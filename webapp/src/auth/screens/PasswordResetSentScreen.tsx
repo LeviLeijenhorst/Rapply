@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react'
 import { Image, Pressable, StyleSheet, View } from 'react-native'
 
-import { AuthBackButton } from '../components/AuthBackButton'
+import { BackButton } from '../components/BackButton'
 import { AuthCard } from '../components/AuthCard'
 import { AuthResendLink } from '../components/AuthResendLink'
-import { Text } from '../../components/Text'
-import { colors } from '../../theme/colors'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
 import { maskEmail } from '../utils/masking'
 
 type Props = {
@@ -23,7 +23,7 @@ export function PasswordResetSentScreen({ email, onBack, onContinue }: Props) {
         {/* Header */}
         <View style={styles.headerRow}>
           {/* Back */}
-          <AuthBackButton onPress={onBack} />
+          <BackButton onPress={onBack} />
           <View style={styles.headerSpacer} />
         </View>
 
@@ -152,4 +152,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+
 

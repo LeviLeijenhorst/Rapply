@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
-import { colors } from '../../theme/colors'
-import { Text } from '../Text'
-import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
-import { SearchIcon } from '../icons/SearchIcon'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
+import { colors } from '../../design/theme/colors'
+import { Text } from '../../ui/Text'
+import { ModalCloseDarkIcon } from '../../icons/ModalCloseDarkIcon'
+import { SearchIcon } from '../../icons/SearchIcon'
 
 type Props = {
   visible: boolean
@@ -57,7 +57,7 @@ export function TemplatePickerModal({
         {/* Modal header */}
         <View style={styles.header}>
           <Text isBold style={styles.headerTitle}>
-            Kies een template
+            Kies een formulier
           </Text>
           <Pressable onPress={onClose} style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHovered : undefined]}>
             {/* Close */}
@@ -73,7 +73,7 @@ export function TemplatePickerModal({
             <TextInput
               value={searchText}
               onChangeText={setSearchText}
-              placeholder="Zoek templates..."
+              placeholder="Zoek formulieren..."
               placeholderTextColor="#656565"
               style={[styles.searchInput, inputWebStyle]}
             />
@@ -273,4 +273,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+
 

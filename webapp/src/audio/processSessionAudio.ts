@@ -1,7 +1,7 @@
 import { createAudioBlobRemote } from '../services/audioBlobs'
 import { chargeRealtimeTranscription } from '../services/realtimeTranscription'
 import { isTranscriptionCancelledError, transcribeAudio } from '../services/transcription'
-import { generateSummary } from '../services/summary'
+import { generateStructuredSummary } from '../services/summary'
 import {
   finishTranscriptionRun,
   isTranscriptionRunActive,
@@ -18,11 +18,13 @@ import {
   markPendingPreviewAudioUploaded,
   setPendingPreviewProcessingState,
 } from './pendingPreviewStore'
+import type { Session } from '../local/types'
 
 type SessionUpdate = {
   audioBlobId?: string | null
   transcript?: string | null
   summary?: string | null
+  summaryStructured?: Session['summaryStructured']
   transcriptionStatus?: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
   transcriptionError?: string | null
 }
@@ -122,17 +124,24 @@ export async function processSessionAudio(params: {
         transcriptionError: null,
       })
       hasTranscriptResult = true
-      const generatedSummary = await generateSummary({
+      const generatedStructuredSummary = await generateStructuredSummary({
         transcript: presetTranscript,
-        template: summaryTemplate,
         signal: summaryAbortController.signal,
       })
+      console.log('[STRUCTURED_SUMMARY_RESULT]', generatedStructuredSummary)
       if (!isTranscriptionRunActive(sessionId, runId)) return
-      updateSession(sessionId, {
-        summary: generatedSummary,
-        transcriptionStatus: 'done',
-        transcriptionError: null,
-      })
+      const transcriptionStatus: SessionUpdate['transcriptionStatus'] = 'done'
+      if (transcriptionStatus === 'done') {
+        console.log('[SESSION_UPDATE_VALUES]', {
+          summaryStructured: generatedStructuredSummary,
+        })
+        updateSession(sessionId, {
+          summaryStructured: generatedStructuredSummary,
+          summary: null,
+          transcriptionStatus,
+          transcriptionError: null,
+        })
+      }
       await markPendingPreviewTranscriptionSucceeded(sessionId)
       await clearPendingPreviewAudioIfEligible(sessionId)
       finishTranscriptionRun(sessionId, runId)
@@ -178,17 +187,24 @@ export async function processSessionAudio(params: {
       transcriptionError: null,
     })
     hasTranscriptResult = true
-    const generatedSummary = await generateSummary({
+    const generatedStructuredSummary = await generateStructuredSummary({
       transcript,
-      template: summaryTemplate,
       signal: summaryAbortController.signal,
     })
+    console.log('[STRUCTURED_SUMMARY_RESULT]', generatedStructuredSummary)
     if (!isTranscriptionRunActive(sessionId, runId)) return
-    updateSession(sessionId, {
-      summary: generatedSummary,
-      transcriptionStatus: 'done',
-      transcriptionError: null,
-    })
+    const transcriptionStatus: SessionUpdate['transcriptionStatus'] = 'done'
+    if (transcriptionStatus === 'done') {
+      console.log('[SESSION_UPDATE_VALUES]', {
+        summaryStructured: generatedStructuredSummary,
+      })
+      updateSession(sessionId, {
+        summaryStructured: generatedStructuredSummary,
+        summary: null,
+        transcriptionStatus,
+        transcriptionError: null,
+      })
+    }
     await markPendingPreviewTranscriptionSucceeded(sessionId)
     await clearPendingPreviewAudioIfEligible(sessionId)
     finishTranscriptionRun(sessionId, runId)

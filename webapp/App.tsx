@@ -2,10 +2,10 @@ import { Catamaran_400Regular, Catamaran_500Medium, Catamaran_600SemiBold, Catam
 import { StatusBar } from 'expo-status-bar'
 import React, { useEffect, useRef, useState } from 'react'
 
-import { AppShell } from './src/components/AppShell'
-import { AppErrorBoundary } from './src/components/AppErrorBoundary'
+import { AppShell } from './src/app/AppShell'
+import { AppErrorBoundary } from './src/app/ErrorBoundary'
 import { WebappAnalyticsTracker } from './src/analytics/WebappAnalyticsTracker'
-import { AuthFlow } from './src/auth/AuthFlow'
+import { LoginScreen } from './src/screens/authentication/LoginScreen'
 import { AuthLoadingScreen } from './src/auth/components/AuthLoadingScreen'
 import { AuthScreenLayout } from './src/auth/components/AuthScreenLayout'
 import { LocalAppDataProvider } from './src/local/LocalAppDataProvider'
@@ -13,7 +13,7 @@ import { getStoredAccessToken, signOutFromEntra } from './src/auth/entraAuth'
 import { navigate } from './src/auth/router/webRouter'
 import { E2eeProvider } from './src/e2ee/E2eeProvider'
 import { warmUpSecureApi } from './src/services/secureApi'
-import { ThemeProvider } from './src/theme/ThemeProvider'
+import { ThemeProvider } from './src/design/theme/ThemeProvider'
 import { ToastProvider } from './src/toast/ToastProvider'
 
 export default function App() {
@@ -87,7 +87,7 @@ export default function App() {
                   />
                 </AppErrorBoundary>
               ) : (
-                <AuthFlow onAuthenticated={() => setIsAuthenticated(true)} />
+                <LoginScreen onAuthenticated={() => setIsAuthenticated(true)} />
               )}
             </LocalAppDataProvider>
           </E2eeProvider>
@@ -96,3 +96,6 @@ export default function App() {
     </ThemeProvider>
   )
 }
+
+
+

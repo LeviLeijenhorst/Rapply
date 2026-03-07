@@ -1,27 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
-import { Text } from '../Text'
-import { colors } from '../../theme/colors'
-import { CalendarCircleIcon } from '../icons/CalendarCircleIcon'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
+import { CalendarCircleIcon } from '../../icons/CalendarCircleIcon'
 
 type Props = {
   visible: boolean
-  initialValues: { reportDate: string; wvpWeekNumber: string; reportFirstSickDay: string }
+  initialValues: { wvpWeekNumber: string; reportFirstSickDay: string }
   onClose: () => void
-  onSave: (values: { reportDate: string; wvpWeekNumber: string; reportFirstSickDay: string }) => void
+  onSave: (values: { wvpWeekNumber: string; reportFirstSickDay: string }) => void
 }
 
 export function ReportContextModal({ visible, initialValues, onClose, onSave }: Props) {
-  const [reportDate, setReportDate] = useState(initialValues.reportDate)
   const [wvpWeekNumber, setWvpWeekNumber] = useState(initialValues.wvpWeekNumber)
   const [reportFirstSickDay, setReportFirstSickDay] = useState(initialValues.reportFirstSickDay)
   const firstInputRef = useRef<TextInput | null>(null)
 
   useEffect(() => {
     if (!visible) return
-    setReportDate(initialValues.reportDate)
     setWvpWeekNumber(initialValues.wvpWeekNumber)
     setReportFirstSickDay(initialValues.reportFirstSickDay)
   }, [initialValues, visible])
@@ -50,23 +48,10 @@ export function ReportContextModal({ visible, initialValues, onClose, onSave }: 
 
       <View style={styles.body}>
         <View style={styles.field}>
-          <Text style={styles.fieldLabel}>Datum</Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              ref={firstInputRef}
-              value={reportDate}
-              onChangeText={setReportDate}
-              placeholder="Bijv. 24-02-2026"
-              placeholderTextColor="#656565"
-              style={[styles.textInput, inputWebStyle]}
-            />
-          </View>
-        </View>
-
-        <View style={styles.field}>
           <Text style={styles.fieldLabel}>Weeknummer (WvP)</Text>
           <View style={styles.inputRow}>
             <TextInput
+              ref={firstInputRef}
               value={wvpWeekNumber}
               onChangeText={setWvpWeekNumber}
               placeholder="Bijv. week 8"
@@ -97,7 +82,7 @@ export function ReportContextModal({ visible, initialValues, onClose, onSave }: 
           </Text>
         </Pressable>
         <Pressable
-          onPress={() => onSave({ reportDate, wvpWeekNumber, reportFirstSickDay })}
+          onPress={() => onSave({ wvpWeekNumber, reportFirstSickDay })}
           style={({ hovered }) => [styles.primaryButton, hovered ? styles.primaryButtonHovered : undefined]}
         >
           <Text isBold style={styles.primaryButtonText}>
@@ -211,3 +196,4 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+

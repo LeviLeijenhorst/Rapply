@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { fetchBillingStatus, type BillingStatus } from '../services/billing'
+import { fetchBillingStatus } from '../api/billing'
 
 type BillingUsage = {
   usedMinutes: number
@@ -11,6 +11,13 @@ type BillingUsage = {
 type BillingUsageMinutes = {
   usedMinutes: number
   totalMinutes: number
+}
+
+type BillingStatus = {
+  includedSeconds: number
+  cycleUsedSeconds: number
+  nonExpiringTotalSeconds: number
+  nonExpiringUsedSeconds: number
 }
 
 function buildBillingUsageMinutes(status: BillingStatus | null): BillingUsageMinutes {
@@ -74,3 +81,4 @@ export function useBillingUsage(): BillingUsage {
 
   return { usedMinutes, totalMinutes, isLoading }
 }
+

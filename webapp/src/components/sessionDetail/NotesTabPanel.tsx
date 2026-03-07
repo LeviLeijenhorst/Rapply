@@ -1,14 +1,17 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
-import { Text } from '../Text'
-import { colors } from '../../theme/colors'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
 import { useLocalAppData } from '../../local/LocalAppDataProvider'
 import { NoteEditModal } from '../notes/NoteEditModal'
+import { PlusIcon } from '../../icons/PlusIcon'
 
 type Props = {
   sessionId?: string
   coacheeIdForNewNotes?: string
+  externalCreateRequestId?: number
+  showCenteredCreateCtaWhenEmpty?: boolean
   shouldFillAvailableHeight?: boolean
   contentHorizontalPadding?: number
 }
@@ -16,6 +19,8 @@ type Props = {
 export function NotesTabPanel({
   sessionId,
   coacheeIdForNewNotes,
+  externalCreateRequestId,
+  showCenteredCreateCtaWhenEmpty = false,
   shouldFillAvailableHeight = true,
   contentHorizontalPadding = 0,
 }: Props) {
@@ -50,10 +55,21 @@ export function NotesTabPanel({
     return Array.from(grouped.entries()).map(([label, notesInGroup]) => ({ label, notes: notesInGroup }))
   }, [notes])
 
-  const scrollContentStyle = useMemo(() => [styles.scrollContent, { paddingHorizontal: contentHorizontalPadding }], [contentHorizontalPadding])
+  const shouldShowCenteredEmptyState = showCenteredCreateCtaWhenEmpty && notes.length === 0
+  const scrollContentStyle = useMemo(
+    () => [styles.scrollContent, shouldShowCenteredEmptyState ? styles.scrollContentFill : undefined, { paddingHorizontal: contentHorizontalPadding }],
+    [contentHorizontalPadding, shouldShowCenteredEmptyState],
+  )
 
   const editingNote = editingNoteId ? notes.find((n) => n.id === editingNoteId) : null
   const effectiveSessionId = activeSessionId
+  const canCreateNote = Boolean(effectiveSessionId || coacheeIdForNewNotes)
+
+  useEffect(() => {
+    if (!externalCreateRequestId) return
+    if (!effectiveSessionId && !coacheeIdForNewNotes) return
+    setIsCreating(true)
+  }, [coacheeIdForNewNotes, effectiveSessionId, externalCreateRequestId])
 
   const saveNewNote = (values: { title: string; text: string }) => {
     let targetSessionId = effectiveSessionId
@@ -88,46 +104,64 @@ export function NotesTabPanel({
         contentContainerStyle={scrollContentStyle}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.notesList}>
-          {notesByCreatedLabel.map((group) => (
-            <View key={group.label} style={styles.noteGroup}>
-              <Text style={styles.dateLabel}>{group.label}</Text>
-              {group.notes.map((note) => (
-                <Pressable
-                  key={note.id}
-                  onPress={() => setEditingNoteId(note.id)}
-                  style={({ hovered }) => [styles.noteCard, hovered ? styles.noteCardHovered : undefined]}
-                >
-                  <View style={[styles.noteRow, !note.text.includes('\n') ? styles.noteRowSingleLine : undefined]}>
-                    <View style={styles.noteContent}>
-                      {note.title ? (
-                        <Text isBold style={styles.noteTitle}>
-                          {note.title}
+        {shouldShowCenteredEmptyState ? (
+          <View style={styles.emptyStateWrap}>
+            <Text style={styles.emptyStateText}>Nog geen notities voor deze cliënt.</Text>
+            {!isCreating ? (
+              <Pressable
+                onPress={() => {
+                  if (!canCreateNote) return
+                  setIsCreating(true)
+                }}
+                style={({ hovered }) => [styles.emptyPrimaryButton, hovered ? styles.emptyPrimaryButtonHovered : undefined]}
+              >
+                <PlusIcon color={colors.selected} size={20} />
+                <Text isBold style={styles.emptyPrimaryButtonText}>Nieuwe notities</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : (
+          <View style={styles.notesList}>
+            {notesByCreatedLabel.map((group) => (
+              <View key={group.label} style={styles.noteGroup}>
+                <Text style={styles.dateLabel}>{group.label}</Text>
+                {group.notes.map((note) => (
+                  <Pressable
+                    key={note.id}
+                    onPress={() => setEditingNoteId(note.id)}
+                    style={({ hovered }) => [styles.noteCard, hovered ? styles.noteCardHovered : undefined]}
+                  >
+                    <View style={[styles.noteRow, !note.text.includes('\n') ? styles.noteRowSingleLine : undefined]}>
+                      <View style={styles.noteContent}>
+                        {note.title ? (
+                          <Text isBold style={styles.noteTitle}>
+                            {note.title}
+                          </Text>
+                        ) : null}
+                        <Text style={styles.noteText} numberOfLines={note.title ? 2 : 4}>
+                          {note.text}
                         </Text>
-                      ) : null}
-                      <Text style={styles.noteText} numberOfLines={note.title ? 2 : 4}>
-                        {note.text}
-                      </Text>
+                      </View>
                     </View>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
-          ))}
-        </View>
+                  </Pressable>
+                ))}
+              </View>
+            ))}
+          </View>
+        )}
 
         {notes.length > 0 ? <View style={styles.divider} /> : null}
 
-        {!isCreating ? (
+        {!isCreating && !shouldShowCenteredEmptyState ? (
           <Pressable
             onPress={() => {
-              if (!effectiveSessionId && !coacheeIdForNewNotes) return
+              if (!canCreateNote) return
               setIsCreating(true)
             }}
             style={({ hovered }) => [styles.newRow, hovered ? styles.newRowHovered : undefined]}
           >
             <Text style={styles.plus}>+</Text>
-            <Text style={styles.newText}>Nieuwe notitie</Text>
+            <Text style={styles.newText}>Nieuwe notities</Text>
           </Pressable>
         ) : null}
       </ScrollView>
@@ -176,6 +210,9 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingBottom: 8,
   },
+  scrollContentFill: {
+    flexGrow: 1,
+  },
   dateLabel: {
     fontSize: 12,
     lineHeight: 14,
@@ -186,6 +223,41 @@ const styles = StyleSheet.create({
   },
   noteGroup: {
     gap: 10,
+  },
+  emptyStateWrap: {
+    flex: 1,
+    minHeight: 260,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+    paddingVertical: 20,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  emptyPrimaryButton: {
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderColor: 'transparent',
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  emptyPrimaryButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+    borderColor: 'transparent',
+  },
+  emptyPrimaryButtonText: {
+    fontSize: 15,
+    lineHeight: 18,
+    color: colors.selected,
   },
   noteCard: {
     width: '100%',
@@ -248,3 +320,4 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 })
+

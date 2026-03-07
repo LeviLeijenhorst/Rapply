@@ -2,6 +2,7 @@ type Options = {
   fallback: string
   forbiddenMessage?: string
 }
+const OFFLINE_ERROR_MESSAGE = 'Geen verbinding. Probeer het later opnieuw'
 
 function extractMessage(error: unknown): string {
   if (error instanceof Error) return String(error.message || '').trim()
@@ -79,7 +80,7 @@ function hasTechnicalEnglishTerms(message: string): boolean {
 export function sanitizeUserFacingErrorMessage(rawMessage: string, fallback: string): string {
   const cleaned = String(rawMessage || '').trim()
   if (!cleaned) return fallback
-  if (isLikelyConnectivityIssue(cleaned)) return 'Het lijkt erop dat je geen internetverbinding hebt :('
+  if (isLikelyConnectivityIssue(cleaned)) return OFFLINE_ERROR_MESSAGE
   if (hasRawErrorCode(cleaned)) return fallback
   if (hasTechnicalEnglishTerms(cleaned)) return fallback
   return cleaned
@@ -89,13 +90,13 @@ export function toUserFriendlyErrorMessage(error: unknown, options: Options): st
   const { fallback, forbiddenMessage } = options
   const rawMessage = extractMessage(error)
   if (!rawMessage) return fallback
-  if (isLikelyConnectivityIssue(rawMessage)) return 'Het lijkt erop dat je geen internetverbinding hebt :('
+  if (isLikelyConnectivityIssue(rawMessage)) return OFFLINE_ERROR_MESSAGE
 
   const parsedApiError = parseApiError(rawMessage)
   if (parsedApiError) {
     const decodedPayload = extractJsonMessage(parsedApiError.payload) || parsedApiError.payload
     if (isLikelyConnectivityIssue(decodedPayload)) {
-      return 'Het lijkt erop dat je geen internetverbinding hebt :('
+      return OFFLINE_ERROR_MESSAGE
     }
 
     const statusCode = parsedApiError.statusCode

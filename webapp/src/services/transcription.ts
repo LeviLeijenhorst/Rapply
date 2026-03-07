@@ -400,18 +400,47 @@ function canTranscribeCompressedMimeType(mimeType: string): boolean {
     normalized === 'audio/mp3' ||
     normalized === 'audio/mp4' ||
     normalized === 'audio/m4a' ||
+    normalized === 'audio/aac' ||
+    normalized === 'audio/opus' ||
     normalized === 'audio/ogg' ||
     normalized === 'audio/wav' ||
     normalized === 'audio/x-wav'
   )
 }
 
+function shouldPreferWavForTranscription(mimeType: string): boolean {
+  const normalized = normalizeMimeType(mimeType)
+  return (
+    normalized === 'audio/webm' ||
+    normalized === 'video/webm' ||
+    normalized === 'audio/ogg' ||
+    normalized === 'audio/opus' ||
+    normalized === 'audio/mp4' ||
+    normalized === 'audio/m4a' ||
+    normalized === 'audio/aac'
+  )
+}
+
 async function normalizeAudioForTranscription(params: { audioBlob: Blob; mimeType: string; requiresWav: boolean }) {
   const { audioBlob, requiresWav } = params
-  const mimeType = normalizeMimeType(params.mimeType)
+  const mimeType = normalizeMimeType(params.mimeType || audioBlob.type || '')
   const isWav = mimeType.startsWith('audio/wav') || mimeType.startsWith('audio/x-wav')
   if (isWav) {
     return { audioBlob, mimeType: 'audio/wav' }
+  }
+
+  const shouldPreferWav = requiresWav || !mimeType || shouldPreferWavForTranscription(mimeType)
+
+  if (shouldPreferWav) {
+    try {
+      const converted = await convertToOptimizedWav(audioBlob, AZURE_WAV_TARGET_SAMPLE_RATE)
+      return { audioBlob: converted, mimeType: 'audio/wav' }
+    } catch (error) {
+      if (requiresWav) {
+        throw new Error('Audio kon niet worden omgezet naar WAV voor transcriptie.')
+      }
+      console.warn('[transcription] Preferred WAV conversion failed, falling back to original audio', error)
+    }
   }
 
   if (!requiresWav && canTranscribeCompressedMimeType(mimeType)) {
@@ -429,7 +458,7 @@ async function normalizeAudioForTranscription(params: { audioBlob: Blob; mimeTyp
     // Some browsers cannot decode certain recorder formats (e.g. webm/mp4) via decodeAudioData.
     // Fallback to original compressed audio so server-side processing can continue.
     console.warn('[transcription] WAV conversion failed, falling back to original audio', error)
-    const fallbackMimeType = mimeType === 'video/webm' ? 'audio/webm' : mimeType || 'application/octet-stream'
+    const fallbackMimeType = mimeType === 'video/webm' ? 'audio/webm' : mimeType || normalizeMimeType(audioBlob.type) || 'application/octet-stream'
     return { audioBlob, mimeType: fallbackMimeType }
   }
 }

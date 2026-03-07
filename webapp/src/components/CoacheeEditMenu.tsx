@@ -1,11 +1,11 @@
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { colors } from '../theme/colors'
-import { Text } from './Text'
-import { WebPortal } from './WebPortal'
-import { ArchiveIcon } from './icons/ArchiveIcon'
-import { TrashIcon } from './icons/TrashIcon'
+import { colors } from '../design/theme/colors'
+import { Text } from '../ui/Text'
+import { WebPortal } from '../ui/WebPortal'
+import { ArchiveIcon } from '../icons/ArchiveIcon'
+import { TrashIcon } from '../icons/TrashIcon'
 
 type AnchorPoint = {
   x: number
@@ -98,4 +98,5 @@ const styles = StyleSheet.create({
     color: colors.selected,
   },
 })
+
 

@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
-import { Text } from '../components/Text'
-import { callSecureApi } from '../services/secureApi'
-import { colors } from '../theme/colors'
+import { Text } from '../ui/Text'
+import { listAdminContactSubmissions } from '../api/admin'
+import { colors } from '../design/theme/colors'
 import { toUserFriendlyErrorMessage } from '../utils/userFriendlyError'
 import { useToast } from '../toast/ToastProvider'
 
@@ -45,7 +45,7 @@ export function AdminContactSubmissionsScreen() {
     try {
       setIsLoading(true)
       setErrorMessage(null)
-      const response = await callSecureApi<ContactSubmissionListResponse>('/admin/contact-submissions/list', { limit: 200 })
+      const response = await listAdminContactSubmissions(200) as ContactSubmissionListResponse
       setItems(Array.isArray(response.items) ? response.items : [])
     } catch (error) {
       setItems([])
@@ -219,3 +219,4 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
   },
 })
+

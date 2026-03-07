@@ -1,8 +1,8 @@
 import React from 'react'
 import { StyleSheet, View } from 'react-native'
-import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { LoadingSpinner } from '../../ui/LoadingSpinner'
 
-import { Text } from '../../components/Text'
+import { Text } from '../../ui/Text'
 
 type Props = {
   message: string
@@ -34,3 +34,4 @@ const styles = StyleSheet.create({
     color: '#6B6B6B',
   },
 })
+

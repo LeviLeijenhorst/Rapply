@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
-import { colors } from '../../theme/colors'
-import { typography } from '../../theme/typography'
-import { Text } from '../Text'
-import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
-import { TrashIcon } from '../icons/TrashIcon'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
+import { colors } from '../../design/theme/colors'
+import { typography } from '../../design/theme/typography'
+import { Text } from '../../ui/Text'
+import { ModalCloseDarkIcon } from '../../icons/ModalCloseDarkIcon'
+import { TrashIcon } from '../../icons/TrashIcon'
 import { ConfirmNoteDeleteModal } from './ConfirmNoteDeleteModal'
 import { ConfirmNoteCloseModal } from './ConfirmNoteCloseModal'
 import { radius } from '../../foundation/theme/tokens'
@@ -346,3 +346,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+
+

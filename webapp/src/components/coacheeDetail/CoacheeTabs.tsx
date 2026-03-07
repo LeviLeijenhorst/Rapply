@@ -1,13 +1,15 @@
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { colors } from '../../theme/colors'
-import { Text } from '../Text'
-import { NotitiesSessieIcon } from '../icons/NotitiesSessieIcon'
-import { SessiesIcon } from '../icons/SessiesIcon'
-import { SnelleVragenIcon } from '../icons/SnelleVragenIcon'
+import { colors } from '../../design/theme/colors'
+import { Text } from '../../ui/Text'
+import {
+  ClientPageDocumentenIcon,
+  ClientPageNotesIcon,
+  ClientPageRapportageIcon,
+} from '../../icons/ClientPageSvgIcons'
 
-export type CoacheeTabKey = 'sessies' | 'snelleVragen' | 'notities'
+export type CoacheeTabKey = 'sessies' | 'notities' | 'rapportages' | 'documenten'
 
 type Props = {
   activeTabKey: CoacheeTabKey
@@ -20,22 +22,28 @@ export function CoacheeTabs({ activeTabKey, onSelectTab }: Props) {
       {/* Tabs */}
       <View style={[styles.row, styles.rowWeb]}>
         <TabButton
-          label="Verslagen"
+          label="Sessies"
           isSelected={activeTabKey === 'sessies'}
-          icon={(color) => <SessiesIcon color={color} size={24} />}
+          icon={(color) => <ClientPageRapportageIcon color={color} size={18} />}
           onPress={() => onSelectTab('sessies')}
-        />
-        <TabButton
-          label="Snelle vragen"
-          isSelected={activeTabKey === 'snelleVragen'}
-          icon={(color) => <SnelleVragenIcon color={color} size={24} />}
-          onPress={() => onSelectTab('snelleVragen')}
         />
         <TabButton
           label="Notities"
           isSelected={activeTabKey === 'notities'}
-          icon={(color) => <NotitiesSessieIcon color={color} size={24} />}
+          icon={(color) => <ClientPageNotesIcon color={color} size={18} />}
           onPress={() => onSelectTab('notities')}
+        />
+        <TabButton
+          label="Rapportages"
+          isSelected={activeTabKey === 'rapportages'}
+          icon={(color) => <ClientPageRapportageIcon color={color} size={18} />}
+          onPress={() => onSelectTab('rapportages')}
+        />
+        <TabButton
+          label="Documenten"
+          isSelected={activeTabKey === 'documenten'}
+          icon={(color) => <ClientPageDocumentenIcon color={color} size={18} />}
+          onPress={() => onSelectTab('documenten')}
         />
       </View>
     </View>
@@ -50,8 +58,8 @@ type TabButtonProps = {
 }
 
 function TabButton({ label, isSelected, icon, onPress }: TabButtonProps) {
-  const iconColor = isSelected ? '#FFFFFF' : colors.selected
-  const textColor = isSelected ? '#FFFFFF' : colors.selected
+  const iconColor = isSelected ? colors.selected : colors.text
+  const textColor = isSelected ? colors.selected : colors.text
 
   return (
     <Pressable
@@ -92,26 +100,36 @@ const styles = StyleSheet.create({
     ...( { msOverflowStyle: 'none' } as any ),
   },
   tabButton: {
-    height: 40,
-    borderRadius: 10,
-    padding: 10,
+    height: 48,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderWidth: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: 'transparent',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    top: 1,
+    position: 'relative',
   },
   tabButtonSelected: {
-    backgroundColor: colors.selected,
-    borderColor: colors.selected,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#DFE0E2',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFFFFF',
   },
   tabButtonSelectedHovered: {
-    backgroundColor: '#A50058',
-    borderColor: '#A50058',
+    backgroundColor: '#FAFAFA',
+    borderColor: '#DFE0E2',
   },
   tabButtonUnselected: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#DFE0E2',
   },
   tabButtonHovered: {
     backgroundColor: colors.hoverBackground,
@@ -123,8 +141,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tabLabel: {
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 16,
+    lineHeight: 20,
   },
 })
+
 

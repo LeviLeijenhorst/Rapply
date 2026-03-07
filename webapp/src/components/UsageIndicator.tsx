@@ -1,11 +1,11 @@
 import React from 'react'
 import { StyleSheet, View } from 'react-native'
-import { LoadingSpinner } from './LoadingSpinner'
+import { LoadingSpinner } from '../ui/LoadingSpinner'
 
 import { fontSizes, radius, spacing } from '../foundation/theme/tokens'
-import { colors } from '../theme/colors'
-import { MicrophoneSmallIcon } from './icons/MicrophoneSmallIcon'
-import { Text } from './Text'
+import { colors } from '../design/theme/colors'
+import { MicrophoneSmallIcon } from '../icons/MicrophoneSmallIcon'
+import { Text } from '../ui/Text'
 
 type Props = {
   usedMinutes: number
@@ -68,4 +68,6 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
 })
+
+
 

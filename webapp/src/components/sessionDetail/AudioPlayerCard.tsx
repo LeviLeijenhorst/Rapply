@@ -1,21 +1,21 @@
 import React, { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
-import { LoadingSpinner } from '../LoadingSpinner'
-import { colors } from '../../theme/colors'
+import { LoadingSpinner } from '../../ui/LoadingSpinner'
+import { colors } from '../../design/theme/colors'
 import { useE2ee } from '../../e2ee/E2eeProvider'
 import { loadAudioBlobRemote } from '../../services/audioBlobs'
 import { downloadAudioStream } from '../../audio/downloadAudioStream'
-import { Text } from '../Text'
-import { AudioBackwardIcon } from '../icons/AudioBackwardIcon'
-import { AudioForwardIcon } from '../icons/AudioForwardIcon'
-import { PlaySmallIcon } from '../icons/PlaySmallIcon'
-import { PauseIcon } from '../icons/PauseIcon'
-import { AudioEncryptedIcon } from '../icons/AudioEncryptedIcon'
-import { AudioDecryptedIcon } from '../icons/AudioDecryptedIcon'
-import { MoreOptionsIcon } from '../icons/MoreOptionsIcon'
-import { PracticeExportIcon } from '../icons/PracticeExportIcon'
-import { TrashIcon } from '../icons/TrashIcon'
-import { AnimatedDropdownPanel } from '../AnimatedDropdownPanel'
+import { Text } from '../../ui/Text'
+import { AudioBackwardIcon } from '../../icons/AudioBackwardIcon'
+import { AudioForwardIcon } from '../../icons/AudioForwardIcon'
+import { PlaySmallIcon } from '../../icons/PlaySmallIcon'
+import { PauseIcon } from '../../icons/PauseIcon'
+import { AudioEncryptedIcon } from '../../icons/AudioEncryptedIcon'
+import { AudioDecryptedIcon } from '../../icons/AudioDecryptedIcon'
+import { MoreOptionsIcon } from '../../icons/MoreOptionsIcon'
+import { PracticeExportIcon } from '../../icons/PracticeExportIcon'
+import { TrashIcon } from '../../icons/TrashIcon'
+import { AnimatedDropdownPanel } from '../../ui/AnimatedDropdownPanel'
 
 type Props = {
   audioBlobId: string | null
@@ -746,3 +746,4 @@ const styles = StyleSheet.create({
     color: '#171717',
   },
 })
+

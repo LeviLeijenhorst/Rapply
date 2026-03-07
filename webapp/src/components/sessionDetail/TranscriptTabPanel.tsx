@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
-import { LoadingSpinner } from '../LoadingSpinner'
+import { LoadingSpinner } from '../../ui/LoadingSpinner'
 
 import { FormattedText } from '../FormattedText'
-import { Text } from '../Text'
-import { colors } from '../../theme/colors'
-import { SearchIcon } from '../icons/SearchIcon'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
+import { SearchIcon } from '../../icons/SearchIcon'
 import { parseTimeLabelToSeconds } from '../../utils/time'
 import { toUserFriendlyTranscriptionError } from '../../utils/transcriptionError'
 import { useToast } from '../../toast/ToastProvider'
@@ -495,4 +495,5 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 })
+
 

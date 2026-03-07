@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
-import { Text } from '../Text'
-import { colors } from '../../theme/colors'
-import { RotateLeftIcon } from '../icons/RotateLeftIcon'
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
+import { RotateLeftIcon } from '../../icons/RotateLeftIcon'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
 
 type QuickQuestionOption = {
   id: string
@@ -419,4 +419,5 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 })
+
 

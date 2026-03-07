@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
-import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
-import { Text } from '../Text'
-import { colors } from '../../theme/colors'
-import { CopyIcon } from '../icons/CopyIcon'
-import { CopiedIcon } from '../icons/CopiedIcon'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
+import { ModalCloseDarkIcon } from '../../icons/ModalCloseDarkIcon'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
+import { CopyIcon } from '../../icons/CopyIcon'
+import { CopiedIcon } from '../../icons/CopiedIcon'
 
 const SHARE_URL = 'https://www.coachscribe.nl'
 
@@ -137,3 +137,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.hoverBackground,
   },
 })
+

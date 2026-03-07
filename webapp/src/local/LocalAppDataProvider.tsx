@@ -2,42 +2,80 @@ import React, { createContext, ReactNode, useContext, useEffect, useMemo, useSta
 
 import {
   archiveCoachee,
+  createActivity,
+  createActivityTemplate,
+  createSnippet,
   createCoachee,
   createNote,
   createSession,
   createTemplate,
+  createTrajectory,
+  deleteActivity,
+  deleteActivityTemplate,
+  deleteSnippet,
   deleteCoachee,
   deleteNote,
   deleteSession,
   deleteTemplate,
+  deleteTrajectory,
   loadLocalAppData,
   restoreCoachee,
   saveLocalAppData,
   setWrittenReport,
+  updateActivity,
+  updateActivityTemplate,
+  updateSnippet,
   updatePracticeSettings,
   updateCoachee,
   updateNote,
   updateSession,
+  updateTrajectory,
 } from './localAppDataStore'
 import { createId } from './createId'
-import { Coachee, LocalAppData, Note, PracticeSettings, Session, SessionKind, Template, TemplateCategory, TemplateSection, WrittenReport } from './types'
 import {
+  Activity,
+  ActivityTemplate,
+  Coachee,
+  LocalAppData,
+  Note,
+  PracticeSettings,
+  Session,
+  Snippet,
+  Template,
+  TemplateCategory,
+  TemplateSection,
+  Trajectory,
+  WrittenReport,
+} from './types'
+import {
+  createActivityRemote,
+  createActivityTemplateRemote,
+  createSnippetRemote,
   createCoacheeRemote,
   createNoteRemote,
   createSessionRemote,
   createTemplateRemote,
+  createTrajectoryRemote,
+  deleteActivityRemote,
+  deleteActivityTemplateRemote,
+  deleteSnippetRemote,
   deleteCoacheeRemote,
   deleteNoteRemote,
   deleteSessionRemote,
   deleteTemplateRemote,
+  deleteTrajectoryRemote,
   readAppData,
   readDefaultTemplates,
   setWrittenReportRemote,
+  updateActivityRemote,
+  updateActivityTemplateRemote,
+  updateSnippetRemote,
   updateCoacheeRemote,
   updateNoteRemote,
   updateSessionRemote,
   updateTemplateRemote,
   updatePracticeSettingsRemote,
+  updateTrajectoryRemote,
 } from '../services/appData'
 import { useOptionalE2ee } from '../e2ee/E2eeProvider'
 
@@ -54,8 +92,9 @@ type ContextValue = {
 
   createSession: (values: {
     coacheeId: string | null
+    trajectoryId?: string | null
     title: string
-    kind: SessionKind
+    kind: Session['kind']
     audioBlobId: string | null
     audioDurationSeconds: number | null
     uploadFileName: string | null
@@ -66,6 +105,8 @@ type ContextValue = {
     sessionId: string,
     values: {
       coacheeId?: string | null
+      trajectoryId?: string | null
+      kind?: Session['kind']
       title?: string
       createdAtUnixMs?: number
       audioBlobId?: string | null
@@ -73,6 +114,7 @@ type ContextValue = {
       uploadFileName?: string | null
       transcript?: string | null
       summary?: string | null
+      summaryStructured?: Session['summaryStructured']
       reportDate?: string | null
       wvpWeekNumber?: string | null
       reportFirstSickDay?: string | null
@@ -81,6 +123,107 @@ type ContextValue = {
     }
   ) => void
   deleteSession: (sessionId: string) => void
+
+  createTrajectory: (values: {
+    coacheeId: string
+    name: string
+    dienstType?: string
+    uwvContactName?: string | null
+    uwvContactPhone?: string | null
+    uwvContactEmail?: string | null
+    orderNumber?: string | null
+    startDate?: string | null
+    planVanAanpak?: Trajectory['planVanAanpak']
+    maxHours?: number
+    maxAdminHours?: number
+  }) => string
+  updateTrajectory: (
+    trajectoryId: string,
+    values: {
+      coacheeId?: string
+      name?: string
+      dienstType?: string
+      uwvContactName?: string | null
+      uwvContactPhone?: string | null
+      uwvContactEmail?: string | null
+      orderNumber?: string | null
+      startDate?: string | null
+      planVanAanpak?: Trajectory['planVanAanpak']
+      maxHours?: number
+      maxAdminHours?: number
+    },
+  ) => void
+  deleteTrajectory: (trajectoryId: string) => void
+
+  createActivityTemplate: (values: {
+    name: string
+    description?: string
+    category: string
+    defaultHours: number
+    isAdmin?: boolean
+    organizationId?: string | null
+    isActive?: boolean
+  }) => string
+  updateActivityTemplate: (
+    templateId: string,
+    values: {
+      name?: string
+      description?: string
+      category?: string
+      defaultHours?: number
+      isAdmin?: boolean
+      organizationId?: string | null
+      isActive?: boolean
+    },
+  ) => void
+  deleteActivityTemplate: (templateId: string) => void
+
+  createActivity: (values: {
+    trajectoryId: string
+    sessionId?: string | null
+    templateId?: string | null
+    name: string
+    category: string
+    status: Activity['status']
+    plannedHours?: number | null
+    actualHours?: number | null
+    source?: Activity['source']
+    isAdmin?: boolean
+  }) => string
+  updateActivity: (
+    activityId: string,
+    values: {
+      trajectoryId?: string
+      sessionId?: string | null
+      templateId?: string | null
+      name?: string
+      category?: string
+      status?: Activity['status']
+      plannedHours?: number | null
+      actualHours?: number | null
+      source?: Activity['source']
+      isAdmin?: boolean
+    },
+  ) => void
+  deleteActivity: (activityId: string) => void
+
+  createSnippet: (values: {
+    trajectoryId: string
+    itemId: string
+    field: string
+    text: string
+    date: number
+    status?: Snippet['status']
+  }) => string
+  updateSnippet: (
+    snippetId: string,
+    values: {
+      field?: string
+      text?: string
+      status?: Snippet['status']
+    },
+  ) => void
+  deleteSnippet: (snippetId: string) => void
 
   createNote: (sessionId: string, values: { title: string; text: string }) => void
   updateNote: (noteId: string, values: { title?: string; text: string }) => void
@@ -92,7 +235,19 @@ type ContextValue = {
   updateTemplate: (templateId: string, values: { name?: string; description?: string; sections?: TemplateSection[] }) => void
   deleteTemplate: (templateId: string) => void
   toggleTemplateSaved: (templateId: string) => void
-  updatePracticeSettings: (values: { practiceName?: string; website?: string; tintColor?: string; logoDataUrl?: string | null }) => void
+  updatePracticeSettings: (values: {
+    practiceName?: string
+    website?: string
+    visitAddress?: string
+    postalAddress?: string
+    postalCodeCity?: string
+    contactName?: string
+    contactRole?: string
+    contactPhone?: string
+    contactEmail?: string
+    tintColor?: string
+    logoDataUrl?: string | null
+  }) => void
 }
 
 const LocalAppDataContext = createContext<ContextValue | null>(null)
@@ -116,8 +271,12 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
 
   async function decryptRemoteData(remote: LocalAppData): Promise<LocalAppData> {
     if (!e2ee) {
+      const trajectories = Array.isArray((remote as any).trajectories) ? (remote as any).trajectories : []
+      const activities = Array.isArray((remote as any).activities) ? (remote as any).activities : []
+      const activityTemplates = Array.isArray((remote as any).activityTemplates) ? (remote as any).activityTemplates : []
+      const snippets = Array.isArray((remote as any).snippets) ? (remote as any).snippets : []
       const templates = Array.isArray(remote.templates) ? remote.templates : []
-      return { ...remote, templates, practiceSettings: remote.practiceSettings }
+      return { ...remote, trajectories, activities, activityTemplates, snippets, templates, practiceSettings: remote.practiceSettings }
     }
 
     const decryptTextCompat = async (value: string): Promise<string> => {
@@ -159,11 +318,79 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         uploadFileName: session.uploadFileName ? await decryptTextCompat(session.uploadFileName) : null,
         transcript: session.transcript ? await decryptTextCompat(session.transcript) : null,
         summary: session.summary ? await decryptTextCompat(session.summary) : null,
+        summaryStructured:
+          session.summaryStructured && typeof session.summaryStructured === 'object'
+            ? {
+                doelstelling: session.summaryStructured.doelstelling ? await decryptTextCompat(session.summaryStructured.doelstelling) : '',
+                belastbaarheid: session.summaryStructured.belastbaarheid
+                  ? await decryptTextCompat(session.summaryStructured.belastbaarheid)
+                  : '',
+                belemmeringen: session.summaryStructured.belemmeringen ? await decryptTextCompat(session.summaryStructured.belemmeringen) : '',
+                voortgang: session.summaryStructured.voortgang ? await decryptTextCompat(session.summaryStructured.voortgang) : '',
+                arbeidsmarktorientatie: session.summaryStructured.arbeidsmarktorientatie
+                  ? await decryptTextCompat(session.summaryStructured.arbeidsmarktorientatie)
+                  : '',
+              }
+            : null,
         reportDate: session.reportDate ? await decryptTextCompat(session.reportDate) : null,
         wvpWeekNumber: session.wvpWeekNumber ? await decryptTextCompat(session.wvpWeekNumber) : null,
         reportFirstSickDay: session.reportFirstSickDay ? await decryptTextCompat(session.reportFirstSickDay) : null,
         transcriptionError: session.transcriptionError ? await decryptTextCompat(session.transcriptionError) : null,
         audioDurationSeconds: typeof session.audioDurationSeconds === 'number' ? session.audioDurationSeconds : null,
+        trajectoryId: typeof session.trajectoryId === 'string' ? session.trajectoryId : null,
+      })
+    }
+
+    const trajectories: Trajectory[] = []
+    const remoteTrajectories = Array.isArray((remote as any).trajectories) ? (remote as any).trajectories as Trajectory[] : []
+    for (const trajectory of remoteTrajectories) {
+      trajectories.push({
+      ...trajectory,
+      name: await decryptTextCompat(trajectory.name),
+      dienstType: await decryptTextCompat(trajectory.dienstType),
+      uwvContactName: trajectory.uwvContactName ? await decryptTextCompat(trajectory.uwvContactName) : null,
+      uwvContactPhone: trajectory.uwvContactPhone ? await decryptTextCompat(trajectory.uwvContactPhone) : null,
+      uwvContactEmail: trajectory.uwvContactEmail ? await decryptTextCompat(trajectory.uwvContactEmail) : null,
+      orderNumber: trajectory.orderNumber ? await decryptTextCompat(trajectory.orderNumber) : null,
+      startDate: trajectory.startDate ? await decryptTextCompat(trajectory.startDate) : null,
+      planVanAanpak:
+        trajectory.planVanAanpak && typeof trajectory.planVanAanpak.documentId === 'string'
+          ? { documentId: await decryptTextCompat(trajectory.planVanAanpak.documentId) }
+          : null,
+      })
+    }
+
+    const activities: Activity[] = []
+    const remoteActivities = Array.isArray((remote as any).activities) ? (remote as any).activities as Activity[] : []
+    for (const activity of remoteActivities) {
+      activities.push({
+        ...activity,
+        name: await decryptTextCompat(activity.name),
+        category: await decryptTextCompat(activity.category),
+      })
+    }
+
+    const activityTemplates: ActivityTemplate[] = []
+    const remoteActivityTemplates = Array.isArray((remote as any).activityTemplates)
+      ? (remote as any).activityTemplates as ActivityTemplate[]
+      : []
+    for (const template of remoteActivityTemplates) {
+      activityTemplates.push({
+        ...template,
+        name: await decryptTextCompat(template.name),
+        description: template.description ? await decryptTextCompat(template.description) : '',
+        category: await decryptTextCompat(template.category),
+        organizationId: template.organizationId ? await decryptTextCompat(template.organizationId) : null,
+      })
+    }
+
+    const snippets: Snippet[] = []
+    const remoteSnippets = Array.isArray((remote as any).snippets) ? ((remote as any).snippets as Snippet[]) : []
+    for (const snippet of remoteSnippets) {
+      snippets.push({
+        ...snippet,
+        field: await decryptTextCompat(snippet.field),
+        text: await decryptTextCompat(snippet.text),
       })
     }
 
@@ -190,12 +417,19 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
     const practiceSettings: PracticeSettings = {
       practiceName: await decryptTextCompat(remote.practiceSettings.practiceName),
       website: await decryptTextCompat(remote.practiceSettings.website),
+      visitAddress: await decryptTextCompat(remote.practiceSettings.visitAddress ?? ''),
+      postalAddress: await decryptTextCompat(remote.practiceSettings.postalAddress ?? ''),
+      postalCodeCity: await decryptTextCompat(remote.practiceSettings.postalCodeCity ?? ''),
+      contactName: await decryptTextCompat(remote.practiceSettings.contactName ?? ''),
+      contactRole: await decryptTextCompat(remote.practiceSettings.contactRole ?? ''),
+      contactPhone: await decryptTextCompat(remote.practiceSettings.contactPhone ?? ''),
+      contactEmail: await decryptTextCompat(remote.practiceSettings.contactEmail ?? ''),
       tintColor: await decryptTextCompat(remote.practiceSettings.tintColor),
       logoDataUrl: remote.practiceSettings.logoDataUrl ? await decryptTextCompat(remote.practiceSettings.logoDataUrl) : null,
       updatedAtUnixMs: remote.practiceSettings.updatedAtUnixMs,
     }
 
-    return { coachees, sessions, notes, writtenReports, templates, practiceSettings }
+    return { coachees, trajectories, sessions, activities, activityTemplates, snippets, notes, writtenReports, templates, practiceSettings }
   }
 
   async function encryptCoachee(coachee: Coachee): Promise<Coachee> {
@@ -217,10 +451,68 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
       uploadFileName: session.uploadFileName ? await e2ee.encryptText(session.uploadFileName) : null,
       transcript: session.transcript ? await e2ee.encryptText(session.transcript) : null,
       summary: session.summary ? await e2ee.encryptText(session.summary) : null,
+      summaryStructured: session.summaryStructured
+        ? {
+            doelstelling: session.summaryStructured.doelstelling ? await e2ee.encryptText(session.summaryStructured.doelstelling) : '',
+            belastbaarheid: session.summaryStructured.belastbaarheid ? await e2ee.encryptText(session.summaryStructured.belastbaarheid) : '',
+            belemmeringen: session.summaryStructured.belemmeringen ? await e2ee.encryptText(session.summaryStructured.belemmeringen) : '',
+            voortgang: session.summaryStructured.voortgang ? await e2ee.encryptText(session.summaryStructured.voortgang) : '',
+            arbeidsmarktorientatie: session.summaryStructured.arbeidsmarktorientatie
+              ? await e2ee.encryptText(session.summaryStructured.arbeidsmarktorientatie)
+              : '',
+          }
+        : null,
       reportDate: session.reportDate ? await e2ee.encryptText(session.reportDate) : null,
       wvpWeekNumber: session.wvpWeekNumber ? await e2ee.encryptText(session.wvpWeekNumber) : null,
       reportFirstSickDay: session.reportFirstSickDay ? await e2ee.encryptText(session.reportFirstSickDay) : null,
       transcriptionError: session.transcriptionError ? await e2ee.encryptText(session.transcriptionError) : null,
+    }
+  }
+
+  async function encryptTrajectory(trajectory: Trajectory): Promise<Trajectory> {
+    if (!e2ee) return trajectory
+    return {
+      ...trajectory,
+      name: await e2ee.encryptText(trajectory.name),
+      dienstType: await e2ee.encryptText(trajectory.dienstType),
+      uwvContactName: trajectory.uwvContactName ? await e2ee.encryptText(trajectory.uwvContactName) : null,
+      uwvContactPhone: trajectory.uwvContactPhone ? await e2ee.encryptText(trajectory.uwvContactPhone) : null,
+      uwvContactEmail: trajectory.uwvContactEmail ? await e2ee.encryptText(trajectory.uwvContactEmail) : null,
+      orderNumber: trajectory.orderNumber ? await e2ee.encryptText(trajectory.orderNumber) : null,
+      startDate: trajectory.startDate ? await e2ee.encryptText(trajectory.startDate) : null,
+      planVanAanpak:
+        trajectory.planVanAanpak && typeof trajectory.planVanAanpak.documentId === 'string'
+          ? { documentId: await e2ee.encryptText(trajectory.planVanAanpak.documentId) }
+          : null,
+    }
+  }
+
+  async function encryptActivity(activity: Activity): Promise<Activity> {
+    if (!e2ee) return activity
+    return {
+      ...activity,
+      name: await e2ee.encryptText(activity.name),
+      category: await e2ee.encryptText(activity.category),
+    }
+  }
+
+  async function encryptActivityTemplate(template: ActivityTemplate): Promise<ActivityTemplate> {
+    if (!e2ee) return template
+    return {
+      ...template,
+      name: await e2ee.encryptText(template.name),
+      description: await e2ee.encryptText(template.description || ''),
+      category: await e2ee.encryptText(template.category),
+      organizationId: template.organizationId ? await e2ee.encryptText(template.organizationId) : null,
+    }
+  }
+
+  async function encryptSnippet(snippet: Snippet): Promise<Snippet> {
+    if (!e2ee) return snippet
+    return {
+      ...snippet,
+      field: await e2ee.encryptText(snippet.field),
+      text: await e2ee.encryptText(snippet.text),
     }
   }
 
@@ -279,6 +571,13 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
     return {
       practiceName: await e2ee.encryptText(practiceSettings.practiceName),
       website: await e2ee.encryptText(practiceSettings.website),
+      visitAddress: await e2ee.encryptText(practiceSettings.visitAddress),
+      postalAddress: await e2ee.encryptText(practiceSettings.postalAddress),
+      postalCodeCity: await e2ee.encryptText(practiceSettings.postalCodeCity),
+      contactName: await e2ee.encryptText(practiceSettings.contactName),
+      contactRole: await e2ee.encryptText(practiceSettings.contactRole),
+      contactPhone: await e2ee.encryptText(practiceSettings.contactPhone),
+      contactEmail: await e2ee.encryptText(practiceSettings.contactEmail),
       tintColor: await e2ee.encryptText(practiceSettings.tintColor),
       logoDataUrl: practiceSettings.logoDataUrl ? await e2ee.encryptText(practiceSettings.logoDataUrl) : null,
       updatedAtUnixMs: practiceSettings.updatedAtUnixMs,
@@ -353,6 +652,13 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
     try {
       const remoteRaw = await readAppData()
       const remote = await decryptRemoteData(remoteRaw)
+      console.log('[APPDATA_READ_RESPONSE]', {
+        sessionsWithSummaryStructuredCount: remote.sessions.filter((session) => {
+          const value = (session as any).summaryStructured
+          if (!value || typeof value !== 'object') return false
+          return Object.values(value as Record<string, unknown>).some((field) => String(field || '').trim().length > 0)
+        }).length,
+      })
       setData((previous) => {
         const remoteBySessionId = new Map(remote.writtenReports.map((report) => [report.sessionId, report]))
         const mergedWrittenReports = [...remote.writtenReports]
@@ -383,7 +689,11 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
   function isEmptyAppData(next: LocalAppData) {
     return (
       next.coachees.length === 0 &&
+      next.trajectories.length === 0 &&
       next.sessions.length === 0 &&
+      next.activities.length === 0 &&
+      next.activityTemplates.length === 0 &&
+      next.snippets.length === 0 &&
       next.notes.length === 0 &&
       next.writtenReports.length === 0 &&
       next.templates.length === 0
@@ -394,8 +704,20 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
     for (const coachee of localSnapshot.coachees) {
       await createCoacheeRemote(await encryptCoachee(coachee))
     }
+    for (const trajectory of localSnapshot.trajectories) {
+      await createTrajectoryRemote(await encryptTrajectory(trajectory))
+    }
     for (const session of localSnapshot.sessions) {
       await createSessionRemote(await encryptSession(session))
+    }
+    for (const activityTemplate of localSnapshot.activityTemplates) {
+      await createActivityTemplateRemote(await encryptActivityTemplate(activityTemplate))
+    }
+    for (const activity of localSnapshot.activities) {
+      await createActivityRemote(await encryptActivity(activity))
+    }
+    for (const snippet of localSnapshot.snippets) {
+      await createSnippetRemote(await encryptSnippet(snippet))
     }
     for (const note of localSnapshot.notes) {
       await createNoteRemote(await encryptNote(note))
@@ -475,6 +797,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         const session: Session = {
           id: createId('session'),
           coacheeId: values.coacheeId,
+          trajectoryId: values.trajectoryId ?? null,
           title,
           kind: values.kind,
           audioBlobId: values.audioBlobId,
@@ -482,6 +805,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           uploadFileName: values.uploadFileName,
           transcript: null,
           summary: null,
+          summaryStructured: null,
           reportDate: null,
           wvpWeekNumber: null,
           reportFirstSickDay: null,
@@ -500,25 +824,62 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         return session.id
       },
       updateSession: (sessionId, values) => {
+        console.log('[SESSION_UPDATE_CALLED]', {
+          sessionId,
+          summaryStructured: (values as any).summaryStructured,
+          values,
+        })
         const updatedAtUnixMs = Date.now()
         setData((previous) => updateSession(previous, sessionId, values))
-        if (!e2ee) return
+        if (!e2ee) {
+          console.log('[MUTATION_PAYLOAD]', {
+            sessionId,
+            summaryStructured: (values as any).summaryStructured,
+            payload: null,
+            reason: 'Skipped remote update because e2ee is disabled in LocalAppDataProvider.updateSession',
+          })
+          return
+        }
         void (async () => {
+          const hasSummaryStructuredField = Object.prototype.hasOwnProperty.call(values, 'summaryStructured')
           const encryptedTitle = typeof values.title === 'string' ? await e2ee.encryptText(values.title) : undefined
           const encryptedUploadFileName =
             values.uploadFileName === undefined ? undefined : values.uploadFileName === null ? null : await e2ee.encryptText(values.uploadFileName)
           const encryptedTranscript = values.transcript === undefined ? undefined : values.transcript === null ? null : await e2ee.encryptText(values.transcript)
           const encryptedSummary = values.summary === undefined ? undefined : values.summary === null ? null : await e2ee.encryptText(values.summary)
+          const structuredValue = values.summaryStructured
+          const encryptedSummaryStructured =
+            !hasSummaryStructuredField
+              ? undefined
+              : structuredValue === null || structuredValue === undefined
+                ? null
+                : {
+                    doelstelling: structuredValue.doelstelling
+                      ? await e2ee.encryptText(structuredValue.doelstelling)
+                      : '',
+                    belastbaarheid: structuredValue.belastbaarheid
+                      ? await e2ee.encryptText(structuredValue.belastbaarheid)
+                      : '',
+                    belemmeringen: structuredValue.belemmeringen
+                      ? await e2ee.encryptText(structuredValue.belemmeringen)
+                      : '',
+                    voortgang: structuredValue.voortgang ? await e2ee.encryptText(structuredValue.voortgang) : '',
+                    arbeidsmarktorientatie: structuredValue.arbeidsmarktorientatie
+                      ? await e2ee.encryptText(structuredValue.arbeidsmarktorientatie)
+                      : '',
+                  }
           const encryptedError =
             values.transcriptionError === undefined
               ? undefined
               : values.transcriptionError === null
                 ? null
                 : await e2ee.encryptText(values.transcriptionError)
-          await updateSessionRemote({
+          const payload = {
             id: sessionId,
             updatedAtUnixMs,
             coacheeId: values.coacheeId,
+            trajectoryId: values.trajectoryId,
+            kind: values.kind,
             title: encryptedTitle,
             createdAtUnixMs: values.createdAtUnixMs,
             audioBlobId: values.audioBlobId,
@@ -526,6 +887,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
             uploadFileName: encryptedUploadFileName,
             transcript: encryptedTranscript,
             summary: encryptedSummary,
+            ...(hasSummaryStructuredField ? { summaryStructured: encryptedSummaryStructured ?? null } : {}),
             reportDate: values.reportDate === undefined ? undefined : values.reportDate === null ? null : await e2ee.encryptText(values.reportDate),
             wvpWeekNumber:
               values.wvpWeekNumber === undefined ? undefined : values.wvpWeekNumber === null ? null : await e2ee.encryptText(values.wvpWeekNumber),
@@ -537,7 +899,13 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
                   : await e2ee.encryptText(values.reportFirstSickDay),
             transcriptionStatus: values.transcriptionStatus,
             transcriptionError: encryptedError,
+          }
+          console.log('[MUTATION_PAYLOAD]', {
+            sessionId,
+            summaryStructured: payload.summaryStructured,
+            payload,
           })
+          await updateSessionRemote(payload)
         })()
           .then(refreshFromServer)
           .catch((error: unknown) => console.error('[LocalAppDataProvider] Remote update failed', error))
@@ -545,6 +913,239 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
       deleteSession: (sessionId) => {
         setData((previous) => deleteSession(previous, sessionId))
         runRemoteAction(deleteSessionRemote(sessionId))
+      },
+
+      createTrajectory: (values) => {
+        const now = Date.now()
+        const trimmedCoacheeId = String(values.coacheeId || '').trim()
+        const trimmedName = String(values.name || '').trim()
+        if (!trimmedCoacheeId || !trimmedName) return ''
+        const trajectory: Trajectory = {
+          id: createId('trajectory'),
+          coacheeId: trimmedCoacheeId,
+          name: trimmedName,
+          dienstType: String(values.dienstType || 'Werkfit maken').trim() || 'Werkfit maken',
+          uwvContactName: values.uwvContactName ?? null,
+          uwvContactPhone: values.uwvContactPhone ?? null,
+          uwvContactEmail: values.uwvContactEmail ?? null,
+          orderNumber: values.orderNumber ?? null,
+          startDate: values.startDate ?? null,
+          planVanAanpak: values.planVanAanpak ?? null,
+          maxHours: Number.isFinite(values.maxHours) ? Number(values.maxHours) : 41,
+          maxAdminHours: Number.isFinite(values.maxAdminHours) ? Number(values.maxAdminHours) : 3,
+          createdAtUnixMs: now,
+          updatedAtUnixMs: now,
+        }
+        setData((previous) => createTrajectory(previous, trajectory).data)
+        if (e2ee) {
+          runRemoteAction(encryptTrajectory(trajectory).then(createTrajectoryRemote))
+        }
+        return trajectory.id
+      },
+      updateTrajectory: (trajectoryId, values) => {
+        const updatedAtUnixMs = Date.now()
+        setData((previous) => updateTrajectory(previous, trajectoryId, { ...values, updatedAtUnixMs }))
+        if (!e2ee) return
+        void (async () => {
+          await updateTrajectoryRemote({
+            id: trajectoryId,
+            updatedAtUnixMs,
+            ...(values.coacheeId !== undefined ? { coacheeId: values.coacheeId } : {}),
+            ...(values.name !== undefined ? { name: await e2ee.encryptText(values.name.trim()) } : {}),
+            ...(values.dienstType !== undefined ? { dienstType: await e2ee.encryptText(values.dienstType.trim()) } : {}),
+            ...(values.uwvContactName !== undefined
+              ? { uwvContactName: values.uwvContactName === null ? null : await e2ee.encryptText(values.uwvContactName) }
+              : {}),
+            ...(values.uwvContactPhone !== undefined
+              ? { uwvContactPhone: values.uwvContactPhone === null ? null : await e2ee.encryptText(values.uwvContactPhone) }
+              : {}),
+            ...(values.uwvContactEmail !== undefined
+              ? { uwvContactEmail: values.uwvContactEmail === null ? null : await e2ee.encryptText(values.uwvContactEmail) }
+              : {}),
+            ...(values.orderNumber !== undefined
+              ? { orderNumber: values.orderNumber === null ? null : await e2ee.encryptText(values.orderNumber) }
+              : {}),
+            ...(values.startDate !== undefined
+              ? { startDate: values.startDate === null ? null : await e2ee.encryptText(values.startDate) }
+              : {}),
+            ...(values.planVanAanpak !== undefined
+              ? {
+                  planVanAanpak:
+                    values.planVanAanpak === null
+                      ? null
+                      : {
+                          documentId: await e2ee.encryptText(values.planVanAanpak.documentId),
+                        },
+                }
+              : {}),
+            ...(values.maxHours !== undefined ? { maxHours: values.maxHours } : {}),
+            ...(values.maxAdminHours !== undefined ? { maxAdminHours: values.maxAdminHours } : {}),
+          })
+        })()
+          .then(refreshFromServer)
+          .catch((error: unknown) => console.error('[LocalAppDataProvider] Remote update failed', error))
+      },
+      deleteTrajectory: (trajectoryId) => {
+        setData((previous) => deleteTrajectory(previous, trajectoryId))
+        runRemoteAction(deleteTrajectoryRemote(trajectoryId))
+      },
+
+      createActivityTemplate: (values) => {
+        const now = Date.now()
+        const name = String(values.name || '').trim()
+        const category = String(values.category || '').trim()
+        if (!name || !category) return ''
+        const template: ActivityTemplate = {
+          id: createId('activity-template'),
+          name,
+          description: String(values.description || '').trim(),
+          category,
+          defaultHours: Number.isFinite(values.defaultHours) ? Number(values.defaultHours) : 0,
+          isAdmin: values.isAdmin === true,
+          organizationId: values.organizationId ?? null,
+          isActive: values.isActive !== false,
+          createdAtUnixMs: now,
+          updatedAtUnixMs: now,
+        }
+        setData((previous) => createActivityTemplate(previous, template).data)
+        if (e2ee) {
+          runRemoteAction(encryptActivityTemplate(template).then(createActivityTemplateRemote))
+        }
+        return template.id
+      },
+      updateActivityTemplate: (templateId, values) => {
+        const updatedAtUnixMs = Date.now()
+        setData((previous) => updateActivityTemplate(previous, templateId, { ...values, updatedAtUnixMs }))
+        if (!e2ee) return
+        void (async () => {
+          await updateActivityTemplateRemote({
+            id: templateId,
+            updatedAtUnixMs,
+            ...(values.name !== undefined ? { name: await e2ee.encryptText(values.name.trim()) } : {}),
+            ...(values.description !== undefined ? { description: await e2ee.encryptText(values.description.trim()) } : {}),
+            ...(values.category !== undefined ? { category: await e2ee.encryptText(values.category.trim()) } : {}),
+            ...(values.defaultHours !== undefined ? { defaultHours: values.defaultHours } : {}),
+            ...(values.isAdmin !== undefined ? { isAdmin: values.isAdmin } : {}),
+            ...(values.organizationId !== undefined
+              ? { organizationId: values.organizationId === null ? null : await e2ee.encryptText(values.organizationId) }
+              : {}),
+            ...(values.isActive !== undefined ? { isActive: values.isActive } : {}),
+          })
+        })()
+          .then(refreshFromServer)
+          .catch((error: unknown) => console.error('[LocalAppDataProvider] Remote update failed', error))
+      },
+      deleteActivityTemplate: (templateId) => {
+        setData((previous) => deleteActivityTemplate(previous, templateId))
+        runRemoteAction(deleteActivityTemplateRemote(templateId))
+      },
+
+      createActivity: (values) => {
+        const now = Date.now()
+        const trajectoryId = String(values.trajectoryId || '').trim()
+        const name = String(values.name || '').trim()
+        const category = String(values.category || '').trim()
+        if (!trajectoryId || !name || !category) return ''
+        const activity: Activity = {
+          id: createId('activity'),
+          trajectoryId,
+          sessionId: values.sessionId ?? null,
+          templateId: values.templateId ?? null,
+          name,
+          category,
+          status: values.status,
+          plannedHours: values.plannedHours ?? null,
+          actualHours: values.actualHours ?? null,
+          source: values.source ?? 'manual',
+          isAdmin: values.isAdmin === true,
+          createdAtUnixMs: now,
+          updatedAtUnixMs: now,
+        }
+        setData((previous) => createActivity(previous, activity).data)
+        if (e2ee) {
+          runRemoteAction(encryptActivity(activity).then(createActivityRemote))
+        }
+        return activity.id
+      },
+      updateActivity: (activityId, values) => {
+        const updatedAtUnixMs = Date.now()
+        setData((previous) => updateActivity(previous, activityId, { ...values, updatedAtUnixMs }))
+        if (!e2ee) return
+        void (async () => {
+          await updateActivityRemote({
+            id: activityId,
+            updatedAtUnixMs,
+            ...(values.trajectoryId !== undefined ? { trajectoryId: values.trajectoryId } : {}),
+            ...(values.sessionId !== undefined ? { sessionId: values.sessionId } : {}),
+            ...(values.templateId !== undefined ? { templateId: values.templateId } : {}),
+            ...(values.name !== undefined ? { name: await e2ee.encryptText(values.name.trim()) } : {}),
+            ...(values.category !== undefined ? { category: await e2ee.encryptText(values.category.trim()) } : {}),
+            ...(values.status !== undefined ? { status: values.status } : {}),
+            ...(values.plannedHours !== undefined ? { plannedHours: values.plannedHours } : {}),
+            ...(values.actualHours !== undefined ? { actualHours: values.actualHours } : {}),
+            ...(values.source !== undefined ? { source: values.source } : {}),
+            ...(values.isAdmin !== undefined ? { isAdmin: values.isAdmin } : {}),
+          })
+        })()
+          .then(refreshFromServer)
+          .catch((error: unknown) => console.error('[LocalAppDataProvider] Remote update failed', error))
+      },
+      deleteActivity: (activityId) => {
+        setData((previous) => deleteActivity(previous, activityId))
+        runRemoteAction(deleteActivityRemote(activityId))
+      },
+
+      createSnippet: (values) => {
+        const now = Date.now()
+        const trajectoryId = String(values.trajectoryId || '').trim()
+        const itemId = String(values.itemId || '').trim()
+        const field = String(values.field || '').trim()
+        const text = String(values.text || '').trim()
+        if (!trajectoryId || !itemId || !field || !text) return ''
+        const snippet: Snippet = {
+          id: createId('snippet'),
+          trajectoryId,
+          itemId,
+          field,
+          text,
+          date: Number.isFinite(values.date) ? Number(values.date) : now,
+          status: values.status ?? 'pending',
+          createdAtUnixMs: now,
+          updatedAtUnixMs: now,
+        }
+        setData((previous) => createSnippet(previous, snippet).data)
+        if (e2ee) {
+          void (async () => {
+            await createSnippetRemote({
+              ...snippet,
+              field: await e2ee.encryptText(snippet.field),
+              text: await e2ee.encryptText(snippet.text),
+            })
+          })()
+            .then(refreshFromServer)
+            .catch((error: unknown) => console.error('[LocalAppDataProvider] Remote update failed', error))
+        }
+        return snippet.id
+      },
+      updateSnippet: (snippetId, values) => {
+        const updatedAtUnixMs = Date.now()
+        setData((previous) => updateSnippet(previous, snippetId, { ...values, updatedAtUnixMs }))
+        if (!e2ee) return
+        void (async () => {
+          await updateSnippetRemote({
+            id: snippetId,
+            updatedAtUnixMs,
+            ...(values.field !== undefined ? { field: await e2ee.encryptText(values.field.trim()) } : {}),
+            ...(values.text !== undefined ? { text: await e2ee.encryptText(values.text.trim()) } : {}),
+            ...(values.status !== undefined ? { status: values.status } : {}),
+          })
+        })()
+          .then(refreshFromServer)
+          .catch((error: unknown) => console.error('[LocalAppDataProvider] Remote update failed', error))
+      },
+      deleteSnippet: (snippetId) => {
+        setData((previous) => deleteSnippet(previous, snippetId))
+        runRemoteAction(deleteSnippetRemote(snippetId))
       },
 
       createNote: (sessionId, values) => {
@@ -708,16 +1309,37 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         void (async () => {
           const practiceName = values.practiceName !== undefined ? values.practiceName.trim() : undefined
           const website = values.website !== undefined ? values.website.trim() : undefined
+          const visitAddress = values.visitAddress !== undefined ? values.visitAddress.trim() : undefined
+          const postalAddress = values.postalAddress !== undefined ? values.postalAddress.trim() : undefined
+          const postalCodeCity = values.postalCodeCity !== undefined ? values.postalCodeCity.trim() : undefined
+          const contactName = values.contactName !== undefined ? values.contactName.trim() : undefined
+          const contactRole = values.contactRole !== undefined ? values.contactRole.trim() : undefined
+          const contactPhone = values.contactPhone !== undefined ? values.contactPhone.trim() : undefined
+          const contactEmail = values.contactEmail !== undefined ? values.contactEmail.trim() : undefined
           const tintColor = values.tintColor
           const logoDataUrl = values.logoDataUrl
           const remotePracticeName = practiceName === undefined ? undefined : e2ee ? await e2ee.encryptText(practiceName) : practiceName
           const remoteWebsite = website === undefined ? undefined : e2ee ? await e2ee.encryptText(website) : website
+          const remoteVisitAddress = visitAddress === undefined ? undefined : e2ee ? await e2ee.encryptText(visitAddress) : visitAddress
+          const remotePostalAddress = postalAddress === undefined ? undefined : e2ee ? await e2ee.encryptText(postalAddress) : postalAddress
+          const remotePostalCodeCity = postalCodeCity === undefined ? undefined : e2ee ? await e2ee.encryptText(postalCodeCity) : postalCodeCity
+          const remoteContactName = contactName === undefined ? undefined : e2ee ? await e2ee.encryptText(contactName) : contactName
+          const remoteContactRole = contactRole === undefined ? undefined : e2ee ? await e2ee.encryptText(contactRole) : contactRole
+          const remoteContactPhone = contactPhone === undefined ? undefined : e2ee ? await e2ee.encryptText(contactPhone) : contactPhone
+          const remoteContactEmail = contactEmail === undefined ? undefined : e2ee ? await e2ee.encryptText(contactEmail) : contactEmail
           const remoteTintColor = tintColor === undefined ? undefined : e2ee ? await e2ee.encryptText(tintColor) : tintColor
           const encryptedLogoDataUrl =
             logoDataUrl === undefined ? undefined : logoDataUrl === null ? null : e2ee ? await e2ee.encryptText(logoDataUrl) : logoDataUrl
           await updatePracticeSettingsRemote({
             practiceName: remotePracticeName,
             website: remoteWebsite,
+            visitAddress: remoteVisitAddress,
+            postalAddress: remotePostalAddress,
+            postalCodeCity: remotePostalCodeCity,
+            contactName: remoteContactName,
+            contactRole: remoteContactRole,
+            contactPhone: remoteContactPhone,
+            contactEmail: remoteContactEmail,
             tintColor: remoteTintColor,
             logoDataUrl: encryptedLogoDataUrl,
             updatedAtUnixMs,

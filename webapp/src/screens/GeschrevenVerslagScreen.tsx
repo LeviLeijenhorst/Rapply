@@ -1,14 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 
-import { AnimatedDropdownPanel } from '../components/AnimatedDropdownPanel'
-import { Text } from '../components/Text'
-import { colors } from '../theme/colors'
-import { ChevronLeftIcon } from '../components/icons/ChevronLeftIcon'
-import { ChevronDownIcon } from '../components/icons/ChevronDownIcon'
-import { ProfileCircleIcon } from '../components/icons/ProfileCircleIcon'
+import { AnimatedDropdownPanel } from '../ui/AnimatedDropdownPanel'
+import { Text } from '../ui/Text'
+import { colors } from '../design/theme/colors'
+import { ChevronLeftIcon } from '../icons/ChevronLeftIcon'
+import { ChevronDownIcon } from '../icons/ChevronDownIcon'
+import { ProfileCircleIcon } from '../icons/ProfileCircleIcon'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
 import { getCoacheeDisplayName, unassignedCoacheeLabel } from '../utils/coachee'
+import { buildUntitledSessionTitle } from '../utils/untitledSessionTitle'
 
 type Props = {
   initialCoacheeId?: string | null
@@ -31,11 +32,7 @@ export function GeschrevenVerslagScreen({ initialCoacheeId = null, onBack, onOpe
   const isAnyDropdownOpen = isCoacheeOpen
   const selectedCoacheeName = useMemo(() => getCoacheeDisplayName(activeCoachees, selectedCoacheeId), [activeCoachees, selectedCoacheeId])
   const coacheeOptions = useMemo(() => [{ id: null, name: unassignedCoacheeLabel }, ...activeCoachees], [activeCoachees])
-  const baseTitle = 'Naamloos verslag'
-  const defaultTitle = useMemo(() => {
-    const existingCount = data.sessions.filter((session) => session.title.toLowerCase().startsWith(baseTitle.toLowerCase())).length
-    return existingCount === 0 ? baseTitle : `${baseTitle} #${existingCount + 1}`
-  }, [baseTitle, data.sessions])
+  const defaultTitle = useMemo(() => buildUntitledSessionTitle('verslag'), [])
 
   useEffect(() => {
     if (reportTitle) return
@@ -382,4 +379,5 @@ const styles = StyleSheet.create({
     ...( { position: 'absolute', inset: 0, zIndex: 10 } as any ),
   },
 })
+
 

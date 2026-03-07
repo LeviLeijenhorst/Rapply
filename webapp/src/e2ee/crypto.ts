@@ -3,9 +3,16 @@ import { fromBase64Url, toBase64Url } from './base64'
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder()
 
-function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  const slice = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
-  return slice as ArrayBuffer
+function toArrayBuffer(bytes: Uint8Array<ArrayBufferLike>): ArrayBuffer {
+  const output = new Uint8Array(bytes.byteLength)
+  output.set(bytes)
+  return output.buffer
+}
+
+function toBytes(bytes: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBuffer> {
+  const output = new Uint8Array(new ArrayBuffer(bytes.byteLength))
+  output.set(bytes)
+  return output
 }
 
 function concatBytes(parts: Uint8Array[]) {
@@ -27,12 +34,12 @@ export function createRandomId(prefix: string) {
 }
 
 export function createRecoveryKey(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(32))
+  const bytes = toBytes(crypto.getRandomValues(new Uint8Array(32)))
   return toBase64Url(bytes)
 }
 
 export function createUserDataKeyBytes(): Uint8Array {
-  return crypto.getRandomValues(new Uint8Array(32))
+  return toBytes(crypto.getRandomValues(new Uint8Array(32)))
 }
 
 export async function importAesKey(rawKeyBytes: Uint8Array): Promise<CryptoKey> {
@@ -40,8 +47,8 @@ export async function importAesKey(rawKeyBytes: Uint8Array): Promise<CryptoKey> 
 }
 
 export async function encryptBytesWithAesGcm(params: { key: CryptoKey; plaintext: Uint8Array }): Promise<string> {
-  const iv = crypto.getRandomValues(new Uint8Array(12))
-  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, params.key, toArrayBuffer(params.plaintext))
+  const iv = toBytes(crypto.getRandomValues(new Uint8Array(12)))
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: toArrayBuffer(iv) }, params.key, toArrayBuffer(params.plaintext))
   const combined = concatBytes([textEncoder.encode('E2EE1'), iv, new Uint8Array(ciphertext)])
   return toBase64Url(combined)
 }
@@ -49,20 +56,20 @@ export async function encryptBytesWithAesGcm(params: { key: CryptoKey; plaintext
 export async function decryptBytesWithAesGcm(params: { key: CryptoKey; encrypted: string }): Promise<Uint8Array> {
   const combined = fromBase64Url(params.encrypted)
   const magic5 = textDecoder.decode(combined.slice(0, 5))
-  let iv: Uint8Array
-  let ciphertext: Uint8Array
+  let iv: Uint8Array<ArrayBuffer>
+  let ciphertext: Uint8Array<ArrayBuffer>
   if (magic5 === 'E2EE1') {
-    iv = combined.slice(5, 17)
-    ciphertext = combined.slice(17)
+    iv = toBytes(combined.slice(5, 17))
+    ciphertext = toBytes(combined.slice(17))
   } else {
     const magic4 = textDecoder.decode(combined.slice(0, 4))
     if (magic4 !== 'CSA1') {
       throw new Error('Ongeldige versleuteling')
     }
-    iv = combined.slice(4, 16)
-    ciphertext = combined.slice(16)
+    iv = toBytes(combined.slice(4, 16))
+    ciphertext = toBytes(combined.slice(16))
   }
-  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, params.key, toArrayBuffer(ciphertext))
+  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: toArrayBuffer(iv) }, params.key, toArrayBuffer(ciphertext))
   return new Uint8Array(plaintext)
 }
 

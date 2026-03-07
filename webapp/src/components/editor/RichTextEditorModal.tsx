@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native'
-import { LoadingSpinner } from '../LoadingSpinner'
+import { LoadingSpinner } from '../../ui/LoadingSpinner'
 import Svg, { Path } from 'react-native-svg'
 
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
 import { fontSizes, radius, shadows, spacing } from '../../foundation/theme/tokens'
-import { ModalCloseDarkIcon } from '../icons/ModalCloseDarkIcon'
-import { Text } from '../Text'
-import { colors } from '../../theme/colors'
+import { ModalCloseDarkIcon } from '../../icons/ModalCloseDarkIcon'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
 import { getRichTextEditorCss, richTextHtmlToMarkdown, richTextMarkdownToHtml, richTextSharedFormatting } from '../../utils/richTextFormatting'
 
 type Props = {
@@ -832,3 +832,5 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
   },
 })
+
+

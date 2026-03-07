@@ -1,14 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 
-import { colors } from '../../theme/colors'
-import { SendIcon } from '../icons/SendIcon'
-import { Text } from '../Text'
+import { colors } from '../../design/theme/colors'
+import { SendIcon } from '../../icons/SendIcon'
+import { Text } from '../../ui/Text'
 
 type Props = {
   value: string
   onChangeValue: (value: string) => void
   onSend: () => void
+  compact?: boolean
   shouldAutoFocus?: boolean
   autoFocusKey?: string | number
   isSendDisabled?: boolean
@@ -22,7 +23,6 @@ const tabAutocompleteSuggestions = [
   'Vat dit samen in bullet points.',
   'Geef mij 3 verdiepende vragen voor het volgende verslag.',
 ]
-const SEND_BUTTON_SIZE = 44
 
 function applyTabAutocomplete(value: string): string | null {
   const trimmed = String(value || '').trim()
@@ -36,25 +36,27 @@ export function ChatComposer({
   value,
   onChangeValue,
   onSend,
+  compact = false,
   shouldAutoFocus = false,
   autoFocusKey,
   isSendDisabled = false,
   onPressEscape,
 }: Props) {
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
-  const [inputHeight, setInputHeight] = useState(44)
+  const composerMinHeight = compact ? 40 : 44
+  const [inputHeight, setInputHeight] = useState(composerMinHeight)
   const [isScrollable, setIsScrollable] = useState(false)
   const inputHeightRef = useRef(inputHeight)
   const isScrollableRef = useRef(isScrollable)
   const inputRef = useRef<TextInput | null>(null)
 
   const { minHeight, maxHeight } = useMemo(() => {
-    const baseHeight = 44
+    const baseHeight = composerMinHeight
     const maxLines = 7
-    const lineHeight = 20
+    const lineHeight = compact ? 18 : 20
     const maxExtra = (maxLines - 1) * lineHeight
     return { minHeight: baseHeight, maxHeight: baseHeight + maxExtra }
-  }, [])
+  }, [compact, composerMinHeight])
 
   const inputScrollStyle = { overflowY: isScrollable ? 'auto' : 'hidden' } as any
 
@@ -79,7 +81,7 @@ export function ChatComposer({
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        <View style={[styles.inputContainer, { height: inputHeight }]}>
+        <View style={[styles.inputContainer, compact ? styles.inputContainerCompact : undefined, { height: inputHeight }]}>
           <TextInput
             ref={(nextValue) => {
               inputRef.current = nextValue
@@ -131,7 +133,7 @@ export function ChatComposer({
                 setIsScrollable(nextIsScrollable)
               }
             }}
-            style={[styles.input, inputWebStyle, inputScrollStyle]}
+            style={[styles.input, compact ? styles.inputCompact : undefined, inputWebStyle, inputScrollStyle]}
           />
         </View>
 
@@ -142,7 +144,7 @@ export function ChatComposer({
           }}
           style={({ hovered }) => [
             styles.sendButton,
-            { width: SEND_BUTTON_SIZE, height: SEND_BUTTON_SIZE, borderRadius: SEND_BUTTON_SIZE / 2 },
+            compact ? styles.sendButtonCompact : styles.sendButtonDefault,
             isSendDisabled ? styles.sendButtonDisabled : undefined,
             hovered ? styles.sendButtonHovered : undefined,
           ]}
@@ -150,7 +152,7 @@ export function ChatComposer({
           <SendIcon size={24} />
         </Pressable>
       </View>
-      <View style={styles.disclaimerRow}>
+      <View style={[styles.disclaimerRow, compact ? styles.disclaimerRowCompact : undefined]}>
         <Text style={styles.disclaimerText}>Antwoorden in deze chat worden gegenereerd door AI</Text>
       </View>
     </View>
@@ -178,6 +180,11 @@ const styles = StyleSheet.create({
     padding: 12,
     justifyContent: 'flex-start',
   },
+  inputContainerCompact: {
+    minHeight: 40,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+  },
   input: {
     padding: 0,
     fontSize: 14,
@@ -186,11 +193,25 @@ const styles = StyleSheet.create({
     color: colors.text,
     flex: 1,
   },
+  inputCompact: {
+    lineHeight: 20,
+    paddingBottom: 0,
+  },
   sendButton: {
     backgroundColor: colors.selected,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  sendButtonDefault: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+  },
+  sendButtonCompact: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
   },
   sendButtonHovered: {
     backgroundColor: '#A50058',
@@ -208,7 +229,11 @@ const styles = StyleSheet.create({
   disclaimerRow: {
     width: '100%',
     alignItems: 'center',
-    paddingRight: 52,
-    paddingTop: 5,
+    justifyContent: 'center',
+    paddingTop: 6,
+  },
+  disclaimerRowCompact: {
+    paddingTop: 4,
   },
 })
+

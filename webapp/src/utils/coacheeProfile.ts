@@ -2,7 +2,12 @@ import type { Coachee } from '../local/types'
 
 export type CoacheeUpsertValues = {
   firstName: string
+  initials: string
   lastName: string
+  bsn: string
+  trajectoryId: string
+  orderNumber: string
+  uwvContactName: string
   clientEmail: string
   clientPhone: string
   clientAddress: string
@@ -17,7 +22,10 @@ export type CoacheeUpsertValues = {
 
 type ParsedClientDetails = {
   firstName?: string
+  initials?: string
   lastName?: string
+  bsn?: string
+  trajectoryId?: string
   email?: string
   phone?: string
   address?: string
@@ -55,7 +63,12 @@ export function getCoacheeUpsertValues(coachee: Coachee | null | undefined): Coa
   if (!coachee) {
     return {
       firstName: '',
+      initials: '',
       lastName: '',
+      bsn: '',
+      trajectoryId: '',
+      orderNumber: '',
+      uwvContactName: '',
       clientEmail: '',
       clientPhone: '',
       clientAddress: '',
@@ -75,7 +88,12 @@ export function getCoacheeUpsertValues(coachee: Coachee | null | undefined): Coa
 
   return {
     firstName: String(clientDetails?.firstName ?? split.firstName ?? '').trim(),
+    initials: String(clientDetails?.initials ?? '').trim(),
     lastName: String(clientDetails?.lastName ?? split.lastName ?? '').trim(),
+    bsn: String(clientDetails?.bsn ?? '').trim(),
+    trajectoryId: String(clientDetails?.trajectoryId ?? '').trim(),
+    orderNumber: '',
+    uwvContactName: '',
     clientEmail: String(clientDetails?.email ?? '').trim(),
     clientPhone: String(clientDetails?.phone ?? '').trim(),
     clientAddress: String(clientDetails?.address ?? '').trim(),
@@ -96,12 +114,16 @@ export function serializeCoacheeUpsertValues(values: CoacheeUpsertValues): {
   firstSickDay: string
 } {
   const firstName = values.firstName.trim()
+  const initials = values.initials.trim()
   const lastName = values.lastName.trim()
   const name = [firstName, lastName].filter(Boolean).join(' ').trim()
 
   const clientDetails = JSON.stringify({
     firstName,
+    initials,
     lastName,
+    bsn: values.bsn.trim(),
+    trajectoryId: values.trajectoryId.trim(),
     email: values.clientEmail.trim(),
     phone: values.clientPhone.trim(),
     address: values.clientAddress.trim(),
@@ -128,13 +150,14 @@ export function formatCoacheeDetailsForPrompt(clientDetailsRaw: string | null | 
   const details = parseJsonObject<ParsedClientDetails>(clientDetailsRaw)
   if (!details) return []
   const lines: string[] = []
-  const fullName = [String(details.firstName ?? '').trim(), String(details.lastName ?? '').trim()].filter(Boolean).join(' ')
-  if (fullName) lines.push(`Naam cliënt: ${fullName}`)
-  if (String(details.email ?? '').trim()) lines.push(`E-mail cliënt: ${String(details.email ?? '').trim()}`)
-  if (String(details.phone ?? '').trim()) lines.push(`Telefoon cliënt: ${String(details.phone ?? '').trim()}`)
-  if (String(details.address ?? '').trim()) lines.push(`Adres cliënt: ${String(details.address ?? '').trim()}`)
-  if (String(details.postalCode ?? '').trim()) lines.push(`Postcode cliënt: ${String(details.postalCode ?? '').trim()}`)
-  if (String(details.city ?? '').trim()) lines.push(`Woonplaats cliënt: ${String(details.city ?? '').trim()}`)
+  const fullName = [String(details.initials ?? '').trim(), String(details.lastName ?? '').trim()].filter(Boolean).join(' ')
+  if (fullName) lines.push(`Naam client: ${fullName}`)
+  if (String(details.bsn ?? '').trim()) lines.push(`BSN client: ${String(details.bsn ?? '').trim()}`)
+  if (String(details.email ?? '').trim()) lines.push(`E-mail client: ${String(details.email ?? '').trim()}`)
+  if (String(details.phone ?? '').trim()) lines.push(`Telefoon client: ${String(details.phone ?? '').trim()}`)
+  if (String(details.address ?? '').trim()) lines.push(`Adres client: ${String(details.address ?? '').trim()}`)
+  if (String(details.postalCode ?? '').trim()) lines.push(`Postcode client: ${String(details.postalCode ?? '').trim()}`)
+  if (String(details.city ?? '').trim()) lines.push(`Woonplaats client: ${String(details.city ?? '').trim()}`)
   return lines
 }
 

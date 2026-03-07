@@ -1,13 +1,13 @@
 import React from 'react'
 
-import { PopoverMenu } from '../PopoverMenu'
-import { MijnAccountIcon } from '../icons/MijnAccountIcon'
-import { DeelCoachScribeIcon } from '../icons/DeelCoachScribeIcon'
-import { PrivacyIcon } from '../icons/PrivacyIcon'
-import { ArchiefMenuIcon } from '../icons/ArchiefMenuIcon'
-import { MijnAbonnementIcon } from '../icons/MijnAbonnementIcon'
-import { FeedbackIcon } from '../icons/FeedbackIcon'
-import { colors } from '../../theme/colors'
+import { PopoverMenu } from '../../ui/PopoverMenu'
+import { MijnAccountIcon } from '../../icons/MijnAccountIcon'
+import { DeelCoachScribeIcon } from '../../icons/DeelCoachScribeIcon'
+import { PrivacyIcon } from '../../icons/PrivacyIcon'
+import { ArchiefMenuIcon } from '../../icons/ArchiefMenuIcon'
+import { FeedbackIcon } from '../../icons/FeedbackIcon'
+import { ContactIcon } from '../../icons/ContactIcon'
+import { colors } from '../../design/theme/colors'
 
 type AnchorPoint = { x: number; y: number }
 
@@ -19,6 +19,7 @@ type Props = {
   onOpenSubscription: () => void
   onOpenArchive: () => void
   onOpenFeedback: () => void
+  onOpenContact: () => void
   onOpenShare: () => void
   onOpenPrivacy: () => void
   showSubscriptionItem?: boolean
@@ -32,29 +33,33 @@ export function SettingsMenu({
   onOpenSubscription,
   onOpenArchive,
   onOpenFeedback,
+  onOpenContact,
   onOpenShare,
   onOpenPrivacy,
   showSubscriptionItem = false,
 }: Props) {
   const menuIconColor = colors.text
+  void onOpenSubscription
+  void showSubscriptionItem
 
   const items = [
     {
       key: 'account',
-      label: 'Mijn account',
+      label: 'Account',
       icon: <MijnAccountIcon color={menuIconColor} />,
       onPress: onOpenAccount,
     },
-    ...(showSubscriptionItem
-      ? [
-          {
-            key: 'subscription',
-            label: 'Mijn abonnement',
-            icon: <MijnAbonnementIcon color={menuIconColor} />,
-            onPress: onOpenSubscription,
-          },
-        ]
-      : []),
+    // Tijdelijk uitgezet:
+    // ...(showSubscriptionItem
+    //   ? [
+    //       {
+    //         key: 'subscription',
+    //         label: 'Mijn abonnement',
+    //         icon: <MijnAbonnementIcon color={menuIconColor} />,
+    //         onPress: onOpenSubscription,
+    //       },
+    //     ]
+    //   : []),
     // {
     //   key: 'theme',
     //   label: 'Donkere modus',
@@ -78,6 +83,12 @@ export function SettingsMenu({
       onPress: onOpenFeedback,
     },
     {
+      key: 'contact',
+      label: 'Contact',
+      icon: <ContactIcon color={menuIconColor} />,
+      onPress: onOpenContact,
+    },
+    {
       key: 'share',
       label: 'Deel CoachScribe',
       icon: <DeelCoachScribeIcon color={menuIconColor} />,
@@ -93,4 +104,5 @@ export function SettingsMenu({
 
   return <PopoverMenu visible={visible} anchorPoint={anchorPoint} placement="above" width={320} estimatedHeight={420} items={items} onClose={onClose} />
 }
+
 

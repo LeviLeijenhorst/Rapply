@@ -15,6 +15,12 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
   }) as Promise<T>
 }
 
+function toBlobPart(bytes: Uint8Array): ArrayBuffer {
+  const output = new Uint8Array(bytes.byteLength)
+  output.set(bytes)
+  return output.buffer
+}
+
 export async function downloadAudioStream(params: {
   audioStreamId: string
   decryptChunk: (encryptedChunk: Uint8Array) => Promise<Uint8Array>
@@ -35,7 +41,7 @@ export async function downloadAudioStream(params: {
         ))
 
       const chunks = manifest.chunks.slice().sort((left, right) => left.index - right.index)
-      const parts: Uint8Array[] = []
+      const parts: BlobPart[] = []
       for (const chunk of chunks) {
         const localChunk = await withTimeout(
           loadAudioChunkByIndex(params.audioStreamId, chunk.index),
@@ -57,7 +63,7 @@ export async function downloadAudioStream(params: {
           `Audiochunk ${chunk.index} decrypten duurde te lang.`,
         )
 
-        parts.push(decryptedChunk)
+        parts.push(toBlobPart(decryptedChunk))
       }
 
       return { audioBlob: new Blob(parts, { type: manifest.mimeType }), mimeType: manifest.mimeType }

@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
 
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
-import { AnimatedDropdownPanel } from '../AnimatedDropdownPanel'
-import { colors } from '../../theme/colors'
-import { Text } from '../Text'
-import { AanpassenIcon } from '../icons/AanpassenIcon'
-import { EditActionIcon } from '../icons/EditActionIcon'
-import { ChevronDownIcon } from '../icons/ChevronDownIcon'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
+import { AnimatedDropdownPanel } from '../../ui/AnimatedDropdownPanel'
+import { colors } from '../../design/theme/colors'
+import { Text } from '../../ui/Text'
+import { AanpassenIcon } from '../../icons/AanpassenIcon'
+import { EditActionIcon } from '../../icons/EditActionIcon'
+import { ChevronDownIcon } from '../../icons/ChevronDownIcon'
 import { focusAndSelectAll } from '../../utils/textInput'
 
 type TemplateOption = {
@@ -242,7 +242,11 @@ export function EditSessieModal({
             </Pressable>
 
             <AnimatedDropdownPanel visible={isCoacheeMenuOpen} style={coacheeMenuPanelStyle}>
-              <ScrollView style={styles.menuScroll} contentContainerStyle={styles.menuScrollContent} showsVerticalScrollIndicator={false}>
+              <ScrollView
+                style={[styles.menuScroll, { maxHeight: Math.max(0, coacheeMenuMaxHeight - 48) }]}
+                contentContainerStyle={styles.menuScrollContent}
+                showsVerticalScrollIndicator={false}
+              >
                 {coacheeOptions.map((name, index) => {
                   const isFirst = index === 0
                   return (
@@ -263,24 +267,24 @@ export function EditSessieModal({
                     </Pressable>
                   )
                 })}
-                <Pressable
-                  onPress={(event) => {
-                    event.stopPropagation()
-                    setIsCoacheeMenuOpen(false)
-                    onOpenNewCoachee()
-                  }}
-                  style={({ hovered }) => [
-                    styles.menuItem,
-                    styles.menuItemAdd,
-                    coacheeOptions.length === 0 ? styles.menuItemTop : undefined,
-                    styles.menuItemBottom,
-                    hovered ? styles.menuItemAddHovered : undefined,
-                  ]}
-                >
-                  {/* Add client */}
-                  <Text style={styles.menuItemAddText}>+ Nieuwe cliënt</Text>
-                </Pressable>
               </ScrollView>
+              <Pressable
+                onPress={(event) => {
+                  event.stopPropagation()
+                  setIsCoacheeMenuOpen(false)
+                  onOpenNewCoachee()
+                }}
+                style={({ hovered }) => [
+                  styles.menuItem,
+                  styles.menuItemAdd,
+                  coacheeOptions.length === 0 ? styles.menuItemTop : undefined,
+                  styles.menuItemBottom,
+                  hovered ? styles.menuItemAddHovered : undefined,
+                ]}
+              >
+                {/* Add client */}
+                <Text style={styles.menuItemAddText}>+ Nieuwe cli�nt</Text>
+              </Pressable>
             </AnimatedDropdownPanel>
           </View>
         </View>
@@ -631,4 +635,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+
+
 

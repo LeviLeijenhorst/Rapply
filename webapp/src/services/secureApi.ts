@@ -11,6 +11,8 @@ const COLD_START_RETRY_DELAY_MS = 1200
 const MAX_RETRY_ATTEMPTS = 3
 const WARMUP_TIMEOUT_MS = 20_000
 const COLD_START_STATUS_CODES = new Set([502, 503, 504])
+const OFFLINE_ERROR_MESSAGE = 'Geen verbinding. Probeer het later opnieuw'
+const GENERIC_ERROR_MESSAGE = 'Er is iets misgegaan. Probeer het opnieuw.'
 let hasAttemptedServerWarmup = false
 
 function createTimeoutSignal(timeoutMs: number, externalSignal?: AbortSignal): { signal: AbortSignal; cleanup: () => void } {
@@ -38,6 +40,29 @@ function createTimeoutSignal(timeoutMs: number, externalSignal?: AbortSignal): {
 
 function isAbortError(error: unknown) {
   return error instanceof DOMException && error.name === 'AbortError'
+}
+
+function readErrorMessage(error: unknown): string {
+  if (error instanceof Error) return String(error.message || '')
+  return String(error || '')
+}
+
+function isConnectivityError(error: unknown): boolean {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return true
+  }
+
+  const lowered = readErrorMessage(error).toLowerCase()
+  return (
+    lowered.includes('failed to fetch') ||
+    lowered.includes('network request failed') ||
+    lowered.includes('networkerror when attempting to fetch resource') ||
+    lowered.includes('err_network') ||
+    lowered.includes('enotfound') ||
+    lowered.includes('getaddrinfo') ||
+    lowered.includes('offline') ||
+    lowered.includes('dns')
+  )
 }
 
 function wait(ms: number) {
@@ -129,17 +154,29 @@ export async function fetchSecureApi(endpoint: string, init: RequestInit, option
   }
 
   if (lastTimeoutError) {
-    throw new Error('Er is iets misgegaan. Probeer het opnieuw.')
+    throw new Error(GENERIC_ERROR_MESSAGE)
+  }
+
+  if (isConnectivityError(lastNetworkError)) {
+    throw new Error(OFFLINE_ERROR_MESSAGE)
   }
 
   console.error('[secureApi] Network error', {
     url: requestUrl,
     message: lastNetworkError instanceof Error ? lastNetworkError.message : String(lastNetworkError),
   })
-  throw new Error('Er is iets misgegaan. Probeer het opnieuw.')
+  throw new Error(GENERIC_ERROR_MESSAGE)
 }
 
 export async function callSecureApi<T>(endpoint: string, body: unknown, options?: SecureApiOptions): Promise<T> {
+  if (endpoint === '/sessions/update') {
+    const payload = (body || {}) as Record<string, unknown>
+    console.log('[MUTATION_PAYLOAD]', {
+      sessionId: payload.id ?? null,
+      summaryStructured: payload.summaryStructured ?? null,
+      payload,
+    })
+  }
   const response = await fetchSecureApi(endpoint, {
     method: 'POST',
     headers: {

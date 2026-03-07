@@ -1,8 +1,8 @@
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { colors } from '../../theme/colors'
-import { Text } from '../../components/Text'
+import { colors } from '../../design/theme/colors'
+import { Text } from '../../ui/Text'
 
 const WAITLIST_URL = 'https://www.coachscribe.nl/wachtlijst'
 
@@ -101,3 +101,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 })
+

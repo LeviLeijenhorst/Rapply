@@ -1,9 +1,9 @@
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { RotateLeftIcon } from '../../components/icons/RotateLeftIcon'
-import { Text } from '../../components/Text'
-import { colors } from '../../theme/colors'
+import { RotateLeftIcon } from '../../icons/RotateLeftIcon'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
 
 type Props = {
   label: string
@@ -48,4 +48,5 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 })
+
 

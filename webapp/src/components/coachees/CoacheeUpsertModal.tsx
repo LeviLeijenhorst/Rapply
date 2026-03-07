@@ -1,18 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 
-import { AnimatedOverlayModal } from '../AnimatedOverlayModal'
-import { colors } from '../../theme/colors'
-import { Text } from '../Text'
-import { MijnAccountIcon } from '../icons/MijnAccountIcon'
-import { CalendarCircleIcon } from '../icons/CalendarCircleIcon'
-import { ChevronRightIcon } from '../icons/ChevronRightIcon'
+import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
+import { colors } from '../../design/theme/colors'
+import { Text } from '../../ui/Text'
+import { CalendarCircleIcon } from '../../icons/CalendarCircleIcon'
+import { MijnAccountIcon } from '../../icons/MijnAccountIcon'
+import { ChevronRightIcon } from '../../icons/ChevronRightIcon'
 import type { CoacheeUpsertValues } from '../../utils/coacheeProfile'
 
 type Props = {
   visible: boolean
   mode: 'create' | 'edit'
   initialValues: CoacheeUpsertValues
+  trajectoryOptions?: Array<{ id: string; label: string }>
   onClose: () => void
   onSave: (values: CoacheeUpsertValues) => void
 }
@@ -38,11 +39,22 @@ function toIsoDate(value: Date) {
 }
 
 function parseDateInput(value: string): Date | null {
-  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
-  if (!match) return null
-  const day = Number(match[1])
-  const month = Number(match[2])
-  const year = Number(match[3])
+  const trimmed = String(value || '').trim()
+  const dutchMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (dutchMatch) {
+    const day = Number(dutchMatch[1])
+    const month = Number(dutchMatch[2])
+    const year = Number(dutchMatch[3])
+    if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) return null
+    const candidate = new Date(year, month - 1, day)
+    if (candidate.getFullYear() !== year || candidate.getMonth() !== month - 1 || candidate.getDate() !== day) return null
+    return candidate
+  }
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!isoMatch) return null
+  const year = Number(isoMatch[1])
+  const month = Number(isoMatch[2])
+  const day = Number(isoMatch[3])
   if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) return null
   const candidate = new Date(year, month - 1, day)
   if (candidate.getFullYear() !== year || candidate.getMonth() !== month - 1 || candidate.getDate() !== day) return null
@@ -81,7 +93,33 @@ function getCalendarCells(monthDate: Date): CalendarCell[] {
   return cells
 }
 
-export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSave }: Props) {
+function formatInitialsFromLetters(letters: string): string {
+  if (!letters) return ''
+  return `${letters.toUpperCase().split('').join('.')}.`
+}
+
+function normalizeInitialsInput(raw: string, previousValue: string): string {
+  const previousLetters = previousValue.replace(/[^A-Za-z]/g, '')
+  const nextLettersFromRaw = raw.replace(/[^A-Za-z]/g, '')
+  if (previousValue.endsWith('.') && raw === previousValue.slice(0, -1)) {
+    return formatInitialsFromLetters(previousLetters.slice(0, -1))
+  }
+  return formatInitialsFromLetters(nextLettersFromRaw)
+}
+
+function capitalizeFirstCharacter(value: string): string {
+  if (!value) return value
+  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`
+}
+
+function sanitizePhoneInput(raw: string): string {
+  const compact = String(raw || '').replace(/\s+/g, '')
+  const hasLeadingPlus = compact.startsWith('+')
+  const digits = compact.replace(/\D/g, '')
+  return `${hasLeadingPlus ? '+' : ''}${digits}`
+}
+
+export function CoacheeUpsertModal({ visible, mode, initialValues, trajectoryOptions = [], onClose, onSave }: Props) {
   const CALENDAR_PANEL_WIDTH = 336
   const CALENDAR_PANEL_HEIGHT = 362
   const CALENDAR_PANEL_OFFSET = 24
@@ -96,10 +134,11 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
   const containerRef = useRef<View | null>(null)
   const calendarButtonRef = useRef<View | null>(null)
   const calendarPanelRef = useRef<View | null>(null)
-  const firstNameInputRef = useRef<TextInput | null>(null)
+  const initialsInputRef = useRef<TextInput | null>(null)
   const firstSickDayInputRef = useRef<TextInput | null>(null)
   const inputRefs = useRef<Partial<Record<keyof CoacheeUpsertValues, TextInput | null>>>({})
   const calendarCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const monthSlideTranslateX = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
     if (!visible) return
@@ -114,7 +153,7 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
 
   useEffect(() => {
     if (!visible) return
-    const id = setTimeout(() => firstNameInputRef.current?.focus(), 120)
+    const id = setTimeout(() => initialsInputRef.current?.focus(), 120)
     return () => clearTimeout(id)
   }, [visible])
 
@@ -178,14 +217,32 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
   const monthTitle = useMemo(() => new Intl.DateTimeFormat('nl-NL', { month: 'long', year: 'numeric' }).format(visibleMonth), [visibleMonth])
   const calendarCells = useMemo(() => getCalendarCells(visibleMonth), [visibleMonth])
 
+  const hasSelectableTrajectory = trajectoryOptions.length > 0
+
+  useEffect(() => {
+    if (!visible) return
+    if (!hasSelectableTrajectory) return
+    if (values.trajectoryId) return
+    setValues((previous) => ({ ...previous, trajectoryId: trajectoryOptions[0]?.id ?? previous.trajectoryId }))
+  }, [hasSelectableTrajectory, trajectoryOptions, values.trajectoryId, visible])
+
   if (!visible) return null
 
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
-  const title = mode === 'create' ? 'Cliënt toevoegen' : 'Cliënt bewerken'
+  const title = mode === 'create' ? 'Cli�nt toevoegen' : 'Cli�nt bewerken'
   const primaryLabel = mode === 'create' ? 'Toevoegen' : 'Opslaan'
-  const isSaveDisabled = values.firstName.trim().length === 0
+  const trimmedBsn = values.bsn.trim()
+  const isBsnValid = trimmedBsn.length === 0 || /^\d{8,9}$/.test(trimmedBsn)
+  const hasStartDateInput = values.firstSickDay.trim().length > 0
+  const isStartDateValid = hasStartDateInput ? Boolean(parseDateInput(values.firstSickDay)) : true
+  const isSaveDisabled =
+    values.firstName.trim().length === 0 ||
+    values.lastName.trim().length === 0 ||
+    !isBsnValid ||
+    !isStartDateValid
   const selectedDate = parseDateInput(values.firstSickDay)
   const selectedIso = selectedDate ? toIsoDate(selectedDate) : ''
+  const selectedTrajectoryLabel = 'Werkfit maken'
 
   function setValue<K extends keyof CoacheeUpsertValues>(key: K, nextValue: CoacheeUpsertValues[K]) {
     setValues((previous) => ({ ...previous, [key]: nextValue }))
@@ -296,7 +353,25 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
               if (options?.inputRef) options.inputRef.current = instance
             }}
             value={String(value)}
-            onChangeText={(text) => setValue(key, text as CoacheeUpsertValues[keyof CoacheeUpsertValues])}
+            onChangeText={(text) => {
+              if (key === 'initials') {
+                setValue('initials', normalizeInitialsInput(text, values.initials))
+                return
+              }
+              if (key === 'bsn') {
+                setValue('bsn', text.replace(/\D/g, ''))
+                return
+              }
+              if (key === 'lastName') {
+                setValue('lastName', capitalizeFirstCharacter(text))
+                return
+              }
+              if (key === 'clientPhone') {
+                setValue('clientPhone', sanitizePhoneInput(text))
+                return
+              }
+              setValue(key, text as CoacheeUpsertValues[keyof CoacheeUpsertValues])
+            }}
             placeholder={options?.placeholder ?? ''}
             placeholderTextColor="#656565"
             style={[styles.textInput, styles.inputCursorPointer, inputWebStyle]}
@@ -304,6 +379,28 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
         </Pressable>
       </View>
     )
+  }
+
+  function renderTrajectoryDisplay() {
+    return (
+      <View style={styles.field}>
+        <Text style={styles.fieldLabel}>Traject</Text>
+        <View style={[styles.inputRow, styles.inputRowReadOnly]}>
+          <Text style={styles.dropdownValueText}>{selectedTrajectoryLabel || 'Werkfit maken'}</Text>
+        </View>
+      </View>
+    )
+  }
+
+  function shiftVisibleMonth(delta: -1 | 1) {
+    monthSlideTranslateX.setValue(delta * 18)
+    setVisibleMonth((previous) => new Date(previous.getFullYear(), previous.getMonth() + delta, 1))
+    Animated.timing(monthSlideTranslateX, {
+      toValue: 0,
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start()
   }
 
   return (
@@ -321,74 +418,52 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
       </View>
 
       <ScrollView style={styles.bodyScroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-        <Text isSemibold style={styles.sectionTitle}>
-          Persoon
-        </Text>
-        {renderInputRow('Voornaam', 'firstName', { placeholder: 'Voornaam', inputRef: firstNameInputRef, required: true })}
-        {renderInputRow('Achternaam', 'lastName', { placeholder: 'Achternaam' })}
-
-        <Text isSemibold style={styles.sectionTitle}>
-          Cliëntgegevens
-        </Text>
+        {renderInputRow('Voornaam', 'firstName', { placeholder: 'Voornaam', required: true })}
+        {renderInputRow('Voorletters', 'initials', { placeholder: 'Bijv. J.A.', inputRef: initialsInputRef, required: true })}
+        {renderInputRow('Achternaam', 'lastName', { placeholder: 'Achternaam', required: true })}
+        {renderInputRow('Burgerservicenummer', 'bsn', { placeholder: 'BSN' })}
         {renderInputRow('E-mail', 'clientEmail', { placeholder: 'naam@voorbeeld.nl' })}
-        {renderInputRow('Telefoon', 'clientPhone', { placeholder: 'Telefoonnummer' })}
-        {renderInputRow('Adres', 'clientAddress', { placeholder: 'Straat + huisnummer' })}
-        {renderInputRow('Postcode', 'clientPostalCode', { placeholder: '1234 AB' })}
-        {renderInputRow('Woonplaats', 'clientCity', { placeholder: 'Plaats' })}
-
-        <Text isSemibold style={styles.sectionTitle}>
-          Werkgeversgegevens
-        </Text>
-        {renderInputRow('Werkgever', 'employerName', { placeholder: 'Organisatienaam' })}
-        {renderInputRow('Contactpersoon', 'employerContactName', { placeholder: 'Naam contactpersoon' })}
-        {renderInputRow('E-mail', 'employerEmail', { placeholder: 'werkgever@voorbeeld.nl' })}
-        {renderInputRow('Telefoon', 'employerPhone', { placeholder: 'Telefoonnummer' })}
-
-        <Text isSemibold style={styles.sectionTitle}>
-          Verzuim
-        </Text>
+        {renderInputRow('Telefoon', 'clientPhone', { placeholder: '+31612345678' })}
+        {renderTrajectoryDisplay()}
         <View style={styles.field}>
-          <Text style={styles.fieldLabel}>Eerste ziektedag</Text>
+          <Text style={styles.fieldLabel}>Startdatum</Text>
           <View style={styles.dateRow}>
             <Pressable
               onPress={() => firstSickDayInputRef.current?.focus()}
-              style={({ hovered }) => [styles.dateInputWrap, hovered ? styles.dateInputWrapHovered : undefined]}
+              style={({ hovered }) => [
+                styles.dateInputWrap,
+                !isStartDateValid ? styles.dateInputWrapInvalid : undefined,
+                hovered ? styles.dateInputWrapHovered : undefined,
+              ]}
             >
               <TextInput
-                ref={firstSickDayInputRef}
+                ref={(instance) => {
+                  firstSickDayInputRef.current = instance
+                  inputRefs.current.firstSickDay = instance
+                }}
                 value={values.firstSickDay}
                 onChangeText={(text) => {
-                  const formatted = formatDateInput(text, values.firstSickDay)
-                  setValue('firstSickDay', formatted)
-                  setIsCalendarOpen(false)
+                  setValue('firstSickDay', formatDateInput(text, values.firstSickDay))
                 }}
-                onKeyPress={(event) => {
-                  if (event.nativeEvent.key !== 'Backspace') return
-                  if (!values.firstSickDay.endsWith('/')) return
-                  setValue('firstSickDay', values.firstSickDay.slice(0, -1))
-                  setIsCalendarOpen(false)
-                }}
-                placeholder="dd/mm/jjjj"
+                placeholder="DD/MM/JJJJ"
                 placeholderTextColor="#656565"
-                keyboardType="number-pad"
                 style={[styles.textInput, styles.inputCursorPointer, inputWebStyle]}
               />
             </Pressable>
-            <View ref={calendarButtonRef}>
-              <Pressable
-                onPress={() => {
-                  const parsed = parseDateInput(values.firstSickDay)
-                  if (parsed) setVisibleMonth(parsed)
-                  updateCalendarAnchor()
-                  setIsCalendarOpen((previous) => !previous)
-                }}
-                style={({ hovered }) => [styles.calendarButton, hovered ? styles.calendarButtonHovered : undefined]}
-              >
-                <CalendarCircleIcon size={18} />
-              </Pressable>
-            </View>
+            <Pressable
+              ref={calendarButtonRef as any}
+              onPress={() => {
+                updateCalendarAnchor()
+                setIsCalendarOpen((previous) => !previous)
+              }}
+              style={({ hovered }) => [styles.calendarButton, hovered ? styles.calendarButtonHovered : undefined]}
+            >
+              <CalendarCircleIcon size={20} />
+            </Pressable>
           </View>
         </View>
+        {renderInputRow('Ordernummer', 'orderNumber', { placeholder: 'Ordernummer' })}
+        {renderInputRow('Naam contactpersoon UWV', 'uwvContactName', { placeholder: 'Naam contactpersoon UWV' })}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -411,7 +486,7 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
         <View ref={calendarPanelRef} style={[styles.calendarPanel, styles.calendarPanelTransitionBase, isCalendarActive ? styles.calendarPanelTransitionOpen : styles.calendarPanelTransitionClosed, { left: calendarAnchor.left, top: calendarAnchor.top }]}>
           <View style={styles.calendarHeader}>
             <Pressable
-              onPress={() => setVisibleMonth((previous) => new Date(previous.getFullYear(), previous.getMonth() - 1, 1))}
+              onPress={() => shiftVisibleMonth(-1)}
               style={({ hovered }) => [styles.calendarNavButton, hovered ? styles.calendarNavButtonHovered : undefined]}
             >
               <View style={styles.rotatedChevron}>
@@ -422,47 +497,49 @@ export function CoacheeUpsertModal({ visible, mode, initialValues, onClose, onSa
               {monthTitle}
             </Text>
             <Pressable
-              onPress={() => setVisibleMonth((previous) => new Date(previous.getFullYear(), previous.getMonth() + 1, 1))}
+              onPress={() => shiftVisibleMonth(1)}
               style={({ hovered }) => [styles.calendarNavButton, hovered ? styles.calendarNavButtonHovered : undefined]}
             >
               <ChevronRightIcon color={colors.textStrong} size={18} />
             </Pressable>
           </View>
-          <View style={styles.calendarWeekRow}>
-            {dayLabels.map((dayLabel) => (
-              <View key={dayLabel} style={styles.calendarDayLabelWrap}>
-                <Text isSemibold style={styles.calendarDayLabel}>
-                  {dayLabel}
-                </Text>
-              </View>
-            ))}
-          </View>
-          <View style={styles.calendarGrid}>
-            {calendarCells.map((cell) => {
-              const isSelected = cell.isoDate === selectedIso
-              return (
-                <Pressable
-                  key={cell.isoDate}
-                  onPress={() => {
-                    const [year, month, day] = cell.isoDate.split('-').map(Number)
-                    setValue('firstSickDay', formatDateToInput(new Date(year, month - 1, day)))
-                    setVisibleMonth(new Date(year, month - 1, 1))
-                    setIsCalendarOpen(false)
-                  }}
-                  style={({ hovered }) => [
-                    styles.calendarDayButton,
-                    !cell.inCurrentMonth ? styles.calendarDayButtonOutside : undefined,
-                    isSelected ? styles.calendarDayButtonSelected : undefined,
-                    hovered ? styles.calendarDayButtonHovered : undefined,
-                  ]}
-                >
-                  <Text style={[styles.calendarDayText, !cell.inCurrentMonth ? styles.calendarDayTextOutside : undefined, isSelected ? styles.calendarDayTextSelected : undefined]}>
-                    {cell.dayOfMonth}
+          <Animated.View style={{ transform: [{ translateX: monthSlideTranslateX }] }}>
+            <View style={styles.calendarWeekRow}>
+              {dayLabels.map((dayLabel) => (
+                <View key={dayLabel} style={styles.calendarDayLabelWrap}>
+                  <Text isSemibold style={styles.calendarDayLabel}>
+                    {dayLabel}
                   </Text>
-                </Pressable>
-              )
-            })}
-          </View>
+                </View>
+              ))}
+            </View>
+            <View style={styles.calendarGrid}>
+              {calendarCells.map((cell) => {
+                const isSelected = cell.isoDate === selectedIso
+                return (
+                  <Pressable
+                    key={cell.isoDate}
+                    onPress={() => {
+                      const [year, month, day] = cell.isoDate.split('-').map(Number)
+                      setValue('firstSickDay', formatDateToInput(new Date(year, month - 1, day)))
+                      setVisibleMonth(new Date(year, month - 1, 1))
+                      setIsCalendarOpen(false)
+                    }}
+                    style={({ hovered }) => [
+                      styles.calendarDayButton,
+                      !cell.inCurrentMonth ? styles.calendarDayButtonOutside : undefined,
+                      isSelected ? styles.calendarDayButtonSelected : undefined,
+                      hovered ? styles.calendarDayButtonHovered : undefined,
+                    ]}
+                  >
+                    <Text style={[styles.calendarDayText, !cell.inCurrentMonth ? styles.calendarDayTextOutside : undefined, isSelected ? styles.calendarDayTextSelected : undefined]}>
+                      {cell.dayOfMonth}
+                    </Text>
+                  </Pressable>
+                )
+              })}
+            </View>
+          </Animated.View>
         </View>
       ) : null}
       </View>
@@ -486,7 +563,7 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 16,
     backgroundColor: colors.surface,
-    overflow: 'hidden',
+    overflow: 'visible',
   },
   header: {
     width: '100%',
@@ -526,12 +603,6 @@ const styles = StyleSheet.create({
     gap: 12,
     ...( { overflow: 'visible' } as any ),
   },
-  sectionTitle: {
-    marginTop: 4,
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.text,
-  },
   field: {
     width: '100%',
     gap: 8,
@@ -557,6 +628,13 @@ const styles = StyleSheet.create({
   inputRowHovered: {
     borderColor: colors.selected,
   },
+  inputRowDisabled: {
+    opacity: 0.6,
+  },
+  inputRowReadOnly: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#D5D7DA',
+  },
   textInput: {
     flex: 1,
     padding: 0,
@@ -566,6 +644,12 @@ const styles = StyleSheet.create({
   },
   inputCursorPointer: {
     ...( { cursor: 'pointer' } as any ),
+  },
+  dropdownValueText: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.textStrong,
   },
   dateRow: {
     flexDirection: 'row',
@@ -585,6 +669,9 @@ const styles = StyleSheet.create({
   },
   dateInputWrapHovered: {
     borderColor: colors.selected,
+  },
+  dateInputWrapInvalid: {
+    borderColor: '#D92D20',
   },
   calendarButton: {
     width: 52,
@@ -751,3 +838,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+
+
+

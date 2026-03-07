@@ -3,16 +3,22 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions
 
 import { CoacheeCard } from '../components/CoacheeCard'
 import { CoacheeEditMenu } from '../components/CoacheeEditMenu'
-import { AnimatedWidthContainer } from '../components/AnimatedWidthContainer'
-import { SearchIcon } from '../components/icons/SearchIcon'
-import { PlusIcon } from '../components/icons/PlusIcon'
-import { Text } from '../components/Text'
-import { colors } from '../theme/colors'
-import { typography } from '../theme/typography'
+import { AnimatedWidthContainer } from '../ui/AnimatedWidthContainer'
+import { SearchIcon } from '../icons/SearchIcon'
+import { PlusIcon } from '../icons/PlusIcon'
+import { Text } from '../ui/Text'
+import { colors } from '../design/theme/colors'
+import { typography } from '../design/theme/typography'
 import { CoacheeUpsertModal } from '../components/coachees/CoacheeUpsertModal'
 import { ConfirmCoacheeDeleteModal } from '../components/coachees/ConfirmCoacheeDeleteModal'
+import {
+  getCoacheeSessionCounts,
+  getInitialUpsertValuesForEdit,
+  getUpsertTrajectoryOptions,
+  saveCoacheeFromUpsert,
+} from '../logic/coachees/coacheesScreenFunctionality'
 import { useLocalAppData } from '../local/LocalAppDataProvider'
-import { getCoacheeUpsertValues, serializeCoacheeUpsertValues, type CoacheeUpsertValues } from '../utils/coacheeProfile'
+import { getCoacheeUpsertValues, type CoacheeUpsertValues } from '../utils/coacheeProfile'
 
 type Props = {
   onSelectCoachee: (coacheeId: string) => void
@@ -21,7 +27,7 @@ let persistedCoacheesScrollY = 0
 
 export function CoacheesScreen({ onSelectCoachee }: Props) {
   const { width: windowWidth } = useWindowDimensions()
-  const { data, createCoachee, updateCoachee, archiveCoachee, deleteCoachee } = useLocalAppData()
+  const { data, createCoachee, createTrajectory, updateCoachee, updateTrajectory, archiveCoachee, deleteCoachee } = useLocalAppData()
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const searchInputRef = useRef<TextInput | null>(null)
@@ -43,16 +49,12 @@ export function CoacheesScreen({ onSelectCoachee }: Props) {
   const compactSearchExpandedWidth = Math.min(240, Math.max(140, windowWidth - 360))
   const expandedSearchWidth = isCompactHeader ? compactSearchExpandedWidth : 315
   const coachees = data.coachees.filter((c) => !c.isArchived)
-  const coacheeSessionCounts = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const session of data.sessions) {
-      if (session.kind === 'notes') continue
-      if (!session.coacheeId) continue
-      counts.set(session.coacheeId, (counts.get(session.coacheeId) ?? 0) + 1)
-    }
-    return counts
-  }, [data.sessions])
+  const coacheeSessionCounts = useMemo(() => getCoacheeSessionCounts(data), [data])
   const filteredCoachees = useMemo(() => coachees.filter((item) => item.name.toLowerCase().includes(normalizedQuery)), [coachees, normalizedQuery])
+  const upsertTrajectoryOptions = useMemo(
+    () => getUpsertTrajectoryOptions(data, upsertMode, upsertCoacheeId),
+    [data, upsertCoacheeId, upsertMode],
+  )
 
   const pageSize = 20
   const totalPages = Math.max(1, Math.ceil(filteredCoachees.length / pageSize))
@@ -174,14 +176,14 @@ export function CoacheesScreen({ onSelectCoachee }: Props) {
           <View key={item.id} style={styles.listItem}>
             <CoacheeCard
               name={item.name}
-              detailLabel={`${coacheeSessionCounts.get(item.id) ?? 0} verslagen`}
+              detailLabel={`${coacheeSessionCounts.get(item.id) ?? 0} sessies`}
               onPress={() => {
                 onSelectCoachee(item.id)
               }}
               onPressEdit={() => {
                 setUpsertMode('edit')
                 setUpsertCoacheeId(item.id)
-                setUpsertInitialValues(getCoacheeUpsertValues(item))
+                setUpsertInitialValues(getInitialUpsertValuesForEdit(data, item.id))
                 setIsUpsertModalOpen(true)
               }}
               onPressMore={(anchorPoint) => {
@@ -246,34 +248,19 @@ export function CoacheesScreen({ onSelectCoachee }: Props) {
         visible={isUpsertModalOpen}
         mode={upsertMode}
         initialValues={upsertInitialValues}
+        trajectoryOptions={upsertTrajectoryOptions}
         onClose={() => {
           setIsUpsertModalOpen(false)
           setUpsertCoacheeId(null)
         }}
         onSave={(values) => {
-          const serialized = serializeCoacheeUpsertValues(values)
-          const trimmedName = serialized.name.trim()
-          if (upsertMode === 'create') {
-            if (trimmedName.length === 0) {
-              setIsUpsertModalOpen(false)
-              return
-            }
-            createCoachee(serialized)
-            setIsUpsertModalOpen(false)
-            return
-          }
-
-          if (!upsertCoacheeId) {
-            setIsUpsertModalOpen(false)
-            return
-          }
-
-          if (trimmedName.length === 0) {
-            setIsUpsertModalOpen(false)
-            return
-          }
-
-          updateCoachee(upsertCoacheeId, serialized)
+          saveCoacheeFromUpsert({
+            api: { createCoachee, createTrajectory, updateCoachee, updateTrajectory },
+            data,
+            mode: upsertMode,
+            editCoacheeId: upsertCoacheeId,
+            values,
+          })
           setIsUpsertModalOpen(false)
           setUpsertCoacheeId(null)
         }}
@@ -436,3 +423,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 })
+
+
+
+
+

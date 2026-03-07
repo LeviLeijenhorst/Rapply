@@ -1,7 +1,7 @@
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { Text } from './Text'
+import { Text } from '../ui/Text'
 
 type Props = {
   visible: boolean

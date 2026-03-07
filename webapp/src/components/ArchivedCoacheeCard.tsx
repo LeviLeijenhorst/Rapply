@@ -1,13 +1,13 @@
 import React, { useRef, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { colors } from '../theme/colors'
-import { webTransitionSmooth } from '../theme/webTransitions'
-import { CoacheeAvatarIcon } from './icons/CoacheeAvatarIcon'
-import { MoreOptionsIcon } from './icons/MoreOptionsIcon'
-import { PopoverMenu } from './PopoverMenu'
-import { TrashIcon } from './icons/TrashIcon'
-import { Text } from './Text'
+import { colors } from '../design/theme/colors'
+import { webTransitionSmooth } from '../design/theme/webTransitions'
+import { CoacheeAvatarIcon } from '../icons/CoacheeAvatarIcon'
+import { MoreOptionsIcon } from '../icons/MoreOptionsIcon'
+import { PopoverMenu } from '../ui/PopoverMenu'
+import { TrashIcon } from '../icons/TrashIcon'
+import { Text } from '../ui/Text'
 
 type Props = {
   name: string
@@ -158,4 +158,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.hoverBackground,
   },
 })
+
 

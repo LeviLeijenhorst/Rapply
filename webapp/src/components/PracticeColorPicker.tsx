@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, TextInput, View } from 'react-native'
 
-import { Text } from './Text'
+import { Text } from '../ui/Text'
 import { fontSizes, radius } from '../foundation/theme/tokens'
-import { colors } from '../theme/colors'
+import { colors } from '../design/theme/colors'
 
 type Props = {
   value: string
@@ -514,3 +514,5 @@ const styles = StyleSheet.create({
     ...( { outlineStyle: 'none', outlineWidth: 0 } as any ),
   },
 })
+
+

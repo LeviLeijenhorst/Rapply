@@ -1,20 +1,18 @@
 import React from 'react'
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
+import { StyleSheet, useWindowDimensions, View } from 'react-native'
 
-import { colors } from '../theme/colors'
-import { CoacheesIcon } from './icons/CoacheesIcon'
-import { FeedbackIcon } from './icons/FeedbackIcon'
-import { MijnPraktijkIcon } from './icons/MijnPraktijkIcon'
-import { PlusIcon } from './icons/PlusIcon'
-import { SessiesIcon } from './icons/SessiesIcon'
-import { SettingsIcon } from './icons/SettingsIcon'
-import { TemplatesIcon } from './icons/TemplatesIcon'
-import { ArchiefMenuIcon } from './icons/ArchiefMenuIcon'
-import { ContactIcon } from './icons/ContactIcon'
+import { colors } from '../design/theme/colors'
+import { CoacheesIcon } from '../icons/CoacheesIcon'
+import { ClientPageDashboardIcon, ClientPageRapportageIcon } from '../icons/ClientPageSvgIcons'
+import { FeedbackIcon } from '../icons/FeedbackIcon'
+import { MijnPraktijkIcon } from '../icons/MijnPraktijkIcon'
+import { SettingsIcon } from '../icons/SettingsIcon'
+import { ArchiefMenuIcon } from '../icons/ArchiefMenuIcon'
+import { ContactIcon } from '../icons/ContactIcon'
 import { SidebarItem } from './SidebarItem'
-import { Text } from './Text'
+import { features } from '../config/features'
 
-export type SidebarItemKey = 'coachees' | 'sessies' | 'templates' | 'mijnPraktijk' | 'archief' | 'admin' | 'adminContact' | 'adminWachtlijst'
+export type SidebarItemKey = 'coachees' | 'activities' | 'templates' | 'mijnPraktijk' | 'archief' | 'admin' | 'adminContact' | 'adminWachtlijst'
 
 type AnchorPoint = { x: number; y: number }
 
@@ -22,10 +20,7 @@ type Props = {
   selectedSidebarItemKey: SidebarItemKey
   isSettingsSelected: boolean
   isAdminUser?: boolean
-  isCreateSessionDisabled?: boolean
   onSelectSidebarItem: (sidebarItemKey: SidebarItemKey) => void
-  onPressCreateSession: () => void
-  onOpenContact: () => void
   onOpenSettingsMenu: (anchorPoint: AnchorPoint) => void
 }
 
@@ -33,10 +28,7 @@ export function Sidebar({
   selectedSidebarItemKey,
   isSettingsSelected,
   isAdminUser = false,
-  isCreateSessionDisabled = false,
   onSelectSidebarItem,
-  onPressCreateSession,
-  onOpenContact,
   onOpenSettingsMenu,
 }: Props) {
   const { width } = useWindowDimensions()
@@ -64,31 +56,18 @@ export function Sidebar({
   return (
     <View style={[styles.container, isCompact ? styles.containerCompact : undefined]}>
       <View style={styles.topSection}>
-        <Pressable
-          disabled={isCreateSessionDisabled}
-          onPress={onPressCreateSession}
-          style={({ hovered }) => [
-            styles.createSessionButton,
-            isCompact ? styles.createSessionButtonCompact : undefined,
-            isCreateSessionDisabled ? styles.createSessionButtonDisabled : undefined,
-            hovered && !isCreateSessionDisabled ? styles.createSessionButtonHovered : undefined,
-          ]}
-        >
-          {/* Nieuw verslag button */}
-          <View style={[styles.createSessionButtonContent, isCompact ? styles.createSessionButtonContentCompact : undefined]}>
-            <PlusIcon color="#FFFFFF" size={22} />
-            {/* Nieuw verslag button label */}
-            <Text
-              numberOfLines={1}
-              style={[styles.createSessionButtonText, isCompact ? styles.createSessionButtonTextCompact : undefined]}
-            >
-              {isCompact ? '' : 'Nieuw verslag'}
-            </Text>
-          </View>
-        </Pressable>
-
         {/* Sidebar menu items */}
         <View style={styles.menuItems}>
+          {/* Future-facing: only render when explicitly enabled. */}
+          {features.activities ? (
+            <SidebarItem
+              label="Dashboard"
+              isSelected={selectedSidebarItemKey === 'activities'}
+              onPress={() => onSelectSidebarItem('activities')}
+              icon={<ClientPageDashboardIcon color={selectedSidebarItemKey === 'activities' ? selectedColor : '#2C111F'} size={24} />}
+              isCompact={isCompact}
+            />
+          ) : null}
           <SidebarItem
             label="Cliënten"
             isSelected={selectedSidebarItemKey === 'coachees'}
@@ -96,22 +75,17 @@ export function Sidebar({
             icon={<CoacheesIcon color={selectedSidebarItemKey === 'coachees' ? selectedColor : unselectedColor} size={24} />}
             isCompact={isCompact}
           />
+          {features.templates ? (
+            <SidebarItem
+              label="Rapportages"
+              isSelected={selectedSidebarItemKey === 'templates'}
+              onPress={() => onSelectSidebarItem('templates')}
+              icon={<ClientPageRapportageIcon color={selectedSidebarItemKey === 'templates' ? selectedColor : '#2C111F'} size={24} />}
+              isCompact={isCompact}
+            />
+          ) : null}
           <SidebarItem
-            label="Verslagen"
-            isSelected={selectedSidebarItemKey === 'sessies'}
-            onPress={() => onSelectSidebarItem('sessies')}
-            icon={<SessiesIcon color={selectedSidebarItemKey === 'sessies' ? selectedColor : unselectedColor} size={24} />}
-            isCompact={isCompact}
-          />
-          <SidebarItem
-            label="Templates"
-            isSelected={selectedSidebarItemKey === 'templates'}
-            onPress={() => onSelectSidebarItem('templates')}
-            icon={<TemplatesIcon color={selectedSidebarItemKey === 'templates' ? selectedColor : unselectedColor} size={24} />}
-            isCompact={isCompact}
-          />
-          <SidebarItem
-            label="Huisstijl"
+            label="Mijn organisatie"
             isSelected={selectedSidebarItemKey === 'mijnPraktijk'}
             onPress={() => onSelectSidebarItem('mijnPraktijk')}
             icon={<MijnPraktijkIcon color={selectedSidebarItemKey === 'mijnPraktijk' ? selectedColor : unselectedColor} size={24} />}
@@ -159,13 +133,6 @@ export function Sidebar({
       {/* Sidebar bottom items */}
       <View style={styles.bottomSection}>
         <SidebarItem
-          label="Contact"
-          isSelected={false}
-          onPress={onOpenContact}
-          icon={<ContactIcon color={unselectedColor} size={24} />}
-          isCompact={isCompact}
-        />
-        <SidebarItem
           label="Instellingen"
           isSelected={isSettingsSelected}
           onPress={(event) => {
@@ -182,68 +149,21 @@ export function Sidebar({
 const styles = StyleSheet.create({
   container: {
     width: 240,
-    backgroundColor: colors.surface,
-    borderRightColor: colors.border,
-    borderRightWidth: 1,
+    backgroundColor: '#FEFEFE',
     padding: 24,
     justifyContent: 'space-between',
+    shadowColor: 'rgba(101,101,101,1)',
+    shadowOffset: { width: 0, height: -4 },
+    shadowRadius: 8,
+    shadowOpacity: 0.02,
+    ...( { boxShadow: '0px -4px 8px 8px rgba(101, 101, 101, 0.02)' } as any ),
   },
   containerCompact: {
     width: 72,
     padding: 12,
   },
   topSection: {
-    gap: 16,
-  },
-  createSessionButton: {
-    width: 188,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: colors.selected,
-    borderWidth: 1,
-    borderColor: colors.selected,
-    padding: 12,
-    justifyContent: 'center',
-  },
-  createSessionButtonCompact: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    padding: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  createSessionButtonHovered: {
-    backgroundColor: '#A50058',
-  },
-  createSessionButtonDisabled: {
-    backgroundColor: '#C6C6C6',
-    borderColor: '#C6C6C6',
-  },
-  createSessionButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
-    width: '100%',
-  },
-  createSessionButtonContentCompact: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  createSessionButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    ...( { transform: [{ translateY: 1 }] } as any ),
-  },
-  createSessionButtonTextCompact: {
-    fontSize: 0,
-    lineHeight: 0,
-    width: 0,
   },
   menuItems: {
     gap: 8,
@@ -252,3 +172,4 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 })
+

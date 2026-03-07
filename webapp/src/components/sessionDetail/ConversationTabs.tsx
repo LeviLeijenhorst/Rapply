@@ -1,45 +1,52 @@
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { Text } from '../Text'
-import { colors } from '../../theme/colors'
-import { SnelleVragenIcon } from '../icons/SnelleVragenIcon'
-import { NotitiesSessieIcon } from '../icons/NotitiesSessieIcon'
-import { VolledigeSessieIcon } from '../icons/VolledigeSessieIcon'
+import { Text } from '../../ui/Text'
+import { colors } from '../../design/theme/colors'
+import { NotitiesSessieIcon } from '../../icons/NotitiesSessieIcon'
+import { VolledigeSessieIcon } from '../../icons/VolledigeSessieIcon'
+import { StandaardVerslagIcon } from '../../icons/StandaardVerslagIcon'
+import { SessiesIcon } from '../../icons/SessiesIcon'
+import { features } from '../../config/features'
 
-export type ConversationTabKey = 'snelleVragen' | 'notities' | 'volledigeSessie'
+export type ConversationTabKey = 'summary' | 'transcript' | 'activities' | 'notes'
 
 type Props = {
   activeTabKey: ConversationTabKey
   onSelectTab: (tabKey: ConversationTabKey) => void
-  showFullConversationTab?: boolean
 }
 
-export function ConversationTabs({ activeTabKey, onSelectTab, showFullConversationTab = true }: Props) {
+export function ConversationTabs({ activeTabKey, onSelectTab }: Props) {
   return (
     <View style={styles.container}>
       {/* Tabs */}
       <View style={[styles.row, styles.rowWeb]}>
         <TabButton
-          label="Snelle vragen"
-          isSelected={activeTabKey === 'snelleVragen'}
-          icon={(color) => <SnelleVragenIcon color={color} size={24} />}
-          onPress={() => onSelectTab('snelleVragen')}
+          label="Samenvatting"
+          isSelected={activeTabKey === 'summary'}
+          icon={(color) => <StandaardVerslagIcon color={color} size={24} />}
+          onPress={() => onSelectTab('summary')}
         />
         <TabButton
-          label="Notities"
-          isSelected={activeTabKey === 'notities'}
-          icon={(color) => <NotitiesSessieIcon color={color} size={24} />}
-          onPress={() => onSelectTab('notities')}
+          label="Transcript"
+          isSelected={activeTabKey === 'transcript'}
+          icon={(color) => <VolledigeSessieIcon color={color} size={24} />}
+          onPress={() => onSelectTab('transcript')}
         />
-        {showFullConversationTab ? (
+        {features.activities ? (
           <TabButton
-            label="Volledig gesprek"
-            isSelected={activeTabKey === 'volledigeSessie'}
-            icon={(color) => <VolledigeSessieIcon color={color} size={24} />}
-            onPress={() => onSelectTab('volledigeSessie')}
+            label="Activiteiten"
+            isSelected={activeTabKey === 'activities'}
+            icon={(color) => <SessiesIcon color={color} size={24} />}
+            onPress={() => onSelectTab('activities')}
           />
         ) : null}
+        <TabButton
+          label="Notities"
+          isSelected={activeTabKey === 'notes'}
+          icon={(color) => <NotitiesSessieIcon color={color} size={24} />}
+          onPress={() => onSelectTab('notes')}
+        />
       </View>
     </View>
   )
@@ -130,4 +137,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 })
+
 

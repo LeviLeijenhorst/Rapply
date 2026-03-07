@@ -1,12 +1,12 @@
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { colors } from '../../theme/colors'
-import { EditActionIcon } from '../icons/EditActionIcon'
-import { MicrophoneSmallIcon } from '../icons/MicrophoneSmallIcon'
-import { MoreOptionsIcon } from '../icons/MoreOptionsIcon'
-import { StandaardVerslagIcon } from '../icons/StandaardVerslagIcon'
-import { Text } from '../Text'
+import { colors } from '../../design/theme/colors'
+import { EditActionIcon } from '../../icons/EditActionIcon'
+import { MicrophoneSmallIcon } from '../../icons/MicrophoneSmallIcon'
+import { MoreOptionsIcon } from '../../icons/MoreOptionsIcon'
+import { StandaardVerslagIcon } from '../../icons/StandaardVerslagIcon'
+import { Text } from '../../ui/Text'
 
 type Props = {
   title: string
@@ -164,4 +164,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.hoverBackground,
   },
 })
+
 

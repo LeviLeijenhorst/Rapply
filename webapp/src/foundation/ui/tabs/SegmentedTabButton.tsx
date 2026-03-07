@@ -1,8 +1,8 @@
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { Text } from "../../../components/Text";
-import { colors } from "../../../theme/colors";
+import { Text } from "../../../ui/Text";
+import { colors } from "../../../design/theme/colors";
 import { brandColors, fontSizes, radius, spacing } from "../../theme/tokens";
 
 type Props = {
@@ -82,3 +82,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+
+
