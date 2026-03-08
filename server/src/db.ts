@@ -89,6 +89,13 @@ export async function runRequiredSchemaCheck(): Promise<{ missing: MissingSchema
         ('templates','updated_at_unix_ms'),
         ('practice_settings','practice_name'),
         ('practice_settings','website'),
+        ('practice_settings','visit_address'),
+        ('practice_settings','postal_address'),
+        ('practice_settings','postal_code_city'),
+        ('practice_settings','contact_name'),
+        ('practice_settings','contact_role'),
+        ('practice_settings','contact_phone'),
+        ('practice_settings','contact_email'),
         ('practice_settings','tint_color'),
         ('practice_settings','logo_data_url'),
         ('practice_settings','updated_at_unix_ms')

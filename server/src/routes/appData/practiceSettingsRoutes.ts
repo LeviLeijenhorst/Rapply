@@ -15,6 +15,13 @@ export function registerPracticeSettingsRoutes(app: Express): void {
       await updatePracticeSettings(user.userId, {
         practiceName: readOptionalText(payload.practiceName, true),
         website: readOptionalText(payload.website, true),
+        visitAddress: readOptionalText(payload.visitAddress, true),
+        postalAddress: readOptionalText(payload.postalAddress, true),
+        postalCodeCity: readOptionalText(payload.postalCodeCity, true),
+        contactName: readOptionalText(payload.contactName, true),
+        contactRole: readOptionalText(payload.contactRole, true),
+        contactPhone: readOptionalText(payload.contactPhone, true),
+        contactEmail: readOptionalText(payload.contactEmail, true),
         tintColor: readOptionalText(payload.tintColor, true),
         logoDataUrl: readOptionalText(payload.logoDataUrl, true),
         updatedAtUnixMs,

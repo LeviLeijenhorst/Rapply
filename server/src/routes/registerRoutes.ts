@@ -34,6 +34,7 @@ type RegisterRoutesParams = {
   rateLimitWindowMs: number
   rateLimitMaxRequests: number
   azureSpeechConfigured: boolean
+  speechmaticsConfigured: boolean
   getRequiredSchemaCheckStatus: () => { checkedAtUnixMs: number | null; missingRequiredColumns: string[] }
 }
 
@@ -58,6 +59,7 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
     rateLimitWindowMs: params.rateLimitWindowMs,
     rateLimitMaxRequests: params.rateLimitMaxRequests,
     azureSpeechConfigured: params.azureSpeechConfigured,
+    speechmaticsConfigured: params.speechmaticsConfigured,
     getRequiredSchemaCheckStatus: params.getRequiredSchemaCheckStatus,
   })
 

@@ -129,6 +129,7 @@ export async function readAppData(userId: string): Promise<AppData> {
   const sessions = await queryMany<{
     id: string
     coachee_id: string | null
+    trajectory_id: string | null
     title: string
     kind: SessionKind
     audio_blob_id: string | null
@@ -136,6 +137,7 @@ export async function readAppData(userId: string): Promise<AppData> {
     upload_file_name: string | null
     transcript: string | null
     summary: string | null
+    summary_structured_json: unknown | null
     report_date: string | null
     wvp_week_number: string | null
     report_first_sick_day: string | null
@@ -145,10 +147,100 @@ export async function readAppData(userId: string): Promise<AppData> {
     updated_at_unix_ms: number
   }>(
     `
-    select id, coachee_id, title, kind, audio_blob_id, audio_duration_seconds, upload_file_name, transcript, summary, report_date, wvp_week_number, report_first_sick_day, transcription_status, transcription_error, created_at_unix_ms, updated_at_unix_ms
+    select id, coachee_id, trajectory_id, title, kind, audio_blob_id, audio_duration_seconds, upload_file_name, transcript, summary, summary_structured_json, report_date, wvp_week_number, report_first_sick_day, transcription_status, transcription_error, created_at_unix_ms, updated_at_unix_ms
     from public.coachee_sessions
     where user_id = $1
     order by created_at_unix_ms desc
+    `,
+    [userId],
+  )
+
+  const trajectories = await queryMany<{
+    id: string
+    coachee_id: string
+    name: string
+    dienst_type: string
+    uwv_contact_name: string | null
+    uwv_contact_phone: string | null
+    uwv_contact_email: string | null
+    order_number: string | null
+    start_date: string | null
+    plan_van_aanpak_json: unknown | null
+    max_hours: number
+    max_admin_hours: number
+    created_at_unix_ms: number
+    updated_at_unix_ms: number
+  }>(
+    `
+    select id, coachee_id, name, dienst_type, uwv_contact_name, uwv_contact_phone, uwv_contact_email, order_number, start_date, plan_van_aanpak_json, max_hours, max_admin_hours, created_at_unix_ms, updated_at_unix_ms
+    from public.trajectories
+    where user_id = $1
+    order by created_at_unix_ms desc
+    `,
+    [userId],
+  )
+
+  const activities = await queryMany<{
+    id: string
+    trajectory_id: string
+    session_id: string | null
+    template_id: string | null
+    name: string
+    category: string
+    status: "planned" | "executed"
+    planned_hours: number | null
+    actual_hours: number | null
+    source: "manual" | "ai_detected"
+    is_admin: boolean
+    created_at_unix_ms: number
+    updated_at_unix_ms: number
+  }>(
+    `
+    select id, trajectory_id, session_id, template_id, name, category, status, planned_hours, actual_hours, source, is_admin, created_at_unix_ms, updated_at_unix_ms
+    from public.activities
+    where user_id = $1
+    order by created_at_unix_ms desc
+    `,
+    [userId],
+  )
+
+  const activityTemplates = await queryMany<{
+    id: string
+    name: string
+    description: string
+    category: string
+    default_hours: number
+    is_admin: boolean
+    organization_id: string | null
+    is_active: boolean
+    created_at_unix_ms: number
+    updated_at_unix_ms: number
+  }>(
+    `
+    select id, name, coalesce(description, '') as description, category, default_hours, is_admin, organization_id, is_active, created_at_unix_ms, updated_at_unix_ms
+    from public.activity_templates
+    where user_id = $1 or user_id is null
+    order by created_at_unix_ms asc
+    `,
+    [userId],
+  )
+
+  const snippets = await queryMany<{
+    id: string
+    trajectory_id: string
+    item_id: string
+    field: string
+    text: string
+    date: number
+    status: "pending" | "approved" | "rejected"
+    created_at_unix_ms: number
+    updated_at_unix_ms: number
+  }>(
+    `
+    select id, trajectory_id, item_id, field, text, date, status, created_at_unix_ms, updated_at_unix_ms
+    from public.snippets
+    where user_id = $1
+    order by date desc, created_at_unix_ms desc
     `,
     [userId],
   )
@@ -196,12 +288,19 @@ export async function readAppData(userId: string): Promise<AppData> {
   const practiceSettingsRow = await queryOne<{
     practice_name: string
     website: string
+    visit_address: string
+    postal_address: string
+    postal_code_city: string
+    contact_name: string
+    contact_role: string
+    contact_phone: string
+    contact_email: string
     tint_color: string
     logo_data_url: string | null
     updated_at_unix_ms: number
   }>(
     `
-    select practice_name, website, tint_color, logo_data_url, updated_at_unix_ms
+    select practice_name, website, visit_address, postal_address, postal_code_city, contact_name, contact_role, contact_phone, contact_email, tint_color, logo_data_url, updated_at_unix_ms
     from public.practice_settings
     where user_id = $1
     `,
@@ -222,6 +321,7 @@ export async function readAppData(userId: string): Promise<AppData> {
     sessions: sessions.map((row) => ({
       id: row.id,
       coacheeId: row.coachee_id,
+      trajectoryId: row.trajectory_id,
       title: row.title,
       kind: row.kind,
       audioBlobId: row.audio_blob_id,
@@ -229,11 +329,80 @@ export async function readAppData(userId: string): Promise<AppData> {
       uploadFileName: row.upload_file_name,
       transcript: row.transcript,
       summary: row.summary,
+      summaryStructured:
+        row.summary_structured_json && typeof row.summary_structured_json === "object"
+          ? {
+              doelstelling: String((row.summary_structured_json as any).doelstelling || ""),
+              belastbaarheid: String((row.summary_structured_json as any).belastbaarheid || ""),
+              belemmeringen: String((row.summary_structured_json as any).belemmeringen || ""),
+              voortgang: String((row.summary_structured_json as any).voortgang || ""),
+              arbeidsmarktorientatie: String((row.summary_structured_json as any).arbeidsmarktorientatie || ""),
+            }
+          : null,
       reportDate: row.report_date,
       wvpWeekNumber: row.wvp_week_number,
       reportFirstSickDay: row.report_first_sick_day,
       transcriptionStatus: row.transcription_status,
       transcriptionError: row.transcription_error,
+      createdAtUnixMs: Number(row.created_at_unix_ms),
+      updatedAtUnixMs: Number(row.updated_at_unix_ms),
+    })),
+    trajectories: trajectories.map((row) => ({
+      id: row.id,
+      coacheeId: row.coachee_id,
+      name: row.name,
+      dienstType: row.dienst_type,
+      uwvContactName: row.uwv_contact_name,
+      uwvContactPhone: row.uwv_contact_phone,
+      uwvContactEmail: row.uwv_contact_email,
+      orderNumber: row.order_number,
+      startDate: row.start_date,
+      planVanAanpak:
+        row.plan_van_aanpak_json && typeof row.plan_van_aanpak_json === "object"
+          ? {
+              documentId: String((row.plan_van_aanpak_json as any).documentId || ""),
+            }
+          : null,
+      maxHours: Number(row.max_hours),
+      maxAdminHours: Number(row.max_admin_hours),
+      createdAtUnixMs: Number(row.created_at_unix_ms),
+      updatedAtUnixMs: Number(row.updated_at_unix_ms),
+    })),
+    activities: activities.map((row) => ({
+      id: row.id,
+      trajectoryId: row.trajectory_id,
+      sessionId: row.session_id,
+      templateId: row.template_id,
+      name: row.name,
+      category: row.category,
+      status: row.status,
+      plannedHours: row.planned_hours !== null ? Number(row.planned_hours) : null,
+      actualHours: row.actual_hours !== null ? Number(row.actual_hours) : null,
+      source: row.source,
+      isAdmin: row.is_admin,
+      createdAtUnixMs: Number(row.created_at_unix_ms),
+      updatedAtUnixMs: Number(row.updated_at_unix_ms),
+    })),
+    activityTemplates: activityTemplates.map((row) => ({
+      id: row.id,
+      name: row.name,
+      description: row.description ?? "",
+      category: row.category,
+      defaultHours: Number(row.default_hours),
+      isAdmin: row.is_admin,
+      organizationId: row.organization_id,
+      isActive: row.is_active,
+      createdAtUnixMs: Number(row.created_at_unix_ms),
+      updatedAtUnixMs: Number(row.updated_at_unix_ms),
+    })),
+    snippets: snippets.map((row) => ({
+      id: row.id,
+      trajectoryId: row.trajectory_id,
+      itemId: row.item_id,
+      field: row.field,
+      text: row.text,
+      date: Number(row.date),
+      status: row.status,
       createdAtUnixMs: Number(row.created_at_unix_ms),
       updatedAtUnixMs: Number(row.updated_at_unix_ms),
     })),
@@ -254,6 +423,13 @@ export async function readAppData(userId: string): Promise<AppData> {
     practiceSettings: {
       practiceName: practiceSettingsRow?.practice_name ?? "",
       website: practiceSettingsRow?.website ?? "",
+      visitAddress: practiceSettingsRow?.visit_address ?? "",
+      postalAddress: practiceSettingsRow?.postal_address ?? "",
+      postalCodeCity: practiceSettingsRow?.postal_code_city ?? "",
+      contactName: practiceSettingsRow?.contact_name ?? "",
+      contactRole: practiceSettingsRow?.contact_role ?? "",
+      contactPhone: practiceSettingsRow?.contact_phone ?? "",
+      contactEmail: practiceSettingsRow?.contact_email ?? "",
       tintColor: practiceSettingsRow?.tint_color ?? "#BE0165",
       logoDataUrl: practiceSettingsRow?.logo_data_url ?? null,
       updatedAtUnixMs: Number(practiceSettingsRow?.updated_at_unix_ms ?? 0),

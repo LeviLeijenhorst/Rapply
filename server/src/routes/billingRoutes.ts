@@ -28,7 +28,7 @@ export function registerBillingRoutes(app: Express, params: RegisterBillingRoute
         await processMolliePaymentWebhook(paymentId)
       } catch (error: any) {
         const message = String(error?.message || error || "")
-        console.log("[billing:mollie:webhook] failed", { paymentId, message })
+        console.warn("[billing:mollie:webhook] failed", { paymentId, message })
       }
 
       res.status(200).send("ok")

@@ -1,1 +1,1 @@
-export { BreadcrumbBar } from '../components/BreadcrumbBar'
+export { BreadcrumbBar } from '../ui/BreadcrumbBar'

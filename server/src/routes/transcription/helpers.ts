@@ -1,7 +1,8 @@
 import { execute } from "../../db"
 import { env } from "../../env"
-import { readTranscriptionMode } from "../../transcription/mode"
+import { readTranscriptionRuntimeSettings } from "../../transcription/mode"
 import { runAzureSpeechTranscriptionFromEncryptedUpload } from "../../transcription/azureSpeechTranscription"
+import { runSpeechmaticsTranscriptionFromEncryptedUpload } from "../../transcription/speechmaticsTranscription"
 import { computeAudioDurationSecondsFromEncryptedUpload } from "../../transcription/duration"
 import { fetchEncryptedUploadStream } from "../../transcription/storage"
 import type { StartRequest, TranscriptionProvider } from "./types"
@@ -11,16 +12,29 @@ const AZURE_SPEECH_MAX_AUDIO_DURATION_SECONDS = 115 * 60
 
 // Chooses the configured transcription provider based on available secrets.
 export function resolveTranscriptionProvider(): TranscriptionProvider {
-  if (!(env.azureSpeechKey && env.azureSpeechRegion)) return "none"
-  return "azure-speech-fast"
+  if (env.azureSpeechKey && env.azureSpeechRegion) return "azure-speech-fast"
+  if (env.speechmaticsApiKey) return "speechmatics-batch"
+  return "none"
 }
 
 // Chooses the configured provider while honoring runtime mode from admin settings.
 export async function resolveTranscriptionProviderWithRuntimeMode(): Promise<TranscriptionProvider> {
-  if (!(env.azureSpeechKey && env.azureSpeechRegion)) return "none"
-  const mode = await readTranscriptionMode()
-  if (mode === "azure-realtime-live") return "azure-speech-realtime"
-  if (mode === "azure-fast-batch") return "azure-speech-fast"
+  const settings = await readTranscriptionRuntimeSettings()
+
+  if (settings.provider === "azure") {
+    if (!(env.azureSpeechKey && env.azureSpeechRegion)) return "none"
+    if (settings.mode === "azure-realtime-live") return "azure-speech-realtime"
+    if (settings.mode === "azure-fast-batch") return "azure-speech-fast"
+    return "none"
+  }
+
+  if (settings.provider === "speechmatics") {
+    if (!env.speechmaticsApiKey) return "none"
+    if (settings.mode === "azure-realtime-live") return "speechmatics-realtime"
+    if (settings.mode === "azure-fast-batch") return "speechmatics-batch"
+    return "none"
+  }
+
   return "none"
 }
 
@@ -28,6 +42,8 @@ export async function resolveTranscriptionProviderWithRuntimeMode(): Promise<Tra
 export function getProviderMaxAudioBytes(provider: TranscriptionProvider): number | null {
   if (provider === "azure-speech-fast") return AZURE_SPEECH_MAX_AUDIO_BYTES
   if (provider === "azure-speech-realtime") return AZURE_SPEECH_MAX_AUDIO_BYTES
+  if (provider === "speechmatics-batch") return AZURE_SPEECH_MAX_AUDIO_BYTES
+  if (provider === "speechmatics-realtime") return AZURE_SPEECH_MAX_AUDIO_BYTES
   return null
 }
 
@@ -35,6 +51,8 @@ export function getProviderMaxAudioBytes(provider: TranscriptionProvider): numbe
 export function getProviderMaxAudioDurationSeconds(provider: TranscriptionProvider): number | null {
   if (provider === "azure-speech-fast") return AZURE_SPEECH_MAX_AUDIO_DURATION_SECONDS
   if (provider === "azure-speech-realtime") return AZURE_SPEECH_MAX_AUDIO_DURATION_SECONDS
+  if (provider === "speechmatics-batch") return AZURE_SPEECH_MAX_AUDIO_DURATION_SECONDS
+  if (provider === "speechmatics-realtime") return AZURE_SPEECH_MAX_AUDIO_DURATION_SECONDS
   return null
 }
 
@@ -91,6 +109,14 @@ export async function runTranscription(params: {
   const transcriptionStream = await fetchEncryptedUploadStream({ blobName: params.uploadPath })
   if (params.provider === "azure-speech-fast" || params.provider === "azure-speech-realtime") {
     return await runAzureSpeechTranscriptionFromEncryptedUpload({
+      encryptedStream: transcriptionStream,
+      keyBase64: params.keyBase64,
+      mimeType: params.mimeType,
+      languageCode: params.languageCode,
+    })
+  }
+  if (params.provider === "speechmatics-batch" || params.provider === "speechmatics-realtime") {
+    return await runSpeechmaticsTranscriptionFromEncryptedUpload({
       encryptedStream: transcriptionStream,
       keyBase64: params.keyBase64,
       mimeType: params.mimeType,

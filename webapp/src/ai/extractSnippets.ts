@@ -1,1 +1,1 @@
-export * from '../services/snippetExtraction'
+export * from '../api/snippetExtraction'

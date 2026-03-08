@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ScrollView } from 'react-native'
 
-import { clearQuickQuestionsChatForCoachee, loadQuickQuestionsChatForCoachee, saveQuickQuestionsChatForCoachee } from '../../local/quickQuestionsChatStore'
-import type { Coachee, Session, WrittenReport } from '../../local/types'
+import { clearQuickQuestionsChatForCoachee, loadQuickQuestionsChatForCoachee, saveQuickQuestionsChatForCoachee } from '../../storage/quickQuestionsChatStore'
+import type { Coachee, Session, WrittenReport } from '../../storage/types'
 import { fetchBillingStatus } from '../../api/billing'
 import { sendAiChat, type ApiChatMessage } from '../../api/ai'
-import { createChatMessageId, type ChatStateMessage } from '../../utils/chatState'
-import { buildCoacheeStructuredSystemMessages } from '../../utils/quickQuestionsContext'
+import { createChatMessageId, type ChatStateMessage } from '../../types/chatState'
+import { buildCoacheeStructuredSystemMessages } from '../../content/quickQuestionsContext'
 
 type SessionContextInput = {
   id: string

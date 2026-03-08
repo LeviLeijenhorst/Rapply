@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Button from "@/components/Button";
-import logo from "@/home/logo.png";
 
 const navigationLinks = [
   { label: "Product", destination: "/product" },
@@ -70,7 +69,7 @@ export default function NavigationBar() {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <Image
-              src={logo}
+              src="/group-820.svg"
               alt="CoachScribe logo"
               width={261}
               height={132}
@@ -250,5 +249,7 @@ export default function NavigationBar() {
     </header>
   );
 }
+
+
 
 

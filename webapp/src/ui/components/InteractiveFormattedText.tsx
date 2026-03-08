@@ -1,0 +1,1 @@
+export { InteractiveFormattedText } from '../InteractiveFormattedText'

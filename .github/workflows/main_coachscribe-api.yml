@@ -48,6 +48,17 @@ jobs:
       contents: read #This is required for actions/checkout
 
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js version
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+
+      - name: Install migration dependencies
+        run: npm ci
+        working-directory: server
+
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
@@ -60,6 +71,27 @@ jobs:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_026CAF20A63C401BAFE74DEFEFDC9705 }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_8C9D5538B80C4FB3A20A76B81042D3A0 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_BB51D545A8B64B09AB5C83887B1655AD }}
+
+      - name: Read DB settings from App Service
+        run: |
+          DATABASE_URL="$(az webapp config appsettings list \
+            --resource-group 'jnlsolutions-coachscribe' \
+            --name 'coachscribe-api' \
+            --query "[?name=='DATABASE_URL'].value | [0]" -o tsv)"
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL app setting is empty for coachscribe-api"
+            exit 1
+          fi
+          DATABASE_SSL="$(az webapp config appsettings list \
+            --resource-group 'jnlsolutions-coachscribe' \
+            --name 'coachscribe-api' \
+            --query "[?name=='DATABASE_SSL'].value | [0]" -o tsv)"
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+          echo "DATABASE_SSL=${DATABASE_SSL:-1}" >> "$GITHUB_ENV"
+
+      - name: Apply database migrations
+        run: npm run apply-db-migrations
+        working-directory: server
 
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp

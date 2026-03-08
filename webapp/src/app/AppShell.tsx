@@ -1,2 +1,2 @@
-import { AppShell } from '../components/AppShell'
+import { AppShell } from '../ui/AppShell'
 export { AppShell }

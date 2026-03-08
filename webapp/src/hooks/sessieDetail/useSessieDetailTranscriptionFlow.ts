@@ -2,8 +2,8 @@ import { useRef } from 'react'
 
 import { downloadAudioStream } from '../../audio/downloadAudioStream'
 import { clearPendingPreviewAudio, clearPendingPreviewAudioIfEligible, getPendingPreviewAudioForTranscription, markPendingPreviewTranscriptionSucceeded } from '../../audio/pendingPreviewStore'
-import type { Session, StructuredSessionSummary } from '../../local/types'
-import { loadAudioBlobRemote } from '../../services/audioBlobs'
+import type { Session, StructuredSessionSummary } from '../../storage/types'
+import { loadAudioBlobRemote } from '../../api/audioBlobs'
 import { fetchBillingStatus } from '../../api/billing'
 import { cancelTranscriptionOperation, isTranscriptionCancelledError, transcribeAudio } from '../../api/transcription'
 import {
@@ -14,9 +14,9 @@ import {
   setTranscriptionAbortController,
   setTranscriptionOperationId,
   startTranscriptionRun,
-} from '../../services/transcriptionRunStore'
-import { hasStructuredSummaryContent, mapReportMarkdownToStructuredSummary } from '../../utils/structuredSummary'
-import { normalizeTranscriptionError } from '../../utils/transcriptionError'
+} from '../../api/transcriptionRunStore'
+import { hasStructuredSummaryContent, mapReportMarkdownToStructuredSummary } from '../../types/structuredSummary'
+import { normalizeTranscriptionError } from '../../audio/transcriptionError'
 
 type TranscriptionStatus = Session['transcriptionStatus']
 type BillingStatus = {

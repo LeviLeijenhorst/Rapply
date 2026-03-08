@@ -6,16 +6,22 @@ import { derivePlanStateFromRevenueCatSubscriber, fetchRevenueCatSubscriber } fr
 import { readBillingStatus } from "../../billing/store"
 import { env } from "../../env"
 import { asyncHandler, sendError } from "../../http"
-import { readTranscriptionMode } from "../../transcription/mode"
+import { readTranscriptionRuntimeSettings } from "../../transcription/mode"
 import { chargeSecondsIdempotent } from "../../transcription/store"
 import { applyEmailBillingOverrides, getNonExpiringTotalSecondsOverrideForEmail } from "../billingOverrides"
 import { markOperationCompleted, markOperationFailed } from "./helpers"
 import type { RegisterTranscriptionRoutesParams } from "./types"
 
 const AZURE_SPEECH_TOKEN_TTL_SECONDS = 540
+const SPEECHMATICS_REALTIME_TOKEN_TTL_SECONDS = 540
 
 function normalizeRegion(value: string): string {
   return String(value || "").trim().toLowerCase()
+}
+
+function normalizeSpeechmaticsRealtimeUrl(value: string): string {
+  const trimmed = String(value || "").trim()
+  return trimmed.replace(/\/+$/g, "") || "wss://eu2.rt.speechmatics.com/v2"
 }
 
 async function issueAzureSpeechToken(): Promise<{ token: string; region: string; expiresInSeconds: number }> {
@@ -44,17 +50,63 @@ async function issueAzureSpeechToken(): Promise<{ token: string; region: string;
   }
 }
 
+async function issueSpeechmaticsRealtimeToken(): Promise<{ jwt: string; realtimeUrl: string; expiresInSeconds: number }> {
+  const apiKey = String(env.speechmaticsApiKey || "").trim()
+  if (!apiKey) {
+    throw new Error("Speechmatics is not configured")
+  }
+
+  const managementUrl = "https://mp.speechmatics.com/v1/api_keys?type=rt"
+  const response = await fetch(managementUrl, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      ttl: SPEECHMATICS_REALTIME_TOKEN_TTL_SECONDS,
+    }),
+  })
+
+  const bodyText = await response.text().catch(() => "")
+  if (!response.ok) {
+    throw new Error(`Failed to issue Speechmatics realtime token (${response.status})`)
+  }
+
+  let payload: any = null
+  try {
+    payload = bodyText ? JSON.parse(bodyText) : null
+  } catch {
+    payload = null
+  }
+
+  const jwt = String(payload?.key_value || payload?.jwt || payload?.token || "").trim()
+  if (!jwt) {
+    throw new Error("Failed to issue Speechmatics realtime token (empty token)")
+  }
+
+  return {
+    jwt,
+    realtimeUrl: normalizeSpeechmaticsRealtimeUrl(env.speechmaticsRealtimeUrl),
+    expiresInSeconds: SPEECHMATICS_REALTIME_TOKEN_TTL_SECONDS,
+  }
+}
+
 export function registerTranscriptionRealtimeRoutes(app: Express, params: RegisterTranscriptionRoutesParams): void {
   app.post(
     "/transcription/runtime-config",
     params.rateLimitTranscription,
     asyncHandler(async (req, res) => {
       await requireAuthenticatedUser(req)
-      const mode = await readTranscriptionMode()
+      const settings = await readTranscriptionRuntimeSettings()
       const azureSpeechConfigured = !!String(env.azureSpeechKey || "").trim() && !!normalizeRegion(env.azureSpeechRegion)
+      const speechmaticsConfigured = !!String(env.speechmaticsApiKey || "").trim()
       res.status(200).json({
-        mode,
+        mode: settings.mode,
+        provider: settings.provider,
+        providerConfigured: settings.provider === "azure" ? azureSpeechConfigured : speechmaticsConfigured,
         azureSpeechConfigured,
+        speechmaticsConfigured,
       })
     }),
   )
@@ -64,21 +116,40 @@ export function registerTranscriptionRealtimeRoutes(app: Express, params: Regist
     params.rateLimitTranscription,
     asyncHandler(async (req, res) => {
       await requireAuthenticatedUser(req)
-      const mode = await readTranscriptionMode()
-      if (mode !== "azure-realtime-live") {
+      const settings = await readTranscriptionRuntimeSettings()
+      if (settings.mode !== "azure-realtime-live") {
         sendError(res, 409, "Realtime transcription is disabled")
         return
       }
-      try {
-        const tokenResult = await issueAzureSpeechToken()
-        res.status(200).json({
-          mode,
-          ...tokenResult,
-        })
-      } catch (error: any) {
-        const message = String(error?.message || error)
-        sendError(res, 500, message)
+      if (settings.provider === "azure") {
+        try {
+          const tokenResult = await issueAzureSpeechToken()
+          res.status(200).json({
+            mode: settings.mode,
+            provider: settings.provider,
+            ...tokenResult,
+          })
+        } catch (error: any) {
+          const message = String(error?.message || error)
+          sendError(res, 500, message)
+        }
+        return
       }
+      if (settings.provider === "speechmatics") {
+        try {
+          const tokenResult = await issueSpeechmaticsRealtimeToken()
+          res.status(200).json({
+            mode: settings.mode,
+            provider: settings.provider,
+            ...tokenResult,
+          })
+        } catch (error: any) {
+          const message = String(error?.message || error)
+          sendError(res, 500, message)
+        }
+        return
+      }
+      sendError(res, 500, "Unsupported realtime provider")
     }),
   )
 
@@ -87,8 +158,8 @@ export function registerTranscriptionRealtimeRoutes(app: Express, params: Regist
     params.rateLimitTranscription,
     asyncHandler(async (req, res) => {
       const user = await requireAuthenticatedUser(req)
-      const mode = await readTranscriptionMode()
-      if (mode !== "azure-realtime-live") {
+      const settings = await readTranscriptionRuntimeSettings()
+      if (settings.mode !== "azure-realtime-live") {
         sendError(res, 409, "Realtime transcription is disabled")
         return
       }

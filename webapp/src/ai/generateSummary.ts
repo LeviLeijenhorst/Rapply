@@ -1,1 +1,1 @@
-export { generateSummary } from '../services/summary'
+export { generateSummary } from '../api/summary'

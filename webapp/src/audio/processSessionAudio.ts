@@ -1,7 +1,7 @@
-import { createAudioBlobRemote } from '../services/audioBlobs'
-import { chargeRealtimeTranscription } from '../services/realtimeTranscription'
-import { isTranscriptionCancelledError, transcribeAudio } from '../services/transcription'
-import { generateStructuredSummary } from '../services/summary'
+import { createAudioBlobRemote } from '../api/audioBlobs'
+import { chargeRealtimeTranscription } from '../api/realtimeTranscription'
+import { isTranscriptionCancelledError, transcribeAudio } from '../api/transcription'
+import { generateStructuredSummary } from '../api/summary'
 import {
   finishTranscriptionRun,
   isTranscriptionRunActive,
@@ -9,8 +9,8 @@ import {
   setTranscriptionAbortController,
   setTranscriptionOperationId,
   startTranscriptionRun,
-} from '../services/transcriptionRunStore'
-import { normalizeTranscriptionError } from '../utils/transcriptionError'
+} from '../api/transcriptionRunStore'
+import { normalizeTranscriptionError } from '../audio/transcriptionError'
 import {
   clearPendingPreviewAudioIfEligible,
   clearPendingPreviewAudio,
@@ -18,7 +18,7 @@ import {
   markPendingPreviewAudioUploaded,
   setPendingPreviewProcessingState,
 } from './pendingPreviewStore'
-import type { Session } from '../local/types'
+import type { Session } from '../storage/types'
 
 type SessionUpdate = {
   audioBlobId?: string | null

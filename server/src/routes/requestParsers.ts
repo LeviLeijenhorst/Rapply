@@ -10,6 +10,22 @@ export {
   readUnixMs,
 } from "./parsers/scalars"
 export { readOptionalRecoveryPolicy, readRequiredObjectType, validateArgon2Params } from "./parsers/e2ee"
-export { readOptionalTranscriptionStatus, readCoachee, readSession, readNote, readWrittenReport, readTemplateSection, readTemplate } from "./parsers/appData"
+export {
+  readOptionalTranscriptionStatus,
+  readOptionalSessionType,
+  readOptionalActivityStatus,
+  readOptionalActivitySource,
+  readOptionalSnippetStatus,
+  readCoachee,
+  readSession,
+  readTrajectory,
+  readActivity,
+  readActivityTemplate,
+  readSnippet,
+  readNote,
+  readWrittenReport,
+  readTemplateSection,
+  readTemplate,
+} from "./parsers/appData"
 export { readSummaryTemplate } from "./parsers/summary"
 export type { SummaryTemplate } from "./parsers/summary"

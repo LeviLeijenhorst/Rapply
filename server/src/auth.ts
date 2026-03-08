@@ -56,25 +56,23 @@ export async function requireAuthenticatedUser(req: Request): Promise<Authentica
     try {
       const header = decodeProtectedHeader(token) as any
       const payload = decodeJwt(token) as any
-      console.log("[auth] Entra token verification failed", {
+      console.warn("[auth] Entra token verification failed", {
         message,
         expectedAudience: env.entraAudience,
-        token: {
-          iss: payload?.iss,
-          aud: payload?.aud,
-          exp: payload?.exp,
-          scp: payload?.scp,
-          roles: payload?.roles,
-          tid: payload?.tid,
-          oid: payload?.oid,
-        },
-        header: {
-          kid: header?.kid,
-          alg: header?.alg,
+        tokenDiagnostics: {
+          hasIssuer: Boolean(payload?.iss),
+          audienceType: Array.isArray(payload?.aud) ? "array" : typeof payload?.aud,
+          hasExpiry: Number.isFinite(Number(payload?.exp)),
+          hasScopes: typeof payload?.scp === "string" && payload.scp.trim().length > 0,
+          hasRoles: Array.isArray(payload?.roles) && payload.roles.length > 0,
+          tenantClaimPresent: Boolean(payload?.tid),
+          objectIdClaimPresent: Boolean(payload?.oid),
+          keyId: typeof header?.kid === "string" ? header.kid : null,
+          algorithm: typeof header?.alg === "string" ? header.alg : null,
         },
       })
     } catch {
-      console.log("[auth] Entra token verification failed", { message, expectedAudience: env.entraAudience })
+      console.warn("[auth] Entra token verification failed", { message, expectedAudience: env.entraAudience })
     }
     throw createAuthError("Invalid or expired session")
   }
@@ -103,8 +101,7 @@ export async function requireAuthenticatedUser(req: Request): Promise<Authentica
       throw authError as Error
     }
     const message = String(e?.message || e || "")
-    const stack = typeof e?.stack === "string" ? e.stack : null
-    console.log("[auth] Failed to ensure user in DB", { message, stack })
+    console.warn("[auth] Failed to ensure user in DB", { message })
     throw createDependencyError("Backend temporarily unavailable")
   }
 }

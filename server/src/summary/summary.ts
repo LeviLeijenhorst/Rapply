@@ -4,6 +4,7 @@ import { generateSummaryWithAzureOpenAi } from "./azureOpenAiSummary"
 type GenerateSummaryParams = {
   transcript: string
   template?: { name: string; sections: { title: string; description: string }[] }
+  responseMode?: "markdown" | "structured_item_summary"
 }
 
 // Intent: generateSummary

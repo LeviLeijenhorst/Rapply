@@ -61,10 +61,15 @@ async function ensureUsersAccountTypeColumn(): Promise<void> {
   await ensureUsersAccountTypeColumnPromise
 }
 
-// Intent: ensureUserFromEntra
-export async function ensureUserFromEntra(params: { entraUserId: string; email: string | null; displayName: string | null }): Promise<AppUser> {
+// Startup-safe compatibility warmup for user schema columns.
+export async function ensureUsersSchemaCompatibility(): Promise<void> {
   await ensureUsersAllowlistColumn()
   await ensureUsersAccountTypeColumn()
+}
+
+// Intent: ensureUserFromEntra
+export async function ensureUserFromEntra(params: { entraUserId: string; email: string | null; displayName: string | null }): Promise<AppUser> {
+  await ensureUsersSchemaCompatibility()
 
   const entraUserId = String(params.entraUserId || "").trim()
   if (!entraUserId) {

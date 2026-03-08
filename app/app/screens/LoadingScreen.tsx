@@ -1,14 +1,32 @@
 import React, { useEffect } from "react"
-import { View, StyleSheet, ActivityIndicator } from "react-native"
+import { View, StyleSheet, Animated, Easing } from "react-native"
 import { colors, spacing } from "./constants"
 import { useNavigation } from "@react-navigation/native"
 import { logger } from "@/utils/logger"
 import { getAuthSession, onAuthSessionChange } from "@/services/auth"
 import * as Linking from "expo-linking"
 import { getMobileE2eeStatus } from "@/services/e2eeMobile"
+import CoachScribeMark from "./svgs/CoachScribeMark"
 
 export default function LoadingScreen() {
   const navigation = useNavigation<any>()
+  const spin = React.useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    )
+    loop.start()
+
+    return () => {
+      loop.stop()
+    }
+  }, [spin])
 
   useEffect(() => {
     let isCancelled = false
@@ -76,7 +94,17 @@ export default function LoadingScreen() {
 
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color={colors.orange} />
+      <Animated.View
+        style={{
+          transform: [
+            {
+              rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }),
+            },
+          ],
+        }}
+      >
+        <CoachScribeMark size={36} color={colors.orange} strokeWidth={1} />
+      </Animated.View>
     </View>
   )
 }

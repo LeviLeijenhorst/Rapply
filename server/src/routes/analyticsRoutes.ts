@@ -62,6 +62,12 @@ async function ensureAnalyticsSchema(): Promise<void> {
   await ensureAnalyticsSchemaPromise
 }
 
+// Startup-safe entrypoint: warm analytics schema once so request paths do not need
+// to trigger initial DDL side effects.
+export async function prepareAnalyticsRuntimeSchema(): Promise<void> {
+  await ensureAnalyticsSchema()
+}
+
 async function requireAdminUserEmail(req: Parameters<typeof requireAuthenticatedUser>[0]): Promise<string> {
   const user = await requireAuthenticatedUser(req)
   const normalizedUserEmail = normalizeEmail(user.email)
@@ -214,6 +220,11 @@ function readRequesterContext(req: Request): { ipAddress: string | null; userAge
 }
 
 export function registerAnalyticsRoutes(app: Express, params: RegisterAnalyticsRoutesParams): void {
+  void prepareAnalyticsRuntimeSchema().catch((error: any) => {
+    const message = String(error?.message || error || "")
+    console.warn("[analytics] runtime schema warmup failed", { message })
+  })
+
   app.post(
     "/analytics/public/events",
     params.rateLimitPublic,

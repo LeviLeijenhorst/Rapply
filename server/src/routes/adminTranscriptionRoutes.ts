@@ -2,7 +2,12 @@ import type { Express, RequestHandler } from "express"
 import { requireAuthenticatedUser } from "../auth"
 import { isAdminEmail, normalizeEmail } from "../admin"
 import { asyncHandler, sendError } from "../http"
-import { parseTranscriptionMode, readTranscriptionModeWithMetadata, writeTranscriptionMode } from "../transcription/mode"
+import {
+  parseTranscriptionMode,
+  parseTranscriptionProvider,
+  readTranscriptionModeWithMetadata,
+  writeTranscriptionRuntimeSettings,
+} from "../transcription/mode"
 
 type RegisterAdminTranscriptionRoutesParams = {
   rateLimitAccount: RequestHandler
@@ -48,13 +53,15 @@ export function registerAdminTranscriptionRoutes(app: Express, params: RegisterA
         return
       }
 
-      const mode = parseTranscriptionMode(req.body?.mode)
-      if (!mode) {
-        sendError(res, 400, "Invalid mode")
+      const current = await readTranscriptionModeWithMetadata()
+      const mode = req.body?.mode === undefined ? current.mode : parseTranscriptionMode(req.body?.mode)
+      const provider = req.body?.provider === undefined ? current.provider : parseTranscriptionProvider(req.body?.provider)
+      if (!mode || !provider) {
+        sendError(res, 400, "Invalid mode or provider")
         return
       }
 
-      await writeTranscriptionMode({ mode, updatedBy: adminEmail })
+      await writeTranscriptionRuntimeSettings({ mode, provider, updatedBy: adminEmail })
       const settings = await readTranscriptionModeWithMetadata()
       res.status(200).json(settings)
     }),

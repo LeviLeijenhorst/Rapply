@@ -1,0 +1,265 @@
+﻿import React, { useMemo, useState } from 'react'
+import { Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native'
+
+import { colors } from '../../design/theme/colors'
+import { PlusIcon } from '../../icons/PlusIcon'
+import { useLocalAppData } from '../../storage/LocalAppDataProvider'
+import { Text } from '../../ui/Text'
+import { SearchField } from '../../ui/inputs/SearchField'
+import { ClientTableRow } from './components/ClientTableRow'
+import { selectClientListItems } from './selectors/clientListSelectors'
+import { filterClientListItems } from './viewModels/clientsViewModel'
+
+type Props = {
+  onSelectCoachee: (coacheeId: string) => void
+  onOpenNewClientPage?: () => void
+}
+
+export function ClientsScreen({ onSelectCoachee, onOpenNewClientPage }: Props) {
+  const { width: windowWidth } = useWindowDimensions()
+  const { data } = useLocalAppData()
+  const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
+
+  const allItems = useMemo(() => selectClientListItems(data), [data])
+  const visibleItems = useMemo(() => filterClientListItems(allItems, query), [allItems, query])
+
+  const pageSize = 11
+  const totalPages = Math.max(1, Math.ceil(visibleItems.length / pageSize))
+  const currentPage = Math.min(page, totalPages)
+  const paginatedItems = visibleItems.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  const searchInputRef = React.useRef<TextInput | null>(null)
+  const isCompactHeader = windowWidth < 950
+
+  React.useEffect(() => {
+    setPage(1)
+  }, [query])
+
+  return (
+    <View style={styles.container}>
+      <View style={[styles.headerRow, isCompactHeader ? styles.headerRowCompact : undefined]}>
+        <SearchField
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Zoek cliënten..."
+          inputRef={searchInputRef}
+          containerStyle={styles.searchField}
+        />
+
+        <Pressable
+          onPress={() => onOpenNewClientPage?.()}
+          style={({ hovered }) => [styles.newClientButton, hovered ? styles.newClientButtonHovered : undefined]}
+        >
+          <PlusIcon color={colors.selected} size={18} />
+          <Text isSemibold style={styles.newClientButtonText}>
+            Nieuwe cliënt
+          </Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.tableCard}>
+        <View style={styles.tableHeaderRow}>
+          <Text isSemibold style={[styles.headerText, styles.clientColumn]}>Cliënt</Text>
+          <Text isSemibold style={[styles.headerText, styles.numberColumn]}>Trajecten</Text>
+          <Text isSemibold style={[styles.headerText, styles.numberColumn]}>Sessies</Text>
+          <Text isSemibold style={[styles.headerText, styles.numberColumn]}>Rapportages</Text>
+          <Text isSemibold style={[styles.headerText, styles.statusColumn]}>Status</Text>
+          <Text isSemibold style={[styles.headerText, styles.lastSessionColumn]}>Laatste sessie</Text>
+          <View style={styles.chevronColumn} />
+        </View>
+
+        <ScrollView style={styles.tableBody} showsVerticalScrollIndicator={false}>
+          {paginatedItems.map((item) => (
+            <ClientTableRow key={item.clientId} item={item} onPress={onSelectCoachee} />
+          ))}
+          {paginatedItems.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>Geen cliënten gevonden.</Text>
+            </View>
+          ) : null}
+        </ScrollView>
+      </View>
+
+      <View style={styles.footerRow}>
+        <Text style={styles.footerInfo}>
+          Toont {paginatedItems.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}-
+          {(currentPage - 1) * pageSize + paginatedItems.length} van {visibleItems.length} cliënten
+        </Text>
+        {totalPages > 1 ? (
+          <View style={styles.paginationRow}>
+            <Pressable
+              onPress={() => setPage((value) => Math.max(1, value - 1))}
+              disabled={currentPage <= 1}
+              style={({ hovered }) => [
+                styles.paginationButton,
+                currentPage <= 1 ? styles.paginationButtonDisabled : undefined,
+                hovered && currentPage > 1 ? styles.paginationButtonHovered : undefined,
+              ]}
+            >
+              <Text style={styles.paginationButtonText}>Vorige</Text>
+            </Pressable>
+            <View style={styles.paginationBadge}>
+              <Text style={styles.paginationBadgeText}>{currentPage}</Text>
+            </View>
+            <Pressable
+              onPress={() => setPage((value) => Math.min(totalPages, value + 1))}
+              disabled={currentPage >= totalPages}
+              style={({ hovered }) => [
+                styles.paginationButton,
+                currentPage >= totalPages ? styles.paginationButtonDisabled : undefined,
+                hovered && currentPage < totalPages ? styles.paginationButtonHovered : undefined,
+              ]}
+            >
+              <Text style={styles.paginationButtonText}>Volgende</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    gap: 14,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  headerRowCompact: {
+    flexWrap: 'wrap',
+  },
+  searchField: {
+    width: 296,
+    maxWidth: '100%',
+  },
+  newClientButton: {
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.selected,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  newClientButtonHovered: {
+    backgroundColor: '#FFF7FB',
+  },
+  newClientButtonText: {
+    fontSize: 16,
+    lineHeight: 20,
+    color: colors.selected,
+  },
+  tableCard: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DFE0E2',
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  tableHeaderRow: {
+    minHeight: 58,
+    borderBottomWidth: 1,
+    borderBottomColor: '#DFE0E2',
+    paddingHorizontal: 16,
+    backgroundColor: '#F9FAFB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  tableBody: {
+    flex: 1,
+  },
+  headerText: {
+    fontSize: 16,
+    lineHeight: 20,
+    color: 'rgba(44,17,31,0.5)',
+  },
+  clientColumn: {
+    flex: 1.7,
+    minWidth: 180,
+  },
+  numberColumn: {
+    width: 86,
+  },
+  statusColumn: {
+    width: 110,
+  },
+  lastSessionColumn: {
+    width: 140,
+  },
+  chevronColumn: {
+    width: 24,
+  },
+  emptyState: {
+    height: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textSecondary,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  footerInfo: {
+    fontSize: 16,
+    lineHeight: 20,
+    color: 'rgba(44,17,31,0.5)',
+  },
+  paginationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  paginationButton: {
+    minWidth: 92,
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#DFE0E2',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  paginationButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  paginationButtonDisabled: {
+    opacity: 0.4,
+  },
+  paginationButtonText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.text,
+  },
+  paginationBadge: {
+    minWidth: 36,
+    height: 28,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.selected,
+  },
+  paginationBadgeText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#FFFFFF',
+  },
+})

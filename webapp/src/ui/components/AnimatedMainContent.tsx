@@ -1,0 +1,1 @@
+export { AnimatedMainContent } from '../AnimatedMainContent'

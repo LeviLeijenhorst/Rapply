@@ -1,0 +1,315 @@
+﻿0001: Re-integratieplan
+0002: Werkfit maken
+0003: Inkoopkader
+0004: Re-integratiediensten
+0005: Waarom dit formulier?
+0006: Met dit formulier stelt u samen met onze
+0007: cliÃ«nt
+0008: het re-integratieplan op. Hierin staat stap voor stap welke acties u en de
+0009: cliÃ«nt
+0010: ondernemen om hem weer
+0011: werkfit te maken
+0012: .
+0013: In
+0014: h
+0015: et re-integratieplan zet u ook de afspraken die u met elkaar maakt.
+0016: D
+0017: aarom moet u dit
+0018: formulier beiden ondertekenen.
+0019: Zo weten u en de
+0020: cliÃ«nt
+0021: aan welke afspraken u zich
+0022: beiden
+0023: moet houden
+0024: .
+0025: Opsturen en ordernummer
+0026: Stuur het re-integratieplan met voorblad naar:
+0027: UWV
+0028: Postbus 57200
+0029: 1040 BC
+0030: AMSTERDAM
+0031: Stuur het plan alleen op als u een ordernummer heeft.
+0032: Heeft u voor deze
+0033: cliÃ«nt
+0034: geen ordernummer? Neem dan contact
+0035: op met de arbeidsdeskundige of contactpersoon
+0036: bij UWV
+0037: .
+0038: Als u
+0039: het re-integratieplan
+0040: heeft opgestuurd
+0041: Als u het
+0042: re-integratie
+0043: plan heeft opgestuurd,
+0044: beoordelen
+0045: wij het
+0046: . Nadat wij het re-integratieplan hebben goedgekeurd, ontvangt u de inkooporder en
+0047: gaat u
+0048: samen met de
+0049: cliÃ«nt
+0050: aan de slag om het re-integratieplan uit te voeren. Als
+0051: wij
+0052: het
+0053: re-integratie
+0054: plan niet
+0055: goedkeuren
+0056: , ontvangt
+0057: u hierover bericht.
+0058: Meer informatie
+0059: De
+0060: cliÃ«nt
+0061: vindt meer informatie op uwv.nl. Hij kan ook
+0062: bellen met UWV Telef
+0063: oon Werknemers via 088
+0064: â€“
+0065: 898
+0066: 92 94
+0067: (lokaal tarief â€“ belkosten zijn afhankelijk van de telefoonaanbieder).
+0068: Als u als
+0069: re-integratiebedrijf vragen heeft, kunt u contact opnemen met
+0070: UWV Telefoon Zakelijk via
+0071: 088 â€“ 898
+0072: 20 10 (lokaal tarief â€“ b
+0073: elkosten zijn afhankelijk van uw
+0074: telefoonaanbieder).
+0075: 9
+0076: 1
+0077: Gegevens
+0078: cliÃ«nt
+0079: Gebruikt de
+0080: cliÃ«nt
+0081: de a
+0082: chternaam van de partner? V
+0083: ul dan ook de geboortenaam in.
+0084: 1.1
+0085: Voorletters en achternaam
+0086: V.O.O.R.L.E.T.T.E.R.S. Achternaam
+0087: 1
+0088: .2
+0089: Burgerservicenummer
+0090: 123456789
+0091: 2
+0092: Gegevens UWV
+0093: 2.1
+0094: Naam
+0095: contactpersoon UWV
+0096: Naam contactpersoon UWV
+0097: 3
+0098: Gegevens re-integratiebedrijf
+0099: 3.1
+0100: Naam organisatie
+0101: MKB Support
+0102: 3.2
+0103: Bezoekadres
+0104: Krayenhofflaan 277, 6541PR, Nijmegen
+0105: 3.3
+0106: Postadres
+0107: Poststraat 288
+0108: 3.4
+0109: Postcode en plaats
+0110: 6541PR
+0111: Nijmegen
+0112: 3.5
+0113: Naam contactpersoon
+0114: Jan contactpersoon
+0115: 3.6
+0116: Functie contactpersoon
+0117: Contactpersoon placeholder
+0118: 3.7
+0119: Telefoonnummer contactpersoon
+0120: 9187866922
+0121: 3.8
+0122: E-mailadres contactpersoon
+0123: ltleijenhorost@gmail.com
+0124: 4
+0125: Ordernummer
+0126: 4.1
+0127: Wat is het ordernummer
+0128: ?
+0129: 1234
+0130: 5
+0131: Re-integratieactiviteiten en begeleidingsuren
+0132: 5.
+0133: 1
+0134: Welke
+0135: hoofdactiviteiten zijn in het werkplan of
+0136: Plan van a
+0137: anpak benoemd?
+0138: Versterken werknemersvaardigheden
+0139: Versterken werknemersvaardigheden
+0140: Verbeteren persoonlijke effectiviteit
+0141: In beeld brengen arbeidsmarktpositie
+0142: 5.2
+0143: Beschrijving van de activiteiten en het gewenste resultaat.
+0144: Beschrijf vanuit de startsituatie van de
+0145: cliÃ«nt
+0146: welke activiteiten u gaat doen. Geef daarbij aan wat het gewenste resultaat is.
+0147: Let op: vul hier geen informatie
+0148: in over de medische situatie van de
+0149: cliÃ«nt
+0150: .
+0151: 5.3
+0152: Hoe verdeelt u de begeleidingsuren over de re-integratie
+0153: activiteiten?
+0154: Geef per re-integratieactiviteit aan hoeveel uren u hiervoor nodig denkt te hebben. Rond de begeleidingsuren af op hele uren. Van de begeleidingsuren mag u maximaal 3 uren gebruiken als administratieve uren.
+0155: Heeft u hieronder niet genoeg ruimte? Ga dan verder op een bijlage. Vermeld daarop de naam van uw organisatie, het burgerservicenummer van de
+0156: cliÃ«nt
+0157: en het ordernummer.
+0158: Re-integratieactiviteit
+0159: Aantal begeleidingsuren
+0160: Totaal aantal begeleidingsuren
+0161: , inclusief administratieve uren
+0162: (maximaal
+0163: 41
+0164: u
+0165: r
+0166: en
+0167: )
+0168: 5.4
+0169: Wanneer
+0170: begint
+0171: de eerste
+0172: re-integratieactiviteit?
+0173: asdf
+0174: 5.5
+0175: Beschrijf
+0176: de afspraken die u samen heeft gemaakt om d
+0177: e
+0178: re-integratie
+0179: activiteiten
+0180: tot een succes te make
+0181: n.
+0182: Welke inspanningen levert u allebei?
+0183: asdf
+0184: 5.6
+0185: Als
+0186: u
+0187: met de invulling van de
+0188: re-integratieactiviteiten
+0189: afwijkt
+0190: van
+0191: het werkplan of
+0192: Plan van a
+0193: anpak,
+0194: geef dan aan op welke onderdelen u
+0195: ervan afwijkt
+0196: en waarom.
+0197: asdf
+0198: 6
+0199: Doorlooptijd
+0200: 6.1
+0201: Wat is de maximale individuele doorlooptijd van de re-integratiedienst?
+0202: Aantal m
+0203: aanden
+0204: 3
+0205: 7
+0206: Visie op dienstverlening
+0207: 7
+0208: .1
+0209: W
+0210: at verwacht
+0211: de
+0212: cliÃ«nt
+0213: van de inzet
+0214: en het resultaat van de re-integratiedienst
+0215: ? En van
+0216: de begeleiding door uw organisatie?
+0217: asf
+0218: 7
+0219: .2
+0220: Wat is uw visie op de
+0221: re-integratie
+0222: mogelijkheden van de
+0223: cliÃ«nt
+0224: ?
+0225: asdf
+0226: 7
+0227: .3
+0228: W
+0229: at verwacht
+0230: u van de inzet en het resultaat van de re-integratiedienst?
+0231: asdfsaf
+0232: 8
+0233: Specialistisch uurtarief
+0234: 8
+0235: .1
+0236: Is er sprake van specialistisch
+0237: uurtarief?
+0238: Ja
+0239: Nee
+0240: Ga verder met rubriek 9
+0241: .
+0242: Ja
+0243: 8
+0244: .2
+0245: Motiveer welke specialistische
+0246: expertise voor de
+0247: cliÃ«nt
+0248: nodig is en hoeveel uren
+0249: u adviseert
+0250: .
+0251: Aantal uren
+0252: Aantal uren: 3
+0253: Motivering: asdf
+0254: Motivering
+0255: asdf
+0256: 8
+0257: .3
+0258: Wat is het in rekening te brengen
+0259: (hogere) uurtarief voor de specialistische expertise? Motiveer waarom dit tarief noodzakelijk is.
+0260: Vermeld het specialistisch uurtarief exclusief reiskosten van de
+0261: cliÃ«nt
+0262: . Als UWV akkoord gaat met het uurtarief, w
+0263: ordt dit tarief verhoogd met â‚¬ 5
+0264: . In het totaalbedrag zijn dan de reiskosten van de
+0265: cliÃ«nt
+0266: opgenomen.
+0267: Uurtarief exclusief btw
+0268: â‚¬
+0269: Motivering
+0270: 9
+0271: Rechten en plichten
+0272: De
+0273: cliÃ«nt
+0274: heeft het recht om:
+0275: -
+0276: iemand mee te nemen naar gesprekken met het re-integratiebedrijf;
+0277: -
+0278: zijn gegevens bij het re-integratiebedrijf in te zien en eventueel te verbeteren;
+0279: -
+0280: bezwaar te maken bij UWV tegen onderdelen van het re-integratieplan waar hij het niet
+0281: mee eens is;
+0282: -
+0283: een klacht in te dienen bij het re-integratiebedrijf of UWV als hij ontevreden is over de manier
+0284: waarop hij door het re-integratiebedrijf wordt behandeld.
+0285: De
+0286: cliÃ«nt
+0287: heeft de plicht om:
+0288: -
+0289: op alle uitnodigingen van het re-integratiebedrijf in te gaan;
+0290: -
+0291: alle benodigde informatie aan het re-integratiebedrijf te geven;
+0292: -
+0293: de
+0294: gemaakte
+0295: afspraken na te komen die in het re-integratieplan staan;
+0296: -
+0297: de afspraken uit het werkplan of P
+0298: lan van aanpak te blijven nakomen;
+0299: -
+0300: het re-integratiebedrijf op de hoogte te brengen van elke wijziging
+0301: die
+0302: van belang kan zijn voor
+0303: de re-integratie.
+0304: 10
+0305: Ondertekening
+0306: Contactpersoon re-integratiebedrijf
+0307: Naam
+0308: Jan contactpersoon
+0309: Datum en handtekening
+0310: 5 maart 2026
+0311: CliÃ«nt
+0312: Naam
+0313: Achternaam
+0314: Datum en handtekening
+0315: 5 maart 2026

@@ -1,4 +1,4 @@
-import { readJsonFromLocalStorage, writeJsonToLocalStorage } from '../../local/localStorageJson'
+import { readJsonFromLocalStorage, writeJsonToLocalStorage } from '../../storage/localStorageJson'
 
 import { ThemeMode } from './colors'
 

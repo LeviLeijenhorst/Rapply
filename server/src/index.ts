@@ -2,6 +2,7 @@ import express from "express"
 import { getDatabaseConnectionInfo, getRequiredSchemaCheckStatus, runRequiredSchemaCheck, testDatabaseConnection } from "./db"
 import { env } from "./env"
 import { sendError } from "./http"
+import { prewarmRuntimeSchemaCompatibility } from "./runtimeSchema"
 import { registerAudioRoutes } from "./routes/audioRoutes"
 import { registerRoutes } from "./routes/registerRoutes"
 import { createCorsMiddleware, createRateLimitMiddleware, parseCorsAllowedOriginsFromEnv } from "./security"
@@ -112,6 +113,7 @@ const rateLimitAccount = createRateLimitMiddleware({ windowMs: rateLimitWindowMs
   rateLimitWindowMs,
   rateLimitMaxRequests,
   azureSpeechConfigured: !!env.azureSpeechKey && !!env.azureSpeechRegion,
+  speechmaticsConfigured: !!env.speechmaticsApiKey,
   getRequiredSchemaCheckStatus,
 })
 
@@ -125,6 +127,18 @@ app.use((err: any, _req: any, res: any, _next: any) => {
   res.status(status).json({ error: message })
 })
 
-app.listen(env.port, () => {
-  logRuntimeConfiguration()
-})
+async function startServer(): Promise<void> {
+  try {
+    await prewarmRuntimeSchemaCompatibility()
+  } catch (error: any) {
+    const message = String(error?.message || error || "")
+    const stack = typeof error?.stack === "string" ? error.stack : null
+    console.warn("[db] runtime schema warmup failed", { message, stack })
+  }
+
+  app.listen(env.port, () => {
+    logRuntimeConfiguration()
+  })
+}
+
+void startServer()

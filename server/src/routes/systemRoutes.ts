@@ -19,6 +19,7 @@ type RegisterSystemRoutesParams = {
   rateLimitWindowMs: number
   rateLimitMaxRequests: number
   azureSpeechConfigured: boolean
+  speechmaticsConfigured: boolean
   getRequiredSchemaCheckStatus: () => { checkedAtUnixMs: number | null; missingRequiredColumns: string[] }
 }
 
@@ -72,6 +73,7 @@ export function registerSystemRoutes(app: Express, params: RegisterSystemRoutesP
   app.get("/debug/transcription-provider", (_req, res) => {
     res.status(200).json({
       azureSpeechConfigured: params.azureSpeechConfigured,
+      speechmaticsConfigured: params.speechmaticsConfigured,
     })
   })
 }

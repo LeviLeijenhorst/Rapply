@@ -1,4 +1,4 @@
-import { callSecureApi } from '../services/secureApi'
+import { callSecureApi } from '../api/secureApi'
 
 export async function listAdminContactSubmissions(limit = 200) {
   return callSecureApi('/admin/contact-submissions/list', { limit })

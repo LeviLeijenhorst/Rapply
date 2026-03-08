@@ -2,7 +2,23 @@ import { parseStream } from "music-metadata"
 import { Csa1DecryptStream, ensureValidAesKey } from "./csa1"
 
 const CSA1_OVERHEAD_BYTES = 32
-const DEFAULT_FALLBACK_BITRATE_BPS = 64_000
+const DEFAULT_FALLBACK_BITRATE_BPS = 128_000
+const WAV_FALLBACK_BITRATE_BPS = 256_000
+const WEBM_FALLBACK_BITRATE_BPS = 96_000
+
+function normalizeMimeType(mimeType: string): string {
+  return String(mimeType || "")
+    .toLowerCase()
+    .split(";")[0]
+    .trim()
+}
+
+function getFallbackBitrateBpsForMimeType(mimeType: string): number {
+  const normalized = normalizeMimeType(mimeType)
+  if (normalized === "audio/wav" || normalized === "audio/x-wav") return WAV_FALLBACK_BITRATE_BPS
+  if (normalized === "audio/webm" || normalized === "video/webm" || normalized === "audio/ogg") return WEBM_FALLBACK_BITRATE_BPS
+  return DEFAULT_FALLBACK_BITRATE_BPS
+}
 
 // Intent: readDurationSeconds
 function readDurationSeconds(metadata: any, decryptedSizeBytes?: number): number {
@@ -27,12 +43,13 @@ function readDurationSeconds(metadata: any, decryptedSizeBytes?: number): number
 }
 
 // Intent: estimateDurationSecondsFromSizeOnly
-function estimateDurationSecondsFromSizeOnly(params: { decryptedSizeBytes?: number }): number {
-  const { decryptedSizeBytes } = params
+function estimateDurationSecondsFromSizeOnly(params: { decryptedSizeBytes?: number; mimeType: string }): number {
+  const { decryptedSizeBytes, mimeType } = params
   if (typeof decryptedSizeBytes !== "number" || !Number.isFinite(decryptedSizeBytes) || decryptedSizeBytes <= 0) {
     return 0
   }
-  const estimated = (decryptedSizeBytes * 8) / DEFAULT_FALLBACK_BITRATE_BPS
+  const fallbackBitrateBps = getFallbackBitrateBpsForMimeType(mimeType)
+  const estimated = (decryptedSizeBytes * 8) / fallbackBitrateBps
   return Number.isFinite(estimated) && estimated > 0 ? estimated : 0
 }
 
@@ -74,14 +91,15 @@ export async function computeAudioDurationSecondsFromEncryptedUpload(params: {
   const durationSeconds = readDurationSeconds(metadata, decryptedSizeBytes)
   const rawDuration = typeof metadata?.format?.duration
   if (durationSeconds <= 0) {
-    const estimatedFromSizeOnly = estimateDurationSecondsFromSizeOnly({ decryptedSizeBytes })
+    const assumedBitrateBps = getFallbackBitrateBpsForMimeType(mimeType)
+    const estimatedFromSizeOnly = estimateDurationSecondsFromSizeOnly({ decryptedSizeBytes, mimeType })
     if (estimatedFromSizeOnly > 0) {
       console.error("[duration] estimated duration from size-only fallback", {
         mimeType,
         encryptedSizeBytes,
         decryptedSizeBytes,
         estimatedDurationSeconds: estimatedFromSizeOnly,
-        assumedBitrateBps: DEFAULT_FALLBACK_BITRATE_BPS,
+        assumedBitrateBps,
         formatContainer: metadata?.format?.container,
       })
       return estimatedFromSizeOnly

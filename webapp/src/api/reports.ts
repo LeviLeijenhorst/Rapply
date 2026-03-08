@@ -1,5 +1,5 @@
-import { exportUwvTemplateWord } from '../services/uwvWordExport'
-import { generateStructuredSummary, generateSummary } from '../services/summary'
+import { exportUwvTemplateWord } from '../api/uwvWordExport'
+import { generateStructuredSummary, generateSummary } from '../api/summary'
 
 type SummaryTemplateInput = {
   name: string

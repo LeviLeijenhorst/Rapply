@@ -1,2 +1,2 @@
-import { AppErrorBoundary } from '../components/AppErrorBoundary'
+import { AppErrorBoundary } from '../ui/AppErrorBoundary'
 export { AppErrorBoundary as ErrorBoundary, AppErrorBoundary }

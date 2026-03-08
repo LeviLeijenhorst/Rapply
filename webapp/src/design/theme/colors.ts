@@ -1,4 +1,4 @@
-import { semanticColorTokens } from '../../foundation/theme/tokens'
+import { semanticColorTokens } from '../../design/tokens'
 
 export const colorTokens = semanticColorTokens
 

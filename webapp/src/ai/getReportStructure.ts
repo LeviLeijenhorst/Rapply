@@ -1,1 +1,1 @@
-export { parseReportSections as getReportStructure } from '../utils/reportStructure'
+export { parseReportSections as getReportStructure } from '../types/reportStructure'

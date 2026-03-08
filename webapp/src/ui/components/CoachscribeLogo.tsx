@@ -1,0 +1,1 @@
+export { CoachscribeLogo } from '../CoachscribeLogo'

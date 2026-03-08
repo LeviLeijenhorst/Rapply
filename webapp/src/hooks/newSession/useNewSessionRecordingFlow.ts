@@ -1,16 +1,16 @@
-import { useCallback, useEffect, type MutableRefObject } from 'react'
+﻿import { useCallback, useEffect, type MutableRefObject } from 'react'
 
 import {
   startRealtimeTranscriber,
   type RealtimeTranscriberSession,
 } from '../../api/transcription'
-import type { NewSessionStep } from '../../components/newSession/newSessionModalTypes'
+import type { NewSessionStep } from '../../screens/record/newInputModalTypes'
 import {
   createOperationId,
   maxDuration,
   maxRecordingSeconds,
   readAudioDurationSeconds,
-} from '../../components/newSession/newSessionModalUtils'
+} from '../../screens/record/newInputModalUtils'
 
 type RecorderState = {
   status: 'idle' | 'requesting' | 'recording' | 'paused' | 'stopping' | 'ready' | 'error'
@@ -234,6 +234,7 @@ export function useNewSessionRecordingFlow({
     stopLiveTranscriber,
   }
 }
+
 
 
 

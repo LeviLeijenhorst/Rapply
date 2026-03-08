@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { Animated } from 'react-native'
 
-import type { Template } from '../../local/types'
+import type { Template } from '../../storage/types'
 import { fetchBillingStatus } from '../../api/billing'
 import { sendAiChat, type ApiChatMessage } from '../../api/ai'
 import { generateReportSummary } from '../../api/reports'
-import { clearQuickQuestionsChatForSession, loadQuickQuestionsChatForSession, saveQuickQuestionsChatForSession } from '../../local/quickQuestionsChatStore'
-import { buildConversationTranscriptSystemMessages } from '../../utils/quickQuestionsContext'
-import { type ChatStateMessage, createChatMessageId } from '../../utils/chatState'
+import { clearQuickQuestionsChatForSession, loadQuickQuestionsChatForSession, saveQuickQuestionsChatForSession } from '../../storage/quickQuestionsChatStore'
+import { buildConversationTranscriptSystemMessages } from '../../content/quickQuestionsContext'
+import { type ChatStateMessage, createChatMessageId } from '../../types/chatState'
 
 type QuickQuestionMessageInput = string | { text: string; promptText?: string; templateId?: string }
 
@@ -157,7 +157,7 @@ export function useSessieDetailChatFlow({
     const systemMessage: ApiChatMessage = {
       role: 'system',
       text:
-        'Deze chatbot bevindt zich onder het kopje "Snelle vragen" binnen CoachScribe. Loopbaan- en re-integratiecoaches gebruiken deze chat om korte, gerichte vragen te stellen over dit verslag op basis van de verslagcontext (zoals transcript en/of geschreven verslag). Gebruik alleen informatie uit dit verslag en uit de vraag van de gebruiker. Formuleer altijd in formeel en zakelijk Nederlands en spreek de gebruiker aan met "u". Uw antwoorden zijn duidelijk en beknopt. Geef geen lange uitleg, herhaal de vraag niet en voeg geen meta-uitleg toe. Gebruik geen emoji\'s. Gebruik nooit labels zoals "speaker_3" en gebruik geen andere termen voor sprekers dan "coach" of "cliÃ«nt". Maak nooit nieuwe actiepunten. Noem alleen actiepunten die expliciet in de verslagcontext of in de vraag van de gebruiker staan. Als er geen expliciete actiepunten zijn, zeg dat duidelijk en voeg niets nieuws toe. Wanneer u verwijst naar een specifiek moment in het transcript, gebruik dan de notatie [[timestamp=MM:SS|zichtbare tekst]]. MM:SS is het tijdstip in het transcript en de tekst na de | is de klikbare tekst zoals die in de zin wordt weergegeven. Verwerk deze verwijzing vloeiend in de zin en gebruik dit actief wanneer dat helpt om het antwoord concreet en controleerbaar te maken. Als het antwoord geschikt is om als PDF te downloaden, zet dan alleen de gewenste inhoud tussen deze twee regels. Gebruik exact deze regels op een eigen regel: ' +
+        'Deze chatbot bevindt zich onder het kopje "Snelle vragen" binnen CoachScribe. Loopbaan- en re-integratiecoaches gebruiken deze chat om korte, gerichte vragen te stellen over dit verslag op basis van de verslagcontext (zoals transcript en/of geschreven verslag). Gebruik alleen informatie uit dit verslag en uit de vraag van de gebruiker. Formuleer altijd in formeel en zakelijk Nederlands en spreek de gebruiker aan met "u". Uw antwoorden zijn duidelijk en beknopt. Geef geen lange uitleg, herhaal de vraag niet en voeg geen meta-uitleg toe. Gebruik geen emoji\'s. Gebruik nooit labels zoals "speaker_3" en gebruik geen andere termen voor sprekers dan "coach" of "cliënt". Maak nooit nieuwe actiepunten. Noem alleen actiepunten die expliciet in de verslagcontext of in de vraag van de gebruiker staan. Als er geen expliciete actiepunten zijn, zeg dat duidelijk en voeg niets nieuws toe. Wanneer u verwijst naar een specifiek moment in het transcript, gebruik dan de notatie [[timestamp=MM:SS|zichtbare tekst]]. MM:SS is het tijdstip in het transcript en de tekst na de | is de klikbare tekst zoals die in de zin wordt weergegeven. Verwerk deze verwijzing vloeiend in de zin en gebruik dit actief wanneer dat helpt om het antwoord concreet en controleerbaar te maken. Als het antwoord geschikt is om als PDF te downloaden, zet dan alleen de gewenste inhoud tussen deze twee regels. Gebruik exact deze regels op een eigen regel: ' +
         `${pdfStartToken} en ${pdfEndToken}. ` +
         'Plaats geen andere tekst tussen die regels dan de inhoud die in de PDF hoort. Zet alle overige uitleg buiten die blokken.',
     }
@@ -262,4 +262,6 @@ export function useSessieDetailChatFlow({
     setIsNoMinutesCtaDismissed,
   }
 }
+
+
 

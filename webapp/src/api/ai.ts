@@ -1,4 +1,4 @@
-import { completeChat, type LocalChatMessage } from '../services/chat'
+import { completeChat, type LocalChatMessage } from '../api/chat'
 
 export type ApiChatMessage = LocalChatMessage
 

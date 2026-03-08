@@ -188,6 +188,14 @@ export default function TranscriptionDetailsScreen() {
 
     const sourceUri: string | undefined = route?.params?.sourceUri
     const metering: number[] | undefined = route?.params?.metering
+    const notesParam: unknown = route?.params?.notes
+    const notesForRecording: Array<{ id: string; date: number; text: string; recordingMs?: number }> = Array.isArray(
+      notesParam,
+    )
+      ? (notesParam as Array<{ id: string; date: number; text: string; recordingMs?: number }>).filter(
+          (note) => note && typeof note.text === "string" && note.text.trim().length > 0,
+        )
+      : []
     const existingRecordingId: string | undefined = route?.params?.recordingId as string | undefined
 
     if (!sourceUri && existingRecordingId) {
@@ -267,6 +275,11 @@ export default function TranscriptionDetailsScreen() {
     } catch {}
     try {
       await writeEncryptedFile(baseDirectory, "type.txt.enc", recordingType, "text")
+    } catch {}
+    try {
+      if (notesForRecording.length > 0) {
+        await writeEncryptedFile(baseDirectory, "notes.json.enc", JSON.stringify(notesForRecording), "text")
+      }
     } catch {}
     try {
       if (transcriptionAndSummaryIsEnabled) {

@@ -1,7 +1,17 @@
 import React, { useEffect, useMemo, useState, useRef } from "react"
-import { View, StyleSheet, Pressable, Modal, ScrollView, AppState } from "react-native"
+import {
+  View,
+  StyleSheet,
+  Pressable,
+  Modal,
+  ScrollView,
+  AppState,
+  TextInput,
+  Keyboard,
+  useWindowDimensions,
+} from "react-native"
 import { Text } from "./Text"
-import { colors, spacing, typography, safeAreaTop, safeAreaBottom, vibrate, radius } from "./constants"
+import { colors, spacing, typography, safeAreaBottom, vibrate, radius } from "./constants"
 import { Icon } from "./Icon"
 import { useNavigation, useRoute, useIsFocused } from "@react-navigation/native"
 import { logger } from "@/utils/logger"
@@ -17,6 +27,21 @@ import {
 const MAX_VISIBLE_BARS = 50
 const MAX_RECORDING_DURATION_MINUTES = 115
 const MAX_RECORDING_DURATION_MILLISECONDS = MAX_RECORDING_DURATION_MINUTES * 60 * 1000
+const FIGMA_LEFT_PANEL_WIDTH = 747
+const FIGMA_RIGHT_PANEL_WIDTH = 437
+const FIGMA_PANEL_HEIGHT = 862
+const FIGMA_PANEL_GAP = 24
+const FIGMA_WAVE_BARS = [
+  44, 80, 138, 112, 94, 68, 96, 110, 54, 42, 58, 140, 108, 92, 74, 98, 108, 46, 52, 72, 98, 114, 88, 124, 138, 128,
+  112, 116, 98, 76, 104, 114, 92, 64, 50, 74, 120, 86, 106, 98, 72, 46, 58, 60, 140, 108, 86, 98, 110, 62, 56, 68,
+]
+
+type RecordingNote = {
+  id: string
+  date: number
+  text: string
+  recordingMs: number
+}
 
 function AudioBar({ value }: { value: number }) {
   const minHeight = 10
@@ -42,11 +67,14 @@ export default function RecordingScreen() {
 
   const [isRecordingPaused, setIsRecordingPaused] = useState(false)
   const [isCloseConfirmationVisible, setIsCloseConfirmationVisible] = useState(false)
+  const [noteDraft, setNoteDraft] = useState("")
+  const [notes, setNotes] = useState<RecordingNote[]>([])
 
   type MeterSample = { id: number; value: number }
   const [visibleMetering, setVisibleMetering] = useState<MeterSample[]>([])
 
   const isFocused = useIsFocused()
+  const window = useWindowDimensions()
 
   const recorderConfig = useMemo(
     () => ({
@@ -61,14 +89,12 @@ export default function RecordingScreen() {
   const audioRecorder = useAudioRecorder(recorderConfig)
   const recorderState = useAudioRecorderState(audioRecorder, 100)
 
-  const lastRenderAtRef = useRef(0)
-
+  const noteInputRef = useRef<TextInput | null>(null)
   const scrollRef = useRef<ScrollView | null>(null)
   const hasStartedRef = useRef(false)
   const hasStoppedRef = useRef(false)
   const latestMeteringRef = useRef<number | undefined>(undefined)
   const smoothedMeteringRef = useRef<number>(-60)
-  const tickCounterRef = useRef(0)
 
   const fullMeteringRef = useRef<number[]>([])
   const nextSampleIdRef = useRef(1)
@@ -96,6 +122,13 @@ export default function RecordingScreen() {
 
   function pad(number: number) {
     return number < 10 ? `0${number}` : `${number}`
+  }
+
+  function formatShortTime(ms: number) {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000))
+    const seconds = totalSeconds % 60
+    const minutes = Math.floor(totalSeconds / 60)
+    return `${pad(minutes)}:${pad(seconds)}`
   }
 
   const title =
@@ -129,7 +162,7 @@ export default function RecordingScreen() {
           hasStartedRef.current = true
           startedAtRef.current = startedAtRef.current ?? new Date()
         }
-      } catch (error) {
+      } catch {
         logger.warn("RecordingScreen:start_recording:error")
       }
     }
@@ -162,10 +195,8 @@ export default function RecordingScreen() {
     if (isRecordingPaused) return
 
     const id = setInterval(() => {
-      tickCounterRef.current += 1
       let sample = latestMeteringRef.current
       if (typeof sample !== "number") return
-
 
       if (!Number.isFinite(sample)) {
         sample = smoothedMeteringRef.current
@@ -184,12 +215,12 @@ export default function RecordingScreen() {
 
       setVisibleMetering((prev) => {
         const nextLength = prev.length + 1
-        const sample = { id: nextSampleIdRef.current++, value: sampleDb }
+        const nextSample = { id: nextSampleIdRef.current++, value: sampleDb }
         if (nextLength <= MAX_VISIBLE_BARS) {
-          return [...prev, sample]
+          return [...prev, nextSample]
         }
         const sliced = prev.slice(1)
-        sliced.push(sample)
+        sliced.push(nextSample)
         return sliced
       })
     }, 100)
@@ -227,6 +258,22 @@ export default function RecordingScreen() {
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}:${pad(deciseconds)}`
   }, [pad, recorderState.durationMillis])
 
+  function addNoteWithText(text: string) {
+    const trimmed = text.trim()
+    if (!trimmed) return
+    const now = Date.now()
+    const recordingMs = Math.max(0, recorderState.durationMillis ?? 0)
+    const nextNote: RecordingNote = {
+      id: `${now}-${Math.random().toString(36).slice(2, 6)}`,
+      date: now,
+      text: trimmed,
+      recordingMs,
+    }
+    setNotes((prev) => [nextNote, ...prev])
+    setNoteDraft("")
+    Keyboard.dismiss()
+  }
+
   // ---------- BUTTON HANDLERS ----------
   function handleCloseButtonPress() {
     vibrate()
@@ -253,18 +300,17 @@ export default function RecordingScreen() {
 
     try {
       await setAudioModeForNotRecording()
-    } catch (error) {
+    } catch {
       logger.warn("RecordingScreen:reset_audio_mode:error")
     }
 
-    const sessionType = mode
-
     navigation.navigate("TranscriptionDetails", {
       coacheeName,
-      sessionType,
+      sessionType: mode,
       sourceUri,
       metering: fullMeteringRef.current,
       title,
+      notes,
     })
   }
 
@@ -273,7 +319,7 @@ export default function RecordingScreen() {
     if (!hasStartedRef.current || hasStoppedRef.current) return
     if ((recorderState.durationMillis ?? 0) < MAX_RECORDING_DURATION_MILLISECONDS) return
     void handleStopButtonPress()
-  }, [handleStopButtonPress, isFocused, isRecordingPaused, recorderState.durationMillis])
+  }, [isFocused, isRecordingPaused, recorderState.durationMillis])
 
   function handleTogglePauseButtonPress() {
     vibrate()
@@ -286,115 +332,197 @@ export default function RecordingScreen() {
         } else {
           audioRecorder.pause()
         }
-      } catch (error) {
+      } catch {
         logger.warn("RecordingScreen:toggle_record_pause:error")
       }
       return next
     })
   }
 
+  const horizontalInset = Math.max(spacing.big, 24)
+  const modalWidth = Math.min(window.width - horizontalInset * 2, 1120)
+  const modalHeight = Math.min(window.height - 56, FIGMA_PANEL_HEIGHT)
+  const figmaTotalWidth = FIGMA_LEFT_PANEL_WIDTH + FIGMA_RIGHT_PANEL_WIDTH + FIGMA_PANEL_GAP
+  const scale = Math.min(1, modalWidth / figmaTotalWidth)
+  const leftPanelWidth = FIGMA_LEFT_PANEL_WIDTH * scale
+  const rightPanelWidth = FIGMA_RIGHT_PANEL_WIDTH * scale
+  const panelsGap = FIGMA_PANEL_GAP * scale
+
   return (
-    <View style={styles.safeArea}>
-      {/* HEADER */}
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{dateText}</Text>
-        </View>
-        <Pressable accessibilityRole="button" onPress={handleCloseButtonPress}>
-          <Icon name="closeCircle" />
-        </Pressable>
-      </View>
-
-      {/* CENTER CONTENT (METERING BARS OVER TIME) */}
-      <View style={styles.timerCenterWrap}>
-        {shouldShowAudioBars ? (
-          <ScrollView
-            style={styles.audioScroll}
-            ref={scrollRef}
-            horizontal
-            scrollEnabled={false}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.audioContentContainer}
-          >
-            <View style={[styles.audioBarContainer, styles.audioBarEnd]}>
-              {visibleMetering.map((item) => (
-                <MemoizedAudioBar key={item.id} value={item.value} />
-              ))}
+    <View style={styles.root}>
+      <Pressable style={styles.modalBackdrop} onPress={handleCloseButtonPress} />
+      <View style={[styles.modalContainer, { width: modalWidth, height: modalHeight }]}>
+        <View style={[styles.recordingPanel, { width: leftPanelWidth }]}>
+          <View style={styles.panelHeader}>
+            <View style={styles.headerIdentityRow}>
+              <View style={styles.headerAvatar} />
+              <View>
+                <Text style={styles.panelTitle} numberOfLines={1}>{coacheeName?.trim() || "Naamloze opname"}</Text>
+                <Text style={styles.panelSubtitle}>Sessie #9</Text>
+              </View>
             </View>
-          </ScrollView>
-        ) : null}
-      </View>
+            <Pressable accessibilityRole="button" onPress={handleCloseButtonPress} style={styles.moreButton}>
+              <Icon name="more" color={colors.textPrimary} size={18} />
+            </Pressable>
+          </View>
 
-      {/* BOTTOM CARD */}
-      <View style={styles.bottomCard}>
-        <Text style={styles.timer}>{formattedTimeText}</Text>
-        <View style={styles.controlsRow}>
-          <Pressable accessibilityRole="button" onPress={handleCloseButtonPress} style={({ pressed }) => [styles.smallButton, pressed && styles.smallButtonPressed]}>
-            <Icon name="close" color={colors.orange} size={40} />
-          </Pressable>
-          <Pressable accessibilityRole="button" onPress={handleStopButtonPress} style={({ pressed }) => [styles.bigButton, pressed && styles.bigButtonPressed]}>
-            <Icon name="stop" color={colors.white} size={48} />
-          </Pressable>
-          <Pressable accessibilityRole="button" onPress={handleTogglePauseButtonPress} style={({ pressed }) => [styles.smallButton, pressed && styles.smallButtonPressed]}>
-            {isRecordingPaused ? (
-              <Icon name="play" color={colors.orange} size={18} />
+          <View style={styles.waveContainer}>
+            {shouldShowAudioBars ? (
+              <ScrollView
+                style={styles.audioScroll}
+                ref={scrollRef}
+                horizontal
+                scrollEnabled={false}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.audioContentContainer}
+              >
+                <View style={[styles.audioBarContainer, styles.audioBarEnd]}>
+                  {visibleMetering.map((item) => (
+                    <MemoizedAudioBar key={item.id} value={item.value} />
+                  ))}
+                </View>
+              </ScrollView>
             ) : (
-              <Icon name="pause" color={colors.orange} size={22} />
+              <View style={styles.waveBarsRow}>
+                {FIGMA_WAVE_BARS.map((height, index) => (
+                  <View key={`figma-wave-${index}`} style={[styles.waveBar, { height }]} />
+                ))}
+              </View>
             )}
-          </Pressable>
+          </View>
+
+          <View style={styles.controlsWrap}>
+            <Text style={styles.timer}>{formattedTimeText}</Text>
+            <View style={styles.controlsRow}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  vibrate()
+                  if (noteDraft.trim()) {
+                    addNoteWithText(noteDraft)
+                  } else {
+                    noteInputRef.current?.focus()
+                  }
+                }}
+                style={({ pressed }) => [styles.smallButton, pressed && styles.smallButtonPressed]}
+              >
+                <View style={styles.rotatedPlusIcon}>
+                  <Icon name="plus" color={colors.orange} size={34} />
+                </View>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleStopButtonPress}
+                style={({ pressed }) => [styles.bigButton, pressed && styles.bigButtonPressed]}
+              >
+                <Icon name="stop" color={colors.white} size={48} />
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleTogglePauseButtonPress}
+                style={({ pressed }) => [styles.smallButton, pressed && styles.smallButtonPressed]}
+              >
+                {isRecordingPaused ? (
+                  <Icon name="play" color={colors.orange} size={20} />
+                ) : (
+                  <Icon name="pause" color={colors.orange} size={22} />
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+
+        <View style={[styles.notesPanel, { width: rightPanelWidth, marginLeft: panelsGap }]}>
+          <View style={styles.notesHeader}>
+            <Text style={styles.notesTitle}>Notities</Text>
+          </View>
+
+          <ScrollView
+            style={styles.notesScroll}
+            contentContainerStyle={styles.notesScrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {notes.map((note) => (
+              <View key={note.id} style={styles.noteCard}>
+                <View style={styles.noteTimeChip}>
+                  <Text style={styles.noteTime}>{formatShortTime(note.recordingMs)}</Text>
+                </View>
+                <Text style={styles.noteText}>{note.text}</Text>
+              </View>
+            ))}
+          </ScrollView>
+
+          <View style={[styles.noteComposerRow, { paddingBottom: 12 + safeAreaBottom / 2 }]}>
+            <TextInput
+              ref={noteInputRef}
+              value={noteDraft}
+              onChangeText={setNoteDraft}
+              placeholder=""
+              placeholderTextColor={colors.textSecondary}
+              style={styles.noteInput}
+              multiline
+              maxLength={500}
+            />
+            <Pressable
+              accessibilityRole="button"
+              disabled={!noteDraft.trim()}
+              onPress={() => {
+                vibrate()
+                addNoteWithText(noteDraft)
+              }}
+              style={({ pressed }) => [styles.sendButton, !noteDraft.trim() && styles.sendButtonDisabled, pressed && styles.sendButtonPressed]}
+            >
+              <Icon name="send" color={colors.white} size={16} />
+            </Pressable>
+          </View>
         </View>
       </View>
 
-      {/* CLOSE CONFIRMATION MODAL */}
       <Modal
         transparent
         visible={isCloseConfirmationVisible}
         animationType="fade"
         onRequestClose={() => setIsCloseConfirmationVisible(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setIsCloseConfirmationVisible(false)}>
-          <Pressable style={styles.modalCard} onPress={() => {}}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Opname sluiten?</Text>
-              <Text style={styles.modalMessage}>
+        <Pressable style={styles.confirmationOverlay} onPress={() => setIsCloseConfirmationVisible(false)}>
+          <Pressable style={styles.confirmationCard} onPress={() => {}}>
+            <View style={styles.confirmationContent}>
+              <Text style={styles.confirmationTitle}>Opname sluiten?</Text>
+              <Text style={styles.confirmationMessage}>
                 Weet je zeker dat je de opname wilt sluiten? De opname wordt niet opgeslagen.
               </Text>
             </View>
-            <View style={styles.modalActions}>
+            <View style={styles.confirmationActions}>
               <Pressable
                 onPress={() => {
                   vibrate()
                   setIsCloseConfirmationVisible(false)
                 }}
-                style={({ pressed }) => [
-                  styles.modalButton,
-                  pressed && styles.modalButtonPressed,
-                ]}
+                style={({ pressed }) => [styles.confirmationButton, pressed && styles.confirmationButtonPressed]}
               >
                 {({ pressed }) => (
                   <>
-                    {pressed && <View style={styles.modalButtonOverlay} />}
-                    <Text style={styles.modalCancel}>Annuleren</Text>
+                    {pressed && <View style={styles.confirmationButtonOverlay} />}
+                    <Text style={styles.confirmationCancel}>Annuleren</Text>
                   </>
                 )}
               </Pressable>
-              <View style={styles.modalDivider} />
+              <View style={styles.confirmationDivider} />
               <Pressable
                 onPress={() => {
                   vibrate()
                   setIsCloseConfirmationVisible(false)
                   navigation.goBack()
                 }}
-                style={({ pressed }) => [
-                  styles.modalButton,
-                  pressed && styles.modalButtonPressed,
-                ]}
+                style={({ pressed }) => [styles.confirmationButton, pressed && styles.confirmationButtonPressed]}
               >
                 {({ pressed }) => (
                   <>
-                    {pressed && <View style={styles.modalButtonOverlay} />}
-                    <Text style={styles.modalConfirm}>Sluiten</Text>
+                    {pressed && <View style={styles.confirmationButtonOverlay} />}
+                    <Text style={styles.confirmationConfirm}>Sluiten</Text>
                   </>
                 )}
               </Pressable>
@@ -407,109 +535,263 @@ export default function RecordingScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.backgroundLight, paddingTop: safeAreaTop },
-
-  headerRow: {
+  root: {
+    flex: 1,
+    backgroundColor: "rgba(29,10,0,0.28)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.big,
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalContainer: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    justifyContent: "center",
+  },
+  recordingPanel: {
+    backgroundColor: colors.white,
+    borderRadius: radius,
+    borderWidth: 1,
+    borderColor: "#DFE0E2",
+    shadowColor: "#000000",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    overflow: "hidden",
+  },
+  panelHeader: {
+    height: 88,
+    borderBottomWidth: 1,
+    borderBottomColor: "#DFE0E2",
+    paddingHorizontal: 24,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.big,
-    paddingTop: spacing.small,
   },
-  title: { fontFamily: typography.fontFamily, fontSize: 22, color: colors.textPrimary },
-  subtitle: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary, marginTop: 2 },
-
-  timerCenterWrap: {
-    flex: 1,
+  headerIdentityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#E8D5DD",
+    marginRight: 12,
+  },
+  panelTitle: {
+    fontFamily: typography.fontFamily,
+    fontSize: 16,
+    color: colors.textPrimary,
+    fontWeight: "600",
+  },
+  panelSubtitle: {
+    fontFamily: typography.fontFamily,
+    fontSize: 12,
+    color: "#93858D",
+    marginTop: 2,
+  },
+  moreButton: {
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
+  },
+  waveContainer: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 42,
+  },
+  waveBarsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    height: 160,
+  },
+  waveBar: {
+    width: 6,
+    borderRadius: 3,
+    backgroundColor: "#E5B4D5",
+  },
+  controlsWrap: {
+    alignItems: "center",
+    paddingBottom: 42,
+  },
+  timer: {
+    fontFamily: typography.fontFamily,
+    fontSize: 48,
+    color: colors.textPrimary,
+    textAlign: "center",
+    marginBottom: 24,
+    fontWeight: "500",
+  },
+  controlsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: 260,
+  },
+  smallButton: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F4D5E8",
+  },
+  rotatedPlusIcon: {
+    transform: [{ rotate: "-45deg" }],
+  },
+  smallButtonPressed: {
+    opacity: 0.85,
+  },
+  bigButton: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.orange,
+  },
+  bigButtonPressed: {
+    opacity: 0.88,
+  },
+  notesPanel: {
+    backgroundColor: colors.white,
+    borderRadius: radius,
+    borderWidth: 1,
+    borderColor: "#DFE0E2",
+    shadowColor: "#000000",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    overflow: "hidden",
+  },
+  notesHeader: {
+    height: 88,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: "#DFE0E2",
+  },
+  notesTitle: {
+    fontFamily: typography.fontFamily,
+    fontSize: 24,
+    lineHeight: 34,
+    color: colors.textPrimary,
+    fontWeight: "700",
+  },
+  notesScroll: {
+    flex: 1,
+  },
+  notesScrollContent: {
+    padding: 16,
+    paddingBottom: 24,
+  },
+  noteCard: {
+    borderWidth: 1,
+    borderColor: "#DFE0E2",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 12,
+    backgroundColor: "#F9FAFB",
+  },
+  noteTimeChip: {
+    alignSelf: "flex-start",
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    backgroundColor: "#EDF6FF",
+    marginBottom: 8,
+  },
+  noteTime: {
+    fontFamily: typography.fontFamily,
+    fontSize: 14,
+    lineHeight: 16,
+    color: "#0065F4",
+    fontWeight: "700",
+  },
+  noteText: {
+    fontFamily: typography.fontFamily,
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.textPrimary,
+  },
+  noteComposerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  noteInput: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 80,
+    borderWidth: 1,
+    borderColor: "#DFE0E2",
+    borderRadius: 8,
+    backgroundColor: "#F9FAFB",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    color: colors.textPrimary,
+    fontFamily: typography.fontFamily,
+    fontSize: 16,
+    textAlignVertical: "center",
+    marginRight: 10,
+  },
+  sendButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.orange,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  sendButtonDisabled: {
+    opacity: 0.45,
+  },
+  sendButtonPressed: {
+    opacity: 0.85,
   },
   audioScroll: {
     width: "100%",
   },
-
   audioContentContainer: {
     flexGrow: 1,
   },
-
   audioBarContainer: {
     width: "100%",
     paddingHorizontal: 10,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: 'flex-end',
-  },
-
-  audioBarStart: {
-    justifyContent: "flex-start",
-    flexGrow: 1,
+    justifyContent: "flex-end",
   },
   audioBarEnd: {
     justifyContent: "flex-end",
     flexGrow: 1,
     minWidth: "100%",
   },
-
   audioBar: {
     width: 10,
     borderRadius: 20,
     backgroundColor: colors.orange,
     marginLeft: 2,
   },
-
-  bottomCard: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: radius,
-    borderTopRightRadius: radius,
-    paddingTop: spacing.big,
-    paddingBottom: 12 + safeAreaBottom,
-    alignItems: "center",
-  },
-  timer: {
-    fontFamily: typography.monospaceFontFamily,
-    fontSize: 28,
-    color: colors.textPrimary,
-    textAlign: "center",
-  },
-
-  controlsRow: {
-    marginTop: spacing.small,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: 240,
-  },
-  smallButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.orange + "0D",
-  },
-  smallButtonPressed: {
-    backgroundColor: colors.orange + "20",
-  },
-  bigButton: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.orange,
-  },
-  bigButtonPressed: {
-    backgroundColor: colors.orange + "E6",
-  },
-
-  modalOverlay: {
+  confirmationOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.2)",
     alignItems: "center",
     justifyContent: "center",
     padding: spacing.big,
   },
-  modalCard: {
+  confirmationCard: {
     width: "100%",
     maxWidth: 360,
     backgroundColor: colors.white,
@@ -517,10 +799,19 @@ const styles = StyleSheet.create({
     padding: 0,
     overflow: "hidden",
   },
-  modalContent: { padding: spacing.big },
-  modalTitle: { fontFamily: typography.fontFamily, fontSize: 18, color: colors.textPrimary, marginBottom: spacing.small },
-  modalMessage: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary },
-  modalActions: {
+  confirmationContent: { padding: spacing.big },
+  confirmationTitle: {
+    fontFamily: typography.fontFamily,
+    fontSize: 18,
+    color: colors.textPrimary,
+    marginBottom: spacing.small,
+  },
+  confirmationMessage: {
+    fontFamily: typography.fontFamily,
+    fontSize: typography.textSize,
+    color: colors.textSecondary,
+  },
+  confirmationActions: {
     marginTop: spacing.big,
     flexDirection: "row",
     alignItems: "center",
@@ -528,15 +819,32 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.textSecondary + "22",
   },
-  modalButton: { flex: 1, height: 44, alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" },
-  modalButtonPressed: {},
-  modalButtonOverlay: {
+  confirmationButton: {
+    flex: 1,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    position: "relative",
+  },
+  confirmationButtonPressed: {},
+  confirmationButtonOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.pressedOverlay,
   },
-  modalDivider: { width: StyleSheet.hairlineWidth, height: 44, backgroundColor: colors.textSecondary + "22" },
-  modalCancel: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary, includeFontPadding: false, textAlignVertical: "center" },
-  modalConfirm: {
+  confirmationDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 44,
+    backgroundColor: colors.textSecondary + "22",
+  },
+  confirmationCancel: {
+    fontFamily: typography.fontFamily,
+    fontSize: typography.textSize,
+    color: colors.textSecondary,
+    includeFontPadding: false,
+    textAlignVertical: "center",
+  },
+  confirmationConfirm: {
     fontFamily: typography.fontFamily,
     fontSize: typography.textSize,
     color: colors.textOrange,

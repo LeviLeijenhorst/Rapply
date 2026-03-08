@@ -1,7 +1,7 @@
 import { NavigationContainer, NavigationState, PartialState } from "@react-navigation/native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import React, { useEffect, useRef, useState } from "react"
-import { ActivityIndicator, StyleSheet, View } from "react-native"
+import { Animated, Easing, StyleSheet, View } from "react-native"
 
 import Config from "@/config"
 import { ErrorBoundary } from "@/screens/ErrorScreen/ErrorBoundary"
@@ -29,6 +29,7 @@ import SubscriptionScreen from "@/screens/SubscriptionScreen"
 import SubscriptionCancelScreen from "@/screens/SubscriptionCancelScreen"
 import SubscriptionTipsScreen from "@/screens/SubscriptionTipsScreen"
 import SubscriptionPraktijkScreen from "@/screens/SubscriptionPraktijkScreen"
+import CoachScribeMark from "@/screens/svgs/CoachScribeMark"
 
 import type { AppStackParamList, NavigationProps } from "./navigationTypes"
 import { navigationRef, useBackButtonHandler, getActiveRouteName } from "./navigationUtilities"
@@ -64,7 +65,15 @@ const AppStack = () => {
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ animation: "default" }} />
       <Stack.Screen name="AddCoachee" component={AddCoacheeScreen} />
       <Stack.Screen name="CoacheeEdit" component={CoacheeEditScreen} />
-      <Stack.Screen name="Recording" component={RecordingScreen} />
+      <Stack.Screen
+        name="Recording"
+        component={RecordingScreen}
+        options={{
+          presentation: "transparentModal",
+          animation: "fade",
+          contentStyle: { backgroundColor: "transparent" },
+        }}
+      />
       <Stack.Screen name="TranscriptionDetails" component={TranscriptionDetailsScreen} />
       <Stack.Screen name="CoacheeDetail" component={CoacheeScreen} />
       <Stack.Screen name="Conversation" component={ConversationScreen} />
@@ -84,9 +93,26 @@ export const AppNavigator = (props: NavigationProps) => {
   const { onReady, onStateChange, ...navigationContainerProps } = props
   const { navigationTheme, theme } = useAppTheme()
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const spin = useRef(new Animated.Value(0)).current
   const previousRouteNameRef = useRef<string | undefined>(undefined)
 
   useBackButtonHandler((routeName) => exitRoutes.includes(routeName))
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    )
+    loop.start()
+
+    return () => {
+      loop.stop()
+    }
+  }, [spin])
 
   function handleStateChange(state: NavigationState | PartialState<NavigationState> | undefined) {
     if (!state) return
@@ -119,7 +145,17 @@ export const AppNavigator = (props: NavigationProps) => {
         <AppStack />
         {isTransitioning && (
           <View pointerEvents="none" style={[styles.loaderOverlay, { backgroundColor: theme.colors.background }]}>
-            <ActivityIndicator size="large" color="#000000" />
+            <Animated.View
+              style={{
+                transform: [
+                  {
+                    rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }),
+                  },
+                ],
+              }}
+            >
+              <CoachScribeMark size={36} color="#000000" strokeWidth={1} />
+            </Animated.View>
           </View>
         )}
       </ErrorBoundary>

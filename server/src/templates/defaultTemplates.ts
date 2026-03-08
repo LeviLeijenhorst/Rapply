@@ -188,183 +188,93 @@ function materializeTemplateBlueprints(blueprints: TemplateBlueprint[]): Templat
   }))
 }
 
-const legacyGenericSections = [
-  {
-    title: "Situatie",
-    description: "Feitelijke context, relevante achtergrond en actuele stand van zaken.",
-  },
-  {
-    title: "Analyse",
-    description: "Professionele duiding van bevindingen, mogelijkheden en belemmeringen.",
-  },
-  {
-    title: "Advies en vervolgstappen",
-    description: "Concreet advies, afspraken en acties met duidelijke opvolging.",
-  },
-]
-
-const legacyTemplateBlueprints: TemplateBlueprint[] = [
-  {
-    name: "intake",
-    description: intakeDescription,
-    sections: legacyGenericSections,
-  },
-  {
-    name: "Voortgangsrapportage",
-    description: progressDescription,
-    sections: legacyGenericSections,
-  },
-  {
-    name: "Plan van aanpak",
-    description: pvaDescription,
-    sections: legacyGenericSections,
-  },
-  {
-    name: "Eerstejaarsevaluatie",
-    description: firstYearDescription,
-    sections: legacyGenericSections,
-  },
-  {
-    name: "Tweede spoor rapportage",
-    description: secondTrackDescription,
-    sections: legacyGenericSections,
-  },
-  {
-    name: "Eindevaluatie",
-    description: finalEvaluationDescription,
-    sections: legacyGenericSections,
-  },
-  {
-    name: "Adviesrapport aan werkgever",
-    description: employerAdviceDescription,
-    sections: legacyGenericSections,
-  },
-  {
-    name: "Terugkoppelingsrapport voor werknemer",
-    description: clientFeedbackDescription,
-    sections: legacyGenericSections,
-  },
-  {
-    name: "Arbeidsdeskundig rapport",
-    description: arbeidsdeskundigDescription,
-    sections: legacyGenericSections,
-  },
-]
-
 const reintegrationTemplateBlueprints: TemplateBlueprint[] = [
   {
-    name: "intake",
-    description: intakeDescription,
+    name: "Re-integratieplan Werkfit maken",
+    category: "gespreksverslag",
+    description: `UWV-formulier Re-integratieplan Werkfit maken. Dit formulier bevat alle velden uit het UWV-format.`,
     sections: [
-      { title: "Clientgegevens", description: "Naam, functie, eerste ziektedag en betrokken contactpersonen." },
-      { title: "Probleemstelling", description: "Feitelijke context van verzuim zonder medische diagnose." },
-      { title: "Huidige situatie en belastbaarheid", description: "Wat nu haalbaar is in werkbelasting en inzetbaarheid." },
-      { title: "Eerdere inspanningen", description: "Bestaande interventies en eerdere stappen in het traject." },
-      { title: "Doelen en hulpvraag", description: "Concreet doel en gewenste voortgang op korte termijn." },
-      { title: "Afspraken vervolgtraject", description: "Acties met datum of termijn en verantwoordelijke." },
-      { title: "Ondertekening", description: "Ruimte voor bevestiging door client en coach." },
+      { title: "1.1 Voorletters en achternaam", description: "Automatisch invullen uit clientgegevens." },
+      { title: "1.2 Burgerservicenummer", description: "Automatisch invullen uit clientgegevens." },
+      { title: "2.1 Naam contactpersoon UWV", description: "Automatisch invullen uit clientgegevens/zaakgegevens." },
+      { title: "3.1 Naam organisatie", description: "Automatisch invullen uit organisatiegegevens." },
+      { title: "3.2 Bezoekadres", description: "Automatisch invullen uit organisatiegegevens." },
+      { title: "3.3 Postadres", description: "Automatisch invullen uit organisatiegegevens." },
+      { title: "3.4 Postcode en plaats", description: "Automatisch invullen uit organisatiegegevens." },
+      { title: "3.5 Naam contactpersoon", description: "Automatisch invullen uit organisatiegegevens." },
+      { title: "3.6 Functie contactpersoon", description: "Automatisch invullen uit organisatiegegevens." },
+      { title: "3.7 Telefoonnummer contactpersoon", description: "Automatisch invullen uit organisatiegegevens." },
+      { title: "3.8 E-mailadres contactpersoon", description: "Automatisch invullen uit organisatiegegevens." },
+      { title: "4.1 Wat is het ordernummer?", description: "Automatisch invullen uit clientgegevens/organisatiegegevens." },
+      { title: "5.1 Welke hoofdactiviteiten zijn in het werkplan of Plan van aanpak benoemd?", description: "Open vraag. Noem alle relevante hoofdactiviteiten." },
+      { title: "5.2 Beschrijving van de activiteiten en het gewenste resultaat", description: "Beschrijf vanuit de startsituatie van de client de activiteiten en het gewenste resultaat (zonder medische details)." },
+      { title: "5.3 Verdeling begeleidingsuren over de re-integratieactiviteiten", description: "Open vraag. Geef per activiteit het aantal uren." },
+      { title: "5.3a Re-integratieactiviteit", description: "Open invulveld voor activiteit." },
+      { title: "5.3b Aantal begeleidingsuren", description: "Open invulveld voor uren per activiteit (hele uren)." },
+      { title: "5.3c Totaal aantal begeleidingsuren, inclusief administratieve uren (maximaal 41)", description: "Open invulveld voor totaal." },
+      { title: "5.4 Wanneer begint de eerste re-integratieactiviteit?", description: "Open vraag met startdatum." },
+      { title: "5.5 Afspraken en inspanningen van beide partijen", description: "Beschrijf welke afspraken zijn gemaakt en welke inspanningen beide partijen leveren." },
+      { title: "5.6 Afwijkingen van werkplan of Plan van aanpak", description: "Als er afwijkingen zijn: beschrijf op welke onderdelen en waarom." },
+      { title: "6.1 Maximale individuele doorlooptijd", description: "Open vraag. Geef het aantal maanden." },
+      { title: "7.1 Verwachting client van inzet/resultaat en begeleiding", description: "Open vraag." },
+      { title: "7.2 Visie op re-integratiemogelijkheden van de client", description: "Open vraag." },
+      { title: "7.3 Verwachting van inzet en resultaat van de re-integratiedienst", description: "Open vraag vanuit re-integratiebedrijf." },
+      { title: "8.1 Is er sprake van specialistisch uurtarief?", description: "Open vraag (ja/nee + toelichting)." },
+      { title: "8.2 Specialistische expertise: motivering en aantal uren", description: "Open vraag. Motiveer welke expertise nodig is en noem het aantal uren." },
+      { title: "8.2a Aantal uren specialistische expertise", description: "Open invulveld." },
+      { title: "8.2b Motivering specialistische expertise", description: "Open invulveld." },
+      { title: "8.3 Hoger specialistisch uurtarief en motivering", description: "Open vraag. Geef uurtarief exclusief btw en motiveer noodzaak." },
+      { title: "8.3a Uurtarief exclusief btw", description: "Open invulveld in euro." },
+      { title: "8.3b Motivering uurtarief", description: "Open invulveld." },
+      { title: "9 Rechten en plichten", description: "Bevestig dat rechten en plichten met client zijn besproken." },
+      { title: "10 Ondertekening contactpersoon re-integratiebedrijf - naam", description: "Automatisch invullen uit organisatiegegevens." },
+      { title: "10 Ondertekening contactpersoon re-integratiebedrijf - datum en handtekening", description: "Open invulveld." },
+      { title: "10 Ondertekening client - naam", description: "Automatisch invullen uit clientgegevens." },
+      { title: "10 Ondertekening client - datum en handtekening", description: "Open invulveld." },
     ],
   },
   {
-    name: "Voortgangsgesprek",
-    description: progressDescription,
+    name: "Eindrapportage Werkfit maken",
+    category: "gespreksverslag",
+    description: `UWV-formulier Eindrapportage Werkfit maken. Dit formulier bevat alle velden uit het UWV-format.`,
     sections: [
-      { title: "Datum en weeknummer", description: "Leg de datum en WvP-context in weken vast." },
-      { title: "Deelnemers", description: "Wie aanwezig was bij het voortgangsgesprek." },
-      { title: "Acties sinds vorig verslag", description: "Welke acties sinds de vorige evaluatie zijn uitgevoerd." },
-      { title: "Resultaten en voortgang", description: "Wat aantoonbaar is bereikt sinds de vorige stap." },
-      { title: "Belemmeringen", description: "Nieuwe of aanhoudende knelpunten die voortgang beperken." },
-      { title: "Aanpassingen en afspraken", description: "Nieuwe acties met termijnen en verantwoordelijkheden." },
-      { title: "Volgend gesprek", description: "Plan een volgende evaluatiedatum of termijn." },
-      { title: "Ondertekening", description: "Ruimte voor bevestiging van besproken afspraken." },
-    ],
-  },
-  {
-    name: "Plan van Aanpak",
-    description: pvaDescription,
-    sections: [
-      { title: "Algemene gegevens", description: "Datum opstellen, eerste ziektedag, weeknummer en betrokken partijen." },
-      { title: "Samenvatting probleemanalyse", description: "Functionele mogelijkheden en relevante context zonder medische details." },
-      { title: "Re-integratiedoel", description: "Gezamenlijk doel voor werkhervatting of passend werk." },
-      { title: "Concrete acties en interventies", description: "Werkplek, begeleiding, training en andere maatregelen." },
-      { title: "Verantwoordelijkheden en deadlines", description: "Wie doet wat en voor welke datum." },
-      { title: "Evaluatiemomenten", description: "Frequentie en data voor voortgangsgesprekken." },
-      { title: "Mening werknemer", description: "Leg expliciet vast hoe werknemer de afspraken beoordeelt." },
-      { title: "Ondertekening werkgever en werknemer", description: "Verplichte ondertekening door beide partijen." },
-    ],
-  },
-  {
-    name: "Eerstejaarsevaluatie",
-    description: firstYearDescription,
-    sections: [
-      { title: "Datum en weeknummer", description: "Leg evaluatiedatum en fase in het traject vast." },
-      { title: "Samenvatting inspanningen jaar 1", description: "Kernoverzicht van genomen stappen en resultaten." },
-      { title: "Beoordeling Plan van Aanpak", description: "Wat is gehaald en wat niet, met toelichting." },
-      { title: "Nieuwe afspraken", description: "Acties voor de volgende periode met concrete planning." },
-      { title: "Voorstel vervolgtraject", description: "Besluit over eerste spoor of start tweede spoor." },
-      { title: "Mening werknemer", description: "Relevante reactie van werknemer op nieuwe afspraken." },
-      { title: "Ondertekening werkgever en werknemer", description: "Ondertekening door beide partijen." },
-    ],
-  },
-  {
-    name: "Tweede spoor plan/rapport",
-    description: secondTrackDescription,
-    sections: [
-      { title: "Aanleiding tweede spoor", description: "Waarom eerste spoor onvoldoende perspectief biedt." },
-      { title: "Onderzoek en belastbaarheid", description: "Relevante bevindingen over inzetbaarheid buiten eigen organisatie." },
-      { title: "Arbeidsmarktactiviteiten", description: "Sollicitaties, orientatie, scholing en netwerkacties met data." },
-      { title: "Ondersteuning werkgever en arbodienst", description: "Welke begeleiding en middelen zijn ingezet." },
-      { title: "Plan en deadlines", description: "Doelen, acties en planning voor het tweede spoor." },
-      { title: "Resultaten en belemmeringen", description: "Uitkomsten, reacties en resterende knelpunten." },
-      { title: "Vervolgafspraken", description: "Nieuwe acties met verantwoordelijken en termijnen." },
-      { title: "Ondertekening", description: "Ruimte voor bevestiging van afspraken." },
-    ],
-  },
-  {
-    name: "Eindevaluatie",
-    description: finalEvaluationDescription,
-    sections: [
-      { title: "Datum en weeknummer", description: "Leg timing vast richting WIA-aanvraag." },
-      { title: "Huidige situatie en belastbaarheid", description: "Actuele status van inzetbaarheid en werkhervatting." },
-      { title: "Samenvatting inspanningen", description: "Overzicht van alle relevante stappen in het traject." },
-      { title: "Actueel oordeel bedrijfsarts", description: "Verwijs naar actueel oordeel en functionele mogelijkheden." },
-      { title: "Evaluatie resultaten", description: "Beoordeling van eerste en tweede spoor uitkomsten." },
-      { title: "Conclusie en advies", description: "Heldere conclusie en advies voor vervolg of WIA." },
-      { title: "Bevestiging ontvangst werknemer", description: "Leg vast dat werknemer een kopie heeft ontvangen." },
-      { title: "Ondertekening werkgever en werknemer", description: "Ondertekening door beide partijen." },
-    ],
-  },
-  {
-    name: "Adviesrapport Werkgever",
-    description: employerAdviceDescription,
-    sections: [
-      { title: "Samenvatting casus", description: "Kern van de situatie en status van het traject." },
-      { title: "Analyse", description: "Relevante observaties en risico-inschatting voor vervolg." },
-      { title: "Aanbevelingen", description: "Concreet advies voor werkgever, met prioriteiten." },
-      { title: "Vervolgstappen", description: "Acties, timing en verantwoordelijken voor uitvoering." },
-    ],
-  },
-  {
-    name: "Terugkoppelingsrapport Client",
-    description: clientFeedbackDescription,
-    sections: [
-      { title: "Samenvatting gesprek", description: "Wat er is besproken in duidelijke taal." },
-      { title: "Voortgang", description: "Wat al is bereikt en wat nog aandacht vraagt." },
-      { title: "Afspraken", description: "Praktische afspraken en termijnen voor de komende periode." },
-      { title: "Ondersteuning", description: "Welke hulp of begeleiding beschikbaar is." },
-    ],
-  },
-  {
-    name: "Arbeidsdeskundig rapport",
-    description: arbeidsdeskundigDescription,
-    sections: [
-      { title: "Onderzoeksvraag", description: "Doel en scope van het arbeidsdeskundig onderzoek." },
-      { title: "Belastbaarheid en mogelijkheden", description: "Functionele mogelijkheden in relatie tot arbeid." },
-      { title: "Passend werk en alternatieven", description: "Mogelijkheden binnen en buiten de huidige organisatie." },
-      { title: "Conclusie en advies", description: "Onderbouwde conclusie met aanbevolen vervolgstappen." },
+      { title: "1.1 Voorletters en achternaam", description: "Automatisch invullen uit clientgegevens." },
+      { title: "1.2 Burgerservicenummer", description: "Automatisch invullen uit clientgegevens." },
+      { title: "2.1 Naam contactpersoon UWV", description: "Automatisch invullen uit clientgegevens/zaakgegevens." },
+      { title: "3.1 Naam organisatie", description: "Automatisch invullen uit organisatiegegevens." },
+      { title: "3.2 Naam contactpersoon", description: "Automatisch invullen uit organisatiegegevens." },
+      { title: "3.3 Functie contactpersoon", description: "Automatisch invullen uit organisatiegegevens." },
+      { title: "3.4 Telefoonnummer contactpersoon", description: "Automatisch invullen uit organisatiegegevens." },
+      { title: "3.5 E-mailadres contactpersoon", description: "Automatisch invullen uit organisatiegegevens." },
+      { title: "4.1 Wat is het ordernummer?", description: "Automatisch invullen uit clientgegevens/organisatiegegevens." },
+      { title: "4.2 Van welke eindsituatie is sprake?", description: "Open vraag. Beschrijf de eindsituatie." },
+      { title: "5.1 Reden beeindiging naar aanleiding van evaluatiemoment", description: "Open vraag. Licht reden toe en geef aan of de klant het ermee eens is." },
+      { title: "5.2 Advies voor vervolg van de dienstverlening", description: "Open vraag." },
+      { title: "6.1 Reden van de voortijdige terugmelding", description: "Open vraag. Oorspronkelijke meerkeuze als vrije tekst invullen." },
+      { title: "6.2 Toelichting op reden voortijdige terugmelding", description: "Open vraag." },
+      { title: "6.3 Met wie bij UWV is de voortijdige terugmelding besproken?", description: "Open vraag." },
+      { title: "7.1 Uitgevoerde re-integratieactiviteiten en ingezette begeleidingsuren", description: "Open vraag. Noem activiteiten en uren per activiteit." },
+      { title: "7.1a Re-integratieactiviteit", description: "Open invulveld." },
+      { title: "7.1b Aantal begeleidingsuren", description: "Open invulveld." },
+      { title: "7.1c Totaal aantal begeleidingsuren inclusief administratieve uren", description: "Open invulveld." },
+      { title: "7.2 Welke vorderingen heeft de klant gemaakt?", description: "Open vraag met acties en resultaat." },
+      { title: "7.3 Wat is het bereikte resultaat?", description: "Open vraag." },
+      { title: "7.4 Onderbouwing werkfit of niet werkfit", description: "Open vraag." },
+      { title: "7.5 Is de klant naar eigen mening werkfit? Waaruit blijkt dat?", description: "Open vraag." },
+      { title: "7.6 Vervolgadvies en benodigde bemiddeling/begeleiding", description: "Open vraag. Oorspronkelijke meerkeuze als vrije tekst invullen." },
+      { title: "7.7 Toelichting op het advies", description: "Open vraag." },
+      { title: "7.8 Wat vindt de klant van dit advies?", description: "Open vraag." },
+      { title: "8.1 Hoe heeft de klant de ingezette re-integratieactiviteiten ervaren?", description: "Open vraag met toelichting." },
+      { title: "8.2 Is de klant akkoord met de ingezette en verantwoorde begeleidingsuren?", description: "Open vraag (ja/nee + toelichting)." },
+      { title: "9 Ondertekening contactpersoon re-integratiebedrijf - naam", description: "Automatisch invullen uit organisatiegegevens." },
+      { title: "9 Ondertekening contactpersoon re-integratiebedrijf - datum en handtekening", description: "Open invulveld." },
+      { title: "9 Ondertekening klant - naam", description: "Automatisch invullen uit clientgegevens." },
+      { title: "9 Ondertekening klant - datum en handtekening", description: "Open invulveld." },
     ],
   },
 ]
+
+const legacyTemplateBlueprints: TemplateBlueprint[] = reintegrationTemplateBlueprints
 
 export function getReintegrationDefaultTemplateSectionsByName(name: string): Array<{ title: string; description: string }> | null {
   const normalizedName = normalizeTemplateName(name)
@@ -376,12 +286,16 @@ export function getReintegrationDefaultTemplateSectionsByName(name: string): Arr
 
 // Intent: createLegacyDefaultTemplates
 export function createLegacyDefaultTemplates(): Template[] {
-  return materializeTemplateBlueprints(legacyTemplateBlueprints)
+  return materializeTemplateBlueprints(
+    legacyTemplateBlueprints.filter((blueprint) => normalizeTemplateName(blueprint.name) !== "eindrapportagewerkfitmaken"),
+  )
 }
 
 // Intent: createReintegrationDefaultTemplates
 export function createReintegrationDefaultTemplates(): Template[] {
-  return materializeTemplateBlueprints(reintegrationTemplateBlueprints)
+  return materializeTemplateBlueprints(
+    reintegrationTemplateBlueprints.filter((blueprint) => normalizeTemplateName(blueprint.name) !== "eindrapportagewerkfitmaken"),
+  )
 }
 
 // Intent: createDefaultTemplates

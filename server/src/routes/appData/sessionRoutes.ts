@@ -2,7 +2,16 @@ import type { Express } from "express"
 import { createSession, deleteSession, updateSession } from "../../appData"
 import { requireAuthenticatedUser } from "../../auth"
 import { asyncHandler } from "../../http"
-import { readId, readOptionalId, readOptionalNumber, readOptionalText, readOptionalTranscriptionStatus, readSession, readUnixMs } from "../requestParsers"
+import {
+  readId,
+  readOptionalId,
+  readOptionalNumber,
+  readOptionalSessionType,
+  readOptionalText,
+  readOptionalTranscriptionStatus,
+  readSession,
+  readUnixMs,
+} from "../requestParsers"
 
 // Registers session create, update, and delete endpoints.
 export function registerSessionRoutes(app: Express): void {
@@ -27,6 +36,8 @@ export function registerSessionRoutes(app: Express): void {
         id,
         updatedAtUnixMs,
         coacheeId: payload.coacheeId === null ? null : readOptionalId(payload.coacheeId),
+        trajectoryId: payload.trajectoryId === null ? null : readOptionalId(payload.trajectoryId),
+        kind: readOptionalSessionType(payload.kind),
         title: readOptionalText(payload.title),
         createdAtUnixMs: readOptionalNumber(payload.createdAtUnixMs) ?? undefined,
         audioBlobId: readOptionalText(payload.audioBlobId, true),
@@ -34,6 +45,18 @@ export function registerSessionRoutes(app: Express): void {
         uploadFileName: readOptionalText(payload.uploadFileName, true),
         transcript: readOptionalText(payload.transcript, true),
         summary: readOptionalText(payload.summary, true),
+        summaryStructured:
+          payload.summaryStructured === null
+            ? null
+            : payload.summaryStructured && typeof payload.summaryStructured === 'object'
+              ? {
+                  doelstelling: readOptionalText((payload.summaryStructured as any).doelstelling, true) ?? '',
+                  belastbaarheid: readOptionalText((payload.summaryStructured as any).belastbaarheid, true) ?? '',
+                  belemmeringen: readOptionalText((payload.summaryStructured as any).belemmeringen, true) ?? '',
+                  voortgang: readOptionalText((payload.summaryStructured as any).voortgang, true) ?? '',
+                  arbeidsmarktorientatie: readOptionalText((payload.summaryStructured as any).arbeidsmarktorientatie, true) ?? '',
+                }
+              : undefined,
         reportDate: readOptionalText(payload.reportDate, true),
         wvpWeekNumber: readOptionalText(payload.wvpWeekNumber, true),
         reportFirstSickDay: readOptionalText(payload.reportFirstSickDay, true),

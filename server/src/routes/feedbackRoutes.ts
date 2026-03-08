@@ -24,6 +24,7 @@ let ensureContactSubmissionsCompatibilityPromise: Promise<void> | null = null
 let ensureAdminBillingGrantsTablePromise: Promise<void> | null = null
 let ensureManualPricingSchemaPromise: Promise<void> | null = null
 let ensureManagedPlansPromise: Promise<void> | null = null
+let ensureFeedbackRuntimeSchemaPromise: Promise<void> | null = null
 
 const managedPlanDefaults: Array<{ name: string; monthlyPrice: number; minutesPerMonth: number; description: string | null }> = [
   { name: "Abonnement", monthlyPrice: 85, minutesPerMonth: 3000, description: null },
@@ -294,16 +295,33 @@ async function ensureManagedPlans(): Promise<void> {
   await ensureManagedPlansPromise
 }
 
+// Startup-safe entrypoint: keep all legacy compatibility DDL in one boundary.
+// Request handlers can await this single promise instead of scattered ensure calls.
+export async function prepareFeedbackRuntimeSchema(): Promise<void> {
+  if (!ensureFeedbackRuntimeSchemaPromise) {
+    ensureFeedbackRuntimeSchemaPromise = (async () => {
+      await ensureContactSubmissionsTable()
+      await ensureContactSubmissionsCompatibility()
+      await ensurePraktijkRequestsCompatibility()
+      await ensureManagedPlans()
+      await ensureAdminBillingGrantsTable()
+    })().catch((error) => {
+      ensureFeedbackRuntimeSchemaPromise = null
+      throw error
+    })
+  }
+  await ensureFeedbackRuntimeSchemaPromise
+}
+
 async function requireAdminUserEmail(req: Parameters<typeof requireAuthenticatedUser>[0]): Promise<string> {
   const user = await requireAuthenticatedUser(req)
   const normalizedUserEmail = normalizeEmail(user.email)
   const hasAdminRole = user.accountType === "admin"
   const isBootstrapAdmin = isAdminEmail(normalizedUserEmail)
   if (!hasAdminRole && !isBootstrapAdmin) {
-    console.log("[admin] forbidden", {
+    console.warn("[admin] forbidden", {
       method: req.method,
       path: req.path,
-      userEmail: normalizedUserEmail,
       requiredRole: "account_type=admin",
     })
     const error: any = new Error("Forbidden")
@@ -342,6 +360,11 @@ function formatPrice(value: number | null): number | null {
 
 // Registers feedback collection, admin listing, and account deletion routes.
 export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRoutesParams): void {
+  void prepareFeedbackRuntimeSchema().catch((error: any) => {
+    const message = String(error?.message || error || "")
+    console.warn("[feedback] runtime schema warmup failed", { message })
+  })
+
   app.post(
     "/subscriptionCancel/feedback",
     asyncHandler(async (req, res) => {
@@ -401,8 +424,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/contact/submission",
     asyncHandler(async (req, res) => {
       const user = await requireAuthenticatedUser(req)
-      await ensureContactSubmissionsTable()
-      await ensureContactSubmissionsCompatibility()
+      await prepareFeedbackRuntimeSchema()
 
       const name = typeof req.body?.name === "string" ? req.body.name.trim() : ""
       const email = typeof req.body?.email === "string" ? req.body.email.trim() : ""
@@ -430,8 +452,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/contact/request",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureContactSubmissionsTable()
-      await ensureContactSubmissionsCompatibility()
+      await prepareFeedbackRuntimeSchema()
 
       const name = typeof req.body?.name === "string" ? req.body.name.trim() : ""
       const email = typeof req.body?.email === "string" ? req.body.email.trim() : ""
@@ -459,7 +480,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/wachtlijst/request",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensurePraktijkRequestsCompatibility()
+      await prepareFeedbackRuntimeSchema()
 
       const firstName = typeof req.body?.firstName === "string" ? req.body.firstName.trim() : ""
       const lastName = typeof req.body?.lastName === "string" ? req.body.lastName.trim() : ""
@@ -552,7 +573,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/contact-submissions/list",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureContactSubmissionsTable()
+      await prepareFeedbackRuntimeSchema()
       try {
         await requireAdminUserEmail(req)
       } catch {
@@ -662,7 +683,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/plans/list",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManagedPlans()
+      await prepareFeedbackRuntimeSchema()
       try {
         await requireAdminUserEmail(req)
       } catch {
@@ -706,7 +727,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/plans/upsert",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManagedPlans()
+      await prepareFeedbackRuntimeSchema()
       try {
         await requireAdminUserEmail(req)
       } catch {
@@ -782,7 +803,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/plans/reorder",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManagedPlans()
+      await prepareFeedbackRuntimeSchema()
       try {
         await requireAdminUserEmail(req)
       } catch {
@@ -797,7 +818,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/plans/set-active",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManagedPlans()
+      await prepareFeedbackRuntimeSchema()
       try {
         await requireAdminUserEmail(req)
       } catch {
@@ -812,7 +833,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/users/list",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManagedPlans()
+      await prepareFeedbackRuntimeSchema()
       try {
         await requireAdminUserEmail(req)
       } catch {
@@ -932,7 +953,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/users/update-pricing-controls",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManagedPlans()
+      await prepareFeedbackRuntimeSchema()
       const adminEmail = await requireAdminUserEmail(req).catch(() => null)
       if (!adminEmail) {
         sendError(res, 403, "Forbidden")
@@ -1054,7 +1075,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/users/add-monthly-minutes",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManagedPlans()
+      await prepareFeedbackRuntimeSchema()
       const adminEmail = await requireAdminUserEmail(req).catch(() => null)
       if (!adminEmail) {
         sendError(res, 403, "Forbidden")
@@ -1125,7 +1146,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/pricing/plans/public",
     params.rateLimitPublic,
     asyncHandler(async (_req, res) => {
-      await ensureManagedPlans()
+      await prepareFeedbackRuntimeSchema()
       const rows = await queryMany<{
         id: string
         name: string
@@ -1160,7 +1181,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/pricing/me-visibility",
     params.rateLimitPublic,
     asyncHandler(async (req, res) => {
-      await ensureManagedPlans()
+      await prepareFeedbackRuntimeSchema()
       const hasAuthorizationHeader = String(req.headers.authorization || "").trim().length > 0
       if (!hasAuthorizationHeader) {
         res.status(200).json({
@@ -1286,7 +1307,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/account-allowlist/add",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManualPricingSchema()
+      await prepareFeedbackRuntimeSchema()
       const adminEmail = await requireAdminUserEmail(req).catch(() => null)
       if (!adminEmail) {
         sendError(res, 403, "Forbidden")
@@ -1361,7 +1382,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/account-allowlist/remove",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureManualPricingSchema()
+      await prepareFeedbackRuntimeSchema()
       try {
         await requireAdminUserEmail(req)
       } catch {
@@ -1400,7 +1421,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
     "/admin/billing/grant-minutes",
     params.rateLimitAccount,
     asyncHandler(async (req, res) => {
-      await ensureAdminBillingGrantsTable()
+      await prepareFeedbackRuntimeSchema()
       const adminEmail = await requireAdminUserEmail(req).catch(() => null)
       if (!adminEmail) {
         sendError(res, 403, "Forbidden")
@@ -1550,7 +1571,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
         await deleteEntraUserById(user.entraUserId)
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
-        console.log("[account/delete] Entra deletion failed", { userId: user.userId, entraUserId: user.entraUserId, message })
+        console.warn("[account/delete] Entra deletion failed", { userId: user.userId, message })
         const hasPermissionError =
           message.includes("Authorization_RequestDenied") ||
           message.includes("Insufficient privileges") ||
@@ -1571,7 +1592,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
           await cancelMollieSubscriptionForUser(user.userId)
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
-          console.log("[account/delete] Mollie cancellation failed", { userId: user.userId, message })
+          console.warn("[account/delete] Mollie cancellation failed", { userId: user.userId, message })
         }
       }
 
@@ -1580,9 +1601,10 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
         await deleteEncryptedUploadsByPrefix({ prefix: `${user.userId}/` })
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
-        console.log("[account/delete] Blob cleanup failed", { userId: user.userId, message })
+        console.warn("[account/delete] Blob cleanup failed", { userId: user.userId, message })
       }
       res.status(200).json({ ok: true })
     }),
   )
 }
+

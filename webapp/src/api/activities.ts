@@ -1,5 +1,5 @@
-import { detectActivitiesFromTranscript, type DetectedActivitySuggestion } from '../services/activityDetection'
-import { aiEditSnippetText, aiOverwriteSnippetText, extractSnippetsForItem } from '../services/snippetExtraction'
+import { detectActivitiesFromTranscript, type DetectedActivitySuggestion } from '../api/activityDetection'
+import { aiEditSnippetText, aiOverwriteSnippetText, extractSnippetsForItem } from '../api/snippetExtraction'
 
 export type { DetectedActivitySuggestion }
 

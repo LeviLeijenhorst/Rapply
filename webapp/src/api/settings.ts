@@ -1,4 +1,4 @@
-import { callSecureApi } from '../services/secureApi'
+import { callSecureApi } from '../api/secureApi'
 
 export type PricingPlan = {
   id: string
