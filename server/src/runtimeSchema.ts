@@ -1,6 +1,6 @@
 import { ensureBillingUsersCompatibility } from "./billing/store"
-import { prepareAnalyticsRuntimeSchema } from "./routes/analyticsRoutes"
-import { prepareFeedbackRuntimeSchema } from "./routes/feedbackRoutes"
+import { prepareAnalyticsRuntimeSchema } from "./analytics/registerAnalyticsRoutes"
+import { prepareFeedbackRuntimeSchema } from "./feedback/registerFeedbackRoutes"
 import { ensureTranscriptionRuntimeSettingsTable } from "./transcription/mode"
 import { ensureUsersSchemaCompatibility } from "./users"
 

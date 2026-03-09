@@ -1,16 +1,30 @@
 import type { Express, RequestHandler } from "express"
+import { registerActivityAiRoutes } from "../activities/routes/registerActivityAiRoutes"
+import { registerActivityRoutes } from "../activities/routes/registerActivityRoutes"
+import { registerActivityTemplateRoutes } from "../activities/routes/registerActivityTemplateRoutes"
+import { registerAccountRoutes } from "../account/routes/registerAccountRoutes"
 import { authImplementationVersion } from "../auth"
+import { registerChatRoutes } from "../chat/routes/registerChatRoutes"
+import { registerClientRoutes } from "../clients/routes/registerClientRoutes"
+import { registerEncryptionRoutes } from "../encryption/routes/registerEncryptionRoutes"
 import { env } from "../env"
-import { registerAiRoutes } from "./aiRoutes"
-import { registerAnalyticsRoutes } from "./analyticsRoutes"
-import { registerAdminTranscriptionRoutes } from "./adminTranscriptionRoutes"
-import { registerAppDataRoutes } from "./appDataRoutes"
-import { registerAuthRoutes } from "./authRoutes"
-import { registerBillingRoutes } from "./billingRoutes"
-import { registerE2eeRoutes } from "./e2eeRoutes"
-import { registerFeedbackRoutes } from "./feedbackRoutes"
-import { registerSystemRoutes } from "./systemRoutes"
-import { registerTranscriptionRoutes } from "./transcriptionRoutes"
+import { registerNoteRoutes } from "../notes/routes/registerNoteRoutes"
+import { registerPracticeSettingsRoutes } from "../practiceSettings/routes/registerPracticeSettingsRoutes"
+import { registerReportRoutes } from "../reports/routes/registerReportRoutes"
+import { registerSessionRoutes } from "../sessions/routes/registerSessionRoutes"
+import { registerSnippetAiRoutes } from "../snippets/routes/registerSnippetAiRoutes"
+import { registerSnippetRoutes } from "../snippets/routes/registerSnippetRoutes"
+import { registerSummaryRoutes } from "../summaries/routes/registerSummaryRoutes"
+import { registerTemplateRoutes } from "../templates/routes/registerTemplateRoutes"
+import { registerTrajectoryRoutes } from "../trajectories/routes/registerTrajectoryRoutes"
+import { registerAnalyticsRoutes } from "../analytics/registerAnalyticsRoutes"
+import { registerBillingRoutes } from "../billing/routes/registerBillingRoutes"
+import { registerFeedbackRoutes } from "../feedback/registerFeedbackRoutes"
+import { registerAuthRoutes } from "../identity/routes/registerAuthRoutes"
+import { registerSystemRoutes } from "../system/registerSystemRoutes"
+import { registerAdminTranscriptionRoutes } from "../transcription/routes/registerAdminTranscriptionRoutes"
+import { registerTranscriptionRoutes } from "../transcription/routes/registerTranscriptionRoutes"
+import { registerWorkspaceRoutes } from "../workspace/routes/registerWorkspaceRoutes"
 
 type RegisterRoutesParams = {
   diagnosticLogVersion: string
@@ -63,9 +77,23 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
 
   registerAuthRoutes(app)
   registerAnalyticsRoutes(app, { rateLimitAccount: params.rateLimitAccount, rateLimitPublic: params.rateLimitPublic })
-  registerE2eeRoutes(app, { rateLimitAccount: params.rateLimitAccount })
-  registerAppDataRoutes(app)
-  registerAiRoutes(app, { rateLimitAi: params.rateLimitAi })
+  registerEncryptionRoutes(app, { rateLimitAccount: params.rateLimitAccount })
+  registerWorkspaceRoutes(app)
+  registerClientRoutes(app)
+  registerTrajectoryRoutes(app)
+  registerSessionRoutes(app)
+  registerActivityRoutes(app)
+  registerActivityTemplateRoutes(app)
+  registerSnippetRoutes(app)
+  registerNoteRoutes(app)
+  registerTemplateRoutes(app)
+  registerReportRoutes(app)
+  registerPracticeSettingsRoutes(app)
+  registerAccountRoutes(app)
+  registerChatRoutes(app, { rateLimitAi: params.rateLimitAi })
+  registerSummaryRoutes(app, { rateLimitAi: params.rateLimitAi })
+  registerSnippetAiRoutes(app, { rateLimitAi: params.rateLimitAi })
+  registerActivityAiRoutes(app, { rateLimitAi: params.rateLimitAi })
   registerFeedbackRoutes(app, { rateLimitAccount: params.rateLimitAccount, rateLimitPublic: params.rateLimitPublic })
   registerAdminTranscriptionRoutes(app, { rateLimitAccount: params.rateLimitAccount })
   registerBillingRoutes(app, { rateLimitBilling: params.rateLimitBilling })

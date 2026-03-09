@@ -3,7 +3,7 @@ import { getDatabaseConnectionInfo, getRequiredSchemaCheckStatus, runRequiredSch
 import { env } from "./env"
 import { sendError } from "./http"
 import { prewarmRuntimeSchemaCompatibility } from "./runtimeSchema"
-import { registerAudioRoutes } from "./routes/audioRoutes"
+import { registerAudioRoutes } from "./audio/routes/registerAudioRoutes"
 import { registerRoutes } from "./routes/registerRoutes"
 import { createCorsMiddleware, createRateLimitMiddleware, parseCorsAllowedOriginsFromEnv } from "./security"
 

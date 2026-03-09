@@ -1,6 +1,6 @@
 import crypto from "crypto"
 
-import type { Template } from "../appData"
+import type { Template } from "../types/Template"
 
 // Intent: createId
 function createId(prefix: string) {
