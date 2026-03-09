@@ -25,6 +25,8 @@ import { registerSystemRoutes } from "../system/registerSystemRoutes"
 import { registerAdminTranscriptionRoutes } from "../transcription/routes/registerAdminTranscriptionRoutes"
 import { registerTranscriptionRoutes } from "../transcription/routes/registerTranscriptionRoutes"
 import { registerWorkspaceRoutes } from "../workspace/routes/registerWorkspaceRoutes"
+import { registerMeetingRecordingRoutes } from "../meetingRecordings/routes/registerMeetingRecordingRoutes"
+import { registerPipedriveRoutes } from "../integrations/pipedrive/routes/registerPipedriveRoutes"
 
 type RegisterRoutesParams = {
   diagnosticLogVersion: string
@@ -98,4 +100,6 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
   registerAdminTranscriptionRoutes(app, { rateLimitAccount: params.rateLimitAccount })
   registerBillingRoutes(app, { rateLimitBilling: params.rateLimitBilling })
   registerTranscriptionRoutes(app, { rateLimitTranscription: params.rateLimitTranscription })
+  registerMeetingRecordingRoutes(app, { rateLimitTranscription: params.rateLimitTranscription })
+  registerPipedriveRoutes(app, { rateLimitAccount: params.rateLimitAccount })
 }

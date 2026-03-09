@@ -101,4 +101,11 @@ export const env = {
   ovhKmsClientKeyPath: optionalString("OVH_KMS_CLIENT_KEY_PATH") || "",
   ovhKmsCaPath: optionalString("OVH_KMS_CA_PATH") || "",
   templateDefaultsCutoverIso: optionalString("TEMPLATE_DEFAULTS_CUTOVER_ISO"),
+  pipedriveClientId: optionalString("PIPEDRIVE_CLIENT_ID") || "",
+  pipedriveClientSecret: optionalString("PIPEDRIVE_CLIENT_SECRET") || "",
+  pipedriveOauthRedirectUri: optionalString("PIPEDRIVE_OAUTH_REDIRECT_URI") || "",
+  pipedriveOauthAuthorizeUrl: optionalString("PIPEDRIVE_OAUTH_AUTHORIZE_URL") || "https://oauth.pipedrive.com/oauth/authorize",
+  pipedriveOauthTokenUrl: optionalString("PIPEDRIVE_OAUTH_TOKEN_URL") || "https://oauth.pipedrive.com/oauth/token",
+  pipedriveApiBaseUrl: optionalString("PIPEDRIVE_API_BASE_URL") || "https://api.pipedrive.com/v1",
+  pipedriveOauthSuccessRedirectUrl: optionalString("PIPEDRIVE_OAUTH_SUCCESS_REDIRECT_URL") || "",
 }

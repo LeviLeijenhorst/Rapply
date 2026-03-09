@@ -1,7 +1,5 @@
 import type { Express } from "express"
 import { requireAuthenticatedUser } from "../../auth"
-import { readManualPricingContextForUser } from "../../billing/manualPricing"
-import { isMollieConfigured, syncMollieSubscriptionForUser } from "../../billing/mollie"
 import { readBillingStatus } from "../../billing/store"
 import { env } from "../../env"
 import { asyncHandler, sendError } from "../../http"
@@ -9,6 +7,7 @@ import { readTranscriptionRuntimeSettings } from "../mode"
 import { chargeSecondsIdempotent } from "../store"
 import { markOperationCompleted } from "../actions/markOperationCompleted"
 import { markOperationFailed } from "../actions/markOperationFailed"
+import { readTranscriptionChargeContext } from "../actions/readTranscriptionChargeContext"
 import type { RegisterTranscriptionRoutesParams } from "./types"
 
 const AZURE_SPEECH_TOKEN_TTL_SECONDS = 540
@@ -157,25 +156,17 @@ export function registerTranscriptionRealtimeRoutes(app: Express, params: Regist
       }
 
       try {
-        const useMollie = isMollieConfigured()
-        if (useMollie) {
-          await syncMollieSubscriptionForUser(user.userId)
-        }
-
-        const manualPricing = await readManualPricingContextForUser(user.userId)
-        const useManualCycle = useMollie || manualPricing.includedSecondsPerCycle > 0 || manualPricing.planId != null || manualPricing.customMonthlyPrice != null
-        const hasDashboardMinutesConfigured = manualPricing.planId != null || manualPricing.includedSecondsPerCycle > 0
-        const freeSecondsOverride = hasDashboardMinutesConfigured ? 0 : null
+        const chargeContext = await readTranscriptionChargeContext({ userId: user.userId })
 
         const charge = await chargeSecondsIdempotent({
           userId: user.userId,
           operationId,
           secondsToCharge: Math.max(1, durationSeconds),
           planKey: null,
-          cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : null,
-          cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : null,
-          includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
-          freeSecondsOverride,
+          cycleStartMs: chargeContext.cycleStartMs,
+          cycleEndMs: chargeContext.cycleEndMs,
+          includedSecondsOverride: chargeContext.includedSecondsOverride,
+          freeSecondsOverride: chargeContext.freeSecondsOverride,
           nonExpiringTotalSecondsOverride: undefined,
         })
 
@@ -184,10 +175,10 @@ export function registerTranscriptionRealtimeRoutes(app: Express, params: Regist
         const status = await readBillingStatus({
           userId: user.userId,
           planKey: null,
-          cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : null,
-          cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : null,
-          includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
-          freeSecondsOverride,
+          cycleStartMs: chargeContext.cycleStartMs,
+          cycleEndMs: chargeContext.cycleEndMs,
+          includedSecondsOverride: chargeContext.includedSecondsOverride,
+          freeSecondsOverride: chargeContext.freeSecondsOverride,
         })
 
         res.status(200).json({
