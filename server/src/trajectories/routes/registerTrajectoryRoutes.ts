@@ -26,7 +26,7 @@ export function registerTrajectoryRoutes(app: Express): void {
       await updateTrajectory(user.userId, {
         id,
         updatedAtUnixMs,
-        clientId: readOptionalId(payload.clientId),
+        clientId: readOptionalId(payload.clientId ?? payload.coacheeId),
         name: readOptionalText(payload.name),
         serviceType: readOptionalText(payload.serviceType ?? payload.dienstType, true),
         uwvContactName: readOptionalText(payload.uwvContactName, true),

@@ -90,13 +90,16 @@ function parseSnippetExtraction(rawText: string): SnippetExtractionResult[] {
   return snippets
 }
 
-async function extractSnippetsForTranscriptChunk(transcriptChunk: string): Promise<SnippetExtractionResult[]> {
+async function extractSnippetsForTranscriptChunk(transcriptChunk: string, preserveOriginalWording: boolean): Promise<SnippetExtractionResult[]> {
   const deployment = normalizeText(env.azureOpenAiSummaryDeployment) || normalizeText(env.azureOpenAiChatDeployment)
   if (!deployment) {
     throw new SnippetExtractionError("Azure OpenAI snippet extraction deployment is not configured")
   }
 
   const fieldLines = snippetFieldQuestions.map((item) => `- ${item.field}: ${item.question}`).join("\n")
+  const wordingInstruction = preserveOriginalWording
+    ? "Keep wording very close to the user's original phrasing whenever possible."
+    : "You may rephrase conversational wording as long as factual meaning is preserved."
   const prompt = [
     "You are assisting a professional reintegration coach in the Netherlands.",
     "The coach uses this software to document evidence during reintegration trajectories.",
@@ -112,6 +115,7 @@ async function extractSnippetsForTranscriptChunk(transcriptChunk: string): Promi
     "Avoid small talk, vague remarks, repeated information, and conversational filler.",
     "Each snippet must contain one factual statement, be concise, avoid interpretation, and be useful as evidence in a formal report.",
     "Multiple snippets per category are allowed.",
+    wordingInstruction,
     "",
     "Use these categories and full question texts:",
     fieldLines,
@@ -156,6 +160,7 @@ export function registerSnippetAiRoutes(app: Express, params: RegisterSnippetAiR
       const sourceSessionId = normalizeText(req.body?.sourceSessionId || req.body?.itemId)
       const trajectoryId = normalizeText(req.body?.trajectoryId)
       const transcript = normalizeText(req.body?.transcript)
+      const sourceInputType = normalizeText(req.body?.sourceInputType).toLowerCase()
       const itemDate = normalizeNumber(req.body?.itemDate)
 
       if (!sourceSessionId) {
@@ -193,10 +198,11 @@ export function registerSnippetAiRoutes(app: Express, params: RegisterSnippetAiR
       }
 
       const chunks = splitTranscriptRecursively(transcript, maxChunkPromptTokens)
+      const preserveOriginalWording = sourceInputType === "written_recap" || sourceInputType === "written"
       const merged: SnippetExtractionResult[] = []
       const seenSnippetText = new Set<string>()
       for (const chunk of chunks) {
-        const chunkSnippets = await extractSnippetsForTranscriptChunk(chunk)
+        const chunkSnippets = await extractSnippetsForTranscriptChunk(chunk, preserveOriginalWording)
         for (const snippet of chunkSnippets) {
           const dedupeKey = normalizeText(snippet.text)
           if (!dedupeKey || seenSnippetText.has(dedupeKey)) continue

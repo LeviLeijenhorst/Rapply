@@ -194,6 +194,8 @@ export function useSessieDetailTranscriptionFlow({
       updateSession(sessionId, {
         summary: null,
         summaryStructured: generatedSummary,
+        audioBlobId: null,
+        audioDurationSeconds: null,
         transcriptionStatus: 'done',
         transcriptionError: null,
       })
@@ -302,6 +304,8 @@ export function useSessieDetailTranscriptionFlow({
           transcript,
           summary: null,
           summaryStructured: structuredFromTranscriber,
+          audioBlobId: null,
+          audioDurationSeconds: null,
           transcriptionStatus: 'done',
           transcriptionError: null,
         })

@@ -1,4 +1,5 @@
 import { sendClientChatMessage } from '../../../ai/chat/sendClientChatMessage'
+import { classifySnippetType } from '../../../ai/snippets/classifySnippetType'
 import type { LocalChatMessage } from '../../../api/chat/types'
 import type { LocalAppData, Template } from '../../../storage/types'
 import { exportReportToWord } from '../../../ai/reports/exportReportToWord'
@@ -76,7 +77,8 @@ export function buildReportGenerationSourceText(params: {
   const relevantSnippets = data.snippets
     .filter((snippet) => {
       if (selectedTrajectory.id && snippet.trajectoryId !== selectedTrajectory.id) return false
-      if (snippet.status === 'rejected') return false
+      if (snippet.status !== 'approved') return false
+      if (classifySnippetType(snippet.field) !== 'report') return false
       return selectedSessionAndReportIds.has(snippet.itemId)
     })
     .sort((a, b) => a.date - b.date)

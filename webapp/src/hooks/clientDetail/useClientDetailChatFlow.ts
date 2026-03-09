@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ScrollView } from 'react-native'
 
 import { clearQuickQuestionsChatForCoachee, loadQuickQuestionsChatForCoachee, saveQuickQuestionsChatForCoachee } from '../../storage/quickQuestionsChatStore'
-import type { Coachee, Session, WrittenReport } from '../../storage/types'
+import type { Coachee, Session, Snippet, WrittenReport } from '../../storage/types'
 import { fetchBillingStatus } from '../../api/billing/billingApi'
 import { sendClientChatMessage } from '../../ai/chat/sendClientChatMessage'
 import type { LocalChatMessage } from '../../api/chat/types'
@@ -32,6 +32,7 @@ type Params = {
   sessionCount: number
   sessions: Session[]
   sessieItemsForStatus: Array<{ title: string; trajectoryLabel: string; dateLabel: string; timeLabel: string }>
+  snippets: Snippet[]
   writtenReports: WrittenReport[]
 }
 
@@ -68,6 +69,7 @@ export function useClientDetailChatFlow({
   sessionCount,
   sessions,
   sessieItemsForStatus,
+  snippets,
   writtenReports,
 }: Params) {
   const [composerText, setComposerText] = useState('')
@@ -217,6 +219,14 @@ export function useClientDetailChatFlow({
             reportDate: session.reportDate,
             wvpWeekNumber: session.wvpWeekNumber,
             reportFirstSickDay: session.reportFirstSickDay,
+          })),
+        snippets: snippets
+          .filter((snippet) => snippet.status === 'approved')
+          .filter((snippet) => chatContextSessionIds.has(snippet.itemId))
+          .map((snippet) => ({
+            sessionId: snippet.itemId,
+            field: snippet.field,
+            text: snippet.text,
           })),
         maxTotalCharacters: 18000,
         maxSessionCharacters: 3500,

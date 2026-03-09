@@ -12,12 +12,16 @@ type SnippetTextResponse = {
 export async function extractSnippetsForItem(params: {
   itemId: string
   trajectoryId: string
+  clientId?: string
+  sourceInputType?: string
   transcript: string
   itemDate: number
 }): Promise<Snippet[]> {
-  const response = await callSecureApi<SnippetExtractResponse>('/snippet-extract', {
-    itemId: params.itemId,
+  const response = await callSecureApi<SnippetExtractResponse>('/ai/snippet-extract', {
+    sourceSessionId: params.itemId,
     trajectoryId: params.trajectoryId,
+    ...(params.clientId ? { clientId: params.clientId } : {}),
+    ...(params.sourceInputType ? { sourceInputType: params.sourceInputType } : {}),
     transcript: params.transcript,
     itemDate: params.itemDate,
   })

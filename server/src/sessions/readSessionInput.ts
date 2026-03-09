@@ -45,7 +45,10 @@ export function readSessionInput(value: unknown): Session {
 
   return {
     id: readId(payload.id, "session.id"),
-    clientId: payload.clientId === null ? null : readOptionalId(payload.clientId) ?? null,
+    clientId:
+      (payload.clientId ?? payload.coacheeId) === null
+        ? null
+        : readOptionalId(payload.clientId ?? payload.coacheeId) ?? null,
     trajectoryId: payload.trajectoryId === null ? null : readOptionalId(payload.trajectoryId) ?? null,
     title: readText(payload.title, "session.title"),
     inputType,

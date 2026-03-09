@@ -206,6 +206,11 @@ export function buildCoacheeStructuredSystemMessages(params: {
     wvpWeekNumber?: string | null
     reportFirstSickDay?: string | null
   }[]
+  snippets?: {
+    sessionId: string
+    field: string
+    text: string
+  }[]
   maxTotalCharacters?: number
   maxSessionCharacters?: number
 }): LocalChatMessage[] {
@@ -306,6 +311,23 @@ export function buildCoacheeStructuredSystemMessages(params: {
         ? 'Geen andere verslagen met inhoud beschikbaar.'
         : 'Gespreksverslagen zijn niet opgenomen in deze context.'
 
+  const snippetsBySession = new Map<string, string[]>()
+  for (const snippet of Array.isArray(params.snippets) ? params.snippets : []) {
+    const sessionId = normalizeText(snippet.sessionId) || 'onbekende_sessie'
+    const field = normalizeText(snippet.field)
+    const text = normalizeText(snippet.text)
+    if (!text) continue
+    const lines = snippetsBySession.get(sessionId) ?? []
+    lines.push(field ? `[${field}] ${text}` : text)
+    snippetsBySession.set(sessionId, lines)
+  }
+  const snippetKnowledgeText =
+    snippetsBySession.size > 0
+      ? [...snippetsBySession.entries()]
+          .map(([sessionId, lines]) => `Sessie ${sessionId}\n${lines.map((line) => `- ${line}`).join('\n')}`)
+          .join('\n\n')
+      : 'Geen goedgekeurde snippets beschikbaar.'
+
   const text = includeSessionReports
     ? `Dossiercontext voor ${params.coacheeName}:
 
@@ -318,6 +340,9 @@ ${intakeBlock}
 3. Overige verslagen (nieuw naar oud)
 ${otherReportsText}
 
+4. Snippet-kennis (gegroepeerd per sessie)
+${snippetKnowledgeText}
+
 Gebruik deze structuur en context om de vragen te beantwoorden.`
     : `Dossiercontext voor ${params.coacheeName}:
 
@@ -326,6 +351,9 @@ ${basicInfoText}
 
 2. Gespreksverslagen
 ${otherReportsText}
+
+3. Snippet-kennis (gegroepeerd per sessie)
+${snippetKnowledgeText}
 
 Gebruik uitsluitend de basisgegevens in deze context om de vragen te beantwoorden.`
 

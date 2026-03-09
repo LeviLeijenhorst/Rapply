@@ -26,7 +26,7 @@ export function registerSessionRoutes(app: Express): void {
       await updateSession(user.userId, {
         id,
         updatedAtUnixMs,
-        clientId: payload.clientId === null ? null : readOptionalId(payload.clientId),
+        clientId: (payload.clientId ?? payload.coacheeId) === null ? null : readOptionalId(payload.clientId ?? payload.coacheeId),
         trajectoryId: payload.trajectoryId === null ? null : readOptionalId(payload.trajectoryId),
         inputType: readOptionalSessionInputType(payload.inputType ?? payload.kind),
         title: readOptionalText(payload.title),

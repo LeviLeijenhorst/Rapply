@@ -17,7 +17,7 @@ export function readTrajectoryInput(value: unknown): Trajectory {
   const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs ?? payload.createdAtUnixMs, "trajectory.updatedAtUnixMs")
   return {
     id: readId(payload.id, "trajectory.id"),
-    clientId: readId(payload.clientId, "trajectory.clientId"),
+    clientId: readId(payload.clientId ?? payload.coacheeId, "trajectory.clientId"),
     name: readText(payload.name, "trajectory.name"),
     serviceType: readOptionalText(payload.serviceType ?? payload.dienstType, true) ?? "Werkfit maken",
     uwvContactName: readOptionalText(payload.uwvContactName, true) ?? null,

@@ -150,6 +150,7 @@ export function ClientScreen({
     sessionCount,
     sessions: data.sessions,
     sessieItemsForStatus: sessieItems,
+    snippets: data.snippets,
     writtenReports: data.writtenReports,
   })
   const searchPlaceholder =

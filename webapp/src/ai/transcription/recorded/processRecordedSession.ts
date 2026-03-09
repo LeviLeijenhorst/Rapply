@@ -22,6 +22,7 @@ import type { Session } from '../../../storage/types'
 
 type SessionUpdate = {
   audioBlobId?: string | null
+  audioDurationSeconds?: number | null
   transcript?: string | null
   summary?: string | null
   summaryStructured?: Session['summaryStructured']
@@ -138,6 +139,8 @@ export async function processRecordedSession(params: {
         updateSession(sessionId, {
           summaryStructured: generatedStructuredSummary,
           summary: null,
+          audioBlobId: null,
+          audioDurationSeconds: null,
           transcriptionStatus,
           transcriptionError: null,
         })
@@ -170,6 +173,8 @@ export async function processRecordedSession(params: {
       updateSession(sessionId, {
         transcript,
         summary: cleanedSummary,
+        audioBlobId: null,
+        audioDurationSeconds: null,
         transcriptionStatus: 'done',
         transcriptionError: null,
       })
@@ -201,6 +206,8 @@ export async function processRecordedSession(params: {
       updateSession(sessionId, {
         summaryStructured: generatedStructuredSummary,
         summary: null,
+        audioBlobId: null,
+        audioDurationSeconds: null,
         transcriptionStatus,
         transcriptionError: null,
       })
