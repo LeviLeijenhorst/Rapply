@@ -71,7 +71,7 @@ export default function ConversationScreen() {
   const isAudioRecording = sessionType === "audio" || sessionType === "spoken_report"
   const isReport = sessionType === "written_report" || sessionType === "spoken_report"
   const showTranscriptTab = sessionType === "audio"
-  const showAskAiTab = sessionType === "audio"
+  const showAskAiTab = isAudioRecording
 
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [showShareMenu, setShowShareMenu] = useState(false)
@@ -188,6 +188,16 @@ export default function ConversationScreen() {
   const hasUnsavedSummaryChanges = useMemo(() => {
     return (summary || "") !== (savedSummary || "")
   }, [summary, savedSummary])
+
+  const sessionDateLabel = useMemo(() => {
+    const timestamp = Number((conversationId || "").trim())
+    if (!Number.isFinite(timestamp)) return ""
+    try {
+      return new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short", year: "numeric" }).format(new Date(timestamp))
+    } catch {
+      return ""
+    }
+  }, [conversationId])
 
   function setSummaryValue(next: string) {
     summaryValueRef.current = next || ""
@@ -1972,7 +1982,7 @@ export default function ConversationScreen() {
                 </Pressable>
               </View>
             ) : null}
-            {summaryUiInitializing || !hasCheckedSummary || isSummaryLoading || isSummaryGenerating || isTranscribing || ((transcript || "").trim() && !(summary || "").trim()) ? (
+            {summaryUiInitializing || !hasCheckedSummary || isSummaryLoading || isSummaryGenerating || isTranscribing ? (
               <View style={styles.indicatorRow}>
                 <ActivityIndicator color={colors.orange} />
                 <Text style={styles.indicatorText}>
@@ -2298,7 +2308,7 @@ export default function ConversationScreen() {
             removeClippedSubviews={false}
             overScrollMode="never"
             keyboardDismissMode="none"
-            contentContainerStyle={{ paddingTop: 0, paddingBottom: 120 + safeAreaBottom + (notesFocused ? keyboardHeight : 0) }}
+            contentContainerStyle={{ paddingTop: 0, paddingBottom: 136 + safeAreaBottom + (notesFocused ? keyboardHeight : 0) }}
           >
             {notes
               .slice()
@@ -2366,7 +2376,7 @@ export default function ConversationScreen() {
           style={[
             styles.noteComposerBar,
             { transform: [{ translateY: notesFocused ? -keyboardHeight : 0 }] },
-            { bottom: 0, paddingBottom: safeAreaBottom },
+            { bottom: spacing.small, paddingBottom: safeAreaBottom + spacing.small },
           ]}
         >
           {LinearGradientMaybe ? (
@@ -2473,19 +2483,20 @@ export default function ConversationScreen() {
         )}
       </View>
 
-      {sessionType === "written_report" ? (
-        <View style={{ paddingHorizontal: spacing.big, marginTop: spacing.small, marginBottom: 4 }}>
-          <Text style={styles.titleText} numberOfLines={1}>
-            {headerTitle || "Naamloos verslag"}
+      <View style={styles.sessionMetaRow}>
+        <Text style={[styles.titleText, styles.titleTextInline]} numberOfLines={1}>
+          {sessionType === "written_report"
+            ? (headerTitle || "Naamloos verslag")
+            : (headerTitle || titleFromRoute || (sessionType === "spoken_report" ? "Naamloos verslag" : "Naamloos gesprek"))}
+        </Text>
+        {(coacheeName || sessionDateLabel) ? (
+          <Text style={styles.sessionMetaText} numberOfLines={1}>
+            {coacheeName}
+            {coacheeName && sessionDateLabel ? " · " : ""}
+            {sessionDateLabel}
           </Text>
-        </View>
-      ) : (
-        <View style={{ paddingHorizontal: spacing.big, marginTop: spacing.small, marginBottom: 4 }}>
-          <Text style={styles.titleText} numberOfLines={1}>
-            {headerTitle || titleFromRoute || (sessionType === "spoken_report" ? "Naamloos verslag" : "Naamloos gesprek")}
-          </Text>
-        </View>
-      )}
+        ) : null}
+      </View>
 
       {isAudioRecording ? (
         <View style={styles.audioPlayerOuter}>
@@ -2562,7 +2573,7 @@ export default function ConversationScreen() {
           {isFullConversation && showAskAiTab && <View style={{ width: spacing.small }} />}
           {isFullConversation && showAskAiTab && (
             <View onLayout={(e) => (tabPositionsRef.current["askai"] = e.nativeEvent.layout.x)}>
-              <Tab label="Vraag AI" active={uiActiveTab === "askai"} onPress={() => handleSetActiveTab("askai")} />
+              <Tab label="AI-chat" active={uiActiveTab === "askai"} onPress={() => handleSetActiveTab("askai")} />
             </View>
           )}
           <View style={{ width: spacing.small }} />
@@ -2879,6 +2890,26 @@ const styles = StyleSheet.create({
     height: 44,
     textAlignVertical: "center",
     lineHeight: 44,
+  },
+  titleTextInline: {
+    height: undefined,
+    lineHeight: 38,
+    flexShrink: 1,
+  },
+  sessionMetaRow: {
+    paddingHorizontal: spacing.big,
+    marginTop: spacing.small,
+    marginBottom: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "nowrap",
+  },
+  sessionMetaText: {
+    marginLeft: spacing.small,
+    fontFamily: typography.fontFamily,
+    fontSize: typography.textSize,
+    color: colors.textPrimary,
+    flexShrink: 1,
   },
   emptyCenter: { paddingVertical: 40, alignItems: "center", justifyContent: "center" },
   emptyText: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary },
