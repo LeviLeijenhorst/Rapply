@@ -14,5 +14,6 @@ export function buildReportContext(params: {
     })
     .map((snippet) => `- ${snippet.text}`)
     .join('\n')
+
   return `Template: ${params.templateName}\n\nApproved snippets:\n${snippetsText}\n\nClient knowledge:\n${params.clientKnowledge}`
 }

@@ -1,0 +1,12 @@
+# TODO
+
+## Jonas
+
+- Design and add a clear button for recording a session from another tab (Teams, Zoom, Google Meet, etc.).
+- Define the click flow for this button so users can start this external-tab recording path.
+
+## Levi
+
+- Build pipeline importing functionality.
+- Implement the feature functionality for recording a session from another tab.
+- Execute the migration toward Scaleway.

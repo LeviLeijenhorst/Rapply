@@ -1,8 +1,8 @@
 import { sendClientChatMessage } from '../../../ai/chat/sendClientChatMessage'
-import { classifySnippetType } from '../../../ai/snippets/classifySnippetType'
+import { classifySnippetType } from '../../../api/snippets/classifySnippetType'
 import type { LocalChatMessage } from '../../../api/chat/types'
 import type { LocalAppData, Template } from '../../../storage/types'
-import { exportReportToWord } from '../../../ai/reports/exportReportToWord'
+import { exportReportToWord } from '../../../api/reports/exportReportToWord'
 import { generateSessionSummary } from '../../../ai/summaries/generateSessionSummary'
 import { resolveSummaryTemplateSections } from '../../../ai/summaries/resolveSummaryTemplateSections'
 
