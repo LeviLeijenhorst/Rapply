@@ -5,7 +5,7 @@ import { clearPendingPreviewAudio, clearPendingPreviewAudioIfEligible, getPendin
 import type { Session, StructuredSessionSummary } from '../../storage/types'
 import { loadAudioBlobRemote } from '../../api/audio/audioBlobApi'
 import { fetchBillingStatus } from '../../api/billing/billingApi'
-import { cancelTranscriptionOperation, isTranscriptionCancelledError, transcribeAudio } from '../../ai/transcribeAudio'
+import { cancelTranscriptionOperation, isTranscriptionCancelledError, transcribeAudio } from '../../api/transcription/transcribeAudio'
 import {
   cancelTranscriptionRun,
   finishTranscriptionRun,
@@ -14,7 +14,7 @@ import {
   setTranscriptionAbortController,
   setTranscriptionOperationId,
   startTranscriptionRun,
-} from '../../ai/transcription/transcriptionRunState'
+} from '../../api/transcription/transcriptionRunState'
 import { hasStructuredSummaryContent, mapReportMarkdownToStructuredSummary } from '../../types/structuredSummary'
 import { normalizeTranscriptionError } from '../../audio/processing/transcriptionError'
 

@@ -1,4 +1,4 @@
-import type { LocalChatMessage } from '../../api/chat/types'
+import type { LocalChatMessage } from './types'
 
 // Keep this in sync with prompts/clientChatPrompt.md until the app loads prompt files directly.
 const clientChatInstructions = [

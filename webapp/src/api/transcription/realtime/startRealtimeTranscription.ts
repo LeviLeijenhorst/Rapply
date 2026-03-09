@@ -3,7 +3,7 @@ import {
   startRealtimeTranscriber,
   type RealtimeTranscriberSession,
   type TranscriptionMode,
-} from '../../../api/transcription/realtimeTranscriptionApi'
+} from '../realtimeTranscriptionApi'
 
 type StartParams = {
   languageCode?: string

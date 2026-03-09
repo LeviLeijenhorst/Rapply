@@ -3,7 +3,7 @@ import { useCallback, useEffect, type MutableRefObject } from 'react'
 import {
   startRealtimeTranscription,
   type RealtimeTranscriberSession,
-} from '../../ai/transcription/realtime/startRealtimeTranscription'
+} from '../../api/transcription/realtime/startRealtimeTranscription'
 import type { NewSessionStep } from '../../screens/record/newInputModalTypes'
 import {
   createOperationId,

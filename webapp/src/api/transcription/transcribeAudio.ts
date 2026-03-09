@@ -1,4 +1,4 @@
-import { callSecureApi } from '../api/core/secureApi'
+import { callSecureApi } from '../core/secureApi'
 
 const TRANSCRIPTION_PREFLIGHT_TIMEOUT_MS = 30_000
 const TRANSCRIPTION_UPLOAD_BLOCK_TIMEOUT_MS = 10 * 60_000

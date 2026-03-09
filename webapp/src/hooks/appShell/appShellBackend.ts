@@ -1,6 +1,6 @@
 import { clearPendingPreviewAudio, clearPendingPreviewAudioIfEligible, listPendingPreviewAudioTasks } from '../../audio/pendingPreviewStore'
 import { deleteAccountApi, fetchCurrentUserProfile as fetchCurrentUserProfileApi, fetchSubscriptionAccessApi, submitFeedbackApi } from '../../api/account/accountApi'
-import { processRecordedSession } from '../../ai/transcription/recorded/processRecordedSession'
+import { processRecordedSession } from '../../api/transcription/recorded/processRecordedSession'
 import type { Session } from '../../storage/types'
 
 export type SubscriptionAccess = {

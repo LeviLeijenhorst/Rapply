@@ -1,10 +1,10 @@
-import { sendClientChatMessage } from '../../../ai/chat/sendClientChatMessage'
+import { sendClientChatMessage } from '../../../api/chat/sendClientChatPromptMessage'
 import { classifySnippetType } from '../../../api/snippets/classifySnippetType'
 import type { LocalChatMessage } from '../../../api/chat/types'
 import type { LocalAppData, Template } from '../../../storage/types'
 import { exportReportToWord } from '../../../api/reports/exportReportToWord'
-import { generateSessionSummary } from '../../../ai/summaries/generateSessionSummary'
-import { resolveSummaryTemplateSections } from '../../../ai/summaries/resolveSummaryTemplateSections'
+import { generateSessionSummary } from '../../../api/summaries/generateSessionSummaryFromTranscript'
+import { resolveSummaryTemplateSections } from '../../../api/summaries/resolveSummaryTemplateSections'
 
 export type ReportInputField = {
   key: string

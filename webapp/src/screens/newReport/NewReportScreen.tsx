@@ -1,4 +1,4 @@
-ï»¿
+
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
@@ -15,7 +15,7 @@ import {
 } from '../../hooks/reports/newReport/newReportWorkflows'
 import { useLocalAppData } from '../../storage/LocalAppDataProvider'
 import type { Template } from '../../storage/types'
-import { resolveSummaryTemplateSections } from '../../ai/summaries/resolveSummaryTemplateSections'
+import { resolveSummaryTemplateSections } from '../../api/summaries/resolveSummaryTemplateSections'
 import { features } from '../../config/features'
 import { colors } from '../../design/theme/colors'
 import { useToast } from '../../toast/ToastProvider'
@@ -204,14 +204,14 @@ function replaceFieldLabel(field: UwvField): string {
   if (normalizedLabel.includes('verdeling begeleidingsuren over de re integratieactiviteiten')) return 'Hoe verdeelt U de begeleidingsuren over de re-integratieactiviteiten?'
   if (normalizedLabel.includes('afwijkingen van werkplan of plan van aanpak')) return 'Als U met de invulling van de re-integratieactiviteiten afwijkt van het werkplan of Plan van aanpak, geef aan op welke onderdelen U ervan afwijkt en waarom.'
   if (normalizedLabel.includes('maximale individuele doorlooptijd')) return 'Wat is de maximale individuele doorlooptijd van de re-integratiedienst?'
-  if (normalizedLabel.includes('verwachting client van inzet resultaat en begeleiding')) return 'Wat verwacht de cliÃ«nt van de inzet en het resultaat van de re-integratiedienst? En van de begeleiding door uw organisatie?'
-  if (normalizedLabel.includes('visie op re integratiemogelijkheden van de client')) return 'Wat is uw visie op de re-integratiemogelijkheden van de cliÃ«nt?'
-  if (normalizedLabel.includes('verwachting van inzet en resultaat van de re integratiedienst')) return 'Wat verwacht de cliÃ«nt van de inzet en het resultaat van de re-integratiedienst?'
+  if (normalizedLabel.includes('verwachting client van inzet resultaat en begeleiding')) return 'Wat verwacht de cliënt van de inzet en het resultaat van de re-integratiedienst? En van de begeleiding door uw organisatie?'
+  if (normalizedLabel.includes('visie op re integratiemogelijkheden van de client')) return 'Wat is uw visie op de re-integratiemogelijkheden van de cliënt?'
+  if (normalizedLabel.includes('verwachting van inzet en resultaat van de re integratiedienst')) return 'Wat verwacht de cliënt van de inzet en het resultaat van de re-integratiedienst?'
   if (normalizedLabel.includes('is er sprake van specialistisch uurtarief')) return 'Is er sprake van specialistisch uurtarief?'
-  if (normalizedLabel.includes('specialistische expertise motivering en aantal uren')) return 'Motiveer welke specialistische expertise voor de cliÃ«nt nodig is en hoeveel uren u adviseert.'
+  if (normalizedLabel.includes('specialistische expertise motivering en aantal uren')) return 'Motiveer welke specialistische expertise voor de cliënt nodig is en hoeveel uren u adviseert.'
   if (normalizedLabel.includes('hoger specialistisch uurtarief en motivering')) return 'Wat is het in rekening te brengen (hogere) uurtarief voor de specialistische expertise? Motiveer waarom dit tarief noodzakelijk is.'
   if (normalizedRaw.includes('ondertekening contactpersoon re integratiebedrijf') && normalizedLabel.includes('naam')) return 'Naam contactpersoon re-integratiebedrijf'
-  if ((normalizedRaw.includes('ondertekening client') || normalizedRaw.includes('ondertekening klant')) && normalizedLabel.includes('naam')) return 'Naam cliÃ«nt'
+  if ((normalizedRaw.includes('ondertekening client') || normalizedRaw.includes('ondertekening klant')) && normalizedLabel.includes('naam')) return 'Naam cliënt'
   return field.label
 }
 
@@ -306,7 +306,7 @@ function detectMetadataKind(label: string, numberPrefix: string): MetadataKind {
   if (normalized.includes('telefoonnummer')) return 'phone'
   if (normalized.includes('doorlooptijd')) return 'months'
   if (normalized.includes('naam contactpersoon re integratiebedrijf')) return 'name'
-  if (normalized.includes('naam client') || normalized.includes('naam cliÃ«nt')) return 'name'
+  if (normalized.includes('naam client') || normalized.includes('naam cliënt')) return 'name'
   if (['1', '2', '3', '4'].includes(numberPrefix) && normalized.includes('naam')) return 'name'
   if (['1', '2', '3', '4'].includes(numberPrefix) && normalized.includes('functie')) return 'name'
   return 'none'
@@ -794,7 +794,7 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
       }
       if (isSpecialistTariffDetail(field.label)) {
         const entry = specialistTariffByField[field.key] || { hourlyRate: '', motivation: '' }
-        const serialized = `Uurtarief exclusief btw: â‚¬ ${entry.hourlyRate}\nMotivering: ${entry.motivation}`.trim()
+        const serialized = `Uurtarief exclusief btw: € ${entry.hourlyRate}\nMotivering: ${entry.motivation}`.trim()
         setFieldValues((current) => (current[field.key] === serialized ? current : { ...current, [field.key]: serialized }))
       }
     }
@@ -1109,10 +1109,10 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
         showErrorToast('Geen UWV-formulier gekoppeld aan dit rapporttype.')
         return
       }
-      showToast('UWV-document geÃ«xporteerd.')
+      showToast('UWV-document geëxporteerd.')
     } catch (error) {
       console.error('[NewReportScreen] UWV Word export failed', error)
-      showErrorToast('Het UWV-formulier kon niet worden geÃ«xporteerd.')
+      showErrorToast('Het UWV-formulier kon niet worden geëxporteerd.')
     }
   }
   async function handleSendAssistantMessage() {
@@ -1207,7 +1207,7 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
               <View style={styles.setupSummaryCard}>
                 <View style={styles.avatarCircle}><Text isSemibold style={styles.avatarText}>{selectedCoachee?.name.slice(0, 1).toUpperCase() || '?'}</Text></View>
                 <View style={styles.summaryMeta}>
-                  <Text isSemibold style={styles.summaryName}>{selectedCoachee?.name || 'Geen cliÃ«nt geselecteerd'}</Text>
+                  <Text isSemibold style={styles.summaryName}>{selectedCoachee?.name || 'Geen cliënt geselecteerd'}</Text>
                   <View style={styles.summaryLine}><Text style={styles.summaryLabel}>Template</Text><Text style={styles.summaryValue}>{selectedTemplate?.name || '-'}</Text></View>
                   <View style={styles.summaryLine}><Text style={styles.summaryLabel}>Sessies</Text><Text style={styles.summaryValue}>{`${selectedSessionIds.length} geselecteerd`}</Text></View>
                   <View style={styles.summaryLine}><Text style={styles.summaryLabel}>Rapportages</Text><Text style={styles.summaryValue}>{`${selectedRapportageIds.length} geselecteerd`}</Text></View>
@@ -1400,7 +1400,7 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
                                 <View style={styles.fieldItem}>
                                   <Text style={styles.fieldLabel}>Uurtarief exclusief btw</Text>
                                   <View style={styles.currencyWrap}>
-                                    <Text style={styles.currencyPrefix}>â‚¬</Text>
+                                    <Text style={styles.currencyPrefix}>€</Text>
                                     <TextInput
                                       value={entry.hourlyRate}
                                       onChangeText={(nextValue) => setSpecialistTariffByField((current) => ({ ...current, [field.key]: { ...entry, hourlyRate: sanitizeCurrencyInput(nextValue) } }))}

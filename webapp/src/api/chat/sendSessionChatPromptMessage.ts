@@ -1,6 +1,6 @@
-import { sendSessionChatMessage as sendSessionChatMessageTransport } from '../../api/chat/sendSessionChatMessage'
+import { sendSessionChatMessage as sendSessionChatMessageTransport } from './sendSessionChatMessage'
 import type { ChatMessage } from './chatTypes'
-import type { LocalChatMessage } from '../../api/chat/types'
+import type { LocalChatMessage } from './types'
 import { buildSessionChatPrompt } from './buildSessionChatPrompt'
 
 export async function sendSessionChatMessage(messages: ChatMessage[], sessionId: string, contextMessages: LocalChatMessage[] = []): Promise<string> {

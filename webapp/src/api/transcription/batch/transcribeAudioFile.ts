@@ -1,4 +1,4 @@
-import { transcribeAudio } from '../../transcribeAudio'
+import { transcribeAudio } from '../transcribeAudio'
 
 export async function transcribeAudioFile(params: { audioBlob: Blob; mimeType: string }): Promise<string> {
   const response = await transcribeAudio({

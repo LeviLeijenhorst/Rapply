@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 
-import { sendSessionChatMessage } from '../../../ai/chat/sendSessionChatMessage'
+import { sendSessionChatMessage } from '../../../api/chat/sendSessionChatPromptMessage'
 import { fontSizes } from '../../../design/tokens/fontSizes'
 import { radius } from '../../../design/tokens/radius'
 import { spacing } from '../../../design/tokens/spacing'

@@ -1,8 +1,8 @@
 import { buildClientKnowledge } from '../snippets/buildClientKnowledge'
 import { extractSessionSnippets } from '../snippets/extractSessionSnippets'
 import { classifySnippetType } from '../snippets/classifySnippetType'
-import { generateReport } from '../../api/reports/generateReport'
-import { generateSessionSummary } from '../summaries/generateSessionSummary'
+import { generateReport } from '../reports/generateReport'
+import { generateSessionSummary } from '../summaries/generateSessionSummaryFromTranscript'
 import { normalizeTranscript } from '../transcription/normalizeTranscript'
 import type { SessionInput } from '../transcription/types'
 

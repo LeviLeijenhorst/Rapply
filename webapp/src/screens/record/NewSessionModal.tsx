@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Easing, Pressable, TextInput, useWindowDimensions, View } from 'react-native'
 
 import { useBrowserAudioRecorder } from '../../audio/recording/useBrowserAudioRecorder'
@@ -13,7 +13,7 @@ import { MinimizeIcon } from '../../icons/MinimizeIcon'
 import { FolderOpenIcon } from '../../icons/FolderOpenIcon'
 import { unassignedCoacheeLabel } from '../../types/client'
 import { setPendingPreviewAudio } from '../../audio/pendingPreviewStore'
-import { processRecordedSession } from '../../ai/transcription/recorded/processRecordedSession'
+import { processRecordedSession } from '../../api/transcription/recorded/processRecordedSession'
 import { AnimatedMainContent } from '../../ui/AnimatedMainContent'
 import { fetchBillingStatus } from '../../api/billing/billingApi'
 import { clearSubscriptionReturnDraft, readAndClearSubscriptionReturnDraft, saveSubscriptionReturnDraft } from './subscriptionReturnDraftStore'
@@ -21,7 +21,7 @@ import {
   fetchRealtimeTranscriptionRuntime,
   type RealtimeTranscriberSession,
   type TranscriptionMode,
-} from '../../ai/transcription/realtime/startRealtimeTranscription'
+} from '../../api/transcription/realtime/startRealtimeTranscription'
 import { useToast } from '../../toast/ToastProvider'
 import { isGespreksverslagTemplate } from '../../content/templateCategories'
 import type { Session } from '../../storage/types'

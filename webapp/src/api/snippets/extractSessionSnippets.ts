@@ -1,4 +1,4 @@
-import { callSecureApi } from '../../api/core/secureApi'
+import { callSecureApi } from '../core/secureApi'
 import type { Snippet } from '../../types/snippet'
 
 type SnippetExtractResponse = { snippets?: Snippet[] }

@@ -1,7 +1,7 @@
-import { createAudioBlobRemote } from '../../../api/audio/audioBlobApi'
-import { chargeRealtimeTranscription } from '../../../api/transcription/realtimeTranscriptionApi'
-import { isTranscriptionCancelledError, transcribeAudio } from '../../../ai/transcribeAudio'
-import { generateStructuredSessionSummary } from '../../summaries/generateSessionSummary'
+import { createAudioBlobRemote } from '../../audio/audioBlobApi'
+import { chargeRealtimeTranscription } from '../realtimeTranscriptionApi'
+import { isTranscriptionCancelledError, transcribeAudio } from '../transcribeAudio'
+import { generateStructuredSessionSummary } from '../../summaries/generateSessionSummaryFromTranscript'
 import {
   finishTranscriptionRun,
   isTranscriptionRunActive,

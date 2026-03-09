@@ -1,4 +1,4 @@
-import { generateSessionSummary as requestSummary, type SummaryResponseMode } from '../../api/summaries/generateSessionSummary'
+import { generateSessionSummary as requestSummary, type SummaryResponseMode } from './generateSessionSummary'
 import { parseStructuredSummaryJson, type StructuredSessionSummary } from '../../types/structuredSummary'
 import { buildSessionSummaryPrompt } from './buildSessionSummaryPrompt'
 import { resolveSummaryTemplateSections } from './resolveSummaryTemplateSections'
