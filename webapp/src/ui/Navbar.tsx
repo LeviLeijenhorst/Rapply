@@ -1,7 +1,8 @@
 import React from 'react'
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 
-import { radius, spacing } from '../design/tokens'
+import { radius } from '../design/tokens/radius'
+import { spacing } from '../design/tokens/spacing'
 import { colors } from '../design/theme/colors'
 import { CoachscribeLogo } from './CoachscribeLogo'
 import { Text } from '../ui/Text'

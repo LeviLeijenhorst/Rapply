@@ -3,9 +3,9 @@ import { useRef } from 'react'
 import { downloadAudioStream } from '../../audio/downloadAudioStream'
 import { clearPendingPreviewAudio, clearPendingPreviewAudioIfEligible, getPendingPreviewAudioForTranscription, markPendingPreviewTranscriptionSucceeded } from '../../audio/pendingPreviewStore'
 import type { Session, StructuredSessionSummary } from '../../storage/types'
-import { loadAudioBlobRemote } from '../../api/audioBlobs'
-import { fetchBillingStatus } from '../../api/billing'
-import { cancelTranscriptionOperation, isTranscriptionCancelledError, transcribeAudio } from '../../api/transcription'
+import { loadAudioBlobRemote } from '../../api/audio/audioBlobApi'
+import { fetchBillingStatus } from '../../api/billing/billingApi'
+import { cancelTranscriptionOperation, isTranscriptionCancelledError, transcribeAudio } from '../../ai/transcribeAudio'
 import {
   cancelTranscriptionRun,
   finishTranscriptionRun,
@@ -14,9 +14,9 @@ import {
   setTranscriptionAbortController,
   setTranscriptionOperationId,
   startTranscriptionRun,
-} from '../../api/transcriptionRunStore'
+} from '../../ai/transcription/transcriptionRunState'
 import { hasStructuredSummaryContent, mapReportMarkdownToStructuredSummary } from '../../types/structuredSummary'
-import { normalizeTranscriptionError } from '../../audio/transcriptionError'
+import { normalizeTranscriptionError } from '../../audio/processing/transcriptionError'
 
 type TranscriptionStatus = Session['transcriptionStatus']
 type BillingStatus = {
@@ -37,7 +37,7 @@ type Params = {
   } | null
   editableSessionTitle: string
   effectiveTranscriptionStatus: TranscriptionStatus
-  generateStructuredSummary: (params: { transcript: string; signal?: AbortSignal }) => Promise<StructuredSessionSummary>
+  generateStructuredSessionSummary: (params: { transcript: string; signal?: AbortSignal }) => Promise<StructuredSessionSummary>
   hasTranscript: boolean
   isDeletingAudio: boolean
   isDownloadingAudio: boolean
@@ -84,7 +84,7 @@ export function useSessieDetailTranscriptionFlow({
   e2ee,
   editableSessionTitle,
   effectiveTranscriptionStatus,
-  generateStructuredSummary,
+  generateStructuredSessionSummary,
   hasTranscript,
   isDeletingAudio,
   isDownloadingAudio,
@@ -186,7 +186,7 @@ export function useSessieDetailTranscriptionFlow({
         summary: null,
         summaryStructured: null,
       })
-      const generatedSummary = await generateStructuredSummary({
+      const generatedSummary = await generateStructuredSessionSummary({
         transcript: buildSummaryInputWithContext(transcript),
         signal: summaryAbortController.signal,
       })
@@ -476,4 +476,5 @@ export function useSessieDetailTranscriptionFlow({
     retryTranscription,
   }
 }
+
 

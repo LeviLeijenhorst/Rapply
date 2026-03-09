@@ -1,14 +1,12 @@
 import type { Express } from "express"
 import { requireAuthenticatedUser } from "../../auth"
 import { isMollieConfigured, syncMollieSubscriptionForUser } from "../../billing/mollie"
-import { derivePlanStateFromRevenueCatSubscriber, fetchRevenueCatSubscriber } from "../../billing/revenuecat"
 import { readManualPricingContextForUser } from "../../billing/manualPricing"
 import { readBillingStatus } from "../../billing/store"
 import { asyncHandler, sendError } from "../../http"
 import { generateSummary } from "../../summary/summary"
 import { deleteEncryptedUpload, getEncryptedUploadSize } from "../../transcription/storage"
 import { chargeSecondsIdempotent, consumeUploadToken, refundSecondsIdempotent } from "../../transcription/store"
-import { applyEmailBillingOverrides, getNonExpiringTotalSecondsOverrideForEmail } from "../billingOverrides"
 import { markOperationCompleted } from "./actions/markOperationCompleted"
 import { markOperationFailed } from "./actions/markOperationFailed"
 import { getProviderMaxAudioDurationSeconds } from "./actions/providerLimits"
@@ -67,13 +65,11 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
           await syncMollieSubscriptionForUser(user.userId)
         }
 
-        const subscriber = useMollie ? {} : await fetchRevenueCatSubscriber(user.userId)
-        const planState = useMollie ? { planKey: null, cycleStartMs: null, cycleEndMs: null } : derivePlanStateFromRevenueCatSubscriber(subscriber)
         const manualPricing = await readManualPricingContextForUser(user.userId)
         const useManualCycle = useMollie || manualPricing.includedSecondsPerCycle > 0 || manualPricing.planId != null || manualPricing.customMonthlyPrice != null
         const hasDashboardMinutesConfigured = manualPricing.planId != null || manualPricing.includedSecondsPerCycle > 0
         const freeSecondsOverride = hasDashboardMinutesConfigured ? 0 : null
-        const nonExpiringTotalSecondsOverride = getNonExpiringTotalSecondsOverrideForEmail(user.email)
+        const nonExpiringTotalSecondsOverride = undefined
 
         let charge: { secondsCharged: number; remainingSecondsAfter: number }
         try {
@@ -81,9 +77,9 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
             userId: user.userId,
             operationId,
             secondsToCharge,
-            planKey: useManualCycle ? null : planState.planKey,
-            cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : planState.cycleStartMs,
-            cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : planState.cycleEndMs,
+            planKey: null,
+            cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : null,
+            cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : null,
             includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
             freeSecondsOverride,
             nonExpiringTotalSecondsOverride,
@@ -95,13 +91,13 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
           }
           const statusRaw = await readBillingStatus({
             userId: user.userId,
-            planKey: useManualCycle ? null : planState.planKey,
-            cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : planState.cycleStartMs,
-            cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : planState.cycleEndMs,
+            planKey: null,
+            cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : null,
+            cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : null,
             includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
             freeSecondsOverride,
           })
-          const status = applyEmailBillingOverrides(statusRaw, user.email)
+          const status = statusRaw
           sendError(res, 402, `Not enough seconds remaining. Needed ${secondsToCharge}s, remaining ${status.remainingSeconds}s.`)
           return
         }
@@ -123,7 +119,7 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
           summary,
           secondsCharged: charge.secondsCharged,
           remainingSecondsAfter: charge.remainingSecondsAfter,
-          planKey: useManualCycle ? null : planState.planKey,
+          planKey: null,
         })
       } catch (error: any) {
         const errorMessage = String(error?.message || error)

@@ -2,7 +2,8 @@ import React from 'react'
 import { StyleSheet, View } from 'react-native'
 
 import { colors } from '../../../design/theme/colors'
-import { fontSizes, spacing } from '../../../design/tokens'
+import { fontSizes } from '../../../design/tokens/fontSizes'
+import { spacing } from '../../../design/tokens/spacing'
 import { Text } from '../../../ui/Text'
 import { SessionCalendarIcon, SessionUserProfileIcon } from './SessionIcons'
 

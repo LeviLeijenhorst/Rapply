@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 
-import { trackWebappError, trackWebappEvent } from '../api/analytics'
+import { trackWebappError, trackWebappEvent } from '../api/analytics/webappAnalytics'
 
 type Props = {
   isAuthenticated: boolean

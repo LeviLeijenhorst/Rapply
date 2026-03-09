@@ -1,1 +1,0 @@
-export { EmptyPageMessage } from '../EmptyPageMessage'

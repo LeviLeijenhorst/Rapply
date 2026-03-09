@@ -1,4 +1,4 @@
-import { createCoacheeRemote, deleteCoacheeRemote, updateCoacheeRemote } from '../appData'
+import { createCoacheeRemote, deleteCoacheeRemote, updateCoacheeRemote } from '../appData/appDataApi'
 
 export const clientApi = {
   create: createCoacheeRemote,

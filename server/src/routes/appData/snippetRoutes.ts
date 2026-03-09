@@ -26,9 +26,9 @@ export function registerSnippetRoutes(app: Express): void {
       await updateSnippet(user.userId, {
         id,
         updatedAtUnixMs,
-        field: readOptionalText(payload.field),
+        snippetType: readOptionalText(payload.snippetType ?? payload.field),
         text: readOptionalText(payload.text),
-        status: readOptionalSnippetStatus(payload.status),
+        approvalStatus: readOptionalSnippetStatus(payload.approvalStatus ?? payload.status),
       })
       res.status(200).json({ ok: true })
     }),

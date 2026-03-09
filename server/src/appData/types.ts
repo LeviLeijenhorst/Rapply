@@ -9,9 +9,7 @@ export type Client = {
   isArchived: boolean
 }
 
-// Session is used as a generic artifact container in the current product.
-// kind distinguishes conversation inputs, notes artifacts, intake artifacts, and written reports.
-export type SessionKind = "recording" | "upload" | "written" | "notes" | "intake"
+export type SessionInputType = "recording" | "uploaded_audio" | "written_recap" | "intake"
 
 export type StructuredSessionSummary = {
   doelstelling: string
@@ -26,16 +24,13 @@ export type Session = {
   clientId: string | null
   trajectoryId: string | null
   title: string
-  kind: SessionKind
-  audioBlobId: string | null
+  inputType: SessionInputType
+  audioUploadId: string | null
   audioDurationSeconds: number | null
   uploadFileName: string | null
-  transcript: string | null
-  summary: string | null
+  transcriptText: string | null
+  summaryText: string | null
   summaryStructured: StructuredSessionSummary | null
-  reportDate: string | null
-  wvpWeekNumber: string | null
-  reportFirstSickDay: string | null
   transcriptionStatus: "idle" | "transcribing" | "generating" | "done" | "error"
   transcriptionError: string | null
   createdAtUnixMs: number
@@ -51,9 +46,19 @@ export type Note = {
   updatedAtUnixMs: number
 }
 
-export type WrittenReport = {
-  sessionId: string
-  text: string
+export type Report = {
+  id: string
+  clientId: string | null
+  trajectoryId: string | null
+  sourceSessionId: string | null
+  title: string
+  reportType: string
+  state: "incomplete" | "needs_review" | "complete"
+  reportText: string
+  reportDate: string | null
+  firstSickDay: string | null
+  wvpWeekNumber: string | null
+  createdAtUnixMs: number
   updatedAtUnixMs: number
 }
 
@@ -61,13 +66,13 @@ export type Trajectory = {
   id: string
   clientId: string
   name: string
-  dienstType: string
+  serviceType: string
   uwvContactName: string | null
   uwvContactPhone: string | null
   uwvContactEmail: string | null
   orderNumber: string | null
   startDate: string | null
-  planVanAanpak: {
+  planOfAction: {
     documentId: string
   } | null
   maxHours: number
@@ -112,12 +117,13 @@ export type SnippetStatus = "pending" | "approved" | "rejected"
 
 export type Snippet = {
   id: string
+  clientId: string
   trajectoryId: string
-  itemId: string
-  field: string
+  sourceSessionId: string
+  snippetType: string
   text: string
-  date: number
-  status: SnippetStatus
+  snippetDate: number
+  approvalStatus: SnippetStatus
   createdAtUnixMs: number
   updatedAtUnixMs: number
 }
@@ -161,11 +167,11 @@ export type AppData = {
   clients: Client[]
   trajectories: Trajectory[]
   sessions: Session[]
+  reports: Report[]
   activities: Activity[]
   activityTemplates: ActivityTemplate[]
   snippets: Snippet[]
   notes: Note[]
-  writtenReports: WrittenReport[]
   templates: Template[]
   practiceSettings: PracticeSettings
 }

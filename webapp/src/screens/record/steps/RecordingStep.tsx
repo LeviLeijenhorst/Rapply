@@ -9,7 +9,7 @@ import { PlaySmallIcon } from '../../../icons/PlaySmallIcon'
 import { StopSquareIcon } from '../../../icons/StopSquareIcon'
 import { MoreOptionsIcon } from '../../../icons/MoreOptionsIcon'
 import { SendIcon } from '../../../icons/SendIcon'
-import { webTransitionSmooth } from '../../../design/theme/webTransitions'
+import { webTransitionSmooth } from '../../../design/theme/transitions'
 import { formatTimeLabel } from '../newInputModalUtils'
 import { styles } from '../newInputModalStyles'
 

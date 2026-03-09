@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
-import { saveCoacheeFromUpsert } from '../../hooks/coachees/coacheesScreenFunctionality'
+import { saveCoacheeFromUpsert } from '../../hooks/clients/clientsScreenFunctionality'
 import { useLocalAppData } from '../../storage/LocalAppDataProvider'
 import { colors } from '../../design/theme/colors'
 import { Text } from '../../ui/Text'

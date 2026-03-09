@@ -1,13 +1,11 @@
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import {
-  fontSizes,
-  radius,
-  shadows,
-  spacing,
-  brandColors,
-} from "../../design/tokens";
+import { brandColors } from "../../design/tokens/colors";
+import { fontSizes } from "../../design/tokens/fontSizes";
+import { radius } from "../../design/tokens/radius";
+import { shadows } from "../../design/tokens/shadows";
+import { spacing } from "../../design/tokens/spacing";
 import { colors } from "../../design/theme/colors";
 import { Text } from "../../ui/Text";
 import { AnimatedOverlayModal } from "../../ui/AnimatedOverlayModal";

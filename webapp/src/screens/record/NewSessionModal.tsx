@@ -1,27 +1,27 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Easing, Pressable, TextInput, useWindowDimensions, View } from 'react-native'
 
-import { useBrowserAudioRecorder } from '../../hooks/useBrowserAudioRecorder'
-import { useLiveAudioWaveformBars } from '../../hooks/useLiveAudioWaveformBars'
+import { useBrowserAudioRecorder } from '../../audio/recording/useBrowserAudioRecorder'
+import { useLiveAudioWaveformBars } from '../../audio/recording/useLiveAudioWaveformBars'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import { useLocalAppData } from '../../storage/LocalAppDataProvider'
-import { useE2ee } from '../../encryption/E2eeProvider'
+import { useE2ee } from '../../security/providers/E2eeProvider'
 import { colors } from '../../design/theme/colors'
-import { webTransitionSmooth } from '../../design/theme/webTransitions'
+import { webTransitionSmooth } from '../../design/theme/transitions'
 import { Text } from '../../ui/Text'
 import { MinimizeIcon } from '../../icons/MinimizeIcon'
 import { FolderOpenIcon } from '../../icons/FolderOpenIcon'
 import { unassignedCoacheeLabel } from '../../types/client'
 import { setPendingPreviewAudio } from '../../audio/pendingPreviewStore'
-import { processSessionAudio } from '../../audio/processSessionAudio'
+import { processRecordedSession } from '../../ai/transcription/recorded/processRecordedSession'
 import { AnimatedMainContent } from '../../ui/AnimatedMainContent'
-import { fetchBillingStatus } from '../../api/billing'
+import { fetchBillingStatus } from '../../api/billing/billingApi'
 import { clearSubscriptionReturnDraft, readAndClearSubscriptionReturnDraft, saveSubscriptionReturnDraft } from './subscriptionReturnDraftStore'
 import {
-  fetchTranscriptionRuntimeConfig,
+  fetchRealtimeTranscriptionRuntime,
   type RealtimeTranscriberSession,
   type TranscriptionMode,
-} from '../../api/transcription'
+} from '../../ai/transcription/realtime/startRealtimeTranscription'
 import { useToast } from '../../toast/ToastProvider'
 import { isGespreksverslagTemplate } from '../../content/templateCategories'
 import type { Session } from '../../storage/types'
@@ -333,7 +333,7 @@ export function NewSessionModal({
     let isCancelled = false
     void (async () => {
       try {
-        const runtimeConfig = await fetchTranscriptionRuntimeConfig()
+        const runtimeConfig = await fetchRealtimeTranscriptionRuntime()
         if (isCancelled) return
         setTranscriptionMode(runtimeConfig.mode)
       } catch (error) {
@@ -1082,7 +1082,7 @@ export function NewSessionModal({
     void clearSubscriptionReturnDraft()
     handleClose()
 
-    void processSessionAudio({
+                void processRecordedSession({
       sessionId: createdSessionId,
       audioBlob: nextAudioForTranscription.blob,
       mimeType: nextAudioForTranscription.mimeType,

@@ -2,7 +2,7 @@ import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
 import { colors } from '../design/theme/colors'
-import { webTransitionSmooth } from '../design/theme/webTransitions'
+import { webTransitionSmooth } from '../design/theme/transitions'
 import { typography } from '../design/theme/typography'
 import { Text } from '../ui/Text'
 

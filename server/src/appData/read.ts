@@ -1,6 +1,6 @@
 import { queryMany, queryOne } from "../db"
 import { getDefaultTemplateDescriptionByName } from "./templateDescription"
-import type { AppData, SessionKind, Template, TemplateSection } from "./types"
+import type { AppData, SessionInputType, Template, TemplateSection } from "./types"
 import { getReintegrationDefaultTemplateSectionsByName } from "../templates/defaultTemplates"
 
 type TemplateRow = {
@@ -119,8 +119,8 @@ export async function readAppData(userId: string): Promise<AppData> {
   }>(
     `
     select id, name, coalesce(client_details, '') as client_details, coalesce(employer_details, '') as employer_details, coalesce(first_sick_day, '') as first_sick_day, created_at_unix_ms, updated_at_unix_ms, is_archived
-    from public.coachees
-    where user_id = $1
+    from public.clients
+    where owner_user_id = $1
     order by created_at_unix_ms desc
     `,
     [userId],
@@ -128,28 +128,25 @@ export async function readAppData(userId: string): Promise<AppData> {
 
   const sessions = await queryMany<{
     id: string
-    coachee_id: string | null
+    client_id: string | null
     trajectory_id: string | null
     title: string
-    kind: SessionKind
-    audio_blob_id: string | null
+    input_type: SessionInputType
+    audio_upload_id: string | null
     audio_duration_seconds: number | null
     upload_file_name: string | null
-    transcript: string | null
-    summary: string | null
+    transcript_text: string | null
+    summary_text: string | null
     summary_structured_json: unknown | null
-    report_date: string | null
-    wvp_week_number: string | null
-    report_first_sick_day: string | null
     transcription_status: "idle" | "transcribing" | "generating" | "done" | "error"
     transcription_error: string | null
     created_at_unix_ms: number
     updated_at_unix_ms: number
   }>(
     `
-    select id, coachee_id, trajectory_id, title, kind, audio_blob_id, audio_duration_seconds, upload_file_name, transcript, summary, summary_structured_json, report_date, wvp_week_number, report_first_sick_day, transcription_status, transcription_error, created_at_unix_ms, updated_at_unix_ms
-    from public.coachee_sessions
-    where user_id = $1
+    select id, client_id, trajectory_id, title, input_type, audio_upload_id, audio_duration_seconds, upload_file_name, transcript_text, summary_text, summary_structured_json, transcription_status, transcription_error, created_at_unix_ms, updated_at_unix_ms
+    from public.sessions
+    where owner_user_id = $1
     order by created_at_unix_ms desc
     `,
     [userId],
@@ -157,24 +154,24 @@ export async function readAppData(userId: string): Promise<AppData> {
 
   const trajectories = await queryMany<{
     id: string
-    coachee_id: string
+    client_id: string
     name: string
-    dienst_type: string
+    service_type: string
     uwv_contact_name: string | null
     uwv_contact_phone: string | null
     uwv_contact_email: string | null
     order_number: string | null
     start_date: string | null
-    plan_van_aanpak_json: unknown | null
+    plan_of_action_json: unknown | null
     max_hours: number
     max_admin_hours: number
     created_at_unix_ms: number
     updated_at_unix_ms: number
   }>(
     `
-    select id, coachee_id, name, dienst_type, uwv_contact_name, uwv_contact_phone, uwv_contact_email, order_number, start_date, plan_van_aanpak_json, max_hours, max_admin_hours, created_at_unix_ms, updated_at_unix_ms
+    select id, client_id, name, service_type, uwv_contact_name, uwv_contact_phone, uwv_contact_email, order_number, start_date, plan_of_action_json, max_hours, max_admin_hours, created_at_unix_ms, updated_at_unix_ms
     from public.trajectories
-    where user_id = $1
+    where owner_user_id = $1
     order by created_at_unix_ms desc
     `,
     [userId],
@@ -198,7 +195,7 @@ export async function readAppData(userId: string): Promise<AppData> {
     `
     select id, trajectory_id, session_id, template_id, name, category, status, planned_hours, actual_hours, source, is_admin, created_at_unix_ms, updated_at_unix_ms
     from public.activities
-    where user_id = $1
+    where owner_user_id = $1
     order by created_at_unix_ms desc
     `,
     [userId],
@@ -219,7 +216,7 @@ export async function readAppData(userId: string): Promise<AppData> {
     `
     select id, name, coalesce(description, '') as description, category, default_hours, is_admin, organization_id, is_active, created_at_unix_ms, updated_at_unix_ms
     from public.activity_templates
-    where user_id = $1 or user_id is null
+    where owner_user_id = $1 or owner_user_id is null
     order by created_at_unix_ms asc
     `,
     [userId],
@@ -227,20 +224,21 @@ export async function readAppData(userId: string): Promise<AppData> {
 
   const snippets = await queryMany<{
     id: string
+    client_id: string
     trajectory_id: string
-    item_id: string
-    field: string
+    source_session_id: string
+    snippet_type: string
     text: string
-    date: number
-    status: "pending" | "approved" | "rejected"
+    snippet_date: number
+    approval_status: "pending" | "approved" | "rejected"
     created_at_unix_ms: number
     updated_at_unix_ms: number
   }>(
     `
-    select id, trajectory_id, item_id, field, text, date, status, created_at_unix_ms, updated_at_unix_ms
+    select id, client_id, trajectory_id, source_session_id, snippet_type, text, snippet_date, approval_status, created_at_unix_ms, updated_at_unix_ms
     from public.snippets
-    where user_id = $1
-    order by date desc, created_at_unix_ms desc
+    where owner_user_id = $1
+    order by snippet_date desc, created_at_unix_ms desc
     `,
     [userId],
   )
@@ -256,21 +254,32 @@ export async function readAppData(userId: string): Promise<AppData> {
     `
     select id, session_id, coalesce(title, '') as title, text, created_at_unix_ms, updated_at_unix_ms
     from public.session_notes
-    where user_id = $1
+    where owner_user_id = $1
     order by updated_at_unix_ms desc
     `,
     [userId],
   )
 
-  const writtenReports = await queryMany<{
-    session_id: string
-    text: string
+  const reports = await queryMany<{
+    id: string
+    client_id: string | null
+    trajectory_id: string | null
+    source_session_id: string | null
+    title: string
+    report_type: string
+    state: "incomplete" | "needs_review" | "complete"
+    report_text: string
+    report_date: string | null
+    first_sick_day: string | null
+    wvp_week_number: string | null
+    created_at_unix_ms: number
     updated_at_unix_ms: number
   }>(
     `
-    select session_id, text, updated_at_unix_ms
-    from public.session_written_reports
-    where user_id = $1
+    select id, client_id, trajectory_id, source_session_id, title, report_type, state, report_text, report_date, first_sick_day, wvp_week_number, created_at_unix_ms, updated_at_unix_ms
+    from public.reports
+    where owner_user_id = $1
+    order by updated_at_unix_ms desc
     `,
     [userId],
   )
@@ -279,7 +288,7 @@ export async function readAppData(userId: string): Promise<AppData> {
     `
     select id, name, sections_json, is_saved, created_at_unix_ms, updated_at_unix_ms
     from public.templates
-    where user_id = $1
+    where owner_user_id = $1
     order by created_at_unix_ms desc
     `,
     [userId],
@@ -320,15 +329,15 @@ export async function readAppData(userId: string): Promise<AppData> {
     })),
     sessions: sessions.map((row) => ({
       id: row.id,
-      clientId: row.coachee_id,
+      clientId: row.client_id,
       trajectoryId: row.trajectory_id,
       title: row.title,
-      kind: row.kind,
-      audioBlobId: row.audio_blob_id,
+      inputType: row.input_type,
+      audioUploadId: row.audio_upload_id,
       audioDurationSeconds: row.audio_duration_seconds !== null ? Number(row.audio_duration_seconds) : null,
       uploadFileName: row.upload_file_name,
-      transcript: row.transcript,
-      summary: row.summary,
+      transcriptText: row.transcript_text,
+      summaryText: row.summary_text,
       summaryStructured:
         row.summary_structured_json && typeof row.summary_structured_json === "object"
           ? {
@@ -339,9 +348,6 @@ export async function readAppData(userId: string): Promise<AppData> {
               arbeidsmarktorientatie: String((row.summary_structured_json as any).arbeidsmarktorientatie || ""),
             }
           : null,
-      reportDate: row.report_date,
-      wvpWeekNumber: row.wvp_week_number,
-      reportFirstSickDay: row.report_first_sick_day,
       transcriptionStatus: row.transcription_status,
       transcriptionError: row.transcription_error,
       createdAtUnixMs: Number(row.created_at_unix_ms),
@@ -349,18 +355,18 @@ export async function readAppData(userId: string): Promise<AppData> {
     })),
     trajectories: trajectories.map((row) => ({
       id: row.id,
-      clientId: row.coachee_id,
+      clientId: row.client_id,
       name: row.name,
-      dienstType: row.dienst_type,
+      serviceType: row.service_type,
       uwvContactName: row.uwv_contact_name,
       uwvContactPhone: row.uwv_contact_phone,
       uwvContactEmail: row.uwv_contact_email,
       orderNumber: row.order_number,
       startDate: row.start_date,
-      planVanAanpak:
-        row.plan_van_aanpak_json && typeof row.plan_van_aanpak_json === "object"
+      planOfAction:
+        row.plan_of_action_json && typeof row.plan_of_action_json === "object"
           ? {
-              documentId: String((row.plan_van_aanpak_json as any).documentId || ""),
+              documentId: String((row.plan_of_action_json as any).documentId || ""),
             }
           : null,
       maxHours: Number(row.max_hours),
@@ -397,12 +403,13 @@ export async function readAppData(userId: string): Promise<AppData> {
     })),
     snippets: snippets.map((row) => ({
       id: row.id,
+      clientId: row.client_id,
       trajectoryId: row.trajectory_id,
-      itemId: row.item_id,
-      field: row.field,
+      sourceSessionId: row.source_session_id,
+      snippetType: row.snippet_type,
       text: row.text,
-      date: Number(row.date),
-      status: row.status,
+      snippetDate: Number(row.snippet_date),
+      approvalStatus: row.approval_status,
       createdAtUnixMs: Number(row.created_at_unix_ms),
       updatedAtUnixMs: Number(row.updated_at_unix_ms),
     })),
@@ -414,9 +421,19 @@ export async function readAppData(userId: string): Promise<AppData> {
       createdAtUnixMs: Number(row.created_at_unix_ms),
       updatedAtUnixMs: Number(row.updated_at_unix_ms),
     })),
-    writtenReports: writtenReports.map((row) => ({
-      sessionId: row.session_id,
-      text: row.text,
+    reports: reports.map((row) => ({
+      id: row.id,
+      clientId: row.client_id,
+      trajectoryId: row.trajectory_id,
+      sourceSessionId: row.source_session_id,
+      title: row.title,
+      reportType: row.report_type,
+      state: row.state,
+      reportText: row.report_text,
+      reportDate: row.report_date,
+      firstSickDay: row.first_sick_day,
+      wvpWeekNumber: row.wvp_week_number,
+      createdAtUnixMs: Number(row.created_at_unix_ms),
       updatedAtUnixMs: Number(row.updated_at_unix_ms),
     })),
     templates: templates.map(mapTemplateRow),

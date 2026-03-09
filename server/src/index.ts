@@ -104,7 +104,6 @@ const rateLimitAccount = createRateLimitMiddleware({ windowMs: rateLimitWindowMs
   hasAzureStorageAccountKey: !!env.azureStorageAccountKey,
   hasEntraOpenIdConfigurationUrl: !!env.entraOpenIdConfigurationUrl,
   hasEntraAudience: env.entraAudience.length > 0,
-    hasRevenueCatSecretKey: !!env.revenueCatSecretKey,
     hasMollieApiKey: !!env.mollieApiKey,
     hasMollieWebhookUrl: !!env.mollieWebhookUrl,
     hasMollieRedirectUrl: !!env.mollieRedirectUrl,

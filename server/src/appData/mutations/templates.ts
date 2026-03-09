@@ -5,14 +5,14 @@ import type { Template } from "../types"
 export async function createTemplate(userId: string, template: Template): Promise<void> {
   await execute(
     `
-    insert into public.templates (id, user_id, name, sections_json, is_saved, created_at_unix_ms, updated_at_unix_ms)
+    insert into public.templates (id, owner_user_id, name, sections_json, is_saved, created_at_unix_ms, updated_at_unix_ms)
     values ($1, $2, $3, $4::jsonb, $5, $6, $7)
     on conflict (id) do update
       set name = excluded.name,
           sections_json = excluded.sections_json,
           is_saved = excluded.is_saved,
           updated_at_unix_ms = excluded.updated_at_unix_ms
-      where public.templates.user_id = excluded.user_id
+      where public.templates.owner_user_id = excluded.owner_user_id
     `,
     [
       template.id,
@@ -35,7 +35,7 @@ export async function updateTemplate(userId: string, template: Template): Promis
         sections_json = $2::jsonb,
         is_saved = $3,
         updated_at_unix_ms = $4
-    where user_id = $5 and id = $6
+    where owner_user_id = $5 and id = $6
     `,
     [
       template.name,
@@ -50,6 +50,6 @@ export async function updateTemplate(userId: string, template: Template): Promis
 
 // Permanently deletes one template owned by the user.
 export async function deleteTemplate(userId: string, id: string): Promise<void> {
-  await execute(`delete from public.templates where user_id = $1 and id = $2`, [userId, id])
+  await execute(`delete from public.templates where owner_user_id = $1 and id = $2`, [userId, id])
 }
 

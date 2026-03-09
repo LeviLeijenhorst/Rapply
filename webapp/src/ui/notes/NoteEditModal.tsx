@@ -9,7 +9,7 @@ import { ModalCloseDarkIcon } from '../../icons/ModalCloseDarkIcon'
 import { TrashIcon } from '../../icons/TrashIcon'
 import { ConfirmNoteDeleteModal } from './ConfirmNoteDeleteModal'
 import { ConfirmNoteCloseModal } from './ConfirmNoteCloseModal'
-import { radius } from '../../design/tokens'
+import { radius } from '../../design/tokens/radius'
 
 type Props = {
   visible: boolean

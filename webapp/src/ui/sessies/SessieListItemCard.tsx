@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native'
 import { LoadingSpinner } from '../../ui/LoadingSpinner'
 
 import { colors } from '../../design/theme/colors'
-import { webTransitionSmooth } from '../../design/theme/webTransitions'
+import { webTransitionSmooth } from '../../design/theme/transitions'
 import { CoacheeAvatarIcon } from '../../icons/CoacheeAvatarIcon'
 import { MicrophoneSmallIcon } from '../../icons/MicrophoneSmallIcon'
 import { MoreOptionsIcon } from '../../icons/MoreOptionsIcon'

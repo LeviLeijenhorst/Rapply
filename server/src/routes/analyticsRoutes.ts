@@ -344,7 +344,7 @@ export function registerAnalyticsRoutes(app: Express, params: RegisterAnalyticsR
           u.display_name,
           coalesce(sum(coalesce(s.audio_duration_seconds, 0)), 0)::text as total_audio_seconds
         from public.users u
-        left join public.coachee_sessions s on s.user_id = u.id
+        left join public.sessions s on s.owner_user_id = u.id
         group by u.id, u.email, u.display_name
         order by coalesce(sum(coalesce(s.audio_duration_seconds, 0)), 0) desc, lower(coalesce(u.email, '')) asc
         `,

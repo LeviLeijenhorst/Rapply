@@ -5,7 +5,7 @@ import type { Client } from "../types"
 export async function createClient(userId: string, client: Client): Promise<void> {
   await execute(
     `
-    insert into public.coachees (id, user_id, name, client_details, employer_details, first_sick_day, created_at_unix_ms, updated_at_unix_ms, is_archived)
+    insert into public.clients (id, owner_user_id, name, client_details, employer_details, first_sick_day, created_at_unix_ms, updated_at_unix_ms, is_archived)
     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     on conflict (id) do update
       set name = excluded.name,
@@ -14,7 +14,7 @@ export async function createClient(userId: string, client: Client): Promise<void
           first_sick_day = excluded.first_sick_day,
           updated_at_unix_ms = excluded.updated_at_unix_ms,
           is_archived = excluded.is_archived
-      where public.coachees.user_id = excluded.user_id
+      where public.clients.owner_user_id = excluded.owner_user_id
     `,
     [client.id, userId, client.name, client.clientDetails, client.employerDetails, client.firstSickDay, client.createdAtUnixMs, client.updatedAtUnixMs, client.isArchived],
   )
@@ -70,9 +70,9 @@ export async function updateClient(
 
   await execute(
     `
-    update public.coachees
+    update public.clients
     set ${updates.join(", ")}
-    where user_id = $${index++} and id = $${index}
+    where owner_user_id = $${index++} and id = $${index}
     `,
     values,
   )
@@ -80,6 +80,6 @@ export async function updateClient(
 
 // Permanently deletes one client owned by the user.
 export async function deleteClient(userId: string, id: string): Promise<void> {
-  await execute(`delete from public.coachees where user_id = $1 and id = $2`, [userId, id])
+  await execute(`delete from public.clients where owner_user_id = $1 and id = $2`, [userId, id])
 }
 

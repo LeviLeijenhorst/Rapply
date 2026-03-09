@@ -10,7 +10,6 @@ type RegisterSystemRoutesParams = {
   transcriptionUploadsContainer: string
   hasEntraOpenIdConfigurationUrl: boolean
   hasEntraAudience: boolean
-  hasRevenueCatSecretKey: boolean
   hasMollieApiKey: boolean
   hasMollieWebhookUrl: boolean
   hasMollieRedirectUrl: boolean
@@ -51,9 +50,6 @@ export function registerSystemRoutes(app: Express, params: RegisterSystemRoutesP
         entra: {
           hasOpenIdConfigurationUrl: params.hasEntraOpenIdConfigurationUrl,
           hasAudience: params.hasEntraAudience,
-        },
-        revenuecat: {
-          hasSecretKey: params.hasRevenueCatSecretKey,
         },
         mollie: {
           hasApiKey: params.hasMollieApiKey,

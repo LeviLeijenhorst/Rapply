@@ -31,7 +31,7 @@ import {
   updateSession,
   updateTrajectory,
 } from './localAppDataStore'
-import { createId } from './createId'
+import { createId } from '../utils/createId'
 import {
   Activity,
   ActivityTemplate,
@@ -76,8 +76,8 @@ import {
   updateTemplateRemote,
   updatePracticeSettingsRemote,
   updateTrajectoryRemote,
-} from '../api/appData'
-import { useOptionalE2ee } from '../encryption/E2eeProvider'
+} from '../api/appData/appDataApi'
+import { useOptionalE2ee } from '../security/providers/E2eeProvider'
 
 type ContextValue = {
   data: LocalAppData

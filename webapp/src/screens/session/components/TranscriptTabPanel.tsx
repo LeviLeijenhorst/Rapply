@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 import { LoadingSpinner } from '../../../ui/LoadingSpinner'
 
@@ -6,8 +6,8 @@ import { FormattedText } from '../../../ui/FormattedText'
 import { Text } from '../../../ui/Text'
 import { colors } from '../../../design/theme/colors'
 import { SearchIcon } from '../../../icons/SearchIcon'
-import { parseTimeLabelToSeconds } from '../../../types/time'
-import { toUserFriendlyTranscriptionError } from '../../../audio/transcriptionError'
+import { parseTimeLabelToSeconds } from '../../../utils/date/time'
+import { toUserFriendlyTranscriptionError } from '../../../audio/processing/transcriptionError'
 import { useToast } from '../../../toast/ToastProvider'
 
 type Props = {
@@ -495,6 +495,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 })
+
 
 
 

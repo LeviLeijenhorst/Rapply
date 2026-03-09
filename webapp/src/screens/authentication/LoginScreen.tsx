@@ -5,7 +5,7 @@ import { AuthCardVerticalSwapTransition } from './internal/ui/AuthCardVerticalSw
 import { AuthEntryScreen } from './internal/screens/AuthEntryScreen'
 import { clearAuthIntent, getAuthIntent, getValidAccessToken, handleAuthCallback, signInWithEntra } from './internal/entraAuth'
 import { navigate, usePathname } from './internal/router/webRouter'
-import { toUserFriendlyErrorMessage } from '../../types/userFriendlyError'
+import { toUserFriendlyErrorMessage } from '../../utils/text/userFriendlyError'
 
 type Props = {
   onAuthenticated: () => void

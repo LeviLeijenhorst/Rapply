@@ -71,7 +71,6 @@ export const env = {
   entraGraphTenantId: optionalString("ENTRA_GRAPH_TENANT_ID") || "",
   entraGraphClientId: optionalString("ENTRA_GRAPH_CLIENT_ID") || "",
   entraGraphClientSecret: optionalString("ENTRA_GRAPH_CLIENT_SECRET") || "",
-  revenueCatSecretKey: optionalString("REVENUECAT_SECRET_KEY"),
   mollieApiKey: optionalString("MOLLIE_API_KEY"),
   mollieWebhookUrl: optionalString("MOLLIE_WEBHOOK_URL"),
   mollieRedirectUrl: optionalString("MOLLIE_REDIRECT_URL"),

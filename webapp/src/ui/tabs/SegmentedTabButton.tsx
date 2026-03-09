@@ -3,7 +3,10 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import { Text } from "../../ui/Text";
 import { colors } from "../../design/theme/colors";
-import { brandColors, fontSizes, radius, spacing } from "../../design/tokens";
+import { brandColors } from "../../design/tokens/colors";
+import { fontSizes } from "../../design/tokens/fontSizes";
+import { radius } from "../../design/tokens/radius";
+import { spacing } from "../../design/tokens/spacing";
 
 type Props = {
   label: string;

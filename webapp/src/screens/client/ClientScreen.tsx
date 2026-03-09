@@ -22,20 +22,20 @@ import { QuickQuestionsStart } from '../session/components/QuickQuestionsStart'
 import { NoteEditModal } from '../../ui/notes/NoteEditModal'
 import { ConfirmNoteDeleteModal } from '../../ui/notes/ConfirmNoteDeleteModal'
 import { Text } from '../../ui/Text'
-import { saveCoacheeProfileChanges, saveNewCoacheeNote } from '../../hooks/coacheeDetail/coacheeDetailActions'
+import { saveCoacheeProfileChanges, saveNewCoacheeNote } from '../../hooks/clientDetail/clientDetailActions'
 import {
   formatTrajectoryDurationLabel,
   getActiveTrajectory,
-  getCoacheeTrajectories,
-  getSessionListItems,
+  getClientSessionListItems,
+  getClientTrajectories,
   type SessionListItem,
-} from '../../hooks/coacheeDetail/coacheeDetailData'
-import { useCoacheeDetailChatFlow } from '../../hooks/coacheeDetail/useCoacheeDetailChatFlow'
+} from '../../hooks/clientDetail/clientDetailData'
+import { useClientDetailChatFlow } from '../../hooks/clientDetail/useClientDetailChatFlow'
 import { ExpandableSearchField } from '../../ui/inputs/ExpandableSearchField'
 import { useLocalAppData } from '../../storage/LocalAppDataProvider'
 import { colors } from '../../design/theme/colors'
 import { typography } from '../../design/theme/typography'
-import { webTransitionSmooth } from '../../design/theme/webTransitions'
+import { webTransitionSmooth } from '../../design/theme/transitions'
 import { getCoacheeUpsertValues } from '../../types/clientProfile'
 
 type Props = {
@@ -66,7 +66,7 @@ export function ClientScreen({
   const coachee = data.coachees.find((item) => item.id === coacheeId) ?? null
   const coacheeName = coachee?.name ?? 'Cliënt'
   const coacheeProfileValues = useMemo(() => getCoacheeUpsertValues(coachee), [coachee])
-  const coacheeTrajectories = useMemo(() => getCoacheeTrajectories(data, coacheeId), [coacheeId, data])
+  const coacheeTrajectories = useMemo(() => getClientTrajectories(data, coacheeId), [coacheeId, data])
   const coacheeTrajectoryOptions = useMemo(
     () =>
       coacheeTrajectories.map((trajectory) => ({
@@ -77,7 +77,7 @@ export function ClientScreen({
   )
   const preferredTrajectoryId = String(coacheeProfileValues.trajectoryId || '').trim()
   const activeTrajectory = useMemo(() => getActiveTrajectory(coacheeTrajectories, preferredTrajectoryId), [coacheeTrajectories, preferredTrajectoryId])
-  const { sessieItems, noteItems, rapportageItems, notesSession } = useMemo(() => getSessionListItems(data, coacheeId), [coacheeId, data])
+  const { sessieItems, noteItems, rapportageItems, notesSession } = useMemo(() => getClientSessionListItems(data, coacheeId), [coacheeId, data])
   const sessionCount = sessieItems.length
   const reportCount = rapportageItems.length
 
@@ -137,7 +137,7 @@ export function ClientScreen({
     setComposerText,
     setIsNoMinutesCtaDismissed,
     statusSummaryAi,
-  } = useCoacheeDetailChatFlow({
+  } = useClientDetailChatFlow({
     activeTrajectoryName: activeTrajectory?.name ?? null,
     assistantPanelTabKey,
     chatContextSessionIds,

@@ -1,4 +1,4 @@
-import { LocalChatMessage } from '../api/chat'
+import type { LocalChatMessage } from '../api/chat/types'
 import { formatCoacheeDetailsForPrompt, formatEmployerDetailsForPrompt } from '../types/clientProfile'
 
 function normalizeText(value: string | null | undefined) {

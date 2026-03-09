@@ -5,30 +5,27 @@ import type { Session } from "../types"
 export async function createSession(userId: string, session: Session): Promise<void> {
   await execute(
     `
-    insert into public.coachee_sessions (
-      id, user_id, coachee_id, trajectory_id, title, kind, audio_blob_id, audio_duration_seconds, upload_file_name, transcript, summary, summary_structured_json,
-      report_date, wvp_week_number, report_first_sick_day, transcription_status, transcription_error, created_at_unix_ms, updated_at_unix_ms
+    insert into public.sessions (
+      id, owner_user_id, client_id, trajectory_id, title, input_type, audio_upload_id, audio_duration_seconds, upload_file_name, transcript_text, summary_text, summary_structured_json,
+      transcription_status, transcription_error, created_at_unix_ms, updated_at_unix_ms
     )
-    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14, $15, $16, $17, $18, $19)
+    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14, $15, $16)
     on conflict (id) do update
-      set coachee_id = excluded.coachee_id,
+      set client_id = excluded.client_id,
           trajectory_id = excluded.trajectory_id,
           title = excluded.title,
-          kind = excluded.kind,
-          audio_blob_id = excluded.audio_blob_id,
+          input_type = excluded.input_type,
+          audio_upload_id = excluded.audio_upload_id,
           audio_duration_seconds = excluded.audio_duration_seconds,
           upload_file_name = excluded.upload_file_name,
-          transcript = excluded.transcript,
-          summary = excluded.summary,
+          transcript_text = excluded.transcript_text,
+          summary_text = excluded.summary_text,
           summary_structured_json = excluded.summary_structured_json,
-          report_date = excluded.report_date,
-          wvp_week_number = excluded.wvp_week_number,
-          report_first_sick_day = excluded.report_first_sick_day,
           transcription_status = excluded.transcription_status,
           transcription_error = excluded.transcription_error,
           updated_at_unix_ms = excluded.updated_at_unix_ms
-      where public.coachee_sessions.user_id = excluded.user_id
-        and excluded.updated_at_unix_ms >= public.coachee_sessions.updated_at_unix_ms
+      where public.sessions.owner_user_id = excluded.owner_user_id
+        and excluded.updated_at_unix_ms >= public.sessions.updated_at_unix_ms
     `,
     [
       session.id,
@@ -36,16 +33,13 @@ export async function createSession(userId: string, session: Session): Promise<v
       session.clientId,
       session.trajectoryId,
       session.title,
-      session.kind,
-      session.audioBlobId,
+      session.inputType,
+      session.audioUploadId,
       session.audioDurationSeconds,
       session.uploadFileName,
-      session.transcript,
-      session.summary,
+      session.transcriptText,
+      session.summaryText,
       session.summaryStructured ? JSON.stringify(session.summaryStructured) : null,
-      session.reportDate,
-      session.wvpWeekNumber,
-      session.reportFirstSickDay,
       session.transcriptionStatus,
       session.transcriptionError,
       session.createdAtUnixMs,
@@ -62,17 +56,14 @@ export async function updateSession(
     clientId?: string | null
     trajectoryId?: string | null
     title?: string | null
-    kind?: Session["kind"]
+    inputType?: Session["inputType"]
     createdAtUnixMs?: number
-    audioBlobId?: string | null
+    audioUploadId?: string | null
     audioDurationSeconds?: number | null
     uploadFileName?: string | null
-    transcript?: string | null
-    summary?: string | null
+    transcriptText?: string | null
+    summaryText?: string | null
     summaryStructured?: Session["summaryStructured"]
-    reportDate?: string | null
-    wvpWeekNumber?: string | null
-    reportFirstSickDay?: string | null
     transcriptionStatus?: Session["transcriptionStatus"]
     transcriptionError?: string | null
     updatedAtUnixMs: number
@@ -86,7 +77,7 @@ export async function updateSession(
   values.push(params.updatedAtUnixMs)
 
   if (params.clientId !== undefined) {
-    updates.push(`coachee_id = $${index++}`)
+    updates.push(`client_id = $${index++}`)
     values.push(params.clientId)
   }
 
@@ -100,9 +91,9 @@ export async function updateSession(
     values.push(params.title)
   }
 
-  if (params.kind !== undefined) {
-    updates.push(`kind = $${index++}`)
-    values.push(params.kind)
+  if (params.inputType !== undefined) {
+    updates.push(`input_type = $${index++}`)
+    values.push(params.inputType)
   }
 
   if (params.createdAtUnixMs !== undefined) {
@@ -110,9 +101,9 @@ export async function updateSession(
     values.push(params.createdAtUnixMs)
   }
 
-  if (params.audioBlobId !== undefined) {
-    updates.push(`audio_blob_id = $${index++}`)
-    values.push(params.audioBlobId)
+  if (params.audioUploadId !== undefined) {
+    updates.push(`audio_upload_id = $${index++}`)
+    values.push(params.audioUploadId)
   }
 
   if (params.audioDurationSeconds !== undefined) {
@@ -125,34 +116,19 @@ export async function updateSession(
     values.push(params.uploadFileName)
   }
 
-  if (params.transcript !== undefined) {
-    updates.push(`transcript = $${index++}`)
-    values.push(params.transcript)
+  if (params.transcriptText !== undefined) {
+    updates.push(`transcript_text = $${index++}`)
+    values.push(params.transcriptText)
   }
 
-  if (params.summary !== undefined) {
-    updates.push(`summary = $${index++}`)
-    values.push(params.summary)
+  if (params.summaryText !== undefined) {
+    updates.push(`summary_text = $${index++}`)
+    values.push(params.summaryText)
   }
 
   if (params.summaryStructured !== undefined) {
     updates.push(`summary_structured_json = $${index++}::jsonb`)
     values.push(params.summaryStructured ? JSON.stringify(params.summaryStructured) : null)
-  }
-
-  if (params.reportDate !== undefined) {
-    updates.push(`report_date = $${index++}`)
-    values.push(params.reportDate)
-  }
-
-  if (params.wvpWeekNumber !== undefined) {
-    updates.push(`wvp_week_number = $${index++}`)
-    values.push(params.wvpWeekNumber)
-  }
-
-  if (params.reportFirstSickDay !== undefined) {
-    updates.push(`report_first_sick_day = $${index++}`)
-    values.push(params.reportFirstSickDay)
   }
 
   if (params.transcriptionStatus !== undefined) {
@@ -170,9 +146,9 @@ export async function updateSession(
 
   await execute(
     `
-    update public.coachee_sessions
+    update public.sessions
     set ${updates.join(", ")}
-    where user_id = $${index++} and id = $${index}
+    where owner_user_id = $${index++} and id = $${index}
     `,
     values,
   )
@@ -180,7 +156,7 @@ export async function updateSession(
 
 // Permanently deletes one session owned by the user.
 export async function deleteSession(userId: string, id: string): Promise<void> {
-  await execute(`delete from public.coachee_sessions where user_id = $1 and id = $2`, [userId, id])
+  await execute(`delete from public.sessions where owner_user_id = $1 and id = $2`, [userId, id])
 }
 
 

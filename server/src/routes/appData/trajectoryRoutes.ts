@@ -28,17 +28,19 @@ export function registerTrajectoryRoutes(app: Express): void {
         updatedAtUnixMs,
         clientId: readOptionalId(payload.clientId),
         name: readOptionalText(payload.name),
-        dienstType: readOptionalText(payload.dienstType, true),
+        serviceType: readOptionalText(payload.serviceType ?? payload.dienstType, true),
         uwvContactName: readOptionalText(payload.uwvContactName, true),
         uwvContactPhone: readOptionalText(payload.uwvContactPhone, true),
         uwvContactEmail: readOptionalText(payload.uwvContactEmail, true),
         orderNumber: readOptionalText(payload.orderNumber, true),
         startDate: readOptionalText(payload.startDate, true),
-        planVanAanpak:
-          payload.planVanAanpak === null
+        planOfAction:
+          (payload.planOfAction ?? payload.planVanAanpak) === null
             ? null
-            : payload.planVanAanpak && typeof payload.planVanAanpak === "object" && typeof payload.planVanAanpak.documentId === "string"
-              ? { documentId: payload.planVanAanpak.documentId.trim() }
+            : (payload.planOfAction ?? payload.planVanAanpak) &&
+                typeof (payload.planOfAction ?? payload.planVanAanpak) === "object" &&
+                typeof (payload.planOfAction ?? payload.planVanAanpak).documentId === "string"
+              ? { documentId: (payload.planOfAction ?? payload.planVanAanpak).documentId.trim() }
               : undefined,
         maxHours: readOptionalNumber(payload.maxHours),
         maxAdminHours: readOptionalNumber(payload.maxAdminHours),

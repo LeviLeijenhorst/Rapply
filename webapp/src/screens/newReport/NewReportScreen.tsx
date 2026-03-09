@@ -8,14 +8,14 @@ import { ChatComposer } from '../session/components/ChatComposer'
 import { Text } from '../../ui/Text'
 import {
   buildAssistantReportContext,
-  buildRapportageGenerationSourceText,
-  exportRapportageWord,
-  generateRapportageText,
-  sendRapportageAssistantMessage,
-} from '../../hooks/reports/newRapportage/newRapportageWorkflows'
+  buildReportGenerationSourceText,
+  exportReportWord,
+  generateReportText,
+  sendReportAssistantMessage,
+} from '../../hooks/reports/newReport/newReportWorkflows'
 import { useLocalAppData } from '../../storage/LocalAppDataProvider'
 import type { Template } from '../../storage/types'
-import { normalizeSummaryTemplate } from '../../api/summary'
+import { resolveSummaryTemplateSections } from '../../ai/summaries/resolveSummaryTemplateSections'
 import { features } from '../../config/features'
 import { colors } from '../../design/theme/colors'
 import { useToast } from '../../toast/ToastProvider'
@@ -364,7 +364,7 @@ function normalizeFieldValueForStorage(field: Pick<UwvField, 'metadataKind'>, va
 function buildFieldsFromTemplate(template: Template | null): UwvField[] {
   if (!template?.name) return []
   const normalizedTemplateName = normalizeMatchValue(template.name).replace(/\s+/g, '')
-  const normalizedTemplate = normalizeSummaryTemplate({ name: template.name, sections: [] })
+    const normalizedTemplate = resolveSummaryTemplateSections({ name: template.name, sections: [] })
   const sections: Array<{ title?: string; description?: string }> = Array.isArray(normalizedTemplate.sections)
     ? normalizedTemplate.sections
     : []
@@ -943,7 +943,7 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
     }
 
     try {
-      const sourceText = buildRapportageGenerationSourceText({
+      const sourceText = buildReportGenerationSourceText({
         data,
         selectedTemplate,
         selectedCoacheeName: selectedCoachee?.name ?? '',
@@ -960,7 +960,7 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
         selectedNoteIds,
       })
 
-      const generatedReport = await generateRapportageText({
+      const generatedReport = await generateReportText({
         selectedTemplate,
         sourceText,
         fallbackReportText: buildFallbackReportFromTemplate(selectedTemplate),
@@ -1100,7 +1100,7 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
       setDefaultContextValue('functie_contactpersoon', String(data.practiceSettings.contactRole || '').trim())
       setDefaultContextValue('telefoonnummer_contactpersoon', sanitizePhoneInput(String(data.practiceSettings.contactPhone || '').trim()))
       setDefaultContextValue('e_mailadres_contactpersoon', String(data.practiceSettings.contactEmail || '').trim().toLowerCase())
-      const didExport = await exportRapportageWord({
+      const didExport = await exportReportWord({
         templateName: selectedTemplate.name,
         reportText,
         contextValues: exportContextValues,
@@ -1111,7 +1111,7 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
       }
       showToast('UWV-document geëxporteerd.')
     } catch (error) {
-      console.error('[NewRapportageScreen] UWV Word export failed', error)
+      console.error('[NewReportScreen] UWV Word export failed', error)
       showErrorToast('Het UWV-formulier kon niet worden geëxporteerd.')
     }
   }
@@ -1129,7 +1129,7 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
         fieldValues,
         normalizeFieldValueForStorage,
       })
-      const responseText = await sendRapportageAssistantMessage({
+      const responseText = await sendReportAssistantMessage({
         chatMessages: nextChatMessages,
         reportContext,
       })

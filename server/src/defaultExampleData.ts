@@ -174,8 +174,8 @@ export async function ensureDefaultExampleDataForUser(userId: string): Promise<v
   const existingData = await queryOne<{ has_coachees: boolean; has_sessions: boolean }>(
     `
     select
-      exists(select 1 from public.coachees where user_id = $1) as has_coachees,
-      exists(select 1 from public.coachee_sessions where user_id = $1) as has_sessions
+      exists(select 1 from public.clients where owner_user_id = $1) as has_coachees,
+      exists(select 1 from public.sessions where owner_user_id = $1) as has_sessions
     `,
     [userId],
   )
@@ -189,7 +189,7 @@ export async function ensureDefaultExampleDataForUser(userId: string): Promise<v
 
   await execute(
     `
-    insert into public.coachees (id, user_id, name, client_details, employer_details, first_sick_day, created_at_unix_ms, updated_at_unix_ms, is_archived)
+    insert into public.clients (id, owner_user_id, name, client_details, employer_details, first_sick_day, created_at_unix_ms, updated_at_unix_ms, is_archived)
     values ($1, $2, $3, $4, $5, $6, $7, $8, false)
     on conflict (id) do nothing
     `,
@@ -212,23 +212,26 @@ export async function ensureDefaultExampleDataForUser(userId: string): Promise<v
 
     await execute(
       `
-      insert into public.coachee_sessions (
-        id, user_id, coachee_id, title, kind, audio_blob_id, audio_duration_seconds, upload_file_name, transcript, summary,
-        report_date, wvp_week_number, report_first_sick_day, transcription_status, transcription_error, created_at_unix_ms, updated_at_unix_ms
+      insert into public.sessions (
+        id, owner_user_id, client_id, title, input_type, audio_upload_id, audio_duration_seconds, upload_file_name, transcript_text, summary_text,
+        transcription_status, transcription_error, created_at_unix_ms, updated_at_unix_ms
       )
-      values ($1, $2, $3, $4, 'recording', null, null, null, $5, $6, $7, $8, $9, 'done', null, $10, $11)
+      values ($1, $2, $3, $4, 'recording', null, null, null, $5, $6, 'done', null, $7, $8)
       on conflict (id) do nothing
       `,
-      [sessionId, userId, clientId, item.title, item.transcript, item.summary, item.reportDate, item.wvpWeekNumber, "2025-12-18", sessionUnixMs, sessionUnixMs],
+      [sessionId, userId, clientId, item.title, item.transcript, item.summary, sessionUnixMs, sessionUnixMs],
     )
 
     await execute(
       `
-      insert into public.session_written_reports (session_id, user_id, text, updated_at_unix_ms)
-      values ($1, $2, $3, $4)
-      on conflict (session_id) do nothing
+      insert into public.reports (
+        id, owner_user_id, client_id, trajectory_id, source_session_id, title, report_type, state, report_text,
+        report_date, first_sick_day, wvp_week_number, created_at_unix_ms, updated_at_unix_ms
+      )
+      values ($1, $2, $3, null, $4, $5, 'session_report', 'needs_review', $6, $7, $8, $9, $10, $11)
+      on conflict (id) do nothing
       `,
-      [sessionId, userId, item.summary, sessionUnixMs],
+      [`report-example-${userId}-jan-voorbeeld-${index + 1}`, userId, clientId, sessionId, item.title, item.summary, item.reportDate, "2025-12-18", item.wvpWeekNumber, sessionUnixMs, sessionUnixMs],
     )
   }
 }

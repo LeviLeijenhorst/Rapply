@@ -1,6 +1,6 @@
 import React from 'react'
 import { StyleSheet, View } from 'react-native'
-import { spacing } from '../design/tokens'
+import { spacing } from '../design/tokens/spacing'
 import { CoachscribeMarkIcon } from '../icons/CoachscribeMarkIcon'
 import { CoachscribeWordmarkIcon } from '../icons/CoachscribeWordmarkIcon'
 

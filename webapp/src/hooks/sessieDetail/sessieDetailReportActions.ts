@@ -1,7 +1,7 @@
-ï»¿import { buildStructuredReportMarkdown } from '../../types/reportGeneration'
-import { normalizeTranscriptionError } from '../../audio/transcriptionError'
-import { exportReportWord } from '../../api/reports'
-import { fetchCurrentUserProfile } from '../../api/auth'
+import { buildStructuredReportMarkdown } from '../../types/reportGeneration'
+import { normalizeTranscriptionError } from '../../audio/processing/transcriptionError'
+import { exportReportToWord } from '../../api/reports/exportReportToWord'
+import { fetchCurrentUserProfile } from '../../api/account/accountApi'
 import type { Activity, Coachee, Session, StructuredSessionSummary, Template, Trajectory } from '../../storage/types'
 
 type CoacheeProfileValues = {
@@ -156,7 +156,7 @@ export function createSessieDetailReportActions({
         }
       }
 
-      const didExportTemplate = await exportReportWord({
+      const didExportTemplate = await exportReportToWord({
         templateName: selectedTemplate?.name ?? editableSessionTitle,
         reportText,
         contextValues: {
@@ -200,7 +200,7 @@ export function createSessieDetailReportActions({
       return { mode: 'handled' as const }
     } catch (error) {
       console.error('[SessieDetailScreen] UWV Word export failed', error)
-      showErrorToast('Het UWV-formulier kon niet worden geÃ«xporteerd.', 'Het UWV-formulier kon niet worden geÃ«xporteerd.')
+      showErrorToast('Het UWV-formulier kon niet worden geëxporteerd.', 'Het UWV-formulier kon niet worden geëxporteerd.')
       return { mode: 'handled' as const }
     }
   }
@@ -268,6 +268,8 @@ export function createSessieDetailReportActions({
     handleExportSummaryAsWord,
   }
 }
+
+
 
 
 

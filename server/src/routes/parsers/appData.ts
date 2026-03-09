@@ -1,4 +1,4 @@
-import type { Activity, ActivityTemplate, Client, Note, Session, Snippet, Template, Trajectory, WrittenReport } from "../../appData"
+import type { Activity, ActivityTemplate, Client, Note, Report, Session, Snippet, Template, Trajectory } from "../../appData"
 import { readId, readOptionalId, readOptionalNumber, readOptionalText, readText, readUnixMs } from "./scalars"
 
 function normalizeTemplateName(name: string): string {
@@ -58,10 +58,28 @@ export function readOptionalTranscriptionStatus(value: unknown): Session["transc
   return undefined
 }
 
-export function readOptionalSessionType(value: unknown): Session["kind"] | undefined {
+export function readOptionalSessionInputType(value: unknown): Session["inputType"] | undefined {
   if (typeof value !== "string") return undefined
   const trimmed = value.trim()
-  if (trimmed === "recording" || trimmed === "upload" || trimmed === "written" || trimmed === "notes" || trimmed === "intake") {
+  if (trimmed === "recording" || trimmed === "uploaded_audio" || trimmed === "written_recap" || trimmed === "intake") {
+    return trimmed
+  }
+  if (trimmed === "upload") {
+    return "uploaded_audio"
+  }
+  if (trimmed === "written") {
+    return "written_recap"
+  }
+  if (trimmed === "notes") {
+    return "written_recap"
+  }
+  return undefined
+}
+
+export function readOptionalReportState(value: unknown): Report["state"] | undefined {
+  if (typeof value !== "string") return undefined
+  const trimmed = value.trim()
+  if (trimmed === "incomplete" || trimmed === "needs_review" || trimmed === "complete") {
     return trimmed
   }
   return undefined
@@ -81,14 +99,14 @@ export function readOptionalActivitySource(value: unknown): Activity["source"] |
   return undefined
 }
 
-export function readOptionalSnippetStatus(value: unknown): Snippet["status"] | undefined {
+export function readOptionalSnippetStatus(value: unknown): Snippet["approvalStatus"] | undefined {
   if (typeof value !== "string") return undefined
   const trimmed = value.trim()
   if (trimmed === "pending" || trimmed === "approved" || trimmed === "rejected") return trimmed
   return undefined
 }
 
-function readOptionalPlanVanAanpak(value: unknown): Trajectory["planVanAanpak"] | undefined {
+function readOptionalPlanOfAction(value: unknown): Trajectory["planOfAction"] | undefined {
   if (value === undefined) return undefined
   if (value === null) return null
   if (typeof value !== "object") return undefined
@@ -120,22 +138,21 @@ export function readSession(value: unknown): Session {
   const payload = (value || {}) as any
   const createdAtUnixMs = readUnixMs(payload.createdAtUnixMs, "session.createdAtUnixMs")
   const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs ?? payload.createdAtUnixMs, "session.updatedAtUnixMs")
-  const kind = readOptionalSessionType(payload.kind) ?? readText(payload.kind, "session.kind") as Session["kind"]
+  const inputType =
+    readOptionalSessionInputType(payload.inputType ?? payload.kind) ??
+    (readText(payload.inputType ?? payload.kind, "session.inputType") as Session["inputType"])
   return {
     id: readId(payload.id, "session.id"),
     clientId: payload.clientId === null ? null : readOptionalId(payload.clientId) ?? null,
     trajectoryId: payload.trajectoryId === null ? null : readOptionalId(payload.trajectoryId) ?? null,
     title: readText(payload.title, "session.title"),
-    kind,
-    audioBlobId: readOptionalText(payload.audioBlobId, true) ?? null,
+    inputType,
+    audioUploadId: readOptionalText(payload.audioUploadId ?? payload.audioBlobId, true) ?? null,
     audioDurationSeconds: readOptionalNumber(payload.audioDurationSeconds) ?? null,
     uploadFileName: readOptionalText(payload.uploadFileName, true) ?? null,
-    transcript: readOptionalText(payload.transcript, true) ?? null,
-    summary: readOptionalText(payload.summary, true) ?? null,
+    transcriptText: readOptionalText(payload.transcriptText ?? payload.transcript, true) ?? null,
+    summaryText: readOptionalText(payload.summaryText ?? payload.summary, true) ?? null,
     summaryStructured: readOptionalStructuredSessionSummary(payload.summaryStructured) ?? null,
-    reportDate: readOptionalText(payload.reportDate, true) ?? null,
-    wvpWeekNumber: readOptionalText(payload.wvpWeekNumber, true) ?? null,
-    reportFirstSickDay: readOptionalText(payload.reportFirstSickDay, true) ?? null,
     transcriptionStatus: readOptionalTranscriptionStatus(payload.transcriptionStatus) ?? "idle",
     transcriptionError: readOptionalText(payload.transcriptionError, true) ?? null,
     createdAtUnixMs,
@@ -151,13 +168,13 @@ export function readTrajectory(value: unknown): Trajectory {
     id: readId(payload.id, "trajectory.id"),
     clientId: readId(payload.clientId, "trajectory.clientId"),
     name: readText(payload.name, "trajectory.name"),
-    dienstType: readOptionalText(payload.dienstType, true) ?? "Werkfit maken",
+    serviceType: readOptionalText(payload.serviceType ?? payload.dienstType, true) ?? "Werkfit maken",
     uwvContactName: readOptionalText(payload.uwvContactName, true) ?? null,
     uwvContactPhone: readOptionalText(payload.uwvContactPhone, true) ?? null,
     uwvContactEmail: readOptionalText(payload.uwvContactEmail, true) ?? null,
     orderNumber: readOptionalText(payload.orderNumber, true) ?? null,
     startDate: readOptionalText(payload.startDate, true) ?? null,
-    planVanAanpak: readOptionalPlanVanAanpak(payload.planVanAanpak) ?? null,
+    planOfAction: readOptionalPlanOfAction(payload.planOfAction ?? payload.planVanAanpak) ?? null,
     maxHours: readOptionalNumber(payload.maxHours) ?? 41,
     maxAdminHours: readOptionalNumber(payload.maxAdminHours) ?? 3,
     createdAtUnixMs,
@@ -171,12 +188,13 @@ export function readSnippet(value: unknown): Snippet {
   const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs ?? payload.createdAtUnixMs, "snippet.updatedAtUnixMs")
   return {
     id: readId(payload.id, "snippet.id"),
+    clientId: readId(payload.clientId, "snippet.clientId"),
     trajectoryId: readId(payload.trajectoryId, "snippet.trajectoryId"),
-    itemId: readId(payload.itemId, "snippet.itemId"),
-    field: readText(payload.field, "snippet.field"),
+    sourceSessionId: readId(payload.sourceSessionId ?? payload.itemId, "snippet.sourceSessionId"),
+    snippetType: readText(payload.snippetType ?? payload.field, "snippet.snippetType"),
     text: readText(payload.text, "snippet.text"),
-    date: readUnixMs(payload.date, "snippet.date"),
-    status: readOptionalSnippetStatus(payload.status) ?? "pending",
+    snippetDate: readUnixMs(payload.snippetDate ?? payload.date, "snippet.snippetDate"),
+    approvalStatus: readOptionalSnippetStatus(payload.approvalStatus ?? payload.status) ?? "pending",
     createdAtUnixMs,
     updatedAtUnixMs,
   }
@@ -236,13 +254,25 @@ export function readNote(value: unknown): Note {
   }
 }
 
-// Parses a written report payload from request input.
-export function readWrittenReport(value: unknown): WrittenReport {
+// Parses a report payload from request input.
+export function readReport(value: unknown): Report {
   const payload = (value || {}) as any
+  const createdAtUnixMs = readUnixMs(payload.createdAtUnixMs ?? payload.updatedAtUnixMs, "report.createdAtUnixMs")
   const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs, "writtenReport.updatedAtUnixMs")
+  const id = readOptionalText(payload.id, true) || `report-${readId(payload.sourceSessionId ?? payload.sessionId, "report.sourceSessionId")}`
   return {
-    sessionId: readId(payload.sessionId, "writtenReport.sessionId"),
-    text: readText(payload.text, "writtenReport.text"),
+    id,
+    clientId: payload.clientId === null ? null : readOptionalId(payload.clientId) ?? null,
+    trajectoryId: payload.trajectoryId === null ? null : readOptionalId(payload.trajectoryId) ?? null,
+    sourceSessionId: payload.sourceSessionId === null ? null : readOptionalId(payload.sourceSessionId ?? payload.sessionId) ?? null,
+    title: readOptionalText(payload.title, true) ?? "",
+    reportType: readOptionalText(payload.reportType, true) ?? "session_report",
+    state: readOptionalReportState(payload.state) ?? "needs_review",
+    reportText: readText(payload.reportText ?? payload.text, "report.reportText"),
+    reportDate: readOptionalText(payload.reportDate, true) ?? null,
+    firstSickDay: readOptionalText(payload.firstSickDay, true) ?? null,
+    wvpWeekNumber: readOptionalText(payload.wvpWeekNumber, true) ?? null,
+    createdAtUnixMs,
     updatedAtUnixMs,
   }
 }

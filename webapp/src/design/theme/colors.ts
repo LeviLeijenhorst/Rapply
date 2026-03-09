@@ -1,4 +1,4 @@
-import { semanticColorTokens } from '../../design/tokens'
+import { semanticColorTokens } from '../../design/tokens/colors'
 
 export const colorTokens = semanticColorTokens
 

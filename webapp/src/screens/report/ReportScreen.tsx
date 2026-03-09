@@ -9,7 +9,7 @@ import { ChevronDownIcon } from '../../icons/ChevronDownIcon'
 import { ProfileCircleIcon } from '../../icons/ProfileCircleIcon'
 import { useLocalAppData } from '../../storage/LocalAppDataProvider'
 import { getCoacheeDisplayName, unassignedCoacheeLabel } from '../../types/client'
-import { buildUntitledSessionTitle } from '../../types/untitledSessionTitle'
+import { buildUntitledSessionTitle } from '../../utils/text/buildUntitledTitle'
 
 type Props = {
   initialCoacheeId?: string | null

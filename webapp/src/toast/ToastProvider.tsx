@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 import { BottomToast } from '../ui/BottomToast'
-import { sanitizeUserFacingErrorMessage } from '../types/userFriendlyError'
+import { sanitizeUserFacingErrorMessage } from '../utils/text/userFriendlyError'
 
 type ToastApi = {
   showToast: (message: string) => void

@@ -1,5 +1,6 @@
 import { callSecureApi } from '../../api/core/secureApi'
 import type { Snippet } from '../../types/snippet'
+import { buildSessionSnippetPrompt } from './buildSessionSnippetPrompt'
 
 type SnippetExtractResponse = { snippets?: Snippet[] }
 
@@ -12,7 +13,7 @@ export async function extractSessionSnippets(params: {
   const response = await callSecureApi<SnippetExtractResponse>('/snippet-extract', {
     itemId: params.sessionId,
     trajectoryId: params.clientId,
-    transcript: params.transcript,
+    transcript: buildSessionSnippetPrompt(params),
     itemDate: params.sessionDate,
   })
   return Array.isArray(response?.snippets) ? response.snippets : []

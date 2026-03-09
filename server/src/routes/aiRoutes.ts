@@ -7,16 +7,14 @@ import { createSnippet } from "../appData"
 import { requireAuthenticatedUser } from "../auth"
 import { readManualPricingContextForUser } from "../billing/manualPricing"
 import { isMollieConfigured, syncMollieSubscriptionForUser, syncRecentMolliePaymentsForUser } from "../billing/mollie"
-import { derivePlanStateFromRevenueCatSubscriber, fetchRevenueCatSubscriber } from "../billing/revenuecat"
 import { ensureBillingUser, readBillingStatus } from "../billing/store"
 import { completeChatWithAzureOpenAi } from "../chat/azureOpenAiChat"
-import { queryMany } from "../db"
+import { queryMany, queryOne } from "../db"
 import { env } from "../env"
 import { SnippetExtractionError } from "../errors/SnippetExtractionError"
 import { ValidationError } from "../errors/ValidationError"
 import { asyncHandler, sendError } from "../http"
 import { generateSummary } from "../summary/summary"
-import { applyEmailBillingOverrides } from "./billingOverrides"
 import { readSummaryTemplate } from "./parsers/summary"
 
 type RegisterAiRoutesParams = {
@@ -264,21 +262,19 @@ export function registerAiRoutes(app: Express, params: RegisterAiRoutesParams): 
         }
       }
 
-      const subscriber = useMollie ? {} : await fetchRevenueCatSubscriber(user.userId)
-      const planState = useMollie ? { planKey: null, cycleStartMs: null, cycleEndMs: null } : derivePlanStateFromRevenueCatSubscriber(subscriber)
       const manualPricing = await readManualPricingContextForUser(user.userId)
       const useManualCycle = useMollie || manualPricing.includedSecondsPerCycle > 0 || manualPricing.planId != null || manualPricing.customMonthlyPrice != null
       const hasDashboardMinutesConfigured = manualPricing.planId != null || manualPricing.includedSecondsPerCycle > 0
       const freeSecondsOverride = hasDashboardMinutesConfigured ? 0 : null
       const billingStatusRaw = await readBillingStatus({
         userId: user.userId,
-        planKey: useManualCycle ? null : planState.planKey,
-        cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : planState.cycleStartMs,
-        cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : planState.cycleEndMs,
+        planKey: null,
+        cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : null,
+        cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : null,
         includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
         freeSecondsOverride,
       })
-      const billingStatus = applyEmailBillingOverrides(billingStatusRaw, user.email)
+      const billingStatus = billingStatusRaw
       if (billingStatus.remainingSeconds <= 0) {
         sendError(res, 402, "U heeft geen minuten meer. Ga naar Mijn abonnement om extra minuten toe te voegen.")
         return
@@ -316,13 +312,14 @@ export function registerAiRoutes(app: Express, params: RegisterAiRoutesParams): 
 
   const snippetExtractHandler = asyncHandler(async (req, res) => {
       const user = await requireAuthenticatedUser(req)
-      const itemId = normalizeText(req.body?.itemId)
+      const sourceSessionId = normalizeText(req.body?.sourceSessionId || req.body?.itemId)
       const trajectoryId = normalizeText(req.body?.trajectoryId)
+      const payloadClientId = normalizeText(req.body?.clientId)
       const transcript = normalizeText(req.body?.transcript)
       const itemDate = normalizeNumber(req.body?.itemDate)
 
-      if (!itemId) {
-        sendError(res, 400, "Missing itemId")
+      if (!sourceSessionId) {
+        sendError(res, 400, "Missing sourceSessionId")
         return
       }
       if (!trajectoryId) {
@@ -335,6 +332,23 @@ export function registerAiRoutes(app: Express, params: RegisterAiRoutesParams): 
       }
       if (itemDate === null) {
         sendError(res, 400, "Missing itemDate")
+        return
+      }
+
+      let clientId = payloadClientId
+      if (!clientId) {
+        const sessionRow = await queryOne<{ client_id: string | null }>(
+          `
+          select client_id
+          from public.sessions
+          where id = $1 and owner_user_id = $2
+          `,
+          [sourceSessionId, user.userId],
+        )
+        clientId = normalizeText(sessionRow?.client_id)
+      }
+      if (!clientId) {
+        sendError(res, 400, "Missing clientId")
         return
       }
 
@@ -354,12 +368,13 @@ export function registerAiRoutes(app: Express, params: RegisterAiRoutesParams): 
       const now = Date.now()
       const created: Array<{
         id: string
+        clientId: string
         trajectoryId: string
-        itemId: string
-        field: string
+        sourceSessionId: string
+        snippetType: string
         text: string
-        date: number
-        status: "pending"
+        snippetDate: number
+        approvalStatus: "pending"
         createdAtUnixMs: number
         updatedAtUnixMs: number
       }> = []
@@ -368,12 +383,13 @@ export function registerAiRoutes(app: Express, params: RegisterAiRoutesParams): 
         const id = `snippet-${crypto.randomUUID()}`
         const snippetRow = {
           id,
+          clientId,
           trajectoryId,
-          itemId,
-          field: snippet.field,
+          sourceSessionId,
+          snippetType: snippet.field,
           text: snippet.text,
-          date: itemDate,
-          status: "pending" as const,
+          snippetDate: itemDate,
+          approvalStatus: "pending" as const,
           createdAtUnixMs: now,
           updatedAtUnixMs: now,
         }
@@ -529,7 +545,7 @@ export function registerAiRoutes(app: Express, params: RegisterAiRoutesParams): 
         `
         select id, name, category, default_hours, is_admin
         from public.activity_templates
-        where (user_id = $1 or user_id is null)
+        where (owner_user_id = $1 or owner_user_id is null)
           and is_active = true
         order by created_at_unix_ms asc
         `,
@@ -544,7 +560,7 @@ export function registerAiRoutes(app: Express, params: RegisterAiRoutesParams): 
         `
         select name, category, status
         from public.activities
-        where user_id = $1
+        where owner_user_id = $1
           and trajectory_id = $2
         order by updated_at_unix_ms desc
         limit 200

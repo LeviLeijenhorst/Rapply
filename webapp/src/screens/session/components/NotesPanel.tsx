@@ -1,7 +1,9 @@
 import React from 'react'
 import { StyleSheet, View } from 'react-native'
 
-import { fontSizes, radius, spacing } from '../../../design/tokens'
+import { fontSizes } from '../../../design/tokens/fontSizes'
+import { radius } from '../../../design/tokens/radius'
+import { spacing } from '../../../design/tokens/spacing'
 import type { Note } from '../../../storage/types'
 import { Text } from '../../../ui/Text'
 

@@ -5,7 +5,7 @@ import { LoadingSpinner } from '../../ui/LoadingSpinner'
 import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
 import { ModalCloseDarkIcon } from '../../icons/ModalCloseDarkIcon'
 import { Text } from '../../ui/Text'
-import { submitContactSubmission } from '../../api/settings'
+import { submitContactSubmission } from '../../api/contact/pricingAndContactApi'
 import { useToast } from '../../toast/ToastProvider'
 
 type Props = {

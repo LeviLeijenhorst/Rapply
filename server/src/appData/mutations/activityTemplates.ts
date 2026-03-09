@@ -5,7 +5,7 @@ export async function createActivityTemplate(userId: string, template: ActivityT
   await execute(
     `
     insert into public.activity_templates (
-      id, user_id, name, description, category, default_hours, is_admin, organization_id, is_active, created_at_unix_ms, updated_at_unix_ms
+      id, owner_user_id, name, description, category, default_hours, is_admin, organization_id, is_active, created_at_unix_ms, updated_at_unix_ms
     )
     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     on conflict (id) do update
@@ -17,7 +17,7 @@ export async function createActivityTemplate(userId: string, template: ActivityT
           organization_id = excluded.organization_id,
           is_active = excluded.is_active,
           updated_at_unix_ms = excluded.updated_at_unix_ms
-      where public.activity_templates.user_id = excluded.user_id
+      where public.activity_templates.owner_user_id = excluded.owner_user_id
     `,
     [
       template.id,
@@ -98,12 +98,12 @@ export async function updateActivityTemplate(
     `
     update public.activity_templates
     set ${updates.join(", ")}
-    where user_id = $${index++} and id = $${index}
+    where owner_user_id = $${index++} and id = $${index}
     `,
     values,
   )
 }
 
 export async function deleteActivityTemplate(userId: string, id: string): Promise<void> {
-  await execute(`delete from public.activity_templates where user_id = $1 and id = $2`, [userId, id])
+  await execute(`delete from public.activity_templates where owner_user_id = $1 and id = $2`, [userId, id])
 }

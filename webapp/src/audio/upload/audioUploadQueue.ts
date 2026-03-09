@@ -1,4 +1,4 @@
-import { appendAudioStreamChunkRemote, updateAudioStreamRemote } from '../../api/audioStreams'
+import { appendAudioStreamChunkRemote, updateAudioStreamRemote } from '../../api/audio/audioStreamApi'
 import {
   loadPendingAudioChunks,
   loadRecordingsNeedingFinalize,

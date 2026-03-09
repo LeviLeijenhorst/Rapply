@@ -1,7 +1,7 @@
 export { createClient, updateClient, deleteClient } from "./mutations/clients"
 export { createSession, updateSession, deleteSession } from "./mutations/sessions"
 export { createNote, updateNote, deleteNote } from "./mutations/notes"
-export { setWrittenReport } from "./mutations/writtenReports"
+export { upsertReport } from "./mutations/writtenReports"
 export { createTrajectory, updateTrajectory, deleteTrajectory } from "./mutations/trajectories"
 export { createActivity, updateActivity, deleteActivity } from "./mutations/activities"
 export { createActivityTemplate, updateActivityTemplate, deleteActivityTemplate } from "./mutations/activityTemplates"

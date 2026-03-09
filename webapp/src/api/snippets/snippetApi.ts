@@ -1,4 +1,4 @@
-import { createSnippetRemote, deleteSnippetRemote, updateSnippetRemote } from '../appData'
+import { createSnippetRemote, deleteSnippetRemote, updateSnippetRemote } from '../appData/appDataApi'
 
 export const snippetApi = {
   create: createSnippetRemote,

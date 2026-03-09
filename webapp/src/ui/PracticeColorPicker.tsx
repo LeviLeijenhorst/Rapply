@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, TextInput, View } from 'react-native'
 
 import { Text } from '../ui/Text'
-import { fontSizes, radius } from '../design/tokens'
+import { fontSizes } from '../design/tokens/fontSizes'
+import { radius } from '../design/tokens/radius'
 import { colors } from '../design/theme/colors'
 
 type Props = {

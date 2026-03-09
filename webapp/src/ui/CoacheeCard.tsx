@@ -2,7 +2,7 @@ import React, { useRef } from 'react'
 import { GestureResponderEvent, Pressable, StyleSheet, View } from 'react-native'
 
 import { colors } from '../design/theme/colors'
-import { webTransitionSmooth } from '../design/theme/webTransitions'
+import { webTransitionSmooth } from '../design/theme/transitions'
 import { CoacheeAvatarIcon } from '../icons/CoacheeAvatarIcon'
 import { EditActionIcon } from '../icons/EditActionIcon'
 import { MoreOptionsIcon } from '../icons/MoreOptionsIcon'

@@ -1,1 +1,0 @@
-export { InteractiveFormattedText } from '../InteractiveFormattedText'

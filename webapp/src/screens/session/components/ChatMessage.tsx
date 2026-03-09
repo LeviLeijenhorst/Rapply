@@ -8,7 +8,7 @@ import { CopyIcon } from '../../../icons/CopyIcon'
 import { CopiedIcon } from '../../../icons/CopiedIcon'
 import { SharePdfIcon } from '../../../icons/SharePdfIcon'
 import { ShareTextIcon } from '../../../icons/ShareTextIcon'
-import { parseTimeLabelToSeconds } from '../../../types/time'
+import { parseTimeLabelToSeconds } from '../../../utils/date/time'
 import { useLocalAppData } from '../../../storage/LocalAppDataProvider'
 import { parseRichTextMarkdown, RichTextInlineSegment } from '../../../ui/richTextFormatting'
 

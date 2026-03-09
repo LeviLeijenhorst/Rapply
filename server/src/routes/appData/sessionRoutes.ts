@@ -3,7 +3,7 @@ import { createSession, deleteSession, updateSession } from "../../appData"
 import { requireAuthenticatedUser } from "../../auth"
 import { asyncHandler } from "../../http"
 import { readId, readOptionalId, readOptionalNumber, readOptionalText, readUnixMs } from "../parsers/scalars"
-import { readOptionalSessionType, readOptionalTranscriptionStatus, readSession } from "../parsers/appData"
+import { readOptionalSessionInputType, readOptionalTranscriptionStatus, readSession } from "../parsers/appData"
 
 // Registers session create, update, and delete endpoints.
 export function registerSessionRoutes(app: Express): void {
@@ -29,14 +29,14 @@ export function registerSessionRoutes(app: Express): void {
         updatedAtUnixMs,
         clientId: payload.clientId === null ? null : readOptionalId(payload.clientId),
         trajectoryId: payload.trajectoryId === null ? null : readOptionalId(payload.trajectoryId),
-        kind: readOptionalSessionType(payload.kind),
+        inputType: readOptionalSessionInputType(payload.inputType ?? payload.kind),
         title: readOptionalText(payload.title),
         createdAtUnixMs: readOptionalNumber(payload.createdAtUnixMs) ?? undefined,
-        audioBlobId: readOptionalText(payload.audioBlobId, true),
+        audioUploadId: readOptionalText(payload.audioUploadId ?? payload.audioBlobId, true),
         audioDurationSeconds: readOptionalNumber(payload.audioDurationSeconds),
         uploadFileName: readOptionalText(payload.uploadFileName, true),
-        transcript: readOptionalText(payload.transcript, true),
-        summary: readOptionalText(payload.summary, true),
+        transcriptText: readOptionalText(payload.transcriptText ?? payload.transcript, true),
+        summaryText: readOptionalText(payload.summaryText ?? payload.summary, true),
         summaryStructured:
           payload.summaryStructured === null
             ? null
@@ -49,9 +49,6 @@ export function registerSessionRoutes(app: Express): void {
                   arbeidsmarktorientatie: readOptionalText((payload.summaryStructured as any).arbeidsmarktorientatie, true) ?? '',
                 }
               : undefined,
-        reportDate: readOptionalText(payload.reportDate, true),
-        wvpWeekNumber: readOptionalText(payload.wvpWeekNumber, true),
-        reportFirstSickDay: readOptionalText(payload.reportFirstSickDay, true),
         transcriptionStatus: readOptionalTranscriptionStatus(payload.transcriptionStatus),
         transcriptionError: readOptionalText(payload.transcriptionError, true),
       })

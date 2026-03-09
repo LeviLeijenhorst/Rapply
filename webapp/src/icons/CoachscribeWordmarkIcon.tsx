@@ -1,6 +1,6 @@
 import React from 'react'
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg'
-import { brandColors } from '../design/tokens'
+import { brandColors } from '../design/tokens/colors'
 
 type Props = {
 }

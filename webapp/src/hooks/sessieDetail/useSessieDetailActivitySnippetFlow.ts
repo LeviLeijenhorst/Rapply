@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 
 import type { ActivityTemplate, Snippet } from '../../storage/types'
-import { detectActivitiesFromTranscript, type DetectedActivitySuggestion, aiEditSnippetText, aiOverwriteSnippetText, extractSnippetsForItem } from '../../api/activities'
+import { detectActivitiesFromTranscript, type DetectedActivitySuggestion } from '../../api/activities/detectActivities'
+import { aiEditSnippetText, aiOverwriteSnippetText, extractSnippetsForItem } from '../../api/snippets/snippetGenerationApi'
 
 export type ActivitySuggestionDecision = 'pending' | 'approved' | 'rejected'
 export type PendingActivitySuggestion = DetectedActivitySuggestion & {

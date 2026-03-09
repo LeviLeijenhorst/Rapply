@@ -8,11 +8,11 @@ import { navigate } from '../screens/authentication/internal/router/webRouter'
 import { LoginScreen } from '../screens/authentication/LoginScreen'
 import { AuthLoadingScreen } from '../screens/authentication/internal/ui/AuthLoadingScreen'
 import { AuthScreenLayout } from '../screens/authentication/internal/ui/AuthScreenLayout'
-import { AppShell } from './AppShell'
-import { AppErrorBoundary } from './ErrorBoundary'
+import { AppShell } from '../ui/AppShell'
+import { AppErrorBoundary } from '../ui/AppErrorBoundary'
 import { LocalAppDataProvider } from '../storage/LocalAppDataProvider'
-import { E2eeProvider } from '../encryption/E2eeProvider'
-import { warmUpSecureApi } from '../api/secureApi'
+import { E2eeProvider } from '../security/providers/E2eeProvider'
+import { warmUpSecureApi } from '../api/core/secureApi'
 import { AppProviders } from './providers/AppProviders'
 import { getInitialAuthenticationState } from './bootstrap/authBootstrap'
 
@@ -76,3 +76,4 @@ export function AppRoot() {
     </AppProviders>
   )
 }
+

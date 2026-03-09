@@ -6,7 +6,7 @@ import { colors } from '../../design/theme/colors'
 import { AnimatedOverlayModal } from '../../ui/AnimatedOverlayModal'
 import { Text } from '../../ui/Text'
 import { ModalCloseDarkIcon } from '../../icons/ModalCloseDarkIcon'
-import { toUserFriendlyErrorMessage } from '../../types/userFriendlyError'
+import { toUserFriendlyErrorMessage } from '../../utils/text/userFriendlyError'
 import { useToast } from '../../toast/ToastProvider'
 
 type Props = {

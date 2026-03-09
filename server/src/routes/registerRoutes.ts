@@ -25,7 +25,6 @@ type RegisterRoutesParams = {
   hasAzureStorageAccountKey: boolean
   hasEntraOpenIdConfigurationUrl: boolean
   hasEntraAudience: boolean
-  hasRevenueCatSecretKey: boolean
   hasMollieApiKey: boolean
   hasMollieWebhookUrl: boolean
   hasMollieRedirectUrl: boolean
@@ -50,7 +49,6 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
     transcriptionUploadsContainer: env.azureStorageTranscriptionUploadsContainer,
     hasEntraOpenIdConfigurationUrl: params.hasEntraOpenIdConfigurationUrl,
     hasEntraAudience: params.hasEntraAudience,
-    hasRevenueCatSecretKey: params.hasRevenueCatSecretKey,
     hasMollieApiKey: params.hasMollieApiKey,
     hasMollieWebhookUrl: params.hasMollieWebhookUrl,
     hasMollieRedirectUrl: params.hasMollieRedirectUrl,

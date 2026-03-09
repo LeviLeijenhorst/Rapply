@@ -1,8 +1,8 @@
 import type { Express } from "express"
-import { setWrittenReport } from "../../appData"
+import { upsertReport } from "../../appData"
 import { requireAuthenticatedUser } from "../../auth"
 import { asyncHandler } from "../../http"
-import { readWrittenReport } from "../parsers/appData"
+import { readReport } from "../parsers/appData"
 
 // Registers written report upsert endpoint.
 export function registerWrittenReportRoutes(app: Express): void {
@@ -10,8 +10,8 @@ export function registerWrittenReportRoutes(app: Express): void {
     "/written-reports/set",
     asyncHandler(async (req, res) => {
       const user = await requireAuthenticatedUser(req)
-      const report = readWrittenReport(req.body?.report)
-      await setWrittenReport(user.userId, report)
+      const report = readReport(req.body?.report)
+      await upsertReport(user.userId, report)
       res.status(200).json({ ok: true })
     }),
   )

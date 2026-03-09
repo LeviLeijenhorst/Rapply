@@ -1,4 +1,4 @@
-import { setWrittenReportRemote } from '../appData'
+import { setWrittenReportRemote } from '../appData/appDataApi'
 
 export const reportApi = {
   save: setWrittenReportRemote,

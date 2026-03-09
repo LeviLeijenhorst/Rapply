@@ -1,4 +1,4 @@
-import { callSecureApi } from '../api/secureApi'
+import { callSecureApi } from '../api/core/secureApi'
 
 const TRANSCRIPTION_PREFLIGHT_TIMEOUT_MS = 30_000
 const TRANSCRIPTION_UPLOAD_BLOCK_TIMEOUT_MS = 10 * 60_000
@@ -636,3 +636,4 @@ export async function cancelTranscriptionOperation(params: { operationId: string
 export function isTranscriptionCancelledError(error: unknown): boolean {
   return isRequestAbortedError(error)
 }
+

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { fetchBillingStatus } from '../api/billing'
+import { fetchBillingStatus } from '../api/billing/billingApi'
 
 type BillingUsage = {
   usedMinutes: number

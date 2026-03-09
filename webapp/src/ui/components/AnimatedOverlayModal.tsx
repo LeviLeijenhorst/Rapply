@@ -1,1 +1,0 @@
-export { AnimatedOverlayModal } from '../AnimatedOverlayModal'

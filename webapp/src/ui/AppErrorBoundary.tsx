@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native'
 
 import { Text } from '../ui/Text'
 import { colors } from '../design/theme/colors'
-import { trackWebappError } from '../api/analytics'
+import { trackWebappError } from '../api/analytics/webappAnalytics'
 
 type Props = {
   children: React.ReactNode

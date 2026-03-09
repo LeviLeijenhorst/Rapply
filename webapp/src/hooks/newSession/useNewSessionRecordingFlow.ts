@@ -1,9 +1,9 @@
-﻿import { useCallback, useEffect, type MutableRefObject } from 'react'
+import { useCallback, useEffect, type MutableRefObject } from 'react'
 
 import {
-  startRealtimeTranscriber,
+  startRealtimeTranscription,
   type RealtimeTranscriberSession,
-} from '../../api/transcription'
+} from '../../ai/transcription/realtime/startRealtimeTranscription'
 import type { NewSessionStep } from '../../screens/record/newInputModalTypes'
 import {
   createOperationId,
@@ -129,7 +129,7 @@ export function useNewSessionRecordingFlow({
     setIsRealtimeTranscriberStarting(true)
     setLiveTranscriptError(null)
 
-    void startRealtimeTranscriber({
+    void startRealtimeTranscription({
       languageCode: 'nl',
       onFinalSegment: (segment) => {
         if (cancelled) return
@@ -234,6 +234,7 @@ export function useNewSessionRecordingFlow({
     stopLiveTranscriber,
   }
 }
+
 
 
 

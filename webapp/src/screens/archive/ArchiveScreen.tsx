@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, View } from 'react-native'
 import { colors } from '../../design/theme/colors'
 import { useLocalAppData } from '../../storage/LocalAppDataProvider'
 import { Text } from '../../ui/Text'
-import { ArchivedClientCard } from '../clients/components/ArchivedClientCard'
+import { ArchivedCoacheeCard as ArchivedClientCard } from '../../ui/ArchivedCoacheeCard'
 
 export function ArchiveScreen() {
   const { data, restoreCoachee, deleteCoachee } = useLocalAppData()
@@ -84,4 +84,3 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 })
-

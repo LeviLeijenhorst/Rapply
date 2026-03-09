@@ -5,36 +5,36 @@ export async function createTrajectory(userId: string, trajectory: Trajectory): 
   await execute(
     `
     insert into public.trajectories (
-      id, user_id, coachee_id, name, dienst_type, uwv_contact_name, uwv_contact_phone, uwv_contact_email, order_number, start_date, plan_van_aanpak_json, max_hours, max_admin_hours, created_at_unix_ms, updated_at_unix_ms
+      id, owner_user_id, client_id, name, service_type, uwv_contact_name, uwv_contact_phone, uwv_contact_email, order_number, start_date, plan_of_action_json, max_hours, max_admin_hours, created_at_unix_ms, updated_at_unix_ms
     )
     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12, $13, $14, $15)
     on conflict (id) do update
-      set coachee_id = excluded.coachee_id,
+      set client_id = excluded.client_id,
           name = excluded.name,
-          dienst_type = excluded.dienst_type,
+          service_type = excluded.service_type,
           uwv_contact_name = excluded.uwv_contact_name,
           uwv_contact_phone = excluded.uwv_contact_phone,
           uwv_contact_email = excluded.uwv_contact_email,
           order_number = excluded.order_number,
           start_date = excluded.start_date,
-          plan_van_aanpak_json = excluded.plan_van_aanpak_json,
+          plan_of_action_json = excluded.plan_of_action_json,
           max_hours = excluded.max_hours,
           max_admin_hours = excluded.max_admin_hours,
           updated_at_unix_ms = excluded.updated_at_unix_ms
-      where public.trajectories.user_id = excluded.user_id
+      where public.trajectories.owner_user_id = excluded.owner_user_id
     `,
     [
       trajectory.id,
       userId,
       trajectory.clientId,
       trajectory.name,
-      trajectory.dienstType,
+      trajectory.serviceType,
       trajectory.uwvContactName,
       trajectory.uwvContactPhone,
       trajectory.uwvContactEmail,
       trajectory.orderNumber,
       trajectory.startDate,
-      trajectory.planVanAanpak ? JSON.stringify(trajectory.planVanAanpak) : null,
+      trajectory.planOfAction ? JSON.stringify(trajectory.planOfAction) : null,
       trajectory.maxHours,
       trajectory.maxAdminHours,
       trajectory.createdAtUnixMs,
@@ -49,13 +49,13 @@ export async function updateTrajectory(
     id: string
     clientId?: string
     name?: string | null
-    dienstType?: string | null
+    serviceType?: string | null
     uwvContactName?: string | null
     uwvContactPhone?: string | null
     uwvContactEmail?: string | null
     orderNumber?: string | null
     startDate?: string | null
-    planVanAanpak?: Trajectory["planVanAanpak"]
+    planOfAction?: Trajectory["planOfAction"]
     maxHours?: number | null
     maxAdminHours?: number | null
     updatedAtUnixMs: number
@@ -69,7 +69,7 @@ export async function updateTrajectory(
   values.push(params.updatedAtUnixMs)
 
   if (params.clientId !== undefined) {
-    updates.push(`coachee_id = $${index++}`)
+    updates.push(`client_id = $${index++}`)
     values.push(params.clientId)
   }
 
@@ -78,9 +78,9 @@ export async function updateTrajectory(
     values.push(params.name)
   }
 
-  if (params.dienstType !== undefined) {
-    updates.push(`dienst_type = $${index++}`)
-    values.push(params.dienstType)
+  if (params.serviceType !== undefined) {
+    updates.push(`service_type = $${index++}`)
+    values.push(params.serviceType)
   }
 
   if (params.uwvContactName !== undefined) {
@@ -108,9 +108,9 @@ export async function updateTrajectory(
     values.push(params.startDate)
   }
 
-  if (params.planVanAanpak !== undefined) {
-    updates.push(`plan_van_aanpak_json = $${index++}::jsonb`)
-    values.push(params.planVanAanpak ? JSON.stringify(params.planVanAanpak) : null)
+  if (params.planOfAction !== undefined) {
+    updates.push(`plan_of_action_json = $${index++}::jsonb`)
+    values.push(params.planOfAction ? JSON.stringify(params.planOfAction) : null)
   }
 
   if (params.maxHours !== undefined) {
@@ -130,13 +130,13 @@ export async function updateTrajectory(
     `
     update public.trajectories
     set ${updates.join(", ")}
-    where user_id = $${index++} and id = $${index}
+    where owner_user_id = $${index++} and id = $${index}
     `,
     values,
   )
 }
 
 export async function deleteTrajectory(userId: string, id: string): Promise<void> {
-  await execute(`delete from public.trajectories where user_id = $1 and id = $2`, [userId, id])
+  await execute(`delete from public.trajectories where owner_user_id = $1 and id = $2`, [userId, id])
 }
 

@@ -1,4 +1,4 @@
-﻿import { buildUntitledSessionTitle, type UntitledSessionKind } from '../../types/untitledSessionTitle'
+import { buildUntitledSessionTitle, type UntitledSessionKind } from '../../utils/text/buildUntitledTitle'
 
 export type OptionKey = 'gesprek' | 'gespreksverslag' | 'upload' | 'schrijven' | 'intake'
 
@@ -172,6 +172,3 @@ export function isAudioFile(file: File | null): boolean {
   const extension = getFileExtension(file.name)
   return Boolean(knownAudioMimeByExtension[extension])
 }
-
-
-

@@ -5,28 +5,30 @@ export async function createSnippet(userId: string, snippet: Snippet): Promise<v
   await execute(
     `
     insert into public.snippets (
-      id, user_id, trajectory_id, item_id, field, text, date, status, created_at_unix_ms, updated_at_unix_ms
+      id, owner_user_id, client_id, trajectory_id, source_session_id, snippet_type, text, snippet_date, approval_status, created_at_unix_ms, updated_at_unix_ms
     )
-    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     on conflict (id) do update
-      set trajectory_id = excluded.trajectory_id,
-          item_id = excluded.item_id,
-          field = excluded.field,
+      set client_id = excluded.client_id,
+          trajectory_id = excluded.trajectory_id,
+          source_session_id = excluded.source_session_id,
+          snippet_type = excluded.snippet_type,
           text = excluded.text,
-          date = excluded.date,
-          status = excluded.status,
+          snippet_date = excluded.snippet_date,
+          approval_status = excluded.approval_status,
           updated_at_unix_ms = excluded.updated_at_unix_ms
-      where public.snippets.user_id = excluded.user_id
+      where public.snippets.owner_user_id = excluded.owner_user_id
     `,
     [
       snippet.id,
       userId,
+      snippet.clientId,
       snippet.trajectoryId,
-      snippet.itemId,
-      snippet.field,
+      snippet.sourceSessionId,
+      snippet.snippetType,
       snippet.text,
-      snippet.date,
-      snippet.status,
+      snippet.snippetDate,
+      snippet.approvalStatus,
       snippet.createdAtUnixMs,
       snippet.updatedAtUnixMs,
     ],
@@ -37,9 +39,9 @@ export async function updateSnippet(
   userId: string,
   params: {
     id: string
-    field?: string | null
+    snippetType?: string | null
     text?: string | null
-    status?: Snippet["status"]
+    approvalStatus?: Snippet["approvalStatus"]
     updatedAtUnixMs: number
   },
 ): Promise<void> {
@@ -50,9 +52,9 @@ export async function updateSnippet(
   updates.push(`updated_at_unix_ms = $${index++}`)
   values.push(params.updatedAtUnixMs)
 
-  if (typeof params.field === "string") {
-    updates.push(`field = $${index++}`)
-    values.push(params.field)
+  if (typeof params.snippetType === "string") {
+    updates.push(`snippet_type = $${index++}`)
+    values.push(params.snippetType)
   }
 
   if (typeof params.text === "string") {
@@ -60,9 +62,9 @@ export async function updateSnippet(
     values.push(params.text)
   }
 
-  if (params.status !== undefined) {
-    updates.push(`status = $${index++}`)
-    values.push(params.status)
+  if (params.approvalStatus !== undefined) {
+    updates.push(`approval_status = $${index++}`)
+    values.push(params.approvalStatus)
   }
 
   values.push(userId)
@@ -72,12 +74,12 @@ export async function updateSnippet(
     `
     update public.snippets
     set ${updates.join(", ")}
-    where user_id = $${index++} and id = $${index}
+    where owner_user_id = $${index++} and id = $${index}
     `,
     values,
   )
 }
 
 export async function deleteSnippet(userId: string, id: string): Promise<void> {
-  await execute(`delete from public.snippets where user_id = $1 and id = $2`, [userId, id])
+  await execute(`delete from public.snippets where owner_user_id = $1 and id = $2`, [userId, id])
 }

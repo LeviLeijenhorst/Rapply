@@ -1,5 +1,5 @@
-import { loadAudioChunkByIndex, loadLocalAudioStreamManifest } from './audioChunkStore'
-import { loadAudioStreamChunkRemote, loadAudioStreamManifestRemote } from '../api/audioStreams'
+import { loadAudioChunkByIndex, loadLocalAudioStreamManifest } from './upload/audioChunkStore'
+import { loadAudioStreamChunkRemote, loadAudioStreamManifestRemote } from '../api/audio/audioStreamApi'
 
 const DOWNLOAD_MANIFEST_TIMEOUT_MS = 20_000
 const DOWNLOAD_CHUNK_TIMEOUT_MS = 20_000

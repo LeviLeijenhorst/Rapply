@@ -29,9 +29,9 @@ import {
   e2eeSetup,
   e2eeUnlockServerManaged,
   type E2eeUserKeyMaterial,
-} from '../../api/e2ee'
+} from '../../api/e2ee/e2eeApi'
 import { useToast } from '../../toast/ToastProvider'
-import { toUserFriendlyErrorMessage } from '../../types/userFriendlyError'
+import { toUserFriendlyErrorMessage } from '../../utils/text/userFriendlyError'
 
 type E2eeContextValue = {
   encryptText: (value: string) => Promise<string>

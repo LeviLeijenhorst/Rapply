@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 import { LoadingSpinner } from '../../../ui/LoadingSpinner'
 
@@ -12,7 +12,7 @@ import { ShareTextIcon } from '../../../icons/ShareTextIcon'
 import { VerslagGenererenIcon } from '../../../icons/VerslagGenererenIcon'
 import { VerslagSchrijvenIcon } from '../../../icons/VerslagSchrijvenIcon'
 import { RotateLeftIcon } from '../../../icons/RotateLeftIcon'
-import { toUserFriendlyTranscriptionError } from '../../../audio/transcriptionError'
+import { toUserFriendlyTranscriptionError } from '../../../audio/processing/transcriptionError'
 import { richTextMarkdownToHtml } from '../../../ui/richTextFormatting'
 import { useToast } from '../../../toast/ToastProvider'
 import { parseReportSections, serializeReportSections } from '../../../types/reportStructure'
@@ -661,5 +661,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 })
+
 
 

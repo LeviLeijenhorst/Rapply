@@ -1,4 +1,4 @@
-import { brandColors } from "../design/tokens";
+import { brandColors } from "../design/tokens/colors";
 
 export const brandConfig = {
   appName: "Coachscribe",

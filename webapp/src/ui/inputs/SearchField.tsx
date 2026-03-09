@@ -11,7 +11,10 @@ import {
 import { SearchIcon } from "../../icons/SearchIcon";
 import { colors } from "../../design/theme/colors";
 import { typography } from "../../design/theme/typography";
-import { brandColors, fontSizes, radius, spacing } from "../../design/tokens";
+import { brandColors } from "../../design/tokens/colors";
+import { fontSizes } from "../../design/tokens/fontSizes";
+import { radius } from "../../design/tokens/radius";
+import { spacing } from "../../design/tokens/spacing";
 
 type Props = {
   value: string;

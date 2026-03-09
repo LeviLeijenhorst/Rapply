@@ -5,7 +5,7 @@ export async function createActivity(userId: string, activity: Activity): Promis
   await execute(
     `
     insert into public.activities (
-      id, user_id, trajectory_id, session_id, template_id, name, category, status, planned_hours, actual_hours, source, is_admin, created_at_unix_ms, updated_at_unix_ms
+      id, owner_user_id, trajectory_id, session_id, template_id, name, category, status, planned_hours, actual_hours, source, is_admin, created_at_unix_ms, updated_at_unix_ms
     )
     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
     on conflict (id) do update
@@ -20,7 +20,7 @@ export async function createActivity(userId: string, activity: Activity): Promis
           source = excluded.source,
           is_admin = excluded.is_admin,
           updated_at_unix_ms = excluded.updated_at_unix_ms
-      where public.activities.user_id = excluded.user_id
+      where public.activities.owner_user_id = excluded.owner_user_id
     `,
     [
       activity.id,
@@ -122,12 +122,12 @@ export async function updateActivity(
     `
     update public.activities
     set ${updates.join(", ")}
-    where user_id = $${index++} and id = $${index}
+    where owner_user_id = $${index++} and id = $${index}
     `,
     values,
   )
 }
 
 export async function deleteActivity(userId: string, id: string): Promise<void> {
-  await execute(`delete from public.activities where user_id = $1 and id = $2`, [userId, id])
+  await execute(`delete from public.activities where owner_user_id = $1 and id = $2`, [userId, id])
 }

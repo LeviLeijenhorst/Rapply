@@ -2,11 +2,9 @@ import express, { type Express, type RequestHandler } from "express"
 import { requireAuthenticatedUser } from "../auth"
 import { cancelMollieSubscriptionForUser, changeMollieSubscriptionPlanForUser, createMollieExtraMinutesCheckout, createMolliePlanCheckout, isMollieConfigured, processMolliePaymentWebhook, syncMollieSubscriptionForUser, syncRecentMolliePaymentsForUser } from "../billing/mollie"
 import { readManualPricingContextForUser } from "../billing/manualPricing"
-import { derivePlanStateFromRevenueCatSubscriber, derivePurchasedSecondsFromRevenueCatSubscriber, fetchRevenueCatSubscriber } from "../billing/revenuecat"
 import { ensureBillingUser, readBillingStatus } from "../billing/store"
-import { execute, queryOne } from "../db"
+import { queryOne } from "../db"
 import { asyncHandler, sendError } from "../http"
-import { applyEmailBillingOverrides } from "./billingOverrides"
 
 type RegisterBillingRoutesParams = {
   rateLimitBilling: RequestHandler
@@ -168,33 +166,26 @@ export function registerBillingRoutes(app: Express, params: RegisterBillingRoute
         }
       }
 
-      const subscriber = useMollie ? {} : await fetchRevenueCatSubscriber(user.userId)
-      const planState = useMollie ? { planKey: null, cycleStartMs: null, cycleEndMs: null } : derivePlanStateFromRevenueCatSubscriber(subscriber)
-      const purchasedSecondsFromRevenueCat = useMollie ? 0 : derivePurchasedSecondsFromRevenueCatSubscriber(subscriber)
       const manualPricing = await readManualPricingContextForUser(user.userId)
       const useManualCycle = useMollie || manualPricing.includedSecondsPerCycle > 0 || manualPricing.planId != null || manualPricing.customMonthlyPrice != null
       const hasDashboardMinutesConfigured = manualPricing.planId != null || manualPricing.includedSecondsPerCycle > 0
       const freeSecondsOverride = hasDashboardMinutesConfigured ? 0 : null
 
-      if (!useMollie) {
-        await execute(`update public.billing_users set purchased_seconds = $1, updated_at = now() where user_id = $2`, [purchasedSecondsFromRevenueCat, user.userId])
-      }
-
       const billingStatusRaw = await readBillingStatus({
         userId: user.userId,
-        planKey: useManualCycle ? null : planState.planKey,
-        cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : planState.cycleStartMs,
-        cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : planState.cycleEndMs,
+        planKey: null,
+        cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : null,
+        cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : null,
         includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
         freeSecondsOverride,
       })
-      const billingStatus = applyEmailBillingOverrides(billingStatusRaw, user.email)
+      const billingStatus = billingStatusRaw
 
       res.status(200).json({
         ok: true,
-        planKey: useManualCycle ? null : planState.planKey,
-        cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : planState.cycleStartMs,
-        cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : planState.cycleEndMs,
+        planKey: null,
+        cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : null,
+        cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : null,
         billingStatus,
       })
     }),
@@ -222,26 +213,24 @@ export function registerBillingRoutes(app: Express, params: RegisterBillingRoute
         }
       }
 
-      const subscriber = useMollie ? {} : await fetchRevenueCatSubscriber(user.userId)
-      const planState = useMollie ? { planKey: null, cycleStartMs: null, cycleEndMs: null } : derivePlanStateFromRevenueCatSubscriber(subscriber)
       const manualPricing = await readManualPricingContextForUser(user.userId)
       const useManualCycle = useMollie || manualPricing.includedSecondsPerCycle > 0 || manualPricing.planId != null || manualPricing.customMonthlyPrice != null
       const hasDashboardMinutesConfigured = manualPricing.planId != null || manualPricing.includedSecondsPerCycle > 0
       const freeSecondsOverride = hasDashboardMinutesConfigured ? 0 : null
       const billingStatusRaw = await readBillingStatus({
         userId: user.userId,
-        planKey: useManualCycle ? null : planState.planKey,
-        cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : planState.cycleStartMs,
-        cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : planState.cycleEndMs,
+        planKey: null,
+        cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : null,
+        cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : null,
         includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
         freeSecondsOverride,
       })
-      const billingStatus = applyEmailBillingOverrides(billingStatusRaw, user.email)
+      const billingStatus = billingStatusRaw
 
       res.status(200).json({
-        planKey: useManualCycle ? null : planState.planKey,
-        cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : planState.cycleStartMs,
-        cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : planState.cycleEndMs,
+        planKey: null,
+        cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : null,
+        cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : null,
         billingStatus,
       })
     }),

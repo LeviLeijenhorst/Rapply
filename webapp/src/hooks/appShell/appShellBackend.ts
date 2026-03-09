@@ -1,6 +1,6 @@
 import { clearPendingPreviewAudio, clearPendingPreviewAudioIfEligible, listPendingPreviewAudioTasks } from '../../audio/pendingPreviewStore'
-import { deleteAccountApi, fetchCurrentUserProfileApi, fetchSubscriptionAccessApi, submitFeedbackApi } from '../../api/appShell'
-import { processSessionAudio } from '../../audio/processSessionAudio'
+import { deleteAccountApi, fetchCurrentUserProfile as fetchCurrentUserProfileApi, fetchSubscriptionAccessApi, submitFeedbackApi } from '../../api/account/accountApi'
+import { processRecordedSession } from '../../ai/transcription/recorded/processRecordedSession'
 import type { Session } from '../../storage/types'
 
 export type SubscriptionAccess = {
@@ -75,7 +75,7 @@ export async function resumePendingPreviewAudioTasks(params: {
       continue
     }
 
-    await processSessionAudio({
+      await processRecordedSession({
       sessionId: task.sessionId,
       audioBlob: task.blob,
       mimeType: task.mimeType,

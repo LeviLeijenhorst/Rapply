@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 
-import { sendAiChat } from '../../../api/ai'
-import { fontSizes, radius, spacing } from '../../../design/tokens'
+import { sendSessionChatMessage } from '../../../ai/chat/sendSessionChatMessage'
+import { fontSizes } from '../../../design/tokens/fontSizes'
+import { radius } from '../../../design/tokens/radius'
+import { spacing } from '../../../design/tokens/spacing'
 import { AnimatedMainContent } from '../../../ui/AnimatedMainContent'
 import { Text } from '../../../ui/Text'
 import type { Note, Snippet } from '../../../storage/types'
@@ -81,13 +83,10 @@ export function SessionNotesCard({ sessionId, notes, snippets, summary, transcri
     setIsSending(true)
 
     try {
-      const response = await sendAiChat(
-        [
-          { role: 'system', text: buildChatSystemPrompt({ summary, transcript, snippets, notes: sortedNotes }) },
-          ...nextMessages.map((message) => ({ role: message.role, text: message.text })),
-        ],
-        'session',
+      const response = await sendSessionChatMessage(
+        nextMessages.map((message) => ({ role: message.role, text: message.text })),
         sessionId,
+        [{ role: 'system', text: buildChatSystemPrompt({ summary, transcript, snippets, notes: sortedNotes }) }],
       )
 
       setChatMessages((previous) => [

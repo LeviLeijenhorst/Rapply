@@ -21,7 +21,7 @@ export {
   createNote,
   updateNote,
   deleteNote,
-  setWrittenReport,
+  upsertReport,
   createTemplate,
   updateTemplate,
   deleteTemplate,
@@ -29,8 +29,9 @@ export {
 } from "./mutations"
 export type {
   Client,
-  SessionKind,
+  SessionInputType,
   Session,
+  Report,
   Trajectory,
   ActivityStatus,
   ActivitySource,
@@ -39,7 +40,6 @@ export type {
   SnippetStatus,
   Snippet,
   Note,
-  WrittenReport,
   TemplateCategory,
   TemplateSection,
   Template,

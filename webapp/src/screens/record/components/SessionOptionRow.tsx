@@ -4,7 +4,7 @@ import { Animated, Pressable, View } from 'react-native'
 import { Text } from '../../../ui/Text'
 import { ChevronDownIcon } from '../../../icons/ChevronDownIcon'
 import { colors } from '../../../design/theme/colors'
-import { webTransitionSmooth } from '../../../design/theme/webTransitions'
+import { webTransitionSmooth } from '../../../design/theme/transitions'
 import { styles } from '../newInputModalStyles'
 
 type SessionOptionRowProps = {
