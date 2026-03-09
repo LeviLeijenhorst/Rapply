@@ -2,16 +2,8 @@ import type { Express } from "express"
 import { createSession, deleteSession, updateSession } from "../../appData"
 import { requireAuthenticatedUser } from "../../auth"
 import { asyncHandler } from "../../http"
-import {
-  readId,
-  readOptionalId,
-  readOptionalNumber,
-  readOptionalSessionType,
-  readOptionalText,
-  readOptionalTranscriptionStatus,
-  readSession,
-  readUnixMs,
-} from "../requestParsers"
+import { readId, readOptionalId, readOptionalNumber, readOptionalText, readUnixMs } from "../parsers/scalars"
+import { readOptionalSessionType, readOptionalTranscriptionStatus, readSession } from "../parsers/appData"
 
 // Registers session create, update, and delete endpoints.
 export function registerSessionRoutes(app: Express): void {
@@ -35,7 +27,7 @@ export function registerSessionRoutes(app: Express): void {
       await updateSession(user.userId, {
         id,
         updatedAtUnixMs,
-        coacheeId: payload.coacheeId === null ? null : readOptionalId(payload.coacheeId),
+        clientId: payload.clientId === null ? null : readOptionalId(payload.clientId),
         trajectoryId: payload.trajectoryId === null ? null : readOptionalId(payload.trajectoryId),
         kind: readOptionalSessionType(payload.kind),
         title: readOptionalText(payload.title),
@@ -77,4 +69,5 @@ export function registerSessionRoutes(app: Express): void {
     }),
   )
 }
+
 

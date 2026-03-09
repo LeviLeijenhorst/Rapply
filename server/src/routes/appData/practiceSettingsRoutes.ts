@@ -2,7 +2,7 @@ import type { Express } from "express"
 import { updatePracticeSettings } from "../../appData"
 import { requireAuthenticatedUser } from "../../auth"
 import { asyncHandler } from "../../http"
-import { readOptionalText, readUnixMs } from "../requestParsers"
+import { readOptionalText, readUnixMs } from "../parsers/scalars"
 
 // Registers practice settings update endpoint.
 export function registerPracticeSettingsRoutes(app: Express): void {

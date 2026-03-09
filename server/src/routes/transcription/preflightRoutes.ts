@@ -10,7 +10,8 @@ import { createEncryptedUploadUrl } from "../../transcription/storage"
 import { createUploadToken } from "../../transcription/store"
 import { transcriptionUploadExpirationSeconds } from "../../transcription/uploadExpiration"
 import { applyEmailBillingOverrides } from "../billingOverrides"
-import { getProviderMaxAudioBytes, getProviderMaxAudioDurationSeconds, resolveTranscriptionProviderWithRuntimeMode } from "./helpers"
+import { getProviderMaxAudioBytes, getProviderMaxAudioDurationSeconds } from "./actions/providerLimits"
+import { resolveTranscriptionProviderWithRuntimeMode } from "./actions/resolveTranscriptionProvider"
 import type { RegisterTranscriptionRoutesParams } from "./types"
 
 // Registers transcription preflight endpoint.

@@ -2,7 +2,7 @@ import type { Express } from "express"
 import { registerActivityTemplateRoutes } from "./appData/activityTemplateRoutes"
 import { registerActivityRoutes } from "./appData/activityRoutes"
 import { registerAppDataAccountRoutes } from "./appData/accountRoutes"
-import { registerCoacheeRoutes } from "./appData/coacheeRoutes"
+import { registerClientRoutes } from "./appData/clientRoutes"
 import { registerNoteRoutes } from "./appData/noteRoutes"
 import { registerPracticeSettingsRoutes } from "./appData/practiceSettingsRoutes"
 import { registerAppDataReadRoutes } from "./appData/readRoutes"
@@ -12,10 +12,10 @@ import { registerTemplateRoutes } from "./appData/templateRoutes"
 import { registerTrajectoryRoutes } from "./appData/trajectoryRoutes"
 import { registerWrittenReportRoutes } from "./appData/writtenReportRoutes"
 
-// Registers app data CRUD routes for coachees, sessions, notes, templates, and settings.
+// Registers app data CRUD routes for clients, sessions, notes, templates, and settings.
 export function registerAppDataRoutes(app: Express): void {
   registerAppDataReadRoutes(app)
-  registerCoacheeRoutes(app)
+  registerClientRoutes(app)
   registerTrajectoryRoutes(app)
   registerSessionRoutes(app)
   registerActivityRoutes(app)

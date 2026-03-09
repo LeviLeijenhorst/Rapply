@@ -2,7 +2,8 @@ import type { Express } from "express"
 import { requireAuthenticatedUser } from "../../auth"
 import * as e2ee from "../../e2ee"
 import { asyncHandler, sendError } from "../../http"
-import { readOptionalInteger, readOptionalRecoveryPolicy, readOptionalText, readRequiredInteger, readRequiredNumber, readText, validateArgon2Params } from "../requestParsers"
+import { readOptionalInteger, readOptionalText, readRequiredInteger, readRequiredNumber, readText } from "../parsers/scalars"
+import { readOptionalRecoveryPolicy, validateArgon2Params } from "../parsers/e2ee"
 import type { RegisterE2eeRoutesParams } from "./types"
 
 // Registers endpoints that create or rotate E2EE user key material.

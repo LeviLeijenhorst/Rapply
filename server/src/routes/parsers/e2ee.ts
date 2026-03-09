@@ -2,7 +2,7 @@ import type { RecoveryPolicy } from "../../e2ee"
 import { readRequiredNumber, readText } from "./scalars"
 
 const allowedE2eeObjectTypes = new Set([
-  "coachee",
+  "client",
   "session",
   "note",
   "written_report",

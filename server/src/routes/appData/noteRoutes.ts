@@ -2,7 +2,8 @@ import type { Express } from "express"
 import { createNote, deleteNote, updateNote } from "../../appData"
 import { requireAuthenticatedUser } from "../../auth"
 import { asyncHandler } from "../../http"
-import { readId, readNote, readText, readUnixMs } from "../requestParsers"
+import { readId, readText, readUnixMs } from "../parsers/scalars"
+import { readNote } from "../parsers/appData"
 
 // Registers note create, update, and delete endpoints.
 export function registerNoteRoutes(app: Express): void {

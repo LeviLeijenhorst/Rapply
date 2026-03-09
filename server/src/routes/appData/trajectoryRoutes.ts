@@ -2,7 +2,8 @@ import type { Express } from "express"
 import { createTrajectory, deleteTrajectory, updateTrajectory } from "../../appData"
 import { requireAuthenticatedUser } from "../../auth"
 import { asyncHandler } from "../../http"
-import { readId, readOptionalId, readOptionalNumber, readOptionalText, readTrajectory, readUnixMs } from "../requestParsers"
+import { readId, readOptionalId, readOptionalNumber, readOptionalText, readUnixMs } from "../parsers/scalars"
+import { readTrajectory } from "../parsers/appData"
 
 export function registerTrajectoryRoutes(app: Express): void {
   app.post(
@@ -25,7 +26,7 @@ export function registerTrajectoryRoutes(app: Express): void {
       await updateTrajectory(user.userId, {
         id,
         updatedAtUnixMs,
-        coacheeId: readOptionalId(payload.coacheeId),
+        clientId: readOptionalId(payload.clientId),
         name: readOptionalText(payload.name),
         dienstType: readOptionalText(payload.dienstType, true),
         uwvContactName: readOptionalText(payload.uwvContactName, true),
@@ -56,3 +57,4 @@ export function registerTrajectoryRoutes(app: Express): void {
     }),
   )
 }
+

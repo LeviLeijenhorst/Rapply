@@ -2,7 +2,8 @@ import type { Express } from "express"
 import { requireAuthenticatedUser } from "../../auth"
 import * as e2ee from "../../e2ee"
 import { asyncHandler } from "../../http"
-import { readId, readRequiredInteger, readRequiredObjectType, readText } from "../requestParsers"
+import { readId, readRequiredInteger, readText } from "../parsers/scalars"
+import { readRequiredObjectType } from "../parsers/e2ee"
 
 // Registers endpoints that manage per-object E2EE DEKs.
 export function registerE2eeObjectKeyRoutes(app: Express): void {

@@ -2,7 +2,8 @@ import type { Express } from "express"
 import { createSnippet, deleteSnippet, updateSnippet } from "../../appData"
 import { requireAuthenticatedUser } from "../../auth"
 import { asyncHandler } from "../../http"
-import { readId, readOptionalSnippetStatus, readOptionalText, readSnippet, readUnixMs } from "../requestParsers"
+import { readId, readOptionalText, readUnixMs } from "../parsers/scalars"
+import { readOptionalSnippetStatus, readSnippet } from "../parsers/appData"
 
 export function registerSnippetRoutes(app: Express): void {
   app.post(

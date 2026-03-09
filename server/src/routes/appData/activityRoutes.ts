@@ -2,16 +2,8 @@ import type { Express } from "express"
 import { createActivity, deleteActivity, updateActivity } from "../../appData"
 import { requireAuthenticatedUser } from "../../auth"
 import { asyncHandler } from "../../http"
-import {
-  readActivity,
-  readId,
-  readOptionalActivitySource,
-  readOptionalActivityStatus,
-  readOptionalId,
-  readOptionalNumber,
-  readOptionalText,
-  readUnixMs,
-} from "../requestParsers"
+import { readId, readOptionalId, readOptionalNumber, readOptionalText, readUnixMs } from "../parsers/scalars"
+import { readActivity, readOptionalActivitySource, readOptionalActivityStatus } from "../parsers/appData"
 
 export function registerActivityRoutes(app: Express): void {
   app.post(

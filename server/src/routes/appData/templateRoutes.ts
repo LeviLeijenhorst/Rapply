@@ -5,7 +5,8 @@ import { queryOne } from "../../db"
 import { env } from "../../env"
 import { asyncHandler } from "../../http"
 import { createDefaultTemplates } from "../../templates/defaultTemplates"
-import { readId, readTemplate } from "../requestParsers"
+import { readId } from "../parsers/scalars"
+import { readTemplate } from "../parsers/appData"
 
 const fallbackTemplateCutoverDateIso = "2026-02-22T00:00:00.000Z"
 const templateCutoverDateUnixMs = Date.parse(env.templateDefaultsCutoverIso || fallbackTemplateCutoverDateIso)

@@ -9,7 +9,8 @@ import { asyncHandler, sendError } from "../../http"
 import { readTranscriptionRuntimeSettings } from "../../transcription/mode"
 import { chargeSecondsIdempotent } from "../../transcription/store"
 import { applyEmailBillingOverrides, getNonExpiringTotalSecondsOverrideForEmail } from "../billingOverrides"
-import { markOperationCompleted, markOperationFailed } from "./helpers"
+import { markOperationCompleted } from "./actions/markOperationCompleted"
+import { markOperationFailed } from "./actions/markOperationFailed"
 import type { RegisterTranscriptionRoutesParams } from "./types"
 
 const AZURE_SPEECH_TOKEN_TTL_SECONDS = 540

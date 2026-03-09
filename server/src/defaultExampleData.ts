@@ -184,7 +184,7 @@ export async function ensureDefaultExampleDataForUser(userId: string): Promise<v
     return
   }
 
-  const coacheeId = `coachee-example-${userId}-jan-voorbeeld`
+  const clientId = `client-example-${userId}-jan-voorbeeld`
   const baseUnixMs = Date.now()
 
   await execute(
@@ -194,7 +194,7 @@ export async function ensureDefaultExampleDataForUser(userId: string): Promise<v
     on conflict (id) do nothing
     `,
     [
-      coacheeId,
+      clientId,
       userId,
       "Jan Voorbeeld",
       "Functie: logistiek planner (36 uur). Hulpvraag: duurzame werkhervatting met behoud van belastbaarheid. Klachtenbeeld: stressgerelateerde vermoeidheid en prikkelgevoeligheid bij hoge werkdruk.",
@@ -219,7 +219,7 @@ export async function ensureDefaultExampleDataForUser(userId: string): Promise<v
       values ($1, $2, $3, $4, 'recording', null, null, null, $5, $6, $7, $8, $9, 'done', null, $10, $11)
       on conflict (id) do nothing
       `,
-      [sessionId, userId, coacheeId, item.title, item.transcript, item.summary, item.reportDate, item.wvpWeekNumber, "2025-12-18", sessionUnixMs, sessionUnixMs],
+      [sessionId, userId, clientId, item.title, item.transcript, item.summary, item.reportDate, item.wvpWeekNumber, "2025-12-18", sessionUnixMs, sessionUnixMs],
     )
 
     await execute(

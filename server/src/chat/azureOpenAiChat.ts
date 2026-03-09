@@ -1,77 +1,10 @@
 import { env } from "../env"
 import { completeAzureOpenAiChat, type ChatMessage } from "../ai/azureOpenAi"
+import { normalizeText } from "../ai/shared/normalize"
+import { splitTextByEstimatedTokenBudget } from "../ai/shared/textChunking"
+import { removeSpeakerLabelsFromOutput } from "../ai/shared/textSanitization"
 
 const conservativeMessageChunkTokenBudget = 8_000
-const minimumChunkCharacterLength = 2_000
-
-// Intent: normalizeText
-function normalizeText(value: string) {
-  return String(value || "").trim()
-}
-
-// Intent: estimateTokenCount
-function estimateTokenCount(value: string): number {
-  const normalized = String(value || "")
-  if (!normalized) return 0
-  return Math.ceil(normalized.length / 4)
-}
-
-// Intent: splitOversizedLine
-function splitOversizedLine(line: string, maxAllowedTokens: number): string[] {
-  const trimmed = String(line || "").trim()
-  if (!trimmed) return [""]
-  if (estimateTokenCount(trimmed) <= maxAllowedTokens) return [trimmed]
-  const roughCharacterBudget = Math.max(minimumChunkCharacterLength, maxAllowedTokens * 3)
-  const parts: string[] = []
-  let cursor = 0
-  while (cursor < trimmed.length) {
-    const nextCursor = Math.min(trimmed.length, cursor + roughCharacterBudget)
-    parts.push(trimmed.slice(cursor, nextCursor))
-    cursor = nextCursor
-  }
-  return parts
-}
-
-// Intent: splitTextByEstimatedTokenBudget
-function splitTextByEstimatedTokenBudget(params: { text: string; maxAllowedTokens: number }): string[] {
-  const text = normalizeText(params.text)
-  const maxAllowedTokens = Math.max(500, Math.floor(params.maxAllowedTokens))
-  if (!text) return []
-  const lines = text.split("\n")
-  const chunks: string[] = []
-  let pendingLines: string[] = []
-  let pendingTokens = 0
-
-  const flushPending = () => {
-    const chunk = normalizeText(pendingLines.join("\n"))
-    if (chunk) chunks.push(chunk)
-    pendingLines = []
-    pendingTokens = 0
-  }
-
-  for (const rawLine of lines) {
-    const line = String(rawLine || "")
-    const lineTokens = estimateTokenCount(line) + 1
-    if (lineTokens > maxAllowedTokens) {
-      if (pendingLines.length > 0) flushPending()
-      const oversizedParts = splitOversizedLine(line, maxAllowedTokens)
-      for (const part of oversizedParts) {
-        const normalizedPart = normalizeText(part)
-        if (!normalizedPart) continue
-        chunks.push(normalizedPart)
-      }
-      continue
-    }
-    if (pendingTokens + lineTokens > maxAllowedTokens && pendingLines.length > 0) {
-      flushPending()
-    }
-    pendingLines.push(line)
-    pendingTokens += lineTokens
-  }
-
-  if (pendingLines.length > 0) flushPending()
-  return chunks
-}
 
 // Intent: safeMessages
 function safeMessages(messages: any): ChatMessage[] {
@@ -107,15 +40,6 @@ const crossSessionLeakageMarkers = [
 
 function buildSessionScopeLine(sessionId: string) {
   return `Session-ID: ${sessionId}`
-}
-
-// Intent: removeSpeakerLabelsFromOutput
-function removeSpeakerLabelsFromOutput(value: string): string {
-  return String(value || "")
-    .replace(/\bspeaker[_\s-]*\d+\b\s*:?\s*/gi, "")
-    .replace(/\bspreker[_\s-]*\d+\b\s*:?\s*/gi, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
 }
 
 export function buildChatPolicySystemPrompt() {

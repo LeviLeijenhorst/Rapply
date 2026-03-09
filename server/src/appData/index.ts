@@ -1,8 +1,8 @@
 export { readAppData } from "./read"
 export {
-  createCoachee,
-  updateCoachee,
-  deleteCoachee,
+  createClient,
+  updateClient,
+  deleteClient,
   createSession,
   updateSession,
   deleteSession,
@@ -28,7 +28,7 @@ export {
   updatePracticeSettings,
 } from "./mutations"
 export type {
-  Coachee,
+  Client,
   SessionKind,
   Session,
   Trajectory,

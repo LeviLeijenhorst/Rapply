@@ -1,4 +1,4 @@
-export { createCoachee, updateCoachee, deleteCoachee } from "./mutations/coachees"
+export { createClient, updateClient, deleteClient } from "./mutations/clients"
 export { createSession, updateSession, deleteSession } from "./mutations/sessions"
 export { createNote, updateNote, deleteNote } from "./mutations/notes"
 export { setWrittenReport } from "./mutations/writtenReports"

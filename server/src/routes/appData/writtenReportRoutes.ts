@@ -2,7 +2,7 @@ import type { Express } from "express"
 import { setWrittenReport } from "../../appData"
 import { requireAuthenticatedUser } from "../../auth"
 import { asyncHandler } from "../../http"
-import { readWrittenReport } from "../requestParsers"
+import { readWrittenReport } from "../parsers/appData"
 
 // Registers written report upsert endpoint.
 export function registerWrittenReportRoutes(app: Express): void {

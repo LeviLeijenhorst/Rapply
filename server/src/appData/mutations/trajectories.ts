@@ -26,7 +26,7 @@ export async function createTrajectory(userId: string, trajectory: Trajectory): 
     [
       trajectory.id,
       userId,
-      trajectory.coacheeId,
+      trajectory.clientId,
       trajectory.name,
       trajectory.dienstType,
       trajectory.uwvContactName,
@@ -47,7 +47,7 @@ export async function updateTrajectory(
   userId: string,
   params: {
     id: string
-    coacheeId?: string
+    clientId?: string
     name?: string | null
     dienstType?: string | null
     uwvContactName?: string | null
@@ -68,9 +68,9 @@ export async function updateTrajectory(
   updates.push(`updated_at_unix_ms = $${index++}`)
   values.push(params.updatedAtUnixMs)
 
-  if (params.coacheeId !== undefined) {
+  if (params.clientId !== undefined) {
     updates.push(`coachee_id = $${index++}`)
-    values.push(params.coacheeId)
+    values.push(params.clientId)
   }
 
   if (typeof params.name === "string") {
@@ -139,3 +139,4 @@ export async function updateTrajectory(
 export async function deleteTrajectory(userId: string, id: string): Promise<void> {
   await execute(`delete from public.trajectories where user_id = $1 and id = $2`, [userId, id])
 }
+

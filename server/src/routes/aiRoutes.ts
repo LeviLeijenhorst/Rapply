@@ -1,5 +1,8 @@
 import type { Express, RequestHandler } from "express"
 import { completeAzureOpenAiChat } from "../ai/azureOpenAi"
+import { normalizeNumber, normalizeText } from "../ai/shared/normalize"
+import { estimateTokenCount } from "../ai/shared/textChunking"
+import { stripJsonCodeFences } from "../ai/shared/textSanitization"
 import { createSnippet } from "../appData"
 import { requireAuthenticatedUser } from "../auth"
 import { readManualPricingContextForUser } from "../billing/manualPricing"
@@ -9,10 +12,12 @@ import { ensureBillingUser, readBillingStatus } from "../billing/store"
 import { completeChatWithAzureOpenAi } from "../chat/azureOpenAiChat"
 import { queryMany } from "../db"
 import { env } from "../env"
+import { SnippetExtractionError } from "../errors/SnippetExtractionError"
+import { ValidationError } from "../errors/ValidationError"
 import { asyncHandler, sendError } from "../http"
 import { generateSummary } from "../summary/summary"
 import { applyEmailBillingOverrides } from "./billingOverrides"
-import { readSummaryTemplate } from "./requestParsers"
+import { readSummaryTemplate } from "./parsers/summary"
 
 type RegisterAiRoutesParams = {
   rateLimitAi: RequestHandler
@@ -65,12 +70,6 @@ const snippetFieldQuestions: SnippetFieldQuestion[] = [
 const snippetFieldSet = new Set(snippetFieldQuestions.map((item) => item.field))
 const maxChunkPromptTokens = 4_800
 
-function estimateTokenCount(value: string): number {
-  const trimmed = normalizeText(value)
-  if (!trimmed) return 0
-  return Math.ceil(trimmed.length / 4)
-}
-
 function findSplitIndex(value: string): number {
   const midpoint = Math.floor(value.length / 2)
   const before = value.lastIndexOf("\n", midpoint)
@@ -95,15 +94,6 @@ function splitTranscriptRecursively(transcript: string, maxAllowedTokens: number
     ...splitTranscriptRecursively(left, maxAllowedTokens),
     ...splitTranscriptRecursively(right, maxAllowedTokens),
   ]
-}
-
-function stripJsonCodeFences(value: string): string {
-  const trimmed = normalizeText(value)
-  if (!trimmed.startsWith("```")) return trimmed
-  return trimmed
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim()
 }
 
 function parseSnippetExtraction(rawText: string): SnippetExtractionResult[] {
@@ -136,7 +126,7 @@ function parseSnippetExtraction(rawText: string): SnippetExtractionResult[] {
 async function extractSnippetsForTranscriptChunk(transcriptChunk: string): Promise<SnippetExtractionResult[]> {
   const deployment = normalizeText(env.azureOpenAiSummaryDeployment) || normalizeText(env.azureOpenAiChatDeployment)
   if (!deployment) {
-    throw new Error("Azure OpenAI snippet extraction deployment is not configured")
+    throw new SnippetExtractionError("Azure OpenAI snippet extraction deployment is not configured")
   }
 
   const fieldLines = snippetFieldQuestions.map((item) => `- ${item.field}: ${item.question}`).join("\n")
@@ -194,19 +184,6 @@ function parseSingleSnippetText(rawText: string): string {
   return ""
 }
 
-function normalizeText(value: unknown): string {
-  return String(value || "").trim()
-}
-
-function normalizeNumber(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  if (typeof value === "string") {
-    const parsed = Number(value.replace(",", "."))
-    if (Number.isFinite(parsed)) return parsed
-  }
-  return null
-}
-
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
@@ -226,7 +203,7 @@ function parseDetectSuggestions(params: {
   try {
     parsed = JSON.parse(stripped)
   } catch {
-    throw new Error("Activity detect model response is not valid JSON")
+    throw new ValidationError("Activity detect model response is not valid JSON")
   }
 
   const rawSuggestions = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.suggestions) ? parsed.suggestions : []
@@ -407,7 +384,6 @@ export function registerAiRoutes(app: Express, params: RegisterAiRoutesParams): 
       res.status(200).json({ snippets: created })
     })
 
-  app.post("/snippet-extract", params.rateLimitAi, snippetExtractHandler)
   app.post("/ai/snippet-extract", params.rateLimitAi, snippetExtractHandler)
 
   app.post(

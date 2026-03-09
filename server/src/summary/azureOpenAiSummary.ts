@@ -1,16 +1,15 @@
 import { env } from "../env"
 import { completeAzureOpenAiChat, type ChatMessage } from "../ai/azureOpenAi"
-
-// Intent: normalizeText
-function normalizeText(value: unknown) {
-  return String(value || "").trim()
-}
+import { normalizeText } from "../ai/shared/normalize"
+import { estimateTokenCount, splitTextByEstimatedTokenBudget } from "../ai/shared/textChunking"
+import { removeSpeakerLabelsFromOutput, stripJsonCodeFences } from "../ai/shared/textSanitization"
+import { SummaryGenerationError } from "../errors/SummaryGenerationError"
 
 // Intent: requireTranscript
 function requireTranscript(transcript: string) {
   const trimmed = normalizeText(transcript)
   if (!trimmed) {
-    throw new Error("Missing transcript")
+    throw new SummaryGenerationError("Missing transcript")
   }
   return trimmed
 }
@@ -33,7 +32,6 @@ type ExtractedReportContext = {
 const conservativeChunkTokenBudget = 8_000
 const conservativeMergeTokenBudget = 10_000
 const estimatedPromptOverheadTokens = 1_200
-const minimumChunkCharacterLength = 2_000
 const structuredSummaryKeys = [
   "doelstelling",
   "belastbaarheid",
@@ -44,78 +42,6 @@ const structuredSummaryKeys = [
 type StructuredSummaryKey = (typeof structuredSummaryKeys)[number]
 type StructuredSummary = Record<StructuredSummaryKey, string>
 
-// Intent: estimateTokenCount
-function estimateTokenCount(value: string): number {
-  const normalized = String(value || "")
-  if (!normalized) return 0
-  return Math.ceil(normalized.length / 4)
-}
-
-// Intent: splitOversizedLine
-function splitOversizedLine(line: string, maxAllowedTokens: number): string[] {
-  const trimmed = String(line || "").trim()
-  if (!trimmed) return [""]
-  if (estimateTokenCount(trimmed) <= maxAllowedTokens) return [trimmed]
-  const roughCharacterBudget = Math.max(minimumChunkCharacterLength, maxAllowedTokens * 3)
-  const parts: string[] = []
-  let cursor = 0
-  while (cursor < trimmed.length) {
-    const nextCursor = Math.min(trimmed.length, cursor + roughCharacterBudget)
-    parts.push(trimmed.slice(cursor, nextCursor))
-    cursor = nextCursor
-  }
-  return parts
-}
-
-// Intent: splitTextByEstimatedTokenBudget
-function splitTextByEstimatedTokenBudget(params: { text: string; maxAllowedTokens: number }): string[] {
-  const text = normalizeText(params.text)
-  const maxAllowedTokens = Math.max(500, Math.floor(params.maxAllowedTokens))
-  if (!text) return []
-  const lines = text.split("\n")
-  const chunks: string[] = []
-  let pendingLines: string[] = []
-  let pendingTokens = 0
-
-  const flushPending = () => {
-    const chunk = normalizeText(pendingLines.join("\n"))
-    if (chunk) chunks.push(chunk)
-    pendingLines = []
-    pendingTokens = 0
-  }
-
-  for (const rawLine of lines) {
-    const line = String(rawLine || "")
-    const lineTokens = estimateTokenCount(line) + 1
-    if (lineTokens > maxAllowedTokens) {
-      if (pendingLines.length > 0) flushPending()
-      const oversizedParts = splitOversizedLine(line, maxAllowedTokens)
-      for (const part of oversizedParts) {
-        const normalizedPart = normalizeText(part)
-        if (!normalizedPart) continue
-        chunks.push(normalizedPart)
-      }
-      continue
-    }
-    if (pendingTokens + lineTokens > maxAllowedTokens && pendingLines.length > 0) {
-      flushPending()
-    }
-    pendingLines.push(line)
-    pendingTokens += lineTokens
-  }
-
-  if (pendingLines.length > 0) flushPending()
-  return chunks
-}
-
-// Intent: removeSpeakerLabelsFromOutput
-function removeSpeakerLabelsFromOutput(value: string): string {
-  return String(value || "")
-    .replace(/\bspeaker[_\s-]*\d+\b\s*:?\s*/gi, "")
-    .replace(/\bspreker[_\s-]*\d+\b\s*:?\s*/gi, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
-}
 
 function normalizeHeading(value: string): string {
   return String(value || "")
@@ -201,12 +127,6 @@ function createEmptyStructuredSummary(): StructuredSummary {
     voortgang: "",
     arbeidsmarktorientatie: "",
   }
-}
-
-function stripJsonCodeFences(value: string): string {
-  const trimmed = normalizeText(value)
-  if (!trimmed.startsWith("```")) return trimmed
-  return trimmed.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim()
 }
 
 function parseStructuredSummary(rawValue: string): StructuredSummary | null {
@@ -382,7 +302,7 @@ export async function generateSummaryWithAzureOpenAi(params: {
 }): Promise<string> {
   const deployment = String(env.azureOpenAiSummaryDeployment || "").trim()
   if (!deployment) {
-    throw new Error("Azure OpenAI summary deployment is not configured")
+    throw new SummaryGenerationError("Azure OpenAI summary deployment is not configured")
   }
 
   const transcript = requireTranscript(params.transcript)
@@ -435,11 +355,11 @@ export async function generateSummaryWithAzureOpenAi(params: {
     })
     if (responseMode === "structured_item_summary") {
       const parsed = parseStructuredSummary(summary)
-      if (!parsed) throw new Error("Summary generation failed")
+      if (!parsed) throw new SummaryGenerationError("Summary generation failed")
       return JSON.stringify(parsed)
     }
     const normalizedSummary = normalizeText(summary)
-    if (!normalizedSummary) throw new Error("Summary generation failed")
+    if (!normalizedSummary) throw new SummaryGenerationError("Summary generation failed")
     const cleanedSummary = clearEmptyPlaceholderText(removeSpeakerLabelsFromOutput(normalizedSummary))
     logSummaryDebugData({
       stage: "single_chunk_response",
@@ -464,7 +384,7 @@ export async function generateSummaryWithAzureOpenAi(params: {
         reportTypeContext,
       })
       const parsed = parseStructuredSummary(summary)
-      if (!parsed) throw new Error("Summary generation failed")
+      if (!parsed) throw new SummaryGenerationError("Summary generation failed")
       partialStructured.push(parsed)
     }
     return JSON.stringify(mergeStructuredSummaries(partialStructured))
@@ -484,7 +404,7 @@ export async function generateSummaryWithAzureOpenAi(params: {
     })
     const normalized = normalizeText(summary)
     if (!normalized) {
-      throw new Error("Summary generation failed")
+      throw new SummaryGenerationError("Summary generation failed")
     }
     partialSummaries.push(normalized)
   }
@@ -497,7 +417,7 @@ export async function generateSummaryWithAzureOpenAi(params: {
     reportTypeContext,
   })
   if (!merged) {
-    throw new Error("Summary generation failed")
+    throw new SummaryGenerationError("Summary generation failed")
   }
   const cleanedMerged = clearEmptyPlaceholderText(removeSpeakerLabelsFromOutput(merged))
   logSummaryDebugData({
@@ -702,7 +622,7 @@ async function mergePartialSummaries(params: {
       })
       const normalized = normalizeText(mergedGroup)
       if (!normalized) {
-        throw new Error("Summary generation failed")
+        throw new SummaryGenerationError("Summary generation failed")
       }
       nextWorkingSummaries.push(normalized)
     }
@@ -719,4 +639,5 @@ function buildTemplateStructure(template: SummaryTemplate) {
   const structure = template.sections.map((section) => `### ${section.title}\n...`).join("\n")
   return `Gebruik de structuur van het template "${normalizeText(template.name) || "Template"}".\n\nUitleg per onderdeel:\n${sectionGuide}\n\nStructuur:\n${structure}\n`
 }
+
 

@@ -33,7 +33,7 @@ export async function createSession(userId: string, session: Session): Promise<v
     [
       session.id,
       userId,
-      session.coacheeId,
+      session.clientId,
       session.trajectoryId,
       session.title,
       session.kind,
@@ -59,7 +59,7 @@ export async function updateSession(
   userId: string,
   params: {
     id: string
-    coacheeId?: string | null
+    clientId?: string | null
     trajectoryId?: string | null
     title?: string | null
     kind?: Session["kind"]
@@ -85,9 +85,9 @@ export async function updateSession(
   updates.push(`updated_at_unix_ms = $${index++}`)
   values.push(params.updatedAtUnixMs)
 
-  if (params.coacheeId !== undefined) {
+  if (params.clientId !== undefined) {
     updates.push(`coachee_id = $${index++}`)
-    values.push(params.coacheeId)
+    values.push(params.clientId)
   }
 
   if (params.trajectoryId !== undefined) {
@@ -182,4 +182,5 @@ export async function updateSession(
 export async function deleteSession(userId: string, id: string): Promise<void> {
   await execute(`delete from public.coachee_sessions where user_id = $1 and id = $2`, [userId, id])
 }
+
 

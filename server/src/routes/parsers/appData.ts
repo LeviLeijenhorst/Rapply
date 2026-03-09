@@ -1,4 +1,4 @@
-import type { Activity, ActivityTemplate, Coachee, Note, Session, Snippet, Template, Trajectory, WrittenReport } from "../../appData"
+import type { Activity, ActivityTemplate, Client, Note, Session, Snippet, Template, Trajectory, WrittenReport } from "../../appData"
 import { readId, readOptionalId, readOptionalNumber, readOptionalText, readText, readUnixMs } from "./scalars"
 
 function normalizeTemplateName(name: string): string {
@@ -98,14 +98,14 @@ function readOptionalPlanVanAanpak(value: unknown): Trajectory["planVanAanpak"] 
   return { documentId }
 }
 
-// Parses a coachee payload from request input.
-export function readCoachee(value: unknown): Coachee {
+// Parses a client payload from request input.
+export function readClient(value: unknown): Client {
   const payload = (value || {}) as any
-  const createdAtUnixMs = readUnixMs(payload.createdAtUnixMs, "coachee.createdAtUnixMs")
-  const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs ?? payload.createdAtUnixMs, "coachee.updatedAtUnixMs")
+  const createdAtUnixMs = readUnixMs(payload.createdAtUnixMs, "client.createdAtUnixMs")
+  const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs ?? payload.createdAtUnixMs, "client.updatedAtUnixMs")
   return {
-    id: readId(payload.id, "coachee.id"),
-    name: readText(payload.name, "coachee.name"),
+    id: readId(payload.id, "client.id"),
+    name: readText(payload.name, "client.name"),
     clientDetails: readOptionalText(payload.clientDetails, true) ?? "",
     employerDetails: readOptionalText(payload.employerDetails, true) ?? "",
     firstSickDay: readOptionalText(payload.firstSickDay, true) ?? "",
@@ -123,7 +123,7 @@ export function readSession(value: unknown): Session {
   const kind = readOptionalSessionType(payload.kind) ?? readText(payload.kind, "session.kind") as Session["kind"]
   return {
     id: readId(payload.id, "session.id"),
-    coacheeId: payload.coacheeId === null ? null : readOptionalId(payload.coacheeId) ?? null,
+    clientId: payload.clientId === null ? null : readOptionalId(payload.clientId) ?? null,
     trajectoryId: payload.trajectoryId === null ? null : readOptionalId(payload.trajectoryId) ?? null,
     title: readText(payload.title, "session.title"),
     kind,
@@ -149,7 +149,7 @@ export function readTrajectory(value: unknown): Trajectory {
   const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs ?? payload.createdAtUnixMs, "trajectory.updatedAtUnixMs")
   return {
     id: readId(payload.id, "trajectory.id"),
-    coacheeId: readId(payload.coacheeId, "trajectory.coacheeId"),
+    clientId: readId(payload.clientId, "trajectory.clientId"),
     name: readText(payload.name, "trajectory.name"),
     dienstType: readOptionalText(payload.dienstType, true) ?? "Werkfit maken",
     uwvContactName: readOptionalText(payload.uwvContactName, true) ?? null,
@@ -280,3 +280,4 @@ export function readTemplate(value: unknown): Template {
     updatedAtUnixMs,
   }
 }
+

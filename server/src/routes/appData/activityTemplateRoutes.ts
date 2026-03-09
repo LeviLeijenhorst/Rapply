@@ -2,7 +2,8 @@ import type { Express } from "express"
 import { createActivityTemplate, deleteActivityTemplate, updateActivityTemplate } from "../../appData"
 import { requireAuthenticatedUser } from "../../auth"
 import { asyncHandler } from "../../http"
-import { readActivityTemplate, readId, readOptionalNumber, readOptionalText, readUnixMs } from "../requestParsers"
+import { readId, readOptionalNumber, readOptionalText, readUnixMs } from "../parsers/scalars"
+import { readActivityTemplate } from "../parsers/appData"
 
 export function registerActivityTemplateRoutes(app: Express): void {
   app.post(

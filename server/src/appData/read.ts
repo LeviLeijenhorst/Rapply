@@ -107,7 +107,7 @@ function mapTemplateRow(row: TemplateRow): Template {
 
 // Loads all app-domain records for one user in a single response shape.
 export async function readAppData(userId: string): Promise<AppData> {
-  const coachees = await queryMany<{
+  const clients = await queryMany<{
     id: string
     name: string
     client_details: string
@@ -308,7 +308,7 @@ export async function readAppData(userId: string): Promise<AppData> {
   )
 
   return {
-    coachees: coachees.map((row) => ({
+    clients: clients.map((row) => ({
       id: row.id,
       name: row.name,
       clientDetails: row.client_details ?? "",
@@ -320,7 +320,7 @@ export async function readAppData(userId: string): Promise<AppData> {
     })),
     sessions: sessions.map((row) => ({
       id: row.id,
-      coacheeId: row.coachee_id,
+      clientId: row.coachee_id,
       trajectoryId: row.trajectory_id,
       title: row.title,
       kind: row.kind,
@@ -349,7 +349,7 @@ export async function readAppData(userId: string): Promise<AppData> {
     })),
     trajectories: trajectories.map((row) => ({
       id: row.id,
-      coacheeId: row.coachee_id,
+      clientId: row.coachee_id,
       name: row.name,
       dienstType: row.dienst_type,
       uwvContactName: row.uwv_contact_name,
@@ -436,3 +436,4 @@ export async function readAppData(userId: string): Promise<AppData> {
     },
   }
 }
+

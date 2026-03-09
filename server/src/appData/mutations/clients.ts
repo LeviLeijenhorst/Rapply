@@ -1,8 +1,8 @@
 import { execute } from "../../db"
-import type { Coachee } from "../types"
+import type { Client } from "../types"
 
-// Creates or upserts one coachee row.
-export async function createCoachee(userId: string, coachee: Coachee): Promise<void> {
+// Creates or upserts one client row.
+export async function createClient(userId: string, client: Client): Promise<void> {
   await execute(
     `
     insert into public.coachees (id, user_id, name, client_details, employer_details, first_sick_day, created_at_unix_ms, updated_at_unix_ms, is_archived)
@@ -16,12 +16,12 @@ export async function createCoachee(userId: string, coachee: Coachee): Promise<v
           is_archived = excluded.is_archived
       where public.coachees.user_id = excluded.user_id
     `,
-    [coachee.id, userId, coachee.name, coachee.clientDetails, coachee.employerDetails, coachee.firstSickDay, coachee.createdAtUnixMs, coachee.updatedAtUnixMs, coachee.isArchived],
+    [client.id, userId, client.name, client.clientDetails, client.employerDetails, client.firstSickDay, client.createdAtUnixMs, client.updatedAtUnixMs, client.isArchived],
   )
 }
 
-// Updates the mutable coachee fields that are provided in the request.
-export async function updateCoachee(
+// Updates the mutable client fields that are provided in the request.
+export async function updateClient(
   userId: string,
   params: {
     id: string
@@ -78,8 +78,8 @@ export async function updateCoachee(
   )
 }
 
-// Permanently deletes one coachee owned by the user.
-export async function deleteCoachee(userId: string, id: string): Promise<void> {
+// Permanently deletes one client owned by the user.
+export async function deleteClient(userId: string, id: string): Promise<void> {
   await execute(`delete from public.coachees where user_id = $1 and id = $2`, [userId, id])
 }
 

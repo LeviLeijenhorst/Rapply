@@ -1,4 +1,4 @@
-export type Coachee = {
+export type Client = {
   id: string
   name: string
   clientDetails: string
@@ -23,7 +23,7 @@ export type StructuredSessionSummary = {
 
 export type Session = {
   id: string
-  coacheeId: string | null
+  clientId: string | null
   trajectoryId: string | null
   title: string
   kind: SessionKind
@@ -59,7 +59,7 @@ export type WrittenReport = {
 
 export type Trajectory = {
   id: string
-  coacheeId: string
+  clientId: string
   name: string
   dienstType: string
   uwvContactName: string | null
@@ -158,7 +158,7 @@ export type PracticeSettings = {
 }
 
 export type AppData = {
-  coachees: Coachee[]
+  clients: Client[]
   trajectories: Trajectory[]
   sessions: Session[]
   activities: Activity[]

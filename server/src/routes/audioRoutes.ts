@@ -4,7 +4,7 @@ import { requireAuthenticatedUser } from "../auth"
 import { asyncHandler, sendError } from "../http"
 import { createAudioBlob, readAudioBlob } from "../audioBlobs"
 import { createAudioStream, createAudioStreamChunk, readAudioStreamChunk, readAudioStreamManifest, updateAudioStreamDetails } from "../audioStreams"
-import { readId, readRequiredNumber, readText } from "./requestParsers"
+import { readId, readRequiredNumber, readText } from "./parsers/scalars"
 
 // Registers audio blob and stream routes, including raw upload endpoints.
 export function registerAudioRoutes(app: Express): void {
