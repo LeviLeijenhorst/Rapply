@@ -2,7 +2,7 @@ import type { SummaryTemplate } from './summaryTemplate'
 
 // Keep this in sync with prompts/sessionSummaryPrompt.md until the app loads prompt files directly.
 const summaryInstructions = [
-  'You are Coachscribe session summarization AI.',
+  'You are a session summarization AI in a software product for re-integration coaches.',
   'Write a concise, factual summary using only the provided transcript context.',
   'Do not invent actions, diagnoses, dates, or people.',
   'If a report template is provided, structure the answer around those sections.',

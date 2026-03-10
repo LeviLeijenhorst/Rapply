@@ -2,7 +2,7 @@ import { env } from "../env"
 import { completeAzureOpenAiChat, type ChatMessage } from "../ai/azureOpenAi"
 import { normalizeText } from "../ai/shared/normalize"
 import { estimateTokenCount, splitTextByEstimatedTokenBudget } from "../ai/shared/textChunking"
-import { removeSpeakerLabelsFromOutput, stripJsonCodeFences } from "../ai/shared/textSanitization"
+import { extractFirstJsonObject, removeSpeakerLabelsFromOutput, stripJsonCodeFences } from "../ai/shared/textSanitization"
 import { SummaryGenerationError } from "../errors/SummaryGenerationError"
 
 // Intent: requireTranscript
@@ -224,15 +224,20 @@ function createEmptyStructuredSummary(): StructuredSummary {
 }
 
 function parseStructuredSummary(rawValue: string): StructuredSummary | null {
-  const raw = stripJsonCodeFences(rawValue)
-  if (!raw) return null
+  const rawInput = String(rawValue || "").trim()
+  if (!rawInput) return null
+  const raw = stripJsonCodeFences(rawInput)
+  const jsonCandidate = extractFirstJsonObject(raw) ?? extractFirstJsonObject(rawInput)
+  if (!jsonCandidate) return null
   try {
-    const parsed = JSON.parse(raw)
+    const parsed = JSON.parse(jsonCandidate)
     if (!parsed || typeof parsed !== "object") return null
     const next = createEmptyStructuredSummary()
     for (const key of structuredSummaryKeys) {
       next[key] = normalizeText((parsed as any)[key])
     }
+    const hasAnyContent = structuredSummaryKeys.some((key) => next[key].length > 0)
+    if (!hasAnyContent) return null
     return next
   } catch {
     return null
@@ -391,8 +396,8 @@ function clearEmptyPlaceholderText(summary: string): string {
   return cleanedLines.join("\n").replace(/\n{3,}/g, "\n\n").trim()
 }
 
-// Intent: generateSessionSummaryWithAzureOpenAi
-export async function generateSessionSummaryWithAzureOpenAi(params: {
+// Intent: generateSummaryWithAzureOpenAi
+export async function generateSummaryWithAzureOpenAi(params: {
   transcript: string
   templateKey?: string
   template?: SummaryTemplate
@@ -560,7 +565,7 @@ function buildSummarySystemPrompt(params: {
     )
   }
   return (
-    "Je bent een assistent voor CoachScribe. Vat een coachgesprek samen in het Nederlands. " +
+    "Je bent een samenvattingsgenerator in een softwareproduct voor re-integratiecoaches. Vat een coachgesprek samen in het Nederlands. " +
     "Noem geen details die niet in de tekst staan. " +
     "Schrijf geen persoonsgegevens zoals e-mailadressen of telefoonnummers. " +
     "Noem of gebruik nooit sprekerlabels zoals 'speaker_1', 'speaker 1', 'spreker 1' of vergelijkbare labels. " +

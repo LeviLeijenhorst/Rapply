@@ -181,9 +181,9 @@ function buildPlaceholderValueMap(params: {
   }
 
   const activityDistributionRaw = [
-    params.contextValues?.['7_3'],
-    params.contextValues?.['7.3'],
-    params.contextValues?.['7_3_1'],
+    params.contextValues?.['5_3'],
+    params.contextValues?.['5.3'],
+    params.contextValues?.['5_3_1'],
     params.contextValues?.['hoe_verdeelt_u_de_begeleidingsuren_over_de_re_integratieactiviteiten'],
     params.contextValues?.['verdeling_begeleidingsuren_over_de_re_integratieactiviteiten'],
   ]
@@ -196,8 +196,12 @@ function buildPlaceholderValueMap(params: {
       .map((part) => String(part || '').trim())
       .filter(Boolean)
       .map((part) => {
-        const match = part.match(/^(.*?)\s*\(\s*([0-9]+(?:[.,][0-9]+)?)\s*uur\)\s*$/i)
-        if (!match) return { activity: part, hours: '' }
+        const match = part.match(/^(.*?)\s*\(\s*([0-9]+(?:[.,][0-9]+)?)\s*(?:uur|uren)?\s*\)\s*$/i)
+        if (!match) {
+          const looseNumber = part.match(/\b([0-9]+(?:[.,][0-9]+)?)\b/)
+          const activity = String(part || '').replace(/\s*\(?\s*[0-9]+(?:[.,][0-9]+)?\s*(?:uur|uren)?\s*\)?\s*$/i, '').trim()
+          return { activity: activity || part, hours: String(looseNumber?.[1] || '').trim().replace(',', '.') }
+        }
         return {
           activity: String(match[1] || '').trim(),
           hours: String(match[2] || '').trim().replace(',', '.'),
@@ -209,8 +213,8 @@ function buildPlaceholderValueMap(params: {
       let totalHours = 0
       for (let index = 0; index < 5; index += 1) {
         const row = activityRows[index]
-        const activityKey = `7_3_${index + 1}_re_integratieactiviteit`
-        const hoursKey = `7_3_${index + 1}_aantal_begeleidingsuren`
+        const activityKey = `5_3_${index + 1}_re_integratieactiviteit`
+        const hoursKey = `5_3_${index + 1}_aantal_begeleidingsuren`
         const activityValue = row ? row.activity : ''
         const hoursValue = row ? row.hours : ''
         map.set(activityKey, activityValue)
@@ -220,7 +224,20 @@ function buildPlaceholderValueMap(params: {
           if (Number.isFinite(parsedHours)) totalHours += parsedHours
         }
       }
-      map.set('7_3_totaal_aantal_begeleidingsuren', totalHours > 0 ? String(totalHours).replace(/\.0$/, '') : '')
+      map.set('5_3_totaal_aantal_begeleidingsuren', totalHours > 0 ? String(totalHours).replace(/\.0$/, '') : '')
+    }
+  }
+
+  if (!map.get('5_3_totaal_aantal_begeleidingsuren')) {
+    let derivedTotal = 0
+    for (let index = 1; index <= 5; index += 1) {
+      const rawHours = String(map.get(`5_3_${index}_aantal_begeleidingsuren`) || '').trim().replace(',', '.')
+      if (!rawHours) continue
+      const parsedHours = Number(rawHours)
+      if (Number.isFinite(parsedHours)) derivedTotal += parsedHours
+    }
+    if (derivedTotal > 0) {
+      map.set('5_3_totaal_aantal_begeleidingsuren', String(derivedTotal).replace(/\.0$/, ''))
     }
   }
 
@@ -344,12 +361,14 @@ function resolveReintegratieplanField(params: FieldResolverParams): string {
     .join(' ')
     .trim()
   const postadres = postadresLine || getContextValue(contextValues, 'postadres', '3_3', '3.3')
+  const postadresPostcodePlaatsRaw = getContextValue(contextValues, '3_4', '3.4', 'postadres_postcode_en_plaats', 'postcode_en_plaats')
+  const postadresPostcodePlaatsParsed = splitPostalCodeAndCity(postadresPostcodePlaatsRaw)
   const postcode =
     getContextValue(contextValues, 'postadres_postcode', 'postcode') ||
-    splitPostalCodeAndCity(getContextValue(contextValues, 'postadres_postcode_en_plaats', 'postcode_en_plaats')).postalCode
+    postadresPostcodePlaatsParsed.postalCode
   const plaats =
     getContextValue(contextValues, 'postadres_plaats', 'plaats') ||
-    splitPostalCodeAndCity(getContextValue(contextValues, 'postadres_postcode_en_plaats', 'postcode_en_plaats')).city
+    postadresPostcodePlaatsParsed.city
   const normalizedLabel = normalizeMatchValue(params.rowLabel)
   const bezoekadresLine = getContextValue(contextValues, 'bezoekadres', '3_2', '3.2')
   const bezoekadresParsed = parseAddressLine(bezoekadresLine)
@@ -381,12 +400,23 @@ function resolveReintegratieplanField(params: FieldResolverParams): string {
   const contactName = getContextValue(
     contextValues,
     '3_5',
+    '3.5',
+    'naam_contactpersoon',
     'naam_contactpersoon_re_integratiebedrijf',
+    'naam_contact_persoon',
+    'contactpersoon_naam',
     '9_ondertekening_contactpersoon_re_integratiebedrijf_naam',
     '10_ondertekening_contactpersoon_re_integratiebedrijf_naam',
-    'naam_contactpersoon',
     '2_1',
   )
+
+  if (normalizedLabel.includes('totaal aantal begeleidingsuren')) {
+    return getContextValue(
+      contextValues,
+      '5_3_totaal_aantal_begeleidingsuren',
+      '7_3_totaal_aantal_begeleidingsuren',
+    )
+  }
 
   if (params.numberKey === '3.3') return postadres
   if (params.numberKey === '3.2') {
@@ -398,7 +428,7 @@ function resolveReintegratieplanField(params: FieldResolverParams): string {
     if (params.fieldCount >= 2) return params.fieldIndex === 1 ? postcode : params.fieldIndex === 2 ? plaats : ''
     return [postcode, plaats].filter(Boolean).join(' ').trim()
   }
-  if (params.numberKey === '3.5') return contactName
+  if (params.numberKey === '3.5') return contactName || params.numberedValues.get('3.5') || ''
   if (params.numberKey === '4.1') return resolveOrderNumber({ contextValues, numberedValues: params.numberedValues })
   if (params.numberKey === '3.8' && normalizeMatchValue(params.rowLabel).includes('ordernummer')) {
     return resolveOrderNumber({ contextValues, numberedValues: params.numberedValues })
@@ -448,21 +478,21 @@ function resolveReintegratieplanField(params: FieldResolverParams): string {
 
   if (params.effectiveNumberKey === '5.3') {
     if (normalizedLabel.includes('totaal aantal begeleidingsuren')) {
-      return getContextValue(contextValues, '7_3_totaal_aantal_begeleidingsuren', '5_3_totaal_aantal_begeleidingsuren')
+      return getContextValue(contextValues, '5_3_totaal_aantal_begeleidingsuren', '7_3_totaal_aantal_begeleidingsuren')
     }
     if (params.inferredRowIndex > 0 && params.fieldCount >= 2) {
       if (params.fieldIndex === 1) {
         return getContextValue(
           contextValues,
-          `7_3_${params.inferredRowIndex}_re_integratieactiviteit`,
           `5_3_${params.inferredRowIndex}_re_integratieactiviteit`,
+          `7_3_${params.inferredRowIndex}_re_integratieactiviteit`,
         )
       }
       if (params.fieldIndex === 2) {
         return getContextValue(
           contextValues,
-          `7_3_${params.inferredRowIndex}_aantal_begeleidingsuren`,
           `5_3_${params.inferredRowIndex}_aantal_begeleidingsuren`,
+          `7_3_${params.inferredRowIndex}_aantal_begeleidingsuren`,
         )
       }
       return ''
@@ -471,6 +501,7 @@ function resolveReintegratieplanField(params: FieldResolverParams): string {
 
   if (params.numberKey) {
     if (params.numberKey === '5.1' || params.numberKey === '8.1') return ''
+    if (params.numberKey === '5.3') return ''
     if (params.fieldIndex > 1) return ''
     return params.numberedValues.get(params.numberKey) || ''
   }
@@ -580,6 +611,14 @@ function buildFieldReplacementRuns(value: string, runPropertiesXml?: string): st
     .join('')
 }
 
+function stripPlaceholderSpaceRuns(xmlFragment: string): string {
+  // Remove placeholder tail runs used by legacy FORMTEXT fields.
+  // Includes both real en-space and mojibake token seen in this template (`â€‚`).
+  return String(xmlFragment || '')
+    .replace(/<w:r\b[^>]*>\s*(?:<w:rPr[\s\S]*?<\/w:rPr>\s*)?<w:t(?:\s+[^>]*)?>\s*(?:â€‚| |&#8194;)\s*<\/w:t>\s*<\/w:r>/g, '')
+    .replace(/<w:r\b[^>]*>\s*(?:<w:rPr[\s\S]*?<\/w:rPr>\s*)?<w:t(?:\s+[^>]*)?>\s*<\/w:t>\s*<\/w:r>/g, '')
+}
+
 function fillDocumentXmlFormTextFields(params: {
   documentXml: string
   reportText: string
@@ -614,6 +653,37 @@ function fillDocumentXmlFormTextFields(params: {
   let pendingSignatureDateField = false
   let activeNumberKey = ''
   let activityDistributionRowCursor = 0
+
+  function extractContactNameFromSignatureRows(xml: string): string {
+    const signatureMatch = String(xml || '').match(
+      /Contactpersoon re-integratiebedrijf[\s\S]*?<w:t>Naam<\/w:t>[\s\S]*?<w:fldChar w:fldCharType="separate"\/>[\s\S]*?<w:t[^>]*>([^<]+)<\/w:t>[\s\S]*?<w:fldChar w:fldCharType="end"\/>/i,
+    )
+    return String(signatureMatch?.[1] || '').trim()
+  }
+
+  function injectEndOnlyValueAfterMarker(params: { rowXml: string; markerXml: string; value: string }): string {
+    const rowXml = String(params.rowXml || '')
+    const markerXml = String(params.markerXml || '')
+    const value = String(params.value || '').trim()
+    if (!rowXml || !markerXml || !value) return rowXml
+    const markerIndex = rowXml.indexOf(markerXml)
+    if (markerIndex < 0) return rowXml
+    const rowHead = rowXml.slice(0, markerIndex)
+    const rowTail = rowXml.slice(markerIndex)
+    const endRunPattern = /(<w:r[^>]*>[\s\S]*?<w:fldChar w:fldCharType="end"\/>[\s\S]*?<\/w:r>)/
+    const endRunMatch = rowTail.match(endRunPattern)
+    if (!endRunMatch) return rowXml
+    const endRunXml = String(endRunMatch[1] || '')
+    const runPropertiesXml = extractRunPropertiesXml(endRunXml)
+    const replacementRuns = buildFieldReplacementRuns(value, runPropertiesXml)
+    if (!replacementRuns) return rowXml
+    const runPropsXml = runPropertiesXml ? `${runPropertiesXml}` : ''
+    const beginRun = `<w:r>${runPropsXml}<w:fldChar w:fldCharType="begin"><w:ffData><w:name w:val=""/><w:enabled/><w:calcOnExit w:val="0"/><w:textInput/></w:ffData></w:fldChar></w:r>`
+    const instrRun = `<w:r>${runPropsXml}<w:instrText xml:space="preserve"> FORMTEXT </w:instrText></w:r>`
+    const separateRun = `<w:r>${runPropsXml}<w:fldChar w:fldCharType="separate"/></w:r>`
+    const repairedField = `${beginRun}${instrRun}${separateRun}${replacementRuns}${endRunXml}`
+    return `${rowHead}${rowTail.replace(endRunPattern, repairedField)}`
+  }
 
   function applyCheckboxSelection(rowXml: string, rowNumberKey: string, contextValues: Record<string, string | null | undefined>, numberedValues: Map<string, string>): string {
     if (!rowNumberKey) return rowXml
@@ -659,7 +729,7 @@ function fillDocumentXmlFormTextFields(params: {
     })
   }
 
-  return String(params.documentXml || '').replace(/<w:tr[\s\S]*?<\/w:tr>/g, (rowXml) => {
+  const filledRowsXml = String(params.documentXml || '').replace(/<w:tr[\s\S]*?<\/w:tr>/g, (rowXml) => {
     const hasCheckboxFields = /<w:instrText[^>]*>\s*FORMCHECKBOX\s*<\/w:instrText>/i.test(String(rowXml || ''))
     const rowPlainLabel = normalizeMatchValue(
       String(rowXml || '')
@@ -721,16 +791,57 @@ function fillDocumentXmlFormTextFields(params: {
           extractFieldTextRunPropertiesXml(before) ||
           extractRunPropertiesXml(between) ||
           extractRunPropertiesXml(before)
-        const replacementRuns = buildFieldReplacementRuns(nextValue, runPropertiesXml)
+        let replacementValue = nextValue
+        if (
+          !replacementValue &&
+          activeNumberKey === '5.3' &&
+          !numberKey &&
+          !rowPlainLabel &&
+          fieldCount === 1 &&
+          fieldIndex === 1
+        ) {
+          replacementValue = getContextValue(
+            params.contextValues || {},
+            '5_3_totaal_aantal_begeleidingsuren',
+            '7_3_totaal_aantal_begeleidingsuren',
+          )
+        }
+        const replacementRuns = buildFieldReplacementRuns(replacementValue, runPropertiesXml)
         return `${before}${replacementRuns}${after}`
       })
 
+    const cleanedRow = stripPlaceholderSpaceRuns(replacedTextRow)
     return applyCheckboxSelection(
-      replacedTextRow,
+      cleanedRow,
       numberKey || activeNumberKey,
       params.contextValues || {},
       numberedValues,
     )
+  })
+
+  const contactNameForRepair =
+    getContextValue(
+      params.contextValues || {},
+      '3_5',
+      '3.5',
+      'naam_contactpersoon',
+      'naam_contactpersoon_re_integratiebedrijf',
+      '10_ondertekening_contactpersoon_re_integratiebedrijf_naam',
+      '9_ondertekening_contactpersoon_re_integratiebedrijf_naam',
+    ) || extractContactNameFromSignatureRows(filledRowsXml)
+
+  if (!contactNameForRepair) return filledRowsXml
+
+  return filledRowsXml.replace(/<w:tr[\s\S]*?<\/w:tr>/g, (rowXml) => {
+    if (!/<w:t>3\.5<\/w:t>/.test(rowXml)) return rowXml
+    if (!/<w:t>Naam contactpersoon<\/w:t>/.test(rowXml)) return rowXml
+    if (/w:fldCharType="separate"/.test(rowXml)) return rowXml
+    if (!/w:fldCharType="end"/.test(rowXml)) return rowXml
+    return injectEndOnlyValueAfterMarker({
+      rowXml,
+      markerXml: '<w:t>Naam contactpersoon</w:t>',
+      value: contactNameForRepair,
+    })
   })
 }
 
@@ -757,19 +868,27 @@ async function downloadFilledDocxTemplate(params: {
   for (const [key, value] of placeholderValues.entries()) {
     templateData[key] = String(value || '').replace(/\s+$/g, '')
   }
+  const resolvedContextValues: Record<string, string> = {
+    ...(params.contextValues || {}),
+    ...templateData,
+  }
 
-  let renderedZip: PizZip
-  try {
-    const doc = new Docxtemplater(zip, {
-      delimiters: { start: '{{', end: '}}' },
-      paragraphLoop: true,
-      linebreaks: true,
-      nullGetter: () => '',
-    })
-    doc.render(templateData)
-    renderedZip = doc.getZip()
-  } catch (error) {
-    throw new Error(`Template rendering failed: ${error instanceof Error ? error.message : String(error)}`)
+  let renderedZip: PizZip = zip
+  const documentXmlBeforeRender = zip.file('word/document.xml')?.asText() || ''
+  const hasDocxtemplaterTags = documentXmlBeforeRender.includes('{{') && documentXmlBeforeRender.includes('}}')
+  if (hasDocxtemplaterTags) {
+    try {
+      const doc = new Docxtemplater(zip, {
+        delimiters: { start: '{{', end: '}}' },
+        paragraphLoop: true,
+        linebreaks: true,
+        nullGetter: () => '',
+      })
+      doc.render(templateData)
+      renderedZip = doc.getZip()
+    } catch (error) {
+      throw new Error(`Template rendering failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
   }
 
   const documentXml = renderedZip.file('word/document.xml')?.asText()
@@ -778,7 +897,7 @@ async function downloadFilledDocxTemplate(params: {
     documentXml,
     reportText: params.reportText,
     templateKind: params.templateKind,
-    contextValues: params.contextValues,
+    contextValues: resolvedContextValues,
   })
   renderedZip.file('word/document.xml', filledDocumentXml)
 

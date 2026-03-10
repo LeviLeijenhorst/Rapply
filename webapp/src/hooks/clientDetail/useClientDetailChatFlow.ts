@@ -7,7 +7,7 @@ import { fetchBillingStatus } from '../../api/billing/billingApi'
 import { sendClientChatMessage } from '../../api/chat/sendClientChatPromptMessage'
 import type { LocalChatMessage } from '../../api/chat/types'
 import { createChatMessageId, type ChatStateMessage } from '../../types/chatState'
-import { buildCoacheeStructuredSystemMessages } from '../../content/quickQuestionsContext'
+import { buildCoacheeStructuredSystemMessages } from '../../content/assistantContext'
 
 type SessionContextInput = {
   id: string
@@ -54,6 +54,17 @@ type BillingStatus = {
   cycleUsedSeconds: number
   nonExpiringTotalSeconds: number
   nonExpiringUsedSeconds: number
+}
+
+function formatDutchDateTime(unixMs: number): string {
+  if (!Number.isFinite(unixMs)) return '-'
+  return new Date(unixMs).toLocaleString('nl-NL', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 export function useClientDetailChatFlow({
@@ -125,22 +136,107 @@ export function useClientDetailChatFlow({
 
     let isCancelled = false
     async function generateStatus() {
-      const recentItems = sessieItemsForStatus.slice(0, 8).map((item) => ({
-        title: item.title,
-        trajectory: item.trajectoryLabel,
-        date: `${item.dateLabel} ${item.timeLabel}`.trim(),
-      }))
+      const sessionsForClient = sessions
+        .filter((session) => session.coacheeId === coacheeId)
+        .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
+      const sessionById = new Map(sessionsForClient.map((session) => [session.id, session]))
+
+      const approvedSnippets = snippets
+        .filter((snippet) => snippet.status === 'approved')
+        .filter((snippet) => sessionById.has(snippet.itemId))
+        .sort((a, b) => a.date - b.date)
+
+      const snippetsByInput = new Map<
+        string,
+        {
+          inputDateUnixMs: number
+          snippets: Array<{ field: string; text: string }>
+        }
+      >()
+      for (const snippet of approvedSnippets) {
+        const session = sessionById.get(snippet.itemId)
+        const inputDateUnixMs = Number.isFinite(session?.createdAtUnixMs as number)
+          ? Number(session?.createdAtUnixMs)
+          : Number.isFinite(snippet.date)
+            ? snippet.date
+            : Date.now()
+        const current = snippetsByInput.get(snippet.itemId) || { inputDateUnixMs, snippets: [] }
+        current.snippets.push({
+          field: String(snippet.field || '').trim(),
+          text: String(snippet.text || '').trim(),
+        })
+        snippetsByInput.set(snippet.itemId, current)
+      }
+
+      const groupedSnippetsByInputDate = [...snippetsByInput.entries()]
+        .sort((a, b) => a[1].inputDateUnixMs - b[1].inputDateUnixMs)
+        .map(([inputId, value]) => {
+          const session = sessionById.get(inputId)
+          const snippetLines = value.snippets
+            .filter((snippet) => snippet.text.length > 0)
+            .map((snippet) => `- [${snippet.field || 'general'}] ${snippet.text}`)
+          return [
+            `Input-ID: ${inputId}`,
+            `Inputdatum: ${formatDutchDateTime(value.inputDateUnixMs)}`,
+            `Titel: ${String(session?.title || 'Onbekend input-item').trim()}`,
+            ...(snippetLines.length > 0 ? snippetLines : ['- Geen snippets']),
+          ].join('\n')
+        })
+        .join('\n\n')
+
+      const reportBySessionId = new Map(writtenReports.map((report) => [report.sessionId, report]))
+      const timelineEvents: Array<{ atUnixMs: number; label: string }> = []
+      for (const session of sessionsForClient) {
+        const eventLines = [
+          `${formatDutchDateTime(session.createdAtUnixMs)} | Sessie | ${String(session.title || 'Sessie').trim()}`,
+        ]
+        const snippetSet = snippetsByInput.get(session.id)
+        if (snippetSet && snippetSet.snippets.length > 0) {
+          eventLines.push(
+            ...snippetSet.snippets
+              .filter((snippet) => snippet.text.length > 0)
+              .map((snippet) => `  - [${snippet.field || 'general'}] ${snippet.text}`),
+          )
+        } else {
+          eventLines.push('  - Geen snippets')
+        }
+        timelineEvents.push({
+          atUnixMs: session.createdAtUnixMs,
+          label: eventLines.join('\n'),
+        })
+      }
+      for (const report of writtenReports) {
+        const session = sessionById.get(report.sessionId)
+        if (!session) continue
+        timelineEvents.push({
+          atUnixMs: report.updatedAtUnixMs,
+          label: `${formatDutchDateTime(report.updatedAtUnixMs)} | Rapportage aangemaakt | ${String(session.title || 'Rapportage').trim()}`,
+        })
+      }
+
+      const lastFiveTimeline = timelineEvents
+        .sort((a, b) => b.atUnixMs - a.atUnixMs)
+        .slice(0, 5)
+        .map((event) => event.label)
+        .join('\n\n')
 
       setIsStatusSummaryLoading(true)
       try {
         const response = await sendClientChatMessage([
             {
               role: 'system',
-              text: 'Je bent een coach-assistent. Schrijf een korte statusupdate in het Nederlands (max 90 woorden): hoe gaat het met deze client en waar zijn we gebleven. Wees concreet, professioneel en zonder opsommingen.',
+              text:
+                'Je bent een statusgenerator in een softwareproduct voor re-integratiecoaches. Schrijf een korte statusupdate in het Nederlands (max 90 woorden): hoe gaat het met deze client en waar zijn we gebleven. Wees concreet, professioneel en zonder opsommingen.',
             },
             {
               role: 'user',
-              text: `Client: ${coacheeName}\nTraject: ${activeTrajectoryName || 'Geen traject'}\nSessies: ${sessionCount}\nRapportages: ${reportCount}\nLaatste items: ${JSON.stringify(recentItems)}`,
+              text:
+                `Client: ${coacheeName}\n` +
+                `Traject: ${activeTrajectoryName || 'Geen traject'}\n` +
+                `Sessies: ${sessionCount}\n` +
+                `Rapportages: ${reportCount}\n\n` +
+                `Snippets gegroepeerd per inputdatum (chronologisch):\n${groupedSnippetsByInputDate || 'Geen snippets beschikbaar.'}\n\n` +
+                `Laatste 5 items (nieuw naar oud):\n${lastFiveTimeline || 'Geen items beschikbaar.'}`,
             },
           ])
         if (!isCancelled) setStatusSummaryAi(response.trim() || onStatusFallbackText)
@@ -155,7 +251,7 @@ export function useClientDetailChatFlow({
     return () => {
       isCancelled = true
     }
-  }, [activeTrajectoryName, assistantPanelTabKey, coacheeName, onStatusFallbackText, reportCount, sessionCount, sessieItemsForStatus])
+  }, [activeTrajectoryName, assistantPanelTabKey, coacheeId, coacheeName, onStatusFallbackText, reportCount, sessionCount, sessions, snippets, writtenReports, sessieItemsForStatus])
 
   function appendNoMinutesAssistantMessage() {
     const noMinutesText = 'U heeft geen minuten meer. Ga naar Mijn abonnement om extra minuten toe te voegen.'

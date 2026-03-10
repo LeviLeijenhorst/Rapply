@@ -189,11 +189,11 @@ export async function sendReportAssistantMessage(params: {
     {
       role: 'system',
       text:
-        'U bent een AI-assistent voor loopbaan- en re-integratiecoaches. Gebruik alleen de meegeleverde rapportcontext en de vraag van de gebruiker. Schrijf formeel en zakelijk Nederlands, spreek de gebruiker aan met "u", en geef korte concrete antwoorden.',
+        'Je bent een AI-assistent voor loopbaan- en re-integratiecoaches. Gebruik alleen de meegeleverde context en de vraag van de gebruiker. Schrijf formeel en zakelijk Nederlands, spreek de gebruiker aan met "u", en geef korte concrete antwoorden.',
     },
     {
       role: 'system',
-      text: `Rapportcontext:\n${params.reportContext || 'Geen context beschikbaar.'}`,
+      text: `Context:\n${params.reportContext || 'Geen context beschikbaar.'}`,
     },
     ...params.chatMessages.map<LocalChatMessage>((message) => ({ role: message.role, text: message.text })),
   ]
