@@ -1,16 +1,16 @@
-import { generateSessionSummary as requestSummary, type SummaryResponseMode } from './generateSessionSummary'
-import { parseStructuredSummaryJson, type StructuredSessionSummary } from '../../types/structuredSummary'
-import { buildSessionSummaryPrompt } from './buildSessionSummaryPrompt'
+import { generateInputSummary as requestSummary, type SummaryResponseMode } from './generateInputSummary'
+import { parseStructuredSummaryJson, type StructuredInputSummary } from '../../types/structuredSummary'
+import { buildInputSummaryPrompt } from './buildInputSummaryPrompt'
 import { resolveSummaryTemplateSections } from './resolveSummaryTemplateSections'
 import type { SummaryTemplate } from './summaryTemplate'
 
-export async function generateSessionSummary(params: {
+export async function generateInputSummary(params: {
   transcript: string
   template?: SummaryTemplate | null
   signal?: AbortSignal
 }): Promise<string> {
   return requestSummary({
-    prompt: buildSessionSummaryPrompt({
+    prompt: buildInputSummaryPrompt({
       transcript: params.transcript,
       template: params.template ? resolveSummaryTemplateSections(params.template) : undefined,
     }),
@@ -18,13 +18,13 @@ export async function generateSessionSummary(params: {
   })
 }
 
-export async function generateStructuredSessionSummary(params: {
+export async function generateStructuredInputSummary(params: {
   transcript: string
   template?: SummaryTemplate | null
   signal?: AbortSignal
-}): Promise<StructuredSessionSummary> {
+}): Promise<StructuredInputSummary> {
   const raw = await requestSummary({
-    prompt: buildSessionSummaryPrompt({
+    prompt: buildInputSummaryPrompt({
       transcript: params.transcript,
       template: params.template ? resolveSummaryTemplateSections(params.template) : undefined,
     }),
@@ -39,3 +39,4 @@ export async function generateStructuredSessionSummary(params: {
 
   return parsed
 }
+

@@ -1,6 +1,6 @@
 import { parseReportSections } from './reportStructure'
 
-export type StructuredSessionSummary = {
+export type StructuredInputSummary = {
   doelstelling: string
   belastbaarheid: string
   belemmeringen: string
@@ -9,7 +9,7 @@ export type StructuredSessionSummary = {
 }
 
 export const structuredSummaryFieldOrder: Array<{
-  key: keyof StructuredSessionSummary
+  key: keyof StructuredInputSummary
   label: string
 }> = [
   { key: 'doelstelling', label: 'Kernpunten' },
@@ -21,7 +21,7 @@ export const structuredSummaryFieldOrder: Array<{
 
 export const legacySummaryFallbackTitle = 'Samenvatting (oud formaat)'
 
-export function createEmptyStructuredSummary(): StructuredSessionSummary {
+export function createEmptyStructuredSummary(): StructuredInputSummary {
   return {
     doelstelling: '',
     belastbaarheid: '',
@@ -31,7 +31,7 @@ export function createEmptyStructuredSummary(): StructuredSessionSummary {
   }
 }
 
-export function normalizeStructuredSummary(value: Partial<StructuredSessionSummary> | null | undefined): StructuredSessionSummary {
+export function normalizeStructuredSummary(value: Partial<StructuredInputSummary> | null | undefined): StructuredInputSummary {
   const input = value || {}
   const doelstelling = String(input.doelstelling || (input as Record<string, unknown>).kernpunten || '').trim()
   const belastbaarheid = String(input.belastbaarheid || (input as Record<string, unknown>).situatie || '').trim()
@@ -56,12 +56,12 @@ function normalizeTitle(value: string): string {
     .replace(/[^a-z0-9]+/g, '')
 }
 
-export function hasStructuredSummaryContent(value: StructuredSessionSummary | null | undefined): boolean {
+export function hasStructuredSummaryContent(value: StructuredInputSummary | null | undefined): boolean {
   const normalized = normalizeStructuredSummary(value)
   return structuredSummaryFieldOrder.some((field) => normalized[field.key].length > 0)
 }
 
-export function structuredSummaryToMarkdown(value: StructuredSessionSummary | null | undefined): string {
+export function structuredSummaryToMarkdown(value: StructuredInputSummary | null | undefined): string {
   const normalized = normalizeStructuredSummary(value)
   const sections = structuredSummaryFieldOrder
     .map((field) => {
@@ -117,7 +117,7 @@ function extractFirstJsonObject(value: string): string | null {
   return null
 }
 
-export function parseStructuredSummaryJson(value: string | null | undefined): StructuredSessionSummary | null {
+export function parseStructuredSummaryJson(value: string | null | undefined): StructuredInputSummary | null {
   const rawInput = String(value || '').trim()
   if (!rawInput) return null
   const raw = stripJsonCodeFences(rawInput)
@@ -139,7 +139,7 @@ export function parseStructuredSummaryJson(value: string | null | undefined): St
       })
       return null
     }
-    return normalizeStructuredSummary(parsed as Partial<StructuredSessionSummary>)
+    return normalizeStructuredSummary(parsed as Partial<StructuredInputSummary>)
   } catch {
     console.log('[STRUCTURED_SUMMARY_PARSE_FAILED]', {
       reason: 'json_parse_failed',
@@ -150,7 +150,7 @@ export function parseStructuredSummaryJson(value: string | null | undefined): St
   }
 }
 
-export function mapReportMarkdownToStructuredSummary(markdown: string | null | undefined): StructuredSessionSummary | null {
+export function mapReportMarkdownToStructuredSummary(markdown: string | null | undefined): StructuredInputSummary | null {
   const sections = parseReportSections(String(markdown || ''))
   if (sections.length === 0) return null
   const next = createEmptyStructuredSummary()
@@ -188,4 +188,5 @@ export function mapReportMarkdownToStructuredSummary(markdown: string | null | u
 
   return hasAny ? next : null
 }
+
 

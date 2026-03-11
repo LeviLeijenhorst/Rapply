@@ -6,23 +6,16 @@ export type Client = {
   trajectoryType: ClientTrajectoryType
   profileText: string
   employerText: string
-  firstSickDay: string
   isArchived: boolean
   createdAt: number
   updatedAt: number
 }
 
 export const unassignedClientLabel = 'Ongekoppelde client'
-export const unassignedCoacheeLabel = unassignedClientLabel
 
 type NamedItem = { id: string; name: string }
 
-export function getClientDisplayName(clientName: string | null | undefined, fallbackLabel?: string): string {
-  const value = String(clientName || '').trim()
-  return value || String(fallbackLabel || unassignedClientLabel)
-}
-
-export function getCoacheeDisplayName(
+export function getClientDisplayName(
   clientNameOrItems: string | null | undefined | NamedItem[],
   clientIdOrFallback?: string | null,
 ): string {
@@ -30,7 +23,10 @@ export function getCoacheeDisplayName(
     const clientId = String(clientIdOrFallback || '').trim()
     if (!clientId) return unassignedClientLabel
     const found = clientNameOrItems.find((item) => item.id === clientId)
-    return getClientDisplayName(found?.name || null)
+    const value = String(found?.name || '').trim()
+    return value || unassignedClientLabel
   }
-  return getClientDisplayName(clientNameOrItems, clientIdOrFallback || undefined)
+
+  const value = String(clientNameOrItems || '').trim()
+  return value || String(clientIdOrFallback || unassignedClientLabel)
 }

@@ -9,22 +9,22 @@ import { getClientUpsertValues } from '@/types/clientProfile'
 import { Modal } from '@/ui/animated/Modal'
 import { ActionMenu } from '@/ui/overlays/ActionMenu'
 import { ConfirmChatClearModal } from '@/screens/shared/modals/ConfirmChatClearModal'
-import { ConfirmSessionDeleteModal } from '@/screens/shared/modals/ConfirmSessionDeleteModal'
+import { ConfirmInputDeleteModal } from '@/screens/shared/modals/ConfirmInputDeleteModal'
 import { ClientUpsertModal } from '@/screens/shared/modals/ClientUpsertModal'
-import { ConfirmNoteDeleteModal } from '@/screens/shared/modals/notes/ConfirmNoteDeleteModal'
-import { NoteEditModal } from '@/screens/shared/modals/notes/NoteEditModal'
+import { ConfirmNoteDeleteModal } from '@/screens/shared/modals/ConfirmNoteDeleteModal'
+import { NoteEditModal } from '@/screens/shared/modals/NoteEditModal'
 import { saveClientProfileChanges, saveNewClientNote } from '@/screens/client/clientScreen.functions'
 import {
   formatTrajectoryDurationLabel,
   getActiveTrajectory,
-  getClientSessionListItems,
+  getClientInputListItems,
   getClientTrajectories,
 } from '@/screens/client/clientScreen.logic'
 import type {
   ClientLeftTabKey,
   ClientRightTabKey,
   ClientScreenProps,
-  SessionListItem,
+  InputListItem,
 } from '@/screens/client/clientScreen.types'
 import { ClientHeaderCard } from '@/screens/client/components/ClientHeaderCard'
 import { ClientLeftTabs } from '@/screens/client/components/ClientLeftTabs'
@@ -35,23 +35,23 @@ import { useClientChatbot } from '@/screens/client/clientScreen.hooks'
 export function ClientScreen({
   clientId,
   onBack,
-  onSelectSession,
-  onPressCreateSession,
+  onSelectInput,
+  onPressCreateInput,
   onPressCreateReports,
   initialLeftActiveTabKey = 'sessies',
   initialRightActiveTabKey = 'chatbot',
   onLeftActiveTabChange,
-  isCreateSessionDisabled = false,
+  isCreateInputDisabled = false,
 }: ClientScreenProps) {
   void onBack
 
   const { height: windowHeight } = useWindowDimensions()
   const localAppData = useLocalAppData()
-  const { data, createSession, createNote, updateNote, deleteNote, deleteSession, createTrajectory, updateTrajectory } = localAppData as any
+  const { data, createInput, createNote, updateNote, deleteNote, deleteInput, createTrajectory, updateTrajectory } = localAppData as any
   const legacyUpdateClientKey = ['update', 'Coa', 'chee'].join('')
   const updateClient = ((localAppData as any).updateClient ?? (localAppData as any)[legacyUpdateClientKey]) as (
     clientId: string,
-    values: { name?: string; clientDetails?: string; employerDetails?: string; firstSickDay?: string },
+    values: { name?: string; clientDetails?: string; employerDetails?: string },
   ) => void
 
   const clients = ((data as any).clients ?? []) as Array<any>
@@ -72,8 +72,8 @@ export function ClientScreen({
     () => getActiveTrajectory(clientTrajectories, selectedTrajectoryId),
     [clientTrajectories, selectedTrajectoryId],
   )
-  const { sessionItems, noteItems, reportItems, notesSession } = useMemo(
-    () => getClientSessionListItems(data, clientId),
+  const { sessionItems, noteItems, reportItems, notesInput } = useMemo(
+    () => getClientInputListItems(data, clientId),
     [clientId, data],
   )
   const sessionCount = sessionItems.length
@@ -84,13 +84,13 @@ export function ClientScreen({
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [isCreateNoteModalOpen, setIsCreateNoteModalOpen] = useState(false)
-  const [menuSessionId, setMenuSessionId] = useState<string | null>(null)
+  const [menuInputId, setMenuInputId] = useState<string | null>(null)
   const [menuItemType, setMenuItemType] = useState<'session' | 'note' | null>(null)
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null)
   const [hoveredMenuItemId, setHoveredMenuItemId] = useState<string | null>(null)
   const [menuAnchorPoint, setMenuAnchorPoint] = useState<{ x: number; y: number } | null>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null)
+  const [pendingDeleteInputId, setPendingDeleteInputId] = useState<string | null>(null)
   const [isDeleteNoteModalOpen, setIsDeleteNoteModalOpen] = useState(false)
   const [pendingDeleteNoteId, setPendingDeleteNoteId] = useState<string | null>(null)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
@@ -107,11 +107,11 @@ export function ClientScreen({
   const isDocumentsTab = leftActiveTabKey === 'documenten'
   const showsDurationColumn = leftActiveTabKey === 'sessies'
   const visibleItems = isDocumentsTab ? [] : leftActiveTabKey === 'notities' ? noteItems : leftActiveTabKey === 'rapportages' ? reportItems : sessionItems
-  const filteredSessions = visibleItems.filter((item) => item.searchText.includes(normalizedQuery))
-  const chatContextSessionIds = useMemo(() => {
-    if (leftActiveTabKey === 'notities') return new Set(noteItems.map((item) => item.targetSessionId))
-    if (leftActiveTabKey === 'rapportages') return new Set(reportItems.map((item) => item.targetSessionId))
-    return new Set(sessionItems.map((item) => item.targetSessionId))
+  const filteredInputs = visibleItems.filter((item) => item.searchText.includes(normalizedQuery))
+  const chatContextInputIds = useMemo(() => {
+    if (leftActiveTabKey === 'notities') return new Set(noteItems.map((item) => item.targetInputId))
+    if (leftActiveTabKey === 'rapportages') return new Set(reportItems.map((item) => item.targetInputId))
+    return new Set(sessionItems.map((item) => item.targetInputId))
   }, [leftActiveTabKey, noteItems, reportItems, sessionItems])
   const clientIntentTemplates = useMemo(
     () => data.templates.map((template: any) => ({ id: template.id, name: template.name })),
@@ -140,7 +140,7 @@ export function ClientScreen({
   } = useClientChatbot({
     activeTrajectoryName: activeTrajectory?.name ?? null,
     rightActiveTabKey,
-    chatContextSessionIds,
+    chatContextInputIds,
     chatScrollRef,
     client,
     clientId,
@@ -148,10 +148,10 @@ export function ClientScreen({
     onStatusFallbackText: statusSummaryFallback,
     reportCount,
     sessionCount,
-    sessions: data.sessions,
+    inputs: data.inputs,
     sessionItemsForStatus: sessionItems,
     snippets: data.snippets,
-    writtenReports: data.writtenReports,
+    inputSummaries: data.inputSummaries,
   })
 
   const searchPlaceholder =
@@ -164,8 +164,8 @@ export function ClientScreen({
           : 'Zoek sessies...'
   const shouldShowSearch = !isDocumentsTab && visibleItems.length > 1
 
-  const isMenuVisible = !!menuSessionId && !!menuAnchorPoint
-  const pendingDeleteSessionTitle = pendingDeleteSessionId ? data.sessions.find((item: any) => item.id === pendingDeleteSessionId)?.title : null
+  const isMenuVisible = !!menuInputId && !!menuAnchorPoint
+  const pendingDeleteInputTitle = pendingDeleteInputId ? data.inputs.find((item: any) => item.id === pendingDeleteInputId)?.title : null
   const pendingDeleteNoteTitle = pendingDeleteNoteId ? data.notes.find((item: any) => item.id === pendingDeleteNoteId)?.title : null
   const editingNote = editingNoteId ? data.notes.find((item: any) => item.id === editingNoteId) ?? null : null
   const leftPanelTitle =
@@ -206,7 +206,7 @@ export function ClientScreen({
     setSearchQuery('')
     setIsCreateNoteModalOpen(false)
     setEditingNoteId(null)
-    setMenuSessionId(null)
+    setMenuInputId(null)
     setMenuItemType(null)
     setMenuAnchorPoint(null)
     setHoveredItemId(null)
@@ -302,8 +302,8 @@ export function ClientScreen({
   function handleSaveNewNote(values: { title: string; text: string }) {
     const result = saveNewClientNote(
       {
-        createSession: (values) =>
-          createSession({
+        createInput: (values) =>
+          createInput({
             clientId: values.clientId,
             trajectoryId: values.trajectoryId,
             title: values.title,
@@ -314,7 +314,7 @@ export function ClientScreen({
           } as any),
         createNote,
       },
-      { clientId, activeTrajectoryId: activeTrajectory?.id ?? null, notesSessionId: notesSession?.id ?? null, values },
+      { clientId, activeTrajectoryId: activeTrajectory?.id ?? null, notesInputId: notesInput?.id ?? null, values },
     )
     if (result.didSave) setIsCreateNoteModalOpen(false)
   }
@@ -329,23 +329,23 @@ export function ClientScreen({
       onPressCreateReports(activeTrajectory?.id ?? null)
       return
     }
-    onPressCreateSession(activeTrajectory?.id ?? null)
+    onPressCreateInput(activeTrajectory?.id ?? null)
   }
 
-  function openRowMenu(item: SessionListItem, event?: any) {
+  function openRowMenu(item: InputListItem, event?: any) {
     const rect = event?.currentTarget?.getBoundingClientRect?.() ?? event?.nativeEvent?.target?.getBoundingClientRect?.()
     if (!rect) return
-    setMenuSessionId(item.id)
+    setMenuInputId(item.id)
     setMenuItemType(item.rowType === 'note' ? 'note' : 'session')
     setMenuAnchorPoint({ x: rect.left + rect.width, y: rect.top + rect.height })
   }
 
-  function handlePressRow(item: SessionListItem) {
+  function handlePressRow(item: InputListItem) {
     if (item.rowType === 'note') {
       setEditingNoteId(item.id)
       return
     }
-    onSelectSession(item.targetSessionId, leftActiveTabKey)
+    onSelectInput(item.targetInputId, leftActiveTabKey)
   }
 
   return (
@@ -355,25 +355,25 @@ export function ClientScreen({
         clientName={clientName}
         clientPhone={clientProfileValues.clientPhone || '-'}
         durationLabel={formatTrajectoryDurationLabel(activeTrajectory?.startDate)}
-        isCreateSessionDisabled={isCreateSessionDisabled}
+        isCreateInputDisabled={isCreateInputDisabled}
         reportCount={reportCount}
         sessionCount={sessionCount}
         trajectoryName={activeTrajectory?.name || '-'}
         onOpenEditClient={() => setIsEditClientModalOpen(true)}
         onPressCreateReports={() => onPressCreateReports(activeTrajectory?.id ?? null)}
-        onPressCreateSession={() => onPressCreateSession(activeTrajectory?.id ?? null)}
+        onPressCreateInput={() => onPressCreateInput(activeTrajectory?.id ?? null)}
       />
 
       <View style={styles.mainRow}>
         <ClientLeftTabs
           activeTabKey={leftActiveTabKey}
-          filteredSessions={filteredSessions}
+          filteredInputs={filteredInputs}
           hoveredItemId={hoveredItemId}
           hoveredMenuItemId={hoveredMenuItemId}
           isDocumentsTab={isDocumentsTab}
           isSearchExpanded={isSearchExpanded}
           leftColumnStyle={leftColumnMatchHeightStyle}
-          menuSessionId={menuSessionId}
+          menuInputId={menuInputId}
           searchInputRef={searchInputRef}
           searchPlaceholder={searchPlaceholder}
           searchQuery={searchQuery}
@@ -426,39 +426,39 @@ export function ClientScreen({
             icon: <TrashIcon color={colors.selected} size={18} />,
             isDanger: true,
             onPress: () => {
-              if (!menuSessionId) return
+              if (!menuInputId) return
               if (menuItemType === 'note') {
-                setPendingDeleteNoteId(menuSessionId)
+                setPendingDeleteNoteId(menuInputId)
                 setIsDeleteNoteModalOpen(true)
               } else {
-                setPendingDeleteSessionId(menuSessionId)
+                setPendingDeleteInputId(menuInputId)
                 setIsDeleteModalOpen(true)
               }
-              setMenuSessionId(null)
+              setMenuInputId(null)
               setMenuItemType(null)
               setMenuAnchorPoint(null)
             },
           },
         ]}
         onClose={() => {
-          setMenuSessionId(null)
+          setMenuInputId(null)
           setMenuItemType(null)
           setMenuAnchorPoint(null)
         }}
       />
 
-      <ConfirmSessionDeleteModal
+      <ConfirmInputDeleteModal
         visible={isDeleteModalOpen}
-        sessionTitle={pendingDeleteSessionTitle}
+        sessionTitle={pendingDeleteInputTitle}
         onClose={() => {
           setIsDeleteModalOpen(false)
-          setPendingDeleteSessionId(null)
+          setPendingDeleteInputId(null)
         }}
         onConfirm={() => {
-          if (!pendingDeleteSessionId) return
-          deleteSession(pendingDeleteSessionId)
+          if (!pendingDeleteInputId) return
+          deleteInput(pendingDeleteInputId)
           setIsDeleteModalOpen(false)
-          setPendingDeleteSessionId(null)
+          setPendingDeleteInputId(null)
         }}
       />
 
@@ -520,7 +520,6 @@ export function ClientScreen({
           trajectoryId: activeTrajectory?.id ?? '',
           orderNumber: String(activeTrajectory?.orderNumber || ''),
           uwvContactName: String(activeTrajectory?.uwvContactName || ''),
-          firstSickDay: String(activeTrajectory?.startDate || clientProfileValues.firstSickDay || ''),
         }}
         trajectoryOptions={clientTrajectoryOptions}
         onClose={() => setIsEditClientModalOpen(false)}
@@ -583,3 +582,4 @@ const styles = StyleSheet.create({
   },
   fullscreenModalCloseButtonHovered: { backgroundColor: '#F3F4F6' },
 })
+

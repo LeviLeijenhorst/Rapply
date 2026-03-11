@@ -7,15 +7,15 @@ import { Header } from '@/screens/session/components/Header'
 import { RightPanel } from '@/screens/session/components/RightPanel'
 import { SnippetSection } from '@/screens/session/components/SnippetSection'
 import { SummaryCard } from '@/screens/session/components/SummaryCard'
-import type { SessionScreenProps } from '@/screens/session/sessionScreen.types'
-import { useSessionScreen } from '@/screens/session/sessionScreen.logic'
+import type { InputScreenProps } from '@/screens/session/sessionScreen.types'
+import { useInputScreen } from '@/screens/session/sessionScreen.logic'
 import { EmptyPageMessage } from '@/ui/EmptyPageMessage'
 
-export function SessionScreen(props: SessionScreenProps) {
+export function InputScreen(props: InputScreenProps) {
   const { title, clientName, date, onBack } = props
 
   const {
-    isSessionMissing,
+    isInputMissing,
     resolvedInputId,
     summary,
     transcriptionStatus,
@@ -24,15 +24,15 @@ export function SessionScreen(props: SessionScreenProps) {
     sessionNotes,
     sessionSnippets,
     isRegeneratingSnippets,
-    handleRegenerateSessionSnippets,
+    handleRegenerateInputSnippets,
     handleUpdateSnippetStatus,
     handleDeleteSnippet,
     createNote,
     updateNote,
     deleteNote,
-  } = useSessionScreen(props)
+  } = useInputScreen(props)
 
-  if (isSessionMissing) {
+  if (isInputMissing) {
     return <EmptyPageMessage message="Deze sessie bestaat niet meer." onGoHome={onBack} />
   }
 
@@ -50,7 +50,7 @@ export function SessionScreen(props: SessionScreenProps) {
             snippets={sessionSnippets}
             canRegenerate={canRegenerateSnippets}
             isRegenerating={isRegeneratingSnippets}
-            onRegenerate={handleRegenerateSessionSnippets}
+            onRegenerate={handleRegenerateInputSnippets}
             onUpdateSnippetStatus={handleUpdateSnippetStatus}
             onDeleteSnippet={handleDeleteSnippet}
           />
@@ -102,3 +102,4 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
 })
+

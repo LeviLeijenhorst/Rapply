@@ -1,28 +1,33 @@
-﻿import { LocalAppData } from './types'
+import { LocalAppData } from './types'
 
 export function createDefaultLocalAppData(): LocalAppData {
   return {
-    coachees: [],
+    clients: [],
     trajectories: [],
-    sessions: [],
-    activities: [],
-    activityTemplates: [],
+    inputs: [],
     snippets: [],
     notes: [],
-    writtenReports: [],
     templates: [],
-    practiceSettings: {
-      practiceName: '',
+    inputSummaries: [],
+    organizationSettings: {
+      name: '',
       website: '',
       visitAddress: '',
       postalAddress: '',
       postalCodeCity: '',
+      tintColor: '#BE0165',
+      logoDataUrl: null,
       contactName: '',
       contactRole: '',
       contactPhone: '',
       contactEmail: '',
-      tintColor: '#BE0165',
-      logoDataUrl: null,
+      updatedAtUnixMs: 0,
+    },
+    userSettings: {
+      name: '',
+      role: '',
+      phone: '',
+      email: '',
       updatedAtUnixMs: 0,
     },
   }

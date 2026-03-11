@@ -1,8 +1,8 @@
 import { serializeClientUpsertValues, type ClientUpsertValues } from '@/types/clientProfile'
-import type { ClientDataShape, ClientSession, ClientTrajectory } from '@/screens/client/clientScreen.types'
+import type { ClientDataShape, ClientInput, ClientTrajectory } from '@/screens/client/clientScreen.types'
 
 type ClientEditApi = {
-  updateClient: (clientId: string, values: { name?: string; clientDetails?: string; employerDetails?: string; firstSickDay?: string }) => void
+  updateClient: (clientId: string, values: { name?: string; clientDetails?: string; employerDetails?: string }) => void
   updateTrajectory: (
     trajectoryId: string,
     values: {
@@ -24,11 +24,11 @@ type ClientEditApi = {
 }
 
 type NoteApi = {
-  createSession: (values: {
+  createInput: (values: {
     clientId: string | null
     trajectoryId?: string | null
     title: string
-    kind: ClientSession['kind']
+    kind: ClientInput['kind']
     audioBlobId: string | null
     audioDurationSeconds: number | null
     uploadFileName: string | null
@@ -46,7 +46,6 @@ function buildTrajectoryPatch(values: ClientUpsertValues) {
     dienstType: 'Werkfit maken',
     uwvContactName: values.uwvContactName.trim() || null,
     orderNumber: values.orderNumber.trim() || null,
-    startDate: values.firstSickDay.trim() || null,
   }
 }
 
@@ -80,13 +79,13 @@ export function saveNewClientNote(
   params: {
     clientId: string
     activeTrajectoryId: string | null
-    notesSessionId: string | null
+    notesInputId: string | null
     values: { title: string; text: string }
   },
 ): { didSave: boolean } {
-  let targetSessionId = params.notesSessionId
-  if (!targetSessionId) {
-    targetSessionId = api.createSession({
+  let targetInputId = params.notesInputId
+  if (!targetInputId) {
+    targetInputId = api.createInput({
       clientId: params.clientId,
       trajectoryId: params.activeTrajectoryId,
       title: 'Notities',
@@ -97,9 +96,9 @@ export function saveNewClientNote(
     })
   }
 
-  if (!targetSessionId) return { didSave: false }
+  if (!targetInputId) return { didSave: false }
 
-  api.createNote(targetSessionId, params.values)
+  api.createNote(targetInputId, params.values)
   return { didSave: true }
 }
 
@@ -112,3 +111,4 @@ export function getClientTrajectoryOptions(data: ClientDataShape, clientId: stri
       label: String(trajectory.name || '').trim() || 'Traject',
     }))
 }
+

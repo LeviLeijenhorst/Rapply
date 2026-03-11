@@ -1,4 +1,4 @@
-import { buildUntitledSessionTitle, type UntitledSessionKind } from '../../utils/text/buildUntitledTitle'
+import { buildUntitledInputTitle, type UntitledInputKind } from '../../utils/text/buildUntitledTitle'
 
 export type OptionKey = 'gesprek' | 'gespreksverslag' | 'upload' | 'schrijven' | 'intake'
 
@@ -34,14 +34,14 @@ export function formatTimeLabel(totalSeconds: number): string {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
-function getUntitledSessionKindForOption(option: OptionKey | null): UntitledSessionKind {
+function getUntitledInputKindForOption(option: OptionKey | null): UntitledInputKind {
   if (option === 'gesprek' || option === 'upload') return 'gesprek'
   return 'verslag'
 }
 
-export function buildDefaultSessionTitle(option: OptionKey | null): string {
+export function buildDefaultInputTitle(option: OptionKey | null): string {
   if (option === 'intake') return 'Intake'
-  return buildUntitledSessionTitle(getUntitledSessionKindForOption(option))
+  return buildUntitledInputTitle(getUntitledInputKindForOption(option))
 }
 
 export function normalizeDraftOption(option: string | null | undefined): OptionKey {
@@ -163,3 +163,4 @@ export function isAudioFile(file: File | null): boolean {
   const extension = getFileExtension(file.name)
   return Boolean(knownAudioMimeByExtension[extension])
 }
+

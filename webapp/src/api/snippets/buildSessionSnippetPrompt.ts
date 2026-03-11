@@ -6,7 +6,7 @@ const snippetInstructions = [
   'Do not invent details that are not supported by the transcript.',
 ].join('\n')
 
-export function buildSessionSnippetPrompt(params: {
+export function buildInputSnippetPrompt(params: {
   transcript: string
   sessionId: string
   clientId: string
@@ -15,9 +15,9 @@ export function buildSessionSnippetPrompt(params: {
   return [
     '[SESSION_SNIPPET_PROMPT]',
     snippetInstructions,
-    `Session ID: ${params.sessionId}`,
+    `Input ID: ${params.sessionId}`,
     `Client ID: ${params.clientId}`,
-    `Session date: ${params.sessionDate}`,
+    `Input date: ${params.sessionDate}`,
     '',
     'Transcript:',
     String(params.transcript || '').trim(),
@@ -27,3 +27,4 @@ export function buildSessionSnippetPrompt(params: {
     .join('\n')
     .trim()
 }
+

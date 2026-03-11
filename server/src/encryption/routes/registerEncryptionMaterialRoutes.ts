@@ -1,6 +1,6 @@
 import type { Express } from "express"
-import { requireAuthenticatedUser } from "../../auth"
-import * as e2ee from "../../e2ee"
+import { requireAuthenticatedUser } from "../../identity/auth"
+import * as e2ee from "../../encryption/e2ee"
 import { asyncHandler, sendError } from "../../http"
 import type { RegisterE2eeRoutesParams } from "./types"
 

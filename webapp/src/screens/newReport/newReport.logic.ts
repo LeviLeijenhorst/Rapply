@@ -2,13 +2,14 @@ import { sendClientChatMessage } from '@/api/chat/sendClientChatPromptMessage'
 import type { LocalChatMessage } from '@/api/chat/types'
 import { exportReportToWord } from '@/api/reports/exportReportToWord'
 import { classifySnippetType } from '@/api/snippets/classifySnippetType'
-import { generateSessionSummary } from '@/api/summaries/generateSessionSummaryFromTranscript'
+import { generateInputSummary as generateSessionSummary } from '@/api/summaries/generateSessionSummaryFromTranscript'
 import { resolveSummaryTemplateSections } from '@/api/summaries/resolveSummaryTemplateSections'
 import { parseReportSections } from '@/types/reportStructure'
 
 import type {
   MetadataKind,
   NewReportScreenProps,
+  RapportagePageMode,
   ReportFieldGroup,
   UwvField,
   UwvFieldGroup,
@@ -23,10 +24,20 @@ type Template = {
 
 type LocalAppData = any
 
-export function normalizeNewReportScreenProps(props: NewReportScreenProps): Required<NewReportScreenProps> {
+type NormalizedNewReportScreenProps = {
+  initialCoacheeId: string | null
+  initialSessionId: string | null
+  initialClientId: string | null
+  initialInputId: string | null
+  mode: RapportagePageMode
+}
+
+export function normalizeNewReportScreenProps(props: NewReportScreenProps): NormalizedNewReportScreenProps {
   return {
-    initialCoacheeId: props.initialCoacheeId ?? null,
-    initialSessionId: props.initialSessionId ?? null,
+    initialCoacheeId: props.initialCoacheeId ?? props.initialClientId ?? null,
+    initialSessionId: props.initialSessionId ?? props.initialInputId ?? null,
+    initialClientId: props.initialClientId ?? props.initialCoacheeId ?? null,
+    initialInputId: props.initialInputId ?? props.initialSessionId ?? null,
     mode: props.mode ?? 'controleren',
   }
 }
@@ -645,3 +656,158 @@ export function buildReportGenerationSourceText(params: {
     .join('\n\n---\n\n')
     .trim()
 }
+
+export async function runGenerateFromSetup(params: {
+  selectedTemplate: any
+  isGenerating: boolean
+  createSession: (payload: any) => string | null
+  selectedCoachee: any
+  selectedTrajectory: any
+  data: any
+  selectedSessionIds: string[]
+  selectedRapportageIds: string[]
+  selectedNoteIds: string[]
+  setCurrentReportSessionId: (sessionId: string) => void
+  isMountedRef: { current: boolean }
+  setGenerateError: (value: string | null) => void
+  setIsGenerating: (value: boolean) => void
+  setGeneratedReportText: (value: string) => void
+  setWrittenReport: (sessionId: string, text: string) => void
+  updateSession: (sessionId: string, patch: any) => void
+  setViewMode: (mode: 'edit') => void
+  shouldAnimateReadyRevealRef: { current: boolean }
+}) {
+  const {
+    selectedTemplate,
+    isGenerating,
+    createSession,
+    selectedCoachee,
+    selectedTrajectory,
+    data,
+    selectedSessionIds,
+    selectedRapportageIds,
+    selectedNoteIds,
+    setCurrentReportSessionId,
+    isMountedRef,
+    setGenerateError,
+    setIsGenerating,
+    setGeneratedReportText,
+    setWrittenReport,
+    updateSession,
+    setViewMode,
+    shouldAnimateReadyRevealRef,
+  } = params
+
+  if (!selectedTemplate || isGenerating) return
+  const sessionId = createSession({
+    coacheeId: selectedCoachee?.id ?? null,
+    trajectoryId: selectedTrajectory?.id ?? null,
+    title: selectedTemplate.name.trim() || 'Rapportage',
+    kind: 'written',
+    audioBlobId: null,
+    audioDurationSeconds: null,
+    uploadFileName: null,
+    transcriptionStatus: 'generating',
+    transcriptionError: null,
+  })
+  if (!sessionId) return
+  setCurrentReportSessionId(sessionId)
+
+  if (isMountedRef.current) {
+    setGenerateError(null)
+    setIsGenerating(true)
+  }
+
+  try {
+    const sourceText = buildReportGenerationSourceText({
+      data,
+      selectedTemplate,
+      selectedCoacheeName: selectedCoachee?.name ?? '',
+      selectedTrajectory: {
+        id: selectedTrajectory?.id ?? null,
+        name: selectedTrajectory?.name ?? '',
+        dienstType: selectedTrajectory?.dienstType ?? '',
+        startDate: selectedTrajectory?.startDate ?? '',
+        orderNumber: selectedTrajectory?.orderNumber ?? '',
+        planVanAanpakDocumentId: selectedTrajectory?.planVanAanpak?.documentId ?? null,
+      },
+      selectedSessionIds,
+      selectedRapportageIds,
+      selectedNoteIds,
+    })
+
+    const generatedReport = await generateReportText({
+      selectedTemplate,
+      sourceText,
+      fallbackReportText: buildFallbackReportFromTemplate(selectedTemplate),
+    })
+
+    if (isMountedRef.current) setGeneratedReportText(generatedReport)
+    setWrittenReport(sessionId, generatedReport)
+    updateSession(sessionId, { summary: generatedReport, summaryStructured: null, transcriptionStatus: 'done', transcriptionError: null })
+    if (isMountedRef.current) {
+      shouldAnimateReadyRevealRef.current = true
+      setViewMode('edit')
+    }
+  } catch (error) {
+    const message = String(error instanceof Error ? error.message : error || '').trim()
+    if (isMountedRef.current) setGenerateError(message || 'Er is een fout opgetreden bij het genereren van de rapportage.')
+    updateSession(sessionId, { transcriptionStatus: 'error', transcriptionError: message || 'Genereren mislukt' })
+  } finally {
+    if (isMountedRef.current) setIsGenerating(false)
+  }
+}
+
+export async function runSendAssistantMessage(params: {
+  assistantMessage: string
+  isAssistantSending: boolean
+  assistantMessages: Array<{ id: string; role: 'user' | 'assistant'; text: string }>
+  createMessageId: () => string
+  setAssistantMessages: (updater: (previous: Array<{ id: string; role: 'user' | 'assistant'; text: string }>) => Array<{ id: string; role: 'user' | 'assistant'; text: string }>) => void
+  setAssistantMessage: (value: string) => void
+  setIsAssistantSending: (value: boolean) => void
+  groupedFields: UwvFieldGroup[]
+  fieldValues: Record<string, string>
+}) {
+  const {
+    assistantMessage,
+    isAssistantSending,
+    assistantMessages,
+    createMessageId,
+    setAssistantMessages,
+    setAssistantMessage,
+    setIsAssistantSending,
+    groupedFields,
+    fieldValues,
+  } = params
+
+  const trimmed = assistantMessage.trim()
+  if (!trimmed || isAssistantSending) return
+  const nextUserMessage = { id: createMessageId(), role: 'user' as const, text: trimmed }
+  const nextChatMessages = [...assistantMessages, nextUserMessage]
+  setAssistantMessages((previous) => [...previous, nextUserMessage])
+  setAssistantMessage('')
+  setIsAssistantSending(true)
+  try {
+    const reportContext = buildAssistantReportContext({
+      groupedFields,
+      fieldValues,
+      normalizeFieldValueForStorage,
+    })
+    const responseText = await sendReportAssistantMessage({
+      chatMessages: nextChatMessages,
+      reportContext,
+    })
+    setAssistantMessages((previous) => [...previous, { id: createMessageId(), role: 'assistant', text: responseText }])
+  } catch {
+    setAssistantMessages((previous) => [
+      ...previous,
+      { id: createMessageId(), role: 'assistant', text: 'Er ging iets mis bij het ophalen van het antwoord. Probeer het opnieuw.' },
+    ])
+  } finally {
+    setIsAssistantSending(false)
+  }
+}
+
+
+

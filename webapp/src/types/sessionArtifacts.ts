@@ -1,21 +1,24 @@
-import type { SessionKind } from '../storage/types'
+import type { InputKind } from '../storage/types'
 
-// Session currently stores multiple dossier artifact types in one table.
-// The kind field is the contract that distinguishes artifact behavior.
-export const SESSION_ARTIFACT_KINDS: readonly SessionKind[] = ['recording', 'upload', 'written', 'notes', 'intake']
+export const SESSION_ARTIFACT_KINDS: readonly InputKind[] = ['recording', 'upload', 'written', 'notes', 'intake']
 
-export function isSessionReportArtifact(session: { kind: string }): boolean {
+export function isInputReportArtifact(session: { kind: string }): boolean {
   return session.kind === 'written'
 }
 
-export function isSessionNotesArtifact(session: { kind: string }): boolean {
+export function isInputNotesArtifact(session: { kind: string }): boolean {
   return session.kind === 'notes'
 }
 
-export function isSessionConversationArtifact(session: { kind: string }): boolean {
+export function isInputConversationArtifact(session: { kind: string }): boolean {
   return session.kind === 'recording' || session.kind === 'upload'
 }
 
-export function isSessionPrimaryInputArtifact(session: { kind: string }): boolean {
+export function isInputPrimaryInputArtifact(session: { kind: string }): boolean {
   return session.kind === 'recording' || session.kind === 'upload' || session.kind === 'intake'
 }
+
+// Temporary aliases while the report flow is still migrating.
+export const isSessionReportArtifact = isInputReportArtifact
+export const isSessionNotesArtifact = isInputNotesArtifact
+export const isSessionPrimaryInputArtifact = isInputPrimaryInputArtifact

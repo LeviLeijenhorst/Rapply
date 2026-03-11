@@ -1,7 +1,7 @@
-import type { Coachee } from '../../../storage/types'
+import type { Client } from '../../../storage/types'
 import { selectActiveClients, type ClientListItem } from '../selectors/clientListSelectors'
 
-export function clientsViewModel(clients: Coachee[]) {
+export function clientsViewModel(clients: Client[]) {
   return { activeClients: selectActiveClients(clients) }
 }
 
@@ -10,3 +10,4 @@ export function filterClientListItems(items: ClientListItem[], query: string): C
   if (!normalizedQuery) return items
   return items.filter((item) => item.clientName.toLowerCase().includes(normalizedQuery))
 }
+

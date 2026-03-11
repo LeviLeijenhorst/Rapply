@@ -5,7 +5,7 @@ type IconProps = {
   size?: number
 }
 
-export function SessionThumbsUpIcon({ size = 18 }: IconProps) {
+export function InputThumbsUpIcon({ size = 18 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 18 18" fill="none">
       <Path d="M6.29248 13.8675V6.24748C6.29248 5.94748 6.38248 5.65498 6.54748 5.40748L8.59498 2.36248C8.91748 1.87498 9.71998 1.52998 10.4025 1.78498C11.1375 2.03248 11.625 2.85748 11.4675 3.59248L11.0775 6.04498C11.0475 6.26998 11.1075 6.47248 11.235 6.62998C11.3625 6.77248 11.55 6.86248 11.7525 6.86248H14.835C15.4275 6.86248 15.9375 7.10248 16.2375 7.52248C16.5225 7.92748 16.575 8.45248 16.3875 8.98498L14.5425 14.6025C14.31 15.5325 13.2975 16.29 12.2925 16.29H9.36748C8.86498 16.29 8.15998 16.1175 7.83748 15.795L6.87748 15.0525C6.50998 14.775 6.29248 14.3325 6.29248 13.8675Z" fill="#008234" />
@@ -14,7 +14,7 @@ export function SessionThumbsUpIcon({ size = 18 }: IconProps) {
   )
 }
 
-export function SessionThumbsDownIcon({ size = 18 }: IconProps) {
+export function InputThumbsDownIcon({ size = 18 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 18 18" fill="none">
       <Path d="M11.7075 4.12501V11.745C11.7075 12.045 11.6175 12.3375 11.4525 12.585L9.40501 15.63C9.08251 16.1175 8.28001 16.4625 7.59751 16.2075C6.86251 15.96 6.37501 15.135 6.53251 14.4L6.92251 11.9475C6.95251 11.7225 6.89251 11.52 6.76501 11.3625C6.63751 11.22 6.45001 11.13 6.24751 11.13H3.16501C2.57251 11.13 2.06251 10.89 1.76251 10.47C1.47751 10.065 1.42501 9.54001 1.61251 9.00751L3.45751 3.39001C3.69001 2.46001 4.70251 1.70251 5.70751 1.70251H8.63251C9.13501 1.70251 9.84001 1.87501 10.1625 2.19751L11.1225 2.94001C11.49 3.22501 11.7075 3.66001 11.7075 4.12501Z" fill="#EA1818" />
@@ -23,7 +23,7 @@ export function SessionThumbsDownIcon({ size = 18 }: IconProps) {
   )
 }
 
-export function SessionUserProfileIcon({ size = 18 }: IconProps) {
+export function InputUserProfileIcon({ size = 18 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 18 18" fill="none">
       <Path d="M9 9C11.0711 9 12.75 7.32107 12.75 5.25C12.75 3.17893 11.0711 1.5 9 1.5C6.92893 1.5 5.25 3.17893 5.25 5.25C5.25 7.32107 6.92893 9 9 9Z" fill="#2C111F" />
@@ -32,7 +32,7 @@ export function SessionUserProfileIcon({ size = 18 }: IconProps) {
   )
 }
 
-export function SessionCalendarIcon({ size = 18 }: IconProps) {
+export function InputCalendarIcon({ size = 18 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 18 18" fill="none">
       <Path d="M12.5627 2.67V1.5C12.5627 1.1925 12.3077 0.9375 12.0002 0.9375C11.6927 0.9375 11.4377 1.1925 11.4377 1.5V2.625H6.56267V1.5C6.56267 1.1925 6.30767 0.9375 6.00017 0.9375C5.69267 0.9375 5.43767 1.1925 5.43767 1.5V2.67C3.41267 2.8575 2.43017 4.065 2.28017 5.8575C2.26517 6.075 2.44517 6.255 2.65517 6.255H15.3452C15.5627 6.255 15.7427 6.0675 15.7202 5.8575C15.5702 4.065 14.5877 2.8575 12.5627 2.67Z" fill="#2C111F" />
@@ -41,7 +41,7 @@ export function SessionCalendarIcon({ size = 18 }: IconProps) {
   )
 }
 
-export function SessionEditIcon({ size = 18 }: IconProps) {
+export function InputEditIcon({ size = 18 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 18 18" fill="none">
       <Path
@@ -68,7 +68,7 @@ export function SessionEditIcon({ size = 18 }: IconProps) {
   )
 }
 
-export function SessionExportIcon({ size = 18 }: IconProps) {
+export function InputExportIcon({ size = 18 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 18 18" fill="none">
       <Path d="M12.3301 6.67505C15.0301 6.90755 16.1326 8.29505 16.1326 11.3325V11.43C16.1326 14.7825 14.7901 16.125 11.4376 16.125H6.55511C3.20261 16.125 1.86011 14.7825 1.86011 11.43V11.3325C1.86011 8.31755 2.94761 6.93005 5.60261 6.68255" stroke="#2C111F" strokeLinecap="round" strokeLinejoin="round" />
@@ -78,10 +78,11 @@ export function SessionExportIcon({ size = 18 }: IconProps) {
   )
 }
 
-export function SessionDecorativeShapeIcon({ size = 14 }: IconProps) {
+export function InputDecorativeShapeIcon({ size = 14 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 14 14" fill="none">
       <Path d="M1.56422 11.0904L1.32609e-05 13.6011L1.65817 12.981L3.08245 11.2321L5.2867 11.0919L6.39454 9.31553L6.19204 7.69075L7.96297 7.48105L9.64412 5.53467L9.2933 3.84144L11.296 3.44719L13.8585 0.00558239C9.29952 -0.104043 6.56201 1.36388 1.20717 7.92977L1.56422 11.0904Z" fill="#2C111F" />
     </Svg>
   )
 }
+

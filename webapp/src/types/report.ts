@@ -6,9 +6,10 @@ export type Report = {
   templateName: string
   title: string
   text: string
-  selectedSessionIds: string[]
+  selectedInputIds: string[]
   selectedSnippetIds: string[]
   status: ReportStatus
   createdAt: number
   updatedAt: number
 }
+

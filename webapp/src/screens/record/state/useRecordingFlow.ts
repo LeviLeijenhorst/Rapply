@@ -2,9 +2,9 @@ import { useCallback, useEffect, type MutableRefObject } from 'react'
 
 import {
   startRealtimeTranscription,
-  type RealtimeTranscriberSession,
-} from '../../../api/transcription/realtime/startRealtimeTranscription'
-import type { NewSessionStep } from '../types'
+  type RealtimeTranscriberInput,
+} from '../../../api/transcription/realtime/transcribeAudioRealtime'
+import type { NewInputStep } from '../types'
 import {
   createOperationId,
   maxDuration,
@@ -28,7 +28,7 @@ type Params = {
   hasAutoSubmittedRecordingRef: MutableRefObject<boolean>
   isRealtimeModeActive: boolean
   isRealtimeTranscriberStarting: boolean
-  liveTranscriberRef: MutableRefObject<RealtimeTranscriberSession | null>
+  liveTranscriberRef: MutableRefObject<RealtimeTranscriberInput | null>
   realtimeOperationIdRef: MutableRefObject<string | null>
   recorder: RecorderState
   setAudioDurationSeconds: (value: number | null | ((previous: number | null) => number | null)) => void
@@ -37,8 +37,8 @@ type Params = {
   setIsRealtimeTranscriberStarting: (value: boolean) => void
   setLiveTranscriptError: (value: string | null) => void
   setLiveTranscriptText: (value: string | ((previous: string) => string)) => void
-  setStep: (step: NewSessionStep) => void
-  step: NewSessionStep
+  setStep: (step: NewInputStep) => void
+  step: NewInputStep
   visible: boolean
 }
 
@@ -234,6 +234,7 @@ export function useRecordingFlow({
     stopLiveTranscriber,
   }
 }
+
 
 
 

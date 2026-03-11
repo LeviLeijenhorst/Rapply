@@ -6,12 +6,12 @@ import { useLiveAudioWaveformBars } from '../../../audio/recording/useLiveAudioW
 import { useReducedMotion } from '../../../hooks/useReducedMotion'
 import { useLocalAppData } from '../../../storage/LocalAppDataProvider'
 import { useE2ee } from '../../../security/providers/E2eeProvider'
-import { unassignedCoacheeLabel } from '../../../types/client'
+import { unassignedClientLabel } from '../../../types/client'
 import { setPendingPreviewAudio } from '../../../audio/pendingPreviewStore'
-import { processRecordedSession } from '../../../api/transcription/recorded/processRecordedSession'
+import { processRecordedInput } from '../../../api/transcription/recorded/processRecordedSession'
 import { fetchBillingStatus } from '../../../api/billing/billingApi'
 import { clearSubscriptionReturnDraft, readAndClearSubscriptionReturnDraft, saveSubscriptionReturnDraft } from './subscriptionReturnDraft'
-import { fetchRealtimeTranscriptionRuntime } from '../../../api/transcription/realtime/startRealtimeTranscription'
+import { fetchRealtimeTranscriptionRuntime } from '../../../api/transcription/realtime/transcribeAudioRealtime'
 import { useToast } from '../../../toast/ToastProvider'
 import { isGespreksverslagTemplate } from '../../../content/templateCategories'
 import { runPrimaryFooterAction } from './primaryAction'
@@ -19,13 +19,13 @@ import {
   buildAudioDownloadFileName,
   buildUploadDurationWarning,
   getDropdownMaxHeight,
-  resolveDefaultTrajectoryIdForCoachee,
+  resolveDefaultTrajectoryIdForClient,
   validateUploadFileDuration,
 } from './modalHelpers'
-import { useNewSessionModalState } from './useNewSessionModalState'
+import { useNewInputModalState } from './useNewInputModalState'
 import { useRecordingFlow } from './useRecordingFlow'
 import {
-  buildDefaultSessionTitle,
+  buildDefaultInputTitle,
   createOperationId,
   formatTimeLabel,
   getAudioMimeTypeFromFile,
@@ -39,15 +39,15 @@ import {
   recordingWarningStartSeconds,
   type OptionKey,
 } from '../utils'
-import type { NewSessionModalArgs } from '../types'
+import type { NewInputModalArgs } from '../types'
 
 const BASE_RECORDING_MODAL_WIDTH = 747
 const NOTES_PANEL_WIDTH = 437
 const RECORDING_PANEL_GAP = 24
 const BASE_RECORDING_MODAL_HEIGHT = 862
-type SessionKind = 'recording' | 'upload' | 'intake'
+type InputKind = 'recording' | 'upload' | 'intake'
 
-export function useNewSessionModalController({
+export function useNewInputModalController({
   visible,
   onClose,
   onRecordingBusyChange,
@@ -55,17 +55,17 @@ export function useNewSessionModalController({
   onOpenMySubscription,
   restoreDraftFromSubscriptionReturn = false,
   onRestoreDraftHandled,
-  onOpenSession,
-  onOpenNewCoachee,
-  initialCoacheeId,
+  onOpenInput,
+  onOpenNewClient,
+  initialClientId,
   initialTrajectoryId,
-  newlyCreatedCoacheeId,
-  onNewlyCreatedCoacheeHandled,
+  newlyCreatedClientId,
+  onNewlyCreatedClientHandled,
   limitedMode = false,
   initialOption = null,
-}: NewSessionModalArgs) {
+}: NewInputModalArgs) {
   const isReducedMotionEnabled = useReducedMotion()
-  const { data, createNote, createSession, updateSession } = useLocalAppData()
+  const { data, createNote, createInput, createSnippet, updateInput } = useLocalAppData()
   const e2ee = useE2ee()
   const recorder = useBrowserAudioRecorder()
   const { showErrorToast } = useToast()
@@ -75,13 +75,13 @@ export function useNewSessionModalController({
     audioForTranscription,
     audioPreviewUrl,
     backdropOpacity,
-    coacheeDropdownMaxHeight,
-    coacheeTriggerRef,
+    clientDropdownMaxHeight,
+    clientTriggerRef,
     hasAutoStartedRecordingRef,
     hasAutoSubmittedRecordingRef,
     hasRecordingConsent,
     insufficientMinutesContext,
-    isCoacheeOpen,
+    isClientOpen,
     isInsufficientMinutesWarningVisible,
     isMinimizeAnimating,
     isMinimized,
@@ -105,7 +105,7 @@ export function useNewSessionModalController({
     recordingNotes,
     recordingNotesRevealProgress,
     selectedAudioFile,
-    selectedCoacheeId,
+    selectedClientId,
     selectedOption,
     selectedOptionGroup,
     selectedTemplateId,
@@ -122,10 +122,10 @@ export function useNewSessionModalController({
     setAudioDurationSeconds,
     setAudioForTranscription,
     setAudioPreviewUrl,
-    setCoacheeDropdownMaxHeight,
+    setClientDropdownMaxHeight,
     setHasRecordingConsent,
     setInsufficientMinutesContext,
-    setIsCoacheeOpen,
+    setIsClientOpen,
     setIsInsufficientMinutesWarningVisible,
     setIsMinimizeAnimating,
     setIsMinimized,
@@ -141,13 +141,13 @@ export function useNewSessionModalController({
     setRecordingNoteDraft,
     setRecordingNotes,
     setSelectedAudioFile,
-    setSelectedCoacheeId,
+    setSelectedClientId,
     setSelectedOption,
     setSelectedOptionGroup,
     setSelectedTemplateId,
     setSelectedTrajectoryId,
     setSelectedUploadFileDurationSeconds,
-    setSessionTitle,
+    setInputTitle,
     setShouldRenderRecordingNotesPanel,
     setShouldSaveAudio,
     setStep,
@@ -155,7 +155,7 @@ export function useNewSessionModalController({
     setUploadFileDurationWarning,
     setWaveBarCount,
     selectedUploadFileDurationSeconds,
-  } = useNewSessionModalState(visible)
+  } = useNewInputModalState(visible)
 
   const { height: windowHeight, width: windowWidth } = useWindowDimensions()
   const templates = data.templates ?? []
@@ -184,11 +184,11 @@ export function useNewSessionModalController({
     setSelectedOption(null)
     setSelectedOptionGroup(null)
     setOpenOptionGroup(null)
-    setIsCoacheeOpen(false)
-    setSelectedCoacheeId(null)
+    setIsClientOpen(false)
+    setSelectedClientId(null)
     setSelectedTrajectoryId(initialTrajectoryId ?? null)
     setSelectedTemplateId(defaultTemplateId)
-    setSessionTitle(buildDefaultSessionTitle(null))
+    setInputTitle(buildDefaultInputTitle(null))
     setSelectedAudioFile(null)
     setSelectedUploadFileDurationSeconds(null)
     setUploadFileDurationWarning(null)
@@ -208,7 +208,7 @@ export function useNewSessionModalController({
     setIsRecordedCloseWarningVisible(false)
     setHasRecordingConsent(false)
     setIsUploadDragActive(false)
-    setCoacheeDropdownMaxHeight(null)
+    setClientDropdownMaxHeight(null)
     setRecordingNotes([])
     setRecordingNoteDraft('')
     setShouldRenderRecordingNotesPanel(false)
@@ -222,7 +222,7 @@ export function useNewSessionModalController({
     if (!initialOption) return
     if (restoreDraftFromSubscriptionReturn) return
     setSelectedOption(initialOption)
-    setSessionTitle(buildDefaultSessionTitle(initialOption))
+    setInputTitle(buildDefaultInputTitle(initialOption))
     if (initialOption === 'gespreksverslag') {
       setStep('recording')
       setSelectedOptionGroup('gespreksverslag')
@@ -248,9 +248,9 @@ export function useNewSessionModalController({
         setSelectedOption(restoredOption)
         setSelectedOptionGroup(restoredOption === 'gespreksverslag' ? 'gespreksverslag' : 'gesprek')
         setOpenOptionGroup(null)
-        setSelectedCoacheeId(draft.selectedCoacheeId)
+        setSelectedClientId(draft.selectedClientId)
         setSelectedTemplateId(draft.selectedTemplateId ?? defaultTemplateId)
-        setSessionTitle(String(draft.sessionTitle || '').trim() || buildDefaultSessionTitle(restoredOption))
+        setInputTitle(String(draft.sessionTitle || '').trim() || buildDefaultInputTitle(restoredOption))
         setAudioDurationSeconds(draft.audioDurationSeconds)
         setShouldSaveAudio(draft.shouldSaveAudio !== false)
         setAudioForTranscription({ blob: draft.blob, mimeType: draft.mimeType || 'application/octet-stream' })
@@ -260,7 +260,7 @@ export function useNewSessionModalController({
         setUploadFileDurationWarning(null)
         setStep('recorded')
       } catch (error) {
-        console.error('[NewSessionModal] Failed to restore subscription return draft', error)
+        console.error('[NewInputModal] Failed to restore subscription return draft', error)
       } finally {
         if (!isCancelled) {
           onRestoreDraftHandled?.()
@@ -271,7 +271,7 @@ export function useNewSessionModalController({
     return () => {
       isCancelled = true
     }
-  }, [data.sessions, defaultTemplateId, onRestoreDraftHandled, restoreDraftFromSubscriptionReturn, visible])
+  }, [data.inputs, defaultTemplateId, onRestoreDraftHandled, restoreDraftFromSubscriptionReturn, visible])
 
   async function selectUploadFile(file: File | null) {
     if (!file) return
@@ -325,7 +325,7 @@ export function useNewSessionModalController({
         setTranscriptionMode(runtimeConfig.mode)
       } catch (error) {
         if (isCancelled) return
-        console.warn('[NewSessionModal] Failed to load transcription runtime config', error)
+        console.warn('[NewInputModal] Failed to load transcription runtime config', error)
         setTranscriptionMode('azure-fast-batch')
       }
     })()
@@ -354,73 +354,73 @@ export function useNewSessionModalController({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [handleClose, startMinimizeModal, step, visible])
 
-  const activeCoachees = useMemo(() => data.coachees.filter((c) => !c.isArchived), [data.coachees])
-  const trajectoriesByCoacheeId = useMemo(() => {
+  const activeClients = useMemo(() => data.clients.filter((c) => !c.isArchived), [data.clients])
+  const trajectoriesByClientId = useMemo(() => {
     const map = new Map<string, typeof data.trajectories>()
-    for (const coachee of activeCoachees) {
+    for (const client of activeClients) {
       map.set(
-        coachee.id,
+        client.id,
         data.trajectories
-          .filter((trajectory) => trajectory.coacheeId === coachee.id)
+          .filter((trajectory) => trajectory.clientId === client.id)
           .sort((a, b) => a.createdAtUnixMs - b.createdAtUnixMs),
       )
     }
     return map
-  }, [activeCoachees, data.trajectories])
+  }, [activeClients, data.trajectories])
 
   useEffect(() => {
-    if (newlyCreatedCoacheeId && visible) {
-      const coachee = activeCoachees.find((c) => c.id === newlyCreatedCoacheeId)
-      if (coachee) {
-        setSelectedCoacheeId(newlyCreatedCoacheeId)
+    if (newlyCreatedClientId && visible) {
+      const client = activeClients.find((c) => c.id === newlyCreatedClientId)
+      if (client) {
+        setSelectedClientId(newlyCreatedClientId)
         setSelectedTrajectoryId(
-          resolveDefaultTrajectoryIdForCoachee({
-            coacheeId: newlyCreatedCoacheeId,
+          resolveDefaultTrajectoryIdForClient({
+            clientId: newlyCreatedClientId,
             initialTrajectoryId,
-            trajectoriesByCoacheeId,
+            trajectoriesByClientId,
           }),
         )
-        setIsCoacheeOpen(false)
-        onNewlyCreatedCoacheeHandled()
+        setIsClientOpen(false)
+        onNewlyCreatedClientHandled()
       }
     }
-  }, [activeCoachees, newlyCreatedCoacheeId, onNewlyCreatedCoacheeHandled, visible])
+  }, [activeClients, newlyCreatedClientId, onNewlyCreatedClientHandled, visible])
 
   useEffect(() => {
     if (!visible) return
-    if (!initialCoacheeId) return
-    const coachee = activeCoachees.find((item) => item.id === initialCoacheeId)
-    if (!coachee) return
-    setSelectedCoacheeId(initialCoacheeId)
+    if (!initialClientId) return
+    const client = activeClients.find((item) => item.id === initialClientId)
+    if (!client) return
+    setSelectedClientId(initialClientId)
     setSelectedTrajectoryId(
-      resolveDefaultTrajectoryIdForCoachee({
-        coacheeId: initialCoacheeId,
+      resolveDefaultTrajectoryIdForClient({
+        clientId: initialClientId,
         initialTrajectoryId,
-        trajectoriesByCoacheeId,
+        trajectoriesByClientId,
       }),
     )
-  }, [activeCoachees, initialCoacheeId, initialTrajectoryId, trajectoriesByCoacheeId, visible])
+  }, [activeClients, initialClientId, initialTrajectoryId, trajectoriesByClientId, visible])
 
   useEffect(() => {
     if (!visible) return
-    if (!selectedCoacheeId) {
+    if (!selectedClientId) {
       setSelectedTrajectoryId(null)
       return
     }
-    const trajectories = trajectoriesByCoacheeId.get(selectedCoacheeId) ?? []
+    const trajectories = trajectoriesByClientId.get(selectedClientId) ?? []
     if (trajectories.length === 0) {
       setSelectedTrajectoryId(null)
       return
     }
     if (selectedTrajectoryId && trajectories.some((trajectory) => trajectory.id === selectedTrajectoryId)) return
     setSelectedTrajectoryId(
-      resolveDefaultTrajectoryIdForCoachee({
-        coacheeId: selectedCoacheeId,
+      resolveDefaultTrajectoryIdForClient({
+        clientId: selectedClientId,
         initialTrajectoryId,
-        trajectoriesByCoacheeId,
+        trajectoriesByClientId,
       }),
     )
-  }, [initialTrajectoryId, selectedCoacheeId, selectedTrajectoryId, trajectoriesByCoacheeId, visible])
+  }, [initialTrajectoryId, selectedClientId, selectedTrajectoryId, trajectoriesByClientId, visible])
 
   useEffect(() => {
     if (!isRendered) return
@@ -500,14 +500,14 @@ export function useNewSessionModalController({
     })
   }, [backdropOpacity, isReducedMotionEnabled, isRendered, modalOpacity, modalScale, modalTranslateY, visible])
 
-  const selectedCoachee = useMemo(() => {
-    if (!selectedCoacheeId) return null
-    return activeCoachees.find((coachee) => coachee.id === selectedCoacheeId) ?? null
-  }, [activeCoachees, selectedCoacheeId])
+  const selectedClient = useMemo(() => {
+    if (!selectedClientId) return null
+    return activeClients.find((client) => client.id === selectedClientId) ?? null
+  }, [activeClients, selectedClientId])
 
-  const coacheeOptions = useMemo(() => {
-    return [{ id: null, name: unassignedCoacheeLabel }, ...activeCoachees]
-  }, [activeCoachees])
+  const clientOptions = useMemo(() => {
+    return [{ id: null, name: unassignedClientLabel }, ...activeClients]
+  }, [activeClients])
 
   const bars = useMemo(() => Array.from({ length: waveBarCount }, (_, index) => index), [waveBarCount])
   const isRealtimeModeActive = transcriptionMode === 'azure-realtime-live'
@@ -579,12 +579,12 @@ export function useNewSessionModalController({
   const isCompactConsent = limitedMode || (step === 'consent' && windowWidth <= 520)
   const gesprekOptionLabel = 'Gesprek opnemen'
   const gespreksverslagOptionLabel = 'Gespreksverslag opnemen'
-  const isSessionTitleEmpty = sessionTitle.trim().length === 0
+  const isInputTitleEmpty = sessionTitle.trim().length === 0
   const isPrimaryActionDisabled =
     (step === 'upload' && (!selectedAudioFile || !!uploadFileDurationWarning)) ||
     (!selectedOption && step === 'select' && !limitedMode) ||
     (step === 'consent' && !hasRecordingConsent) ||
-    (step === 'recorded' && (!audioForTranscription || isSessionTitleEmpty))
+    (step === 'recorded' && (!audioForTranscription || isInputTitleEmpty))
   const expandedRecordingWidth = BASE_RECORDING_MODAL_WIDTH + NOTES_PANEL_WIDTH + RECORDING_PANEL_GAP
   const modalHeight = Math.min(BASE_RECORDING_MODAL_HEIGHT, windowHeight * 0.92)
   const modalWidth = Math.min(isDesktopRecordingStep ? expandedRecordingWidth : BASE_RECORDING_MODAL_WIDTH, windowWidth * 0.95)
@@ -673,7 +673,7 @@ export function useNewSessionModalController({
       setSelectedOptionGroup('gesprek')
       setSelectedOption('gesprek')
       setOpenOptionGroup(null)
-      setSessionTitle(limitedMode ? buildDefaultSessionTitle('gesprek') : 'Voortgangsgesprek')
+      setInputTitle(limitedMode ? buildDefaultInputTitle('gesprek') : 'Voortgangsgesprek')
       if (limitedMode) {
         setHasRecordingConsent(false)
         setStep('consent')
@@ -684,7 +684,7 @@ export function useNewSessionModalController({
       setSelectedOptionGroup('gespreksverslag')
       setSelectedOption('gespreksverslag')
       setOpenOptionGroup(null)
-      setSessionTitle(limitedMode ? buildDefaultSessionTitle('gespreksverslag') : 'Voortgangsverslag')
+      setInputTitle(limitedMode ? buildDefaultInputTitle('gespreksverslag') : 'Voortgangsverslag')
       if (limitedMode) {
         setStep('recording')
       }
@@ -694,14 +694,14 @@ export function useNewSessionModalController({
       setSelectedOption('schrijven')
       setSelectedOptionGroup('gespreksverslag')
       setOpenOptionGroup(null)
-      setSessionTitle('Gespreksverslag')
+      setInputTitle('Gespreksverslag')
       return
     }
     if (option === 'upload') {
       setSelectedOption('upload')
       setSelectedOptionGroup(null)
       setOpenOptionGroup(null)
-      setSessionTitle('Bestand uploaden')
+      setInputTitle('Bestand uploaden')
     }
   }
 
@@ -710,11 +710,11 @@ export function useNewSessionModalController({
       hasRecordingConsent,
       isPrimaryActionDisabled,
       limitedMode,
-      selectedCoacheeId,
-      selectedCoacheeResolvedId: selectedCoachee?.id ?? null,
+      selectedClientId,
+      selectedClientResolvedId: selectedClient?.id ?? null,
       selectedOption,
       step,
-      createAndOpenSession,
+      createAndOpenInput,
       handleClose,
       onOpenGeschrevenGespreksverslag,
       saveSelectedFileToAudioStore,
@@ -724,16 +724,16 @@ export function useNewSessionModalController({
     })
   }
 
-  function handleSelectCoachee(coacheeId: string | null) {
-    setSelectedCoacheeId(coacheeId)
+  function handleSelectClient(clientId: string | null) {
+    setSelectedClientId(clientId)
     setSelectedTrajectoryId(
-      resolveDefaultTrajectoryIdForCoachee({
-        coacheeId,
+      resolveDefaultTrajectoryIdForClient({
+        clientId,
         initialTrajectoryId,
-        trajectoriesByCoacheeId,
+        trajectoriesByClientId,
       }),
     )
-    setIsCoacheeOpen(false)
+    setIsClientOpen(false)
   }
 
   function handleOpenSubscriptionFromInsufficientMinutes() {
@@ -752,7 +752,7 @@ export function useNewSessionModalController({
         try {
           await saveSubscriptionReturnDraft({
             selectedOption: selectedOptionForRestore,
-            selectedCoacheeId,
+            selectedClientId,
             selectedTemplateId,
             sessionTitle,
             shouldSaveAudio,
@@ -761,7 +761,7 @@ export function useNewSessionModalController({
             blob: audioForTranscription.blob,
           })
         } catch (error) {
-          console.error('[NewSessionModal] Failed to persist subscription return draft', error)
+          console.error('[NewInputModal] Failed to persist subscription return draft', error)
         }
       }
       setIsInsufficientMinutesWarningVisible(false)
@@ -813,10 +813,10 @@ export function useNewSessionModalController({
 
   useEffect(() => {
     if (typeof document === 'undefined') return
-    if (!isCoacheeOpen) return
+    if (!isClientOpen) return
 
-    const coacheeTriggerId = 'new-session-coachee-trigger'
-    const coacheePanelId = 'new-session-coachee-panel'
+    const clientTriggerId = 'new-session-client-trigger'
+    const clientPanelId = 'new-session-client-panel'
 
     const isInside = (id: string, target: Node | null) => {
       if (!target) return false
@@ -827,17 +827,17 @@ export function useNewSessionModalController({
     const handleMouseDown = (event: MouseEvent) => {
       const target = event.target as Node | null
       if (
-        isInside(coacheeTriggerId, target) ||
-        isInside(coacheePanelId, target)
+        isInside(clientTriggerId, target) ||
+        isInside(clientPanelId, target)
       ) {
         return
       }
-      setIsCoacheeOpen(false)
+      setIsClientOpen(false)
     }
 
     document.addEventListener('mousedown', handleMouseDown)
     return () => document.removeEventListener('mousedown', handleMouseDown)
-  }, [isCoacheeOpen])
+  }, [isClientOpen])
 
   function openFilePicker() {
     if (typeof document === 'undefined') return
@@ -979,7 +979,7 @@ export function useNewSessionModalController({
       const response = await fetchBillingStatus()
       return readRemainingTranscriptionSeconds(response?.billingStatus ?? null)
     } catch (error) {
-      console.error('[NewSessionModal] Failed to read billing status', error)
+      console.error('[NewInputModal] Failed to read billing status', error)
       return null
     }
   }
@@ -1002,10 +1002,10 @@ export function useNewSessionModalController({
     ])
   }
 
-  async function createAndOpenSessionInternal(
+  async function createAndOpenInputInternal(
     values: { kind: 'recording' | 'upload' },
     options?: {
-      sessionKind?: SessionKind
+      sessionKind?: InputKind
       overrideShouldSaveAudio?: boolean
       audioForTranscription?: { blob: Blob; mimeType: string }
       recordingDurationSeconds?: number | null
@@ -1026,8 +1026,8 @@ export function useNewSessionModalController({
         ? Math.max(0, resolvedRecordingDurationSeconds)
         : (Number.isFinite(audioDurationSeconds) ? audioDurationSeconds : null)
 
-    const createdSessionId = createSession({
-      coacheeId: selectedCoachee?.id ?? null,
+    const createdInputId = createInput({
+      clientId: selectedClient?.id ?? null,
       trajectoryId: selectedTrajectoryId ?? null,
       title: sessionTitle,
       kind: options?.sessionKind ?? values.kind,
@@ -1038,11 +1038,14 @@ export function useNewSessionModalController({
       transcriptionError: null,
     })
 
-    if (!createdSessionId) return false
+    if (!createdInputId) return false
+    const now = Date.now()
+    const shouldExtractSnippets =
+      options?.sessionKind === 'intake' || values.kind === 'recording' || values.kind === 'upload'
 
     if (values.kind === 'recording' && recordingNotes.length > 0) {
       for (const note of recordingNotes) {
-        createNote(createdSessionId, {
+        createNote(createdInputId, {
           title: formatTimeLabel(note.seconds),
           text: note.text,
         })
@@ -1051,14 +1054,14 @@ export function useNewSessionModalController({
 
     try {
       await setPendingPreviewAudio({
-        sessionId: createdSessionId,
+        sessionId: createdInputId,
         blob: resolvedAudioForTranscription.blob,
         mimeType: resolvedAudioForTranscription.mimeType,
         shouldSaveAudio: effectiveShouldSaveAudio,
         summaryTemplate: undefined,
       })
     } catch (error) {
-      console.error('[NewSessionModal] Failed to persist raw audio preview', error)
+      console.error('[NewInputModal] Failed to persist raw audio preview', error)
     }
 
     const nextAudioForTranscription = resolvedAudioForTranscription
@@ -1066,12 +1069,12 @@ export function useNewSessionModalController({
     if (isRealtimeModeActive && realtimeChargeOperationId) {
       realtimeOperationIdRef.current = realtimeChargeOperationId
     }
-    onOpenSession(createdSessionId)
+    onOpenInput(createdInputId)
     void clearSubscriptionReturnDraft()
     handleClose()
 
-                void processRecordedSession({
-      sessionId: createdSessionId,
+                void processRecordedInput({
+      sessionId: createdInputId,
       audioBlob: nextAudioForTranscription.blob,
       mimeType: nextAudioForTranscription.mimeType,
       shouldSaveAudio: effectiveShouldSaveAudio,
@@ -1086,18 +1089,40 @@ export function useNewSessionModalController({
       summaryTemplate: undefined,
       initialAudioBlobId: null,
       e2ee,
-      updateSession,
+      updateInput,
+      snippetExtraction: {
+        enabled: shouldExtractSnippets,
+        clientId: selectedClient?.id ?? null,
+        trajectoryId: selectedTrajectoryId ?? null,
+        itemDate: now,
+        onCreatedSnippets: (snippets) => {
+          for (const snippet of snippets) {
+            createSnippet({
+              id: snippet.id,
+              trajectoryId: snippet.trajectoryId,
+              inputId: snippet.inputId,
+              itemId: snippet.itemId ?? snippet.inputId,
+              field: snippet.field,
+              text: snippet.text,
+              date: snippet.date,
+              status: snippet.status,
+              createdAtUnixMs: snippet.createdAtUnixMs,
+              updatedAtUnixMs: snippet.updatedAtUnixMs,
+            })
+          }
+        },
+      },
     }).catch((error) => {
-      console.error('[NewSessionModal] Session audio processing failed', { sessionId: createdSessionId, error })
+      console.error('[NewInputModal] Input audio processing failed', { sessionId: createdInputId, error })
     })
     realtimeOperationIdRef.current = null
     return true
   }
 
-  async function createAndOpenSession(
+  async function createAndOpenInput(
     values: { kind: 'recording' | 'upload' },
     options?: {
-      sessionKind?: SessionKind
+      sessionKind?: InputKind
       overrideShouldSaveAudio?: boolean
       audioForTranscription?: { blob: Blob; mimeType: string }
       recordingDurationSeconds?: number | null
@@ -1122,7 +1147,7 @@ export function useNewSessionModalController({
       setIsInsufficientMinutesWarningVisible(true)
       return false
     }
-    return createAndOpenSessionInternal(values, { ...options, audioForTranscription: resolvedAudioForTranscription })
+    return createAndOpenInputInternal(values, { ...options, audioForTranscription: resolvedAudioForTranscription })
   }
 
   const { retryRecordingAfterError } = useRecordingFlow({
@@ -1170,9 +1195,9 @@ export function useNewSessionModalController({
     handleClose()
   }
 
-  const handleAddCoachee = () => {
-    setIsCoacheeOpen(false)
-    onOpenNewCoachee()
+  const handleAddClient = () => {
+    setIsClientOpen(false)
+    onOpenNewClient()
   }
 
   const handleCancelRecording = () => {
@@ -1184,15 +1209,15 @@ export function useNewSessionModalController({
     setShouldSaveAudio((value) => !value)
   }
 
-  const handleToggleCoacheeDropdown = () => {
+  const handleToggleClientDropdown = () => {
     getDropdownMaxHeight({
       defaultDropdownMaxHeight,
       dropdownSafeBottom,
       windowHeight,
-      target: coacheeTriggerRef.current,
-      onResolved: setCoacheeDropdownMaxHeight,
+      target: clientTriggerRef.current,
+      onResolved: setClientDropdownMaxHeight,
     })
-    setIsCoacheeOpen((value) => !value)
+    setIsClientOpen((value) => !value)
   }
 
   const handleToggleConsent = () => {
@@ -1233,9 +1258,9 @@ export function useNewSessionModalController({
       audioPreviewUrl,
       backdropOpacity,
       bars,
-      coacheeDropdownMaxHeight,
-      coacheeOptions,
-      coacheeTriggerRef,
+      clientDropdownMaxHeight,
+      clientOptions,
+      clientTriggerRef,
       defaultDropdownMaxHeight,
       displayedRecordingElapsedSeconds,
       displayedRecordingMaxSeconds,
@@ -1246,9 +1271,9 @@ export function useNewSessionModalController({
       handleBackdropPress,
       handleOpenSubscriptionFromInsufficientMinutes,
       handlePrimaryActionPress,
-      handleSelectCoachee,
+      handleSelectClient,
       handleSelectOption,
-      handleAddCoachee,
+      handleAddClient,
       handleCancelRecording,
       handleCloseInsufficientMinutes,
       handleCloseRecordedWarning,
@@ -1259,11 +1284,11 @@ export function useNewSessionModalController({
       handleMinimizedCloseWarningConfirm,
       handleMinimizedPauseOrResume,
       handleToggleAudioSave,
-      handleToggleCoacheeDropdown,
+      handleToggleClientDropdown,
       handleToggleConsent,
       hasRecordingConsent,
       insufficientMinutesContext,
-      isCoacheeOpen,
+      isClientOpen,
       isCompactConsent,
       isCompactFooter,
       isCompactUploadFooter,
@@ -1300,7 +1325,7 @@ export function useNewSessionModalController({
       retryRecordingAfterError,
       saveRecordingNote,
       selectedAudioFile,
-      selectedCoacheeName: selectedCoachee?.name ?? unassignedCoacheeLabel,
+      selectedClientName: selectedClient?.name ?? unassignedClientLabel,
       selectedOption,
       selectedOptionGroup,
       sessionTitle,
@@ -1308,7 +1333,7 @@ export function useNewSessionModalController({
       setAudioDurationSeconds,
       setIsMinimizedCloseWarningVisible,
       setRecordingNoteDraft,
-      setSessionTitle,
+      setInputTitle,
       setWaveBarCount,
       shouldRenderRecordingNotesPanel,
       shouldSaveAudio,
@@ -1327,4 +1352,5 @@ export function useNewSessionModalController({
     },
   }
 }
+
 

@@ -1,5 +1,5 @@
 import type { Express } from "express"
-import { requireAuthenticatedUser } from "../../auth"
+import { requireAuthenticatedUser } from "../../identity/auth"
 import { ensureBillingUser, readBillingStatus } from "../../billing/store"
 import { asyncHandler } from "../../http"
 import { randomBase64Url } from "../random"

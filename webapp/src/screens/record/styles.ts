@@ -1,4 +1,4 @@
-﻿import { StyleSheet } from 'react-native'
+import { StyleSheet } from 'react-native'
 
 import { colors } from '../../design/theme/colors'
 
@@ -618,7 +618,7 @@ export const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#2C111F',
   },
-  recordingCardSessionLabel: {
+  recordingCardInputLabel: {
     fontSize: 12,
     lineHeight: 16,
     color: '#93858D',
@@ -1260,7 +1260,7 @@ export const styles = StyleSheet.create({
     color: colors.textStrong,
     textAlignVertical: 'center',
   },
-  coacheePanel: {
+  clientPanel: {
     width: '100%',
     position: 'absolute',
     left: 0,
@@ -1320,13 +1320,13 @@ export const styles = StyleSheet.create({
     lineHeight: 18,
     color: colors.textStrong,
   },
-  coacheeList: {
+  clientList: {
     width: '100%',
   },
-  coacheeListContent: {
+  clientListContent: {
     paddingVertical: 0,
   },
-  coacheeItem: {
+  clientItem: {
     width: '100%',
     height: 48,
     paddingHorizontal: 24,
@@ -1334,34 +1334,35 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  coacheeItemTop: {
+  clientItemTop: {
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
   },
-  coacheeItemBottom: {
+  clientItemBottom: {
     borderBottomLeftRadius: 16,
     borderBottomRightRadius: 16,
   },
-  coacheeItemHovered: {
+  clientItemHovered: {
     backgroundColor: colors.hoverBackground,
   },
-  coacheeItemText: {
+  clientItemText: {
     fontSize: 14,
     lineHeight: 18,
     color: colors.textStrong,
   },
-  coacheeItemAdd: {
+  clientItemAdd: {
     backgroundColor: colors.selected,
   },
-  coacheeItemAddHovered: {
+  clientItemAddHovered: {
     backgroundColor: '#A50058',
   },
-  coacheeItemAddText: {
+  clientItemAddText: {
     fontSize: 14,
     lineHeight: 18,
     color: '#FFFFFF',
   },
 })
+
 
 
 

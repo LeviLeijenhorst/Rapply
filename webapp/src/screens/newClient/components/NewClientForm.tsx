@@ -1,15 +1,15 @@
-﻿import React from 'react'
+import React from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 
 import { colors } from '../../../design/theme/colors'
-import { CoacheeAvatarIcon } from '../../../icons/CoacheeAvatarIcon'
-import type { CoacheeUpsertValues } from '../../../types/clientProfile'
+import { ClientAvatarIcon } from '../../../icons/ClientAvatarIcon'
+import type { ClientUpsertValues } from '../../../types/clientProfile'
 import { Text } from '../../../ui/Text'
 
 type Props = {
-  values: CoacheeUpsertValues
+  values: ClientUpsertValues
   trajectoryLabel: string
-  onChange: (key: keyof CoacheeUpsertValues, value: string) => void
+  onChange: (key: keyof ClientUpsertValues, value: string) => void
 }
 
 const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
@@ -42,51 +42,6 @@ function sanitizeInitialsOnChange(previousValue: string, nextValue: string): str
   return formatInitials(nextLetters)
 }
 
-function pad2(value: number): string {
-  return String(value).padStart(2, '0')
-}
-
-function clampDateDigits(digits: string): string {
-  if (digits.length === 0) return ''
-  const rawDay = digits.slice(0, Math.min(2, digits.length))
-  const rawMonth = digits.length > 2 ? digits.slice(2, Math.min(4, digits.length)) : ''
-  const rawYear = digits.length > 4 ? digits.slice(4) : ''
-
-  let day = rawDay
-  if (rawDay.length === 2) {
-    const dayNumber = Number(rawDay)
-    if (Number.isFinite(dayNumber)) {
-      day = pad2(Math.max(1, Math.min(dayNumber, 31)))
-    }
-  }
-
-  let month = rawMonth
-  if (rawMonth.length === 2) {
-    const monthNumber = Number(rawMonth)
-    if (Number.isFinite(monthNumber)) {
-      month = pad2(Math.max(1, Math.min(monthNumber, 12)))
-    }
-  }
-
-  return `${day}${month}${rawYear}`.slice(0, 8)
-}
-
-function formatDateTyping(raw: string, previousValue: string): string {
-  const previousDigits = previousValue.replace(/\D/g, '').slice(0, 8)
-  const rawDigits = raw.replace(/\D/g, '').slice(0, 8)
-  const digits = clampDateDigits(rawDigits)
-  const isDeleting = rawDigits.length < previousDigits.length
-  const deletingSeparator = isDeleting && previousValue.endsWith('/') && rawDigits.length === previousDigits.length
-
-  if (deletingSeparator && digits.length >= 2) {
-    return `${digits.slice(0, 2)}/`
-  }
-
-  if (digits.length <= 2) return digits.length === 2 ? `${digits}/` : digits
-  if (digits.length <= 4) return digits.length === 4 ? `${digits.slice(0, 2)}/${digits.slice(2)}/` : `${digits.slice(0, 2)}/${digits.slice(2)}`
-  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
-}
-
 function sanitizeBsn(value: string): string {
   return String(value || '').replace(/\D/g, '').slice(0, 9)
 }
@@ -116,7 +71,7 @@ export function NewClientForm({ values, trajectoryLabel, onChange }: Props) {
     <View style={styles.container}>
       <View style={styles.personalHeaderRow}>
         <View style={styles.avatarWrap}>
-          <CoacheeAvatarIcon color={colors.textStrong} size={30} />
+          <ClientAvatarIcon color={colors.textStrong} size={30} />
         </View>
         <Pressable style={({ hovered }) => [styles.changePhotoButton, hovered ? styles.changePhotoButtonHovered : undefined]}>
           <Text style={styles.changePhotoText}>Profielfoto wijzigen</Text>
@@ -139,12 +94,6 @@ export function NewClientForm({ values, trajectoryLabel, onChange }: Props) {
             placeholder="Bijv. J.K."
           />
           <Field label="E-mailadres" value={values.clientEmail} onChange={(value) => onChange('clientEmail', value)} placeholder="naam@email.nl" />
-          <Field
-            label="Geboortedatum"
-            value={values.firstSickDay}
-            onChange={(value) => onChange('firstSickDay', formatDateTyping(value, values.firstSickDay))}
-            placeholder="dd/mm/jjjj"
-          />
           <Field label="Ordernummer" value={values.orderNumber} onChange={(value) => onChange('orderNumber', value)} placeholder="Ordernummer" />
         </View>
 
@@ -260,3 +209,4 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
   },
 })
+

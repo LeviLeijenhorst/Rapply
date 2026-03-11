@@ -10,7 +10,7 @@ import { NewClientAddIcon } from '@/icons/NewClientAddIcon'
 import { OpenActionItemsIcon } from '@/icons/OpenActionItemsIcon'
 import { RecordSummaryIcon } from '@/icons/RecordSummaryIcon'
 import { RecordVideoCallIcon } from '@/icons/RecordVideoCallIcon'
-import { SessionsThisWeekIcon } from '@/icons/SessionsThisWeekIcon'
+import { InputsThisWeekIcon } from '@/icons/InputsThisWeekIcon'
 import { Text } from '@/ui/Text'
 import { SearchBar } from '@/ui/inputs/SearchBar'
 
@@ -34,7 +34,7 @@ function renderQuickInputIcon(action: DashboardQuickInputAction): React.ReactNod
 
 function renderStatIcon(card: DashboardStatCardData): React.ReactNode {
   if (card.id === 'active-clients') return <ActiveClientsIcon size={24} color="#FFFFFF" />
-  if (card.id === 'sessions-this-week') return <SessionsThisWeekIcon size={24} color="#FFFFFF" />
+  if (card.id === 'inputs-this-week') return <InputsThisWeekIcon size={24} color="#FFFFFF" />
   if (card.id === 'reports-this-week') return <ClientPageRapportageIcon size={28} color="#FFFFFF" />
   return <OpenActionItemsIcon size={24} color="#FFFFFF" />
 }
@@ -84,11 +84,11 @@ function ContinueRow({ item, onPress }: { item: DashboardContinueItem; onPress: 
 function OpenActionRow({
   item,
   onOpenReportsPage,
-  onOpenSession,
+  onOpenInput,
 }: {
   item: DashboardOpenActionItem
   onOpenReportsPage: () => void
-  onOpenSession: (sessionId: string) => void
+  onOpenInput: (sessionId: string) => void
 }) {
   const isDisabled = item.kind === 'snippet' && !item.sessionId
 
@@ -100,7 +100,7 @@ function OpenActionRow({
           return
         }
 
-        if (item.sessionId) onOpenSession(item.sessionId)
+        if (item.sessionId) onOpenInput(item.sessionId)
       }}
       disabled={isDisabled}
       style={({ hovered }) => [styles.tableRow, isDisabled ? styles.tableRowDisabled : undefined, hovered && !isDisabled ? styles.tableRowHovered : undefined]}
@@ -246,7 +246,7 @@ export function DashboardScreen(props: DashboardScreenProps) {
                 key={item.id}
                 item={item}
                 onOpenReportsPage={props.onOpenReportsPage}
-                onOpenSession={props.onOpenSession}
+                onOpenInput={props.onOpenInput}
               />
             ))
           ) : (
@@ -259,3 +259,4 @@ export function DashboardScreen(props: DashboardScreenProps) {
     </ScrollView>
   )
 }
+

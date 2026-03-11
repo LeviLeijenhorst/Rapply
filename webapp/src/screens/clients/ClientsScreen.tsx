@@ -13,7 +13,7 @@ import { type ClientListStatus, selectClientListItems } from './selectors/client
 import { filterClientListItems } from './viewModels/clientsViewModel'
 
 type Props = {
-  onSelectCoachee: (coacheeId: string) => void
+  onSelectClient: (clientId: string) => void
   onOpenNewClientPage?: () => void
 }
 
@@ -25,7 +25,7 @@ const FILTER_OPTIONS: Array<{ key: ClientFilter; label: string }> = [
   { key: 'closed', label: 'Afgesloten' },
 ]
 
-export function ClientsScreen({ onSelectCoachee, onOpenNewClientPage }: Props) {
+export function ClientsScreen({ onSelectClient, onOpenNewClientPage }: Props) {
   const { width: windowWidth } = useWindowDimensions()
   const { data } = useLocalAppData()
   const [query, setQuery] = useState('')
@@ -117,13 +117,13 @@ export function ClientsScreen({ onSelectCoachee, onOpenNewClientPage }: Props) {
           <Text isSemibold style={[styles.headerText, styles.sessionColumn]}>Sessies</Text>
           <Text isSemibold style={[styles.headerText, styles.reportsColumn]}>Rapportages</Text>
           <Text isSemibold style={[styles.headerText, styles.statusColumn]}>Status</Text>
-          <Text isSemibold style={[styles.headerText, styles.lastSessionColumn]}>Laatste sessie</Text>
+          <Text isSemibold style={[styles.headerText, styles.lastInputColumn]}>Laatste sessie</Text>
           <View style={styles.chevronColumn} />
         </View>
 
         <ScrollView style={styles.tableBody} showsVerticalScrollIndicator={false}>
           {paginatedItems.map((item) => (
-            <ClientTableRow key={item.clientId} item={item} onPress={onSelectCoachee} />
+            <ClientTableRow key={item.clientId} item={item} onPress={onSelectClient} />
           ))}
           {paginatedItems.length === 0 ? (
             <View style={styles.emptyState}>
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   statusColumn: {
     width: 100,
   },
-  lastSessionColumn: {
+  lastInputColumn: {
     width: 160,
   },
   chevronColumn: {
@@ -398,3 +398,4 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+

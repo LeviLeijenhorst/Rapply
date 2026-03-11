@@ -1,7 +1,7 @@
 import { clearPendingPreviewAudio, clearPendingPreviewAudioIfEligible, listPendingPreviewAudioTasks } from '../../audio/pendingPreviewStore'
 import { deleteAccountApi, fetchCurrentUserProfile as fetchCurrentUserProfileApi, fetchSubscriptionAccessApi, submitFeedbackApi } from '../../api/account/accountApi'
-import { processRecordedSession } from '../../api/transcription/recorded/processRecordedSession'
-import type { Session } from '../../storage/types'
+import { processRecordedInput } from '../../api/transcription/recorded/processRecordedSession'
+import type { Input } from '../../storage/types'
 
 export type SubscriptionAccess = {
   canOpenSubscription: boolean
@@ -55,13 +55,13 @@ export async function fetchCurrentUserProfile(): Promise<CurrentUserProfile> {
 }
 
 export async function resumePendingPreviewAudioTasks(params: {
-  sessions: Session[]
+  inputs: Input[]
   e2ee: any
-  updateSession: (sessionId: string, values: Partial<Session>) => void
+  updateInput: (sessionId: string, values: Partial<Input>) => void
 }): Promise<void> {
   const tasks = await listPendingPreviewAudioTasks()
   for (const task of tasks) {
-    const session = params.sessions.find((item) => item.id === task.sessionId)
+    const session = params.inputs.find((item) => item.id === task.sessionId)
     if (!session) {
       await clearPendingPreviewAudio(task.sessionId)
       continue
@@ -75,7 +75,7 @@ export async function resumePendingPreviewAudioTasks(params: {
       continue
     }
 
-      await processRecordedSession({
+      await processRecordedInput({
       sessionId: task.sessionId,
       audioBlob: task.blob,
       mimeType: task.mimeType,
@@ -83,7 +83,7 @@ export async function resumePendingPreviewAudioTasks(params: {
       summaryTemplate: task.summaryTemplate,
       initialAudioBlobId: session.audioBlobId ?? null,
       e2ee: params.e2ee,
-      updateSession: params.updateSession,
+      updateInput: params.updateInput,
     })
   }
 }
@@ -95,4 +95,5 @@ export async function requestDeleteAccount(): Promise<void> {
 export async function submitFeedbackMessage(message: string): Promise<void> {
   await submitFeedbackApi(message)
 }
+
 

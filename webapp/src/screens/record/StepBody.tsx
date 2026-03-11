@@ -2,8 +2,8 @@ import React from 'react'
 import { Animated, TextInput, View } from 'react-native'
 
 import type { OptionKey } from './utils'
-import type { NewSessionStep } from './types'
-import { SelectSessionTypeStep } from './steps/SelectSessionTypeStep'
+import type { NewInputStep } from './types'
+import { SelectInputTypeStep } from './steps/SelectInputTypeStep'
 import { UploadAudioStep } from './steps/UploadAudioStep'
 import { RecordStep } from './steps/RecordStep'
 import { RecordedStep } from './steps/RecordedStep'
@@ -20,14 +20,14 @@ type StepBodyModel = {
   audioDurationSeconds: number | null
   audioPreviewUrl: string | null
   bars: number[]
-  coacheeDropdownMaxHeight: number | null
-  coacheeOptions: Array<{ id: string | null; name: string }>
+  clientDropdownMaxHeight: number | null
+  clientOptions: Array<{ id: string | null; name: string }>
   defaultDropdownMaxHeight: number
   displayedRecordingElapsedSeconds: number
   gesprekOptionLabel: string
   gespreksverslagOptionLabel: string
   hasRecordingConsent: boolean
-  isCoacheeOpen: boolean
+  isClientOpen: boolean
   isCompactConsent: boolean
   isRecordingPaused: boolean
   isUploadDragActive: boolean
@@ -38,29 +38,29 @@ type StepBodyModel = {
   recorder: RecorderState
   recordingNotesRevealProgress: Animated.Value
   shouldRenderRecordingNotesPanel: boolean
-  selectedCoacheeName: string | null
+  selectedClientName: string | null
   selectedAudioFile: File | null
   selectedOption: OptionKey | null
   selectedOptionGroup: 'gesprek' | 'gespreksverslag' | null
   sessionTitle: string
   sessionTitleInputRef: React.RefObject<TextInput | null>
   shouldSaveAudio: boolean
-  step: NewSessionStep
+  step: NewInputStep
   uploadDropAreaRef: React.RefObject<View | null>
   uploadFileDurationWarning: string | null
   waveBarCount: number
-  coacheeTriggerRef: React.RefObject<any>
-  onAddCoachee: () => void
+  clientTriggerRef: React.RefObject<any>
+  onAddClient: () => void
   onCancelRecording: () => void
   onOpenConsentHelpPage: () => void
   onOpenFilePicker: () => void
   onRetryRecordingAfterError: () => void
-  onSelectCoachee: (coacheeId: string | null) => void
+  onSelectClient: (clientId: string | null) => void
   onSelectOption: (option: OptionKey) => void
-  onSessionTitleChange: (title: string) => void
+  onInputTitleChange: (title: string) => void
   onSetWaveBarCount: (count: number) => void
   onToggleAudioSave: () => void
-  onToggleCoacheeDropdown: () => void
+  onToggleClientDropdown: () => void
   onToggleConsent: () => void
   onUpdateAudioDuration: (seconds: number | null) => void
   onRecordingNoteDraftChange: (value: string) => void
@@ -71,14 +71,14 @@ export function StepBody({
   audioDurationSeconds,
   audioPreviewUrl,
   bars,
-  coacheeDropdownMaxHeight,
-  coacheeOptions,
+  clientDropdownMaxHeight,
+  clientOptions,
   defaultDropdownMaxHeight,
   displayedRecordingElapsedSeconds,
   gesprekOptionLabel,
   gespreksverslagOptionLabel,
   hasRecordingConsent,
-  isCoacheeOpen,
+  isClientOpen,
   isCompactConsent,
   isRecordingPaused,
   isUploadDragActive,
@@ -89,7 +89,7 @@ export function StepBody({
   recorder,
   recordingNotesRevealProgress,
   shouldRenderRecordingNotesPanel,
-  selectedCoacheeName,
+  selectedClientName,
   selectedAudioFile,
   selectedOption,
   selectedOptionGroup,
@@ -100,18 +100,18 @@ export function StepBody({
   uploadDropAreaRef,
   uploadFileDurationWarning,
   waveBarCount,
-  coacheeTriggerRef,
-  onAddCoachee,
+  clientTriggerRef,
+  onAddClient,
   onCancelRecording,
   onOpenConsentHelpPage,
   onOpenFilePicker,
   onRetryRecordingAfterError,
-  onSelectCoachee,
+  onSelectClient,
   onSelectOption,
-  onSessionTitleChange,
+  onInputTitleChange,
   onSetWaveBarCount,
   onToggleAudioSave,
-  onToggleCoacheeDropdown,
+  onToggleClientDropdown,
   onToggleConsent,
   onUpdateAudioDuration,
   onRecordingNoteDraftChange,
@@ -120,7 +120,7 @@ export function StepBody({
   switch (step) {
     case 'select':
       return (
-        <SelectSessionTypeStep
+        <SelectInputTypeStep
           limitedMode={limitedMode}
           gesprekOptionLabel={gesprekOptionLabel}
           gespreksverslagOptionLabel={gespreksverslagOptionLabel}
@@ -152,7 +152,7 @@ export function StepBody({
           recordingNotesRevealProgress={recordingNotesRevealProgress}
           shouldRenderNotesPanel={shouldRenderRecordingNotesPanel}
           recorder={recorder}
-          selectedCoacheeName={selectedCoacheeName}
+          selectedClientName={selectedClientName}
           waveBarCount={waveBarCount}
           onCancelRecording={onCancelRecording}
           onRecordingNoteDraftChange={onRecordingNoteDraftChange}
@@ -166,22 +166,22 @@ export function StepBody({
         <RecordedStep
           audioDurationSeconds={audioDurationSeconds}
           audioPreviewUrl={audioPreviewUrl}
-          coacheeDropdownMaxHeight={coacheeDropdownMaxHeight}
-          coacheeOptions={coacheeOptions}
+          clientDropdownMaxHeight={clientDropdownMaxHeight}
+          clientOptions={clientOptions}
           defaultDropdownMaxHeight={defaultDropdownMaxHeight}
-          isCoacheeOpen={isCoacheeOpen}
+          isClientOpen={isClientOpen}
           limitedMode={limitedMode}
-          selectedCoacheeName={selectedCoacheeName}
+          selectedClientName={selectedClientName}
           selectedOption={selectedOption}
           sessionTitle={sessionTitle}
           sessionTitleInputRef={sessionTitleInputRef}
           shouldSaveAudio={shouldSaveAudio}
-          coacheeTriggerRef={coacheeTriggerRef}
-          onAddCoachee={onAddCoachee}
-          onSelectCoachee={onSelectCoachee}
-          onSessionTitleChange={onSessionTitleChange}
+          clientTriggerRef={clientTriggerRef}
+          onAddClient={onAddClient}
+          onSelectClient={onSelectClient}
+          onInputTitleChange={onInputTitleChange}
           onToggleAudioSave={onToggleAudioSave}
-          onToggleCoacheeDropdown={onToggleCoacheeDropdown}
+          onToggleClientDropdown={onToggleClientDropdown}
           onUpdateAudioDuration={onUpdateAudioDuration}
         />
       )
@@ -199,4 +199,5 @@ export function StepBody({
       return null
   }
 }
+
 

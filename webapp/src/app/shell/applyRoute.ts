@@ -9,7 +9,7 @@ type ApplyRouteSetters = {
   setIsRecordPageOpen: Dispatch<SetStateAction<boolean>>
   setIsNewClientPageOpen: Dispatch<SetStateAction<boolean>>
   setRapportageScreenMode: Dispatch<SetStateAction<'controleren' | 'bewerken'>>
-  setRapportageEditSessionId: Dispatch<SetStateAction<string | null>>
+  setRapportageEditInputId: Dispatch<SetStateAction<string | null>>
   setIsEndToEndEncryptiePageOpen: Dispatch<SetStateAction<boolean>>
   setSelectedSidebarItemKey: Dispatch<SetStateAction<SidebarItemKey>>
   setIsAdminScreenOpen: Dispatch<SetStateAction<boolean>>
@@ -17,10 +17,10 @@ type ApplyRouteSetters = {
   setIsAdminWachtlijstScreenOpen: Dispatch<SetStateAction<boolean>>
   setOverlayScreenKey: Dispatch<SetStateAction<'archief' | null>>
   setSelectedSessieId: Dispatch<SetStateAction<string | null>>
-  setSessionIdPendingTemplatePicker: Dispatch<SetStateAction<string | null>>
-  setSelectedCoacheeId: Dispatch<SetStateAction<string | null>>
+  setInputIdPendingTemplatePicker: Dispatch<SetStateAction<string | null>>
+  setSelectedClientId: Dispatch<SetStateAction<string | null>>
   setSelectedTrajectoryId: Dispatch<SetStateAction<string | null>>
-  setSessionOriginRoute: Dispatch<SetStateAction<RouteState | null>>
+  setInputOriginRoute: Dispatch<SetStateAction<RouteState | null>>
 }
 
 type ApplyRouteParams = ApplyRouteSetters & {
@@ -36,7 +36,7 @@ export function applyRouteToShell(params: ApplyRouteParams): void {
     setIsRecordPageOpen,
     setIsNewClientPageOpen,
     setRapportageScreenMode,
-    setRapportageEditSessionId,
+    setRapportageEditInputId,
     setIsEndToEndEncryptiePageOpen,
     setSelectedSidebarItemKey,
     setIsAdminScreenOpen,
@@ -44,17 +44,17 @@ export function applyRouteToShell(params: ApplyRouteParams): void {
     setIsAdminWachtlijstScreenOpen,
     setOverlayScreenKey,
     setSelectedSessieId,
-    setSessionIdPendingTemplatePicker,
-    setSelectedCoacheeId,
+    setInputIdPendingTemplatePicker,
+    setSelectedClientId,
     setSelectedTrajectoryId,
-    setSessionOriginRoute,
+    setInputOriginRoute,
   } = params
 
   const route = normalizeRouteForAvailability(routeInput)
 
   if (route.kind !== 'nieuwe-rapportage') {
     setRapportageScreenMode('controleren')
-    setRapportageEditSessionId(null)
+    setRapportageEditInputId(null)
   }
 
   if (route.kind === 'archief') {
@@ -68,10 +68,10 @@ export function applyRouteToShell(params: ApplyRouteParams): void {
     setIsAdminWachtlijstScreenOpen(false)
     setOverlayScreenKey('archief')
     setSelectedSessieId(null)
-    setSessionIdPendingTemplatePicker(null)
-    setSelectedCoacheeId(null)
+    setInputIdPendingTemplatePicker(null)
+    setSelectedClientId(null)
     setSelectedTrajectoryId(null)
-    setSessionOriginRoute(null)
+    setInputOriginRoute(null)
     return
   }
 
@@ -85,11 +85,11 @@ export function applyRouteToShell(params: ApplyRouteParams): void {
       setIsAdminContactScreenOpen(false)
       setIsAdminWachtlijstScreenOpen(false)
       setOverlayScreenKey(null)
-      setSelectedSidebarItemKey('coachees')
+      setSelectedSidebarItemKey('clients')
       setSelectedSessieId(null)
-      setSelectedCoacheeId(null)
+      setSelectedClientId(null)
       setSelectedTrajectoryId(null)
-      setSessionOriginRoute(null)
+      setInputOriginRoute(null)
       return
     }
     setIsEndToEndEncryptiePageOpen(false)
@@ -99,10 +99,10 @@ export function applyRouteToShell(params: ApplyRouteParams): void {
     setOverlayScreenKey(null)
     setSelectedSidebarItemKey(route.kind === 'admin' ? 'admin' : route.kind === 'admin-contact' ? 'adminContact' : 'adminWachtlijst')
     setSelectedSessieId(null)
-    setSessionIdPendingTemplatePicker(null)
-    setSelectedCoacheeId(null)
+    setInputIdPendingTemplatePicker(null)
+    setSelectedClientId(null)
     setSelectedTrajectoryId(null)
-    setSessionOriginRoute(null)
+    setInputOriginRoute(null)
     return
   }
 
@@ -116,108 +116,110 @@ export function applyRouteToShell(params: ApplyRouteParams): void {
   setIsNewClientPageOpen(false)
 
   if (route.kind === 'record') {
-    setSelectedSidebarItemKey('coachees')
-    setSelectedCoacheeId(null)
+    setSelectedSidebarItemKey('clients')
+    setSelectedClientId(null)
     setSelectedTrajectoryId(null)
     setSelectedSessieId(null)
-    setSessionOriginRoute(null)
+    setInputOriginRoute(null)
     setIsRecordPageOpen(true)
     return
   }
 
   if (route.kind === 'new-client') {
-    setSelectedSidebarItemKey('coachees')
-    setSelectedCoacheeId(null)
+    setSelectedSidebarItemKey('clients')
+    setSelectedClientId(null)
     setSelectedTrajectoryId(null)
     setSelectedSessieId(null)
-    setSessionOriginRoute(null)
+    setInputOriginRoute(null)
     setIsNewClientPageOpen(true)
     return
   }
 
   if (route.kind === 'reports') {
     setSelectedSidebarItemKey('reports')
-    setSelectedCoacheeId(null)
+    setSelectedClientId(null)
     setSelectedTrajectoryId(null)
     setSelectedSessieId(null)
-    setSessionOriginRoute(null)
+    setInputOriginRoute(null)
     return
   }
 
-  if (route.kind === 'coachees') {
-    setSelectedSidebarItemKey('coachees')
-    setSelectedCoacheeId(null)
+  if (route.kind === 'clients') {
+    setSelectedSidebarItemKey('clients')
+    setSelectedClientId(null)
     setSelectedTrajectoryId(null)
     setSelectedSessieId(null)
-    setSessionOriginRoute(null)
+    setInputOriginRoute(null)
     return
   }
-  if (route.kind === 'coachee') {
-    setSelectedSidebarItemKey('coachees')
-    setSelectedCoacheeId(route.coacheeId)
+  if (route.kind === 'client') {
+    setSelectedSidebarItemKey('clients')
+    setSelectedClientId(route.clientId)
     setSelectedTrajectoryId(null)
     setSelectedSessieId(null)
-    setSessionOriginRoute(null)
+    setInputOriginRoute(null)
     return
   }
   if (route.kind === 'trajectory') {
-    setSelectedSidebarItemKey('coachees')
-    setSelectedCoacheeId(route.coacheeId)
+    setSelectedSidebarItemKey('clients')
+    setSelectedClientId(route.clientId)
     setSelectedTrajectoryId(route.trajectoryId)
     setSelectedSessieId(null)
-    setSessionOriginRoute(null)
+    setInputOriginRoute(null)
     return
   }
-  if (route.kind === 'activities') {
-    setSelectedSidebarItemKey('activities')
-    setSelectedCoacheeId(null)
+  if (route.kind === 'dashboard') {
+    setSelectedSidebarItemKey('dashboard')
+    setSelectedClientId(null)
     setSelectedTrajectoryId(null)
     setSelectedSessieId(null)
-    setSessionOriginRoute(null)
+    setInputOriginRoute(null)
     return
   }
   if (route.kind === 'templates') {
     setSelectedSidebarItemKey('reports')
-    setSelectedCoacheeId(null)
+    setSelectedClientId(null)
     setSelectedTrajectoryId(null)
     setSelectedSessieId(null)
-    setSessionOriginRoute(null)
+    setInputOriginRoute(null)
     return
   }
   if (route.kind === 'nieuwe-rapportage') {
-    setSelectedSidebarItemKey('coachees')
+    setSelectedSidebarItemKey('clients')
     setSelectedSessieId(null)
-    setSessionOriginRoute(null)
+    setInputOriginRoute(null)
     setIsNieuweRapportageOpen(true)
     return
   }
   if (route.kind === 'mijn-praktijk') {
     setSelectedSidebarItemKey('mijnPraktijk')
-    setSelectedCoacheeId(null)
+    setSelectedClientId(null)
     setSelectedTrajectoryId(null)
     setSelectedSessieId(null)
-    setSessionOriginRoute(null)
+    setInputOriginRoute(null)
     return
   }
   if (route.kind === 'sessie') {
-    setSelectedSidebarItemKey('coachees')
+    setSelectedSidebarItemKey('clients')
     setSelectedSessieId(route.sessieId)
-    setSelectedCoacheeId(null)
+    setSelectedClientId(null)
     setSelectedTrajectoryId(null)
-    setSessionOriginRoute(null)
+    setInputOriginRoute(null)
     return
   }
   if (route.kind === 'item') {
-    setSelectedSidebarItemKey('coachees')
+    setSelectedSidebarItemKey('clients')
     setSelectedSessieId(route.itemId)
-    setSelectedCoacheeId(route.coacheeId)
+    setSelectedClientId(route.clientId)
     setSelectedTrajectoryId(route.trajectoryId)
-    setSessionOriginRoute({ kind: 'trajectory', coacheeId: route.coacheeId, trajectoryId: route.trajectoryId })
+    setInputOriginRoute({ kind: 'trajectory', clientId: route.clientId, trajectoryId: route.trajectoryId })
     return
   }
-  setSelectedSidebarItemKey('coachees')
+  setSelectedSidebarItemKey('clients')
   setSelectedSessieId(null)
-  setSelectedCoacheeId(null)
+  setSelectedClientId(null)
   setSelectedTrajectoryId(null)
-  setSessionOriginRoute(null)
+  setInputOriginRoute(null)
 }
+
+

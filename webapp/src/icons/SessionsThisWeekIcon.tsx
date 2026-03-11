@@ -6,7 +6,7 @@ type Props = {
   size?: number
 }
 
-export function SessionsThisWeekIcon({ color = '#FFFFFF', size = 24 }: Props) {
+export function InputsThisWeekIcon({ color = '#FFFFFF', size = 24 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -20,3 +20,4 @@ export function SessionsThisWeekIcon({ color = '#FFFFFF', size = 24 }: Props) {
     </Svg>
   )
 }
+

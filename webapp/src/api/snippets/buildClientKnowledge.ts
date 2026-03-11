@@ -3,7 +3,7 @@ import { classifySnippetType } from './classifySnippetType'
 
 export function buildClientKnowledge(snippets: Snippet[]): string {
   const approved = snippets.filter((snippet) => snippet.status === 'approved')
-  const bySession = new Map<string, string[]>()
+  const byInput = new Map<string, string[]>()
 
   for (const snippet of approved) {
     const sessionId = String((snippet as any).sessionId ?? (snippet as any).itemId ?? 'unknown-session')
@@ -11,12 +11,13 @@ export function buildClientKnowledge(snippets: Snippet[]): string {
     const label = classifySnippetType(field)
     const text = String(snippet.text || '').trim()
     if (!text) continue
-    const lines = bySession.get(sessionId) ?? []
+    const lines = byInput.get(sessionId) ?? []
     lines.push(`- [${label}] ${text}`)
-    bySession.set(sessionId, lines)
+    byInput.set(sessionId, lines)
   }
 
-  return [...bySession.entries()]
-    .map(([sessionId, lines]) => `Session ${sessionId}:\n${lines.join('\n')}`)
+  return [...byInput.entries()]
+    .map(([sessionId, lines]) => `Input ${sessionId}:\n${lines.join('\n')}`)
     .join('\n\n')
 }
+

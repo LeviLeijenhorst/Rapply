@@ -1,4 +1,4 @@
-import { extractSessionSnippets } from './extractSessionSnippets'
+import { extractInputSnippets } from './extractInputSnippets'
 
 type PreviewSnippet = {
   field: string
@@ -19,7 +19,7 @@ export async function previewSnippetExtraction(params: {
   snippets: PreviewSnippet[]
   debugChunks: PreviewChunk[]
 }> {
-  const snippets = (await extractSessionSnippets({
+  const snippets = (await extractInputSnippets({
     sessionId: 'ai-lab-session',
     clientId: 'ai-lab-client',
     trajectoryId: 'ai-lab-trajectory',
@@ -45,3 +45,4 @@ export async function previewSnippetExtraction(params: {
     ],
   }
 }
+

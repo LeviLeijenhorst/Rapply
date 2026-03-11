@@ -1,7 +1,7 @@
 import type { Express } from "express"
-import { requireAuthenticatedUser } from "../../auth"
+import { requireAuthenticatedUser } from "../../identity/auth"
 import { asyncHandler } from "../../http"
-import { updateUserDisplayName } from "../../users"
+import { updateUserDisplayName } from "../../identity/users"
 
 export function registerAccountRoutes(app: Express): void {
   app.post(

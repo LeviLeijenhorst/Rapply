@@ -7,7 +7,7 @@ import { colors } from '../../../design/theme/colors'
 import { webTransitionSmooth } from '../../../design/theme/transitions'
 import { styles } from '../styles'
 
-type SessionOptionRowProps = {
+type InputOptionRowProps = {
   id?: string
   label: string
   leftIcon: React.ReactNode
@@ -17,7 +17,7 @@ type SessionOptionRowProps = {
   onPress: () => void
 }
 
-export function SessionOptionRow({ id, label, leftIcon, showChevron = false, isExpanded = false, isSelected, onPress }: SessionOptionRowProps) {
+export function InputOptionRow({ id, label, leftIcon, showChevron = false, isExpanded = false, isSelected, onPress }: InputOptionRowProps) {
   return (
     <Pressable
       id={id}
@@ -49,6 +49,7 @@ export function SessionOptionRow({ id, label, leftIcon, showChevron = false, isE
     </Pressable>
   )
 }
+
 
 
 

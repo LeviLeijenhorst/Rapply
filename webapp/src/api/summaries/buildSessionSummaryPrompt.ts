@@ -22,7 +22,7 @@ function formatTemplate(template: SummaryTemplate | undefined): string {
   ].join('\n')
 }
 
-export function buildSessionSummaryPrompt(params: {
+export function buildInputSummaryPrompt(params: {
   transcript: string
   template?: SummaryTemplate
 }): string {
@@ -40,3 +40,4 @@ export function buildSessionSummaryPrompt(params: {
     .join('\n')
     .trim()
 }
+

@@ -12,7 +12,7 @@ type InsufficientMinutesContext = {
   kind: 'recording' | 'upload'
 }
 
-type SessionWarningModalsModel = {
+type InputWarningModalsModel = {
   insufficientMinutesContext: InsufficientMinutesContext | null
   isInsufficientMinutesWarningVisible: boolean
   isRecordedCloseWarningVisible: boolean
@@ -23,7 +23,7 @@ type SessionWarningModalsModel = {
   onOpenSubscriptionFromInsufficientMinutes: () => void
 }
 
-export function SessionWarningModals({
+export function InputWarningModals({
   insufficientMinutesContext,
   isInsufficientMinutesWarningVisible,
   isRecordedCloseWarningVisible,
@@ -32,7 +32,7 @@ export function SessionWarningModals({
   onConfirmRecordedDelete,
   onDownloadAudioForInsufficientMinutes,
   onOpenSubscriptionFromInsufficientMinutes,
-}: SessionWarningModalsModel) {
+}: InputWarningModalsModel) {
   return (
     <>
       <Modal
@@ -117,4 +117,5 @@ export function SessionWarningModals({
     </>
   )
 }
+
 

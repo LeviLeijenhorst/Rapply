@@ -1,7 +1,7 @@
-import { clearQuickQuestionsChatForSession, loadQuickQuestionsChatForSession, saveQuickQuestionsChatForSession } from '../quickQuestionsChatStore'
+import { clearChatBotForInput, loadChatBotForInput, saveChatBotForInput } from '../chatBotStore'
 
 export const sessionChatStore = {
-  load: loadQuickQuestionsChatForSession,
-  save: saveQuickQuestionsChatForSession,
-  clear: clearQuickQuestionsChatForSession,
+  load: loadChatBotForInput,
+  save: saveChatBotForInput,
+  clear: clearChatBotForInput,
 }

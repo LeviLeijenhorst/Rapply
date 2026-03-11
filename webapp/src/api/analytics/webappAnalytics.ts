@@ -48,7 +48,7 @@ export function getAnalyticsAnonymousId(): string {
   return readOrCreateStorageId('coachscribe_analytics_anon_id')
 }
 
-export function getAnalyticsSessionId(): string {
+export function getAnalyticsInputId(): string {
   return readOrCreateStorageId('coachscribe_analytics_session_id')
 }
 
@@ -121,7 +121,7 @@ function normalizeEvent(event: AnalyticsEvent): AnalyticsEvent {
     action: event.action ?? null,
     path: event.path ?? null,
     anonymousId: event.anonymousId ?? getAnalyticsAnonymousId(),
-    sessionId: event.sessionId ?? getAnalyticsSessionId(),
+    sessionId: event.sessionId ?? getAnalyticsInputId(),
     metadata: event.metadata ?? {},
     occurredAt: event.occurredAt ?? new Date().toISOString(),
   }
@@ -154,3 +154,4 @@ export function trackWebappError(error: unknown, metadata?: Record<string, unkno
     options,
   )
 }
+

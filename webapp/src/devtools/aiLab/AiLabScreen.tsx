@@ -9,13 +9,13 @@ import { exportUwvTemplateWord } from '../../api/reports/exportToUWVWordDocument
 import { previewSnippetExtraction } from '../../api/snippets/previewSnippetExtraction'
 import { generateReportFromSource } from '../../api/reports/generateReport'
 import { buildClientKnowledge } from '../../api/snippets/buildClientKnowledge'
-import { transcribeAudioFile } from '../../api/transcription/batch/transcribeAudioFile'
+import { transcribeAudioFile } from '../../api/transcription/batch/transcribeInputsBatch'
 import {
   fetchRealtimeTranscriptionRuntime,
   startRealtimeTranscription,
-  type RealtimeTranscriberSession,
-} from '../../api/transcription/realtime/startRealtimeTranscription'
-import { buildCoacheeStructuredSystemMessages, buildConversationTranscriptSystemMessages } from '../../content/assistantContext'
+  type RealtimeTranscriberInput,
+} from '../../api/transcription/realtime/transcribeAudioRealtime'
+import { buildClientStructuredSystemMessages, buildConversationTranscriptSystemMessages } from '../../content/assistantContext'
 import type { Snippet } from '../../types/snippet'
 import { Text } from '../../ui/Text'
 
@@ -256,9 +256,9 @@ function allExportWordFields(templateId: ExportWordTemplateId): ExportWordFieldD
 }
 
 function buildRealisticClientChatContextMessages(): LocalChatMessage[] {
-  return buildCoacheeStructuredSystemMessages({
-    coacheeName: 'Jan de Vries',
-    coacheeCreatedAtUnixMs: Date.parse('2025-11-01T10:00:00Z'),
+  return buildClientStructuredSystemMessages({
+    clientName: 'Jan de Vries',
+    clientCreatedAtUnixMs: Date.parse('2025-11-01T10:00:00Z'),
     clientDetails: JSON.stringify({
       initials: 'J.',
       lastName: 'de Vries',
@@ -269,16 +269,13 @@ function buildRealisticClientChatContextMessages(): LocalChatMessage[] {
       organizationName: 'DeltaLogistiek BV',
       contactName: 'M. Jansen',
     }),
-    firstSickDay: '2024-09-12',
-    sessions: [
+    inputs: [
       {
         title: 'Intake',
         createdAtUnixMs: Date.parse('2026-01-10T09:00:00Z'),
         summary: 'Client ervaart stress bij terugkeer naar werk. Er is behoefte aan ritmeopbouw en een helder opbouwplan.',
         reportText: 'Tijdens de intake is afgesproken om belastbaarheid rustig op te bouwen en arbeidsmarktoriÃ«ntatie pas later te starten.',
         reportDate: '2026-01-10',
-        wvpWeekNumber: '16',
-        reportFirstSickDay: '2024-09-12',
       },
       {
         title: 'Voortgang week 4',
@@ -286,8 +283,6 @@ function buildRealisticClientChatContextMessages(): LocalChatMessage[] {
         summary: 'Client heeft twee netwerkgesprekken gevoerd en werkt stabieler volgens dagstructuur.',
         reportText: null,
         reportDate: '2026-02-07',
-        wvpWeekNumber: '20',
-        reportFirstSickDay: '2024-09-12',
       },
     ],
     snippets: [
@@ -296,11 +291,11 @@ function buildRealisticClientChatContextMessages(): LocalChatMessage[] {
       { sessionId: 'sessie-week-4', field: 'general', text: 'Client noemt steun van partner als helpende factor.' },
     ],
     maxTotalCharacters: 12000,
-    maxSessionCharacters: 2200,
+    maxInputCharacters: 2200,
   })
 }
 
-function buildRealisticSessionChatContextMessages(): LocalChatMessage[] {
+function buildRealisticInputChatContextMessages(): LocalChatMessage[] {
   return [
     ...buildConversationTranscriptSystemMessages({
       sessionId: 'dev-session-001',
@@ -457,7 +452,7 @@ export function AiLabScreen() {
   const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>('batch')
   const [batchAudioFile, setBatchAudioFile] = useState<File | null>(null)
   const [isTranscribingBatch, setIsTranscribingBatch] = useState(false)
-  const [realtimeSession, setRealtimeSession] = useState<RealtimeTranscriberSession | null>(null)
+  const [realtimeInput, setRealtimeInput] = useState<RealtimeTranscriberInput | null>(null)
   const [isRealtimeRunning, setIsRealtimeRunning] = useState(false)
   const [isRealtimePaused, setIsRealtimePaused] = useState(false)
   const [isRealtimeBusy, setIsRealtimeBusy] = useState(false)
@@ -467,7 +462,7 @@ export function AiLabScreen() {
   const [snippetSourceType, setSnippetSourceType] = useState<SnippetSourceType>('transcript')
   const [snippetInputMode, setSnippetInputMode] = useState<SnippetInputMode>('text')
   const [snippetInputText, setSnippetInputText] = useState('')
-  const [snippetRealtimeSession, setSnippetRealtimeSession] = useState<RealtimeTranscriberSession | null>(null)
+  const [snippetRealtimeInput, setSnippetRealtimeInput] = useState<RealtimeTranscriberInput | null>(null)
   const [isSnippetRealtimeRunning, setIsSnippetRealtimeRunning] = useState(false)
   const [isSnippetRealtimePaused, setIsSnippetRealtimePaused] = useState(false)
   const [isSnippetRealtimeBusy, setIsSnippetRealtimeBusy] = useState(false)
@@ -512,7 +507,7 @@ export function AiLabScreen() {
   const [error, setError] = useState('')
   const [isCopyingSnapshot, setIsCopyingSnapshot] = useState(false)
 
-  const resolvedSessionDate = nowMs()
+  const resolvedInputDate = nowMs()
 
   const selectedReportTemplate = useMemo(
     () => reportTypeOptions.find((item) => item.value === reportType) || reportTypeOptions[0],
@@ -572,27 +567,27 @@ export function AiLabScreen() {
   useEffect(() => {
     if (snippetSourceType === 'written_recap') {
       setSnippetInputMode('text')
-      if (snippetRealtimeSession) {
-        void snippetRealtimeSession.stop().catch(() => {})
+      if (snippetRealtimeInput) {
+        void snippetRealtimeInput.stop().catch(() => {})
       }
-      setSnippetRealtimeSession(null)
+      setSnippetRealtimeInput(null)
       setIsSnippetRealtimeRunning(false)
       setIsSnippetRealtimePaused(false)
       setIsSnippetRealtimeBusy(false)
     }
-  }, [snippetSourceType, snippetRealtimeSession])
+  }, [snippetSourceType, snippetRealtimeInput])
 
   useEffect(() => {
     if (snippetInputMode === 'text') {
-      if (snippetRealtimeSession) {
-        void snippetRealtimeSession.stop().catch(() => {})
+      if (snippetRealtimeInput) {
+        void snippetRealtimeInput.stop().catch(() => {})
       }
-      setSnippetRealtimeSession(null)
+      setSnippetRealtimeInput(null)
       setIsSnippetRealtimeRunning(false)
       setIsSnippetRealtimePaused(false)
       setIsSnippetRealtimeBusy(false)
     }
-  }, [snippetInputMode, snippetRealtimeSession])
+  }, [snippetInputMode, snippetRealtimeInput])
 
   const addManualSnippetInput = () => {
     setManualSnippetInputs((current) => [...current, ''])
@@ -690,7 +685,7 @@ export function AiLabScreen() {
         },
         onError: (message) => setFail(message),
       })
-      setRealtimeSession(session)
+      setRealtimeInput(session)
       setIsRealtimeRunning(true)
       setIsRealtimePaused(false)
       setOk('Realtime transcription started.')
@@ -704,8 +699,8 @@ export function AiLabScreen() {
   const stopRealtime = async () => {
     try {
       setIsRealtimeBusy(true)
-      await realtimeSession?.stop()
-      setRealtimeSession(null)
+      await realtimeInput?.stop()
+      setRealtimeInput(null)
       setIsRealtimeRunning(false)
       setIsRealtimePaused(false)
       setOk('Realtime transcription stopped.')
@@ -720,8 +715,8 @@ export function AiLabScreen() {
     if (!isRealtimeRunning) return
     try {
       setIsRealtimeBusy(true)
-      await realtimeSession?.stop()
-      setRealtimeSession(null)
+      await realtimeInput?.stop()
+      setRealtimeInput(null)
       setIsRealtimeRunning(false)
       setIsRealtimePaused(true)
       setOk('Realtime transcription paused.')
@@ -735,9 +730,9 @@ export function AiLabScreen() {
   const cancelRealtime = async () => {
     try {
       setIsRealtimeBusy(true)
-      await realtimeSession?.stop()
+      await realtimeInput?.stop()
     } catch {}
-    setRealtimeSession(null)
+    setRealtimeInput(null)
     setIsRealtimeRunning(false)
     setIsRealtimePaused(false)
     setTranscriptionResult('')
@@ -761,7 +756,7 @@ export function AiLabScreen() {
         },
         onError: (message) => setFail(message),
       })
-      setSnippetRealtimeSession(session)
+      setSnippetRealtimeInput(session)
       setIsSnippetRealtimeRunning(true)
       setIsSnippetRealtimePaused(false)
       setOk('Realtime snippet input started.')
@@ -775,8 +770,8 @@ export function AiLabScreen() {
   const stopSnippetRealtime = async () => {
     try {
       setIsSnippetRealtimeBusy(true)
-      await snippetRealtimeSession?.stop()
-      setSnippetRealtimeSession(null)
+      await snippetRealtimeInput?.stop()
+      setSnippetRealtimeInput(null)
       setIsSnippetRealtimeRunning(false)
       setIsSnippetRealtimePaused(false)
       setOk('Realtime snippet input stopped.')
@@ -791,8 +786,8 @@ export function AiLabScreen() {
     if (!isSnippetRealtimeRunning) return
     try {
       setIsSnippetRealtimeBusy(true)
-      await snippetRealtimeSession?.stop()
-      setSnippetRealtimeSession(null)
+      await snippetRealtimeInput?.stop()
+      setSnippetRealtimeInput(null)
       setIsSnippetRealtimeRunning(false)
       setIsSnippetRealtimePaused(true)
       setOk('Realtime snippet input paused.')
@@ -806,9 +801,9 @@ export function AiLabScreen() {
   const cancelSnippetRealtime = async () => {
     try {
       setIsSnippetRealtimeBusy(true)
-      await snippetRealtimeSession?.stop()
+      await snippetRealtimeInput?.stop()
     } catch {}
-    setSnippetRealtimeSession(null)
+    setSnippetRealtimeInput(null)
     setIsSnippetRealtimeRunning(false)
     setIsSnippetRealtimePaused(false)
     setSnippetInputText('')
@@ -1147,8 +1142,8 @@ export function AiLabScreen() {
     setOk('Realistic client chat scenario loaded.')
   }
 
-  const loadSessionChatScenario = () => {
-    const contextMessages = buildRealisticSessionChatContextMessages()
+  const loadInputChatScenario = () => {
+    const contextMessages = buildRealisticInputChatContextMessages()
     setChatContextMessagesJson(JSON.stringify(contextMessages, null, 2))
     setIncludeKnowledgeInChat('no')
     setChatSnippetScope('session')
@@ -1568,7 +1563,7 @@ export function AiLabScreen() {
           <Text style={styles.sectionTitle}>Chat messaging</Text>
           <View style={styles.row}>
             <ActionButton onPress={loadClientChatScenario} label="Load client scenario" variant="secondary" />
-            <ActionButton onPress={loadSessionChatScenario} label="Load session scenario" variant="secondary" />
+            <ActionButton onPress={loadInputChatScenario} label="Load session scenario" variant="secondary" />
           </View>
           <View style={styles.chatLayout}>
             <View style={styles.chatColumn}>
@@ -1639,7 +1634,7 @@ export function AiLabScreen() {
                 value={chatSnippetScope}
                 onChange={(value) => setChatSnippetScope(value as ChatSnippetScope)}
                 options={[
-                  { value: 'session', label: 'Session chatbot' },
+                  { value: 'session', label: 'Input chatbot' },
                   { value: 'client', label: 'Client chatbot' },
                 ]}
               />
@@ -1951,4 +1946,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 })
+
 

@@ -15,7 +15,6 @@ Defined in `webapp/src/components/Sidebar.tsx` and handled in `webapp/src/compon
 
 Future-facing routes intentionally disabled in current product surface:
 
-- `activities` (`/activiteiten`) remains in the internal route model, but is disabled in navigation.
 - `templates` (`/templates`) remains in the internal route model, but is disabled in navigation.
 - Direct access to disabled feature routes is normalized to `/clienten`.
 
@@ -49,7 +48,6 @@ Helper functions for explicit checks are centralized in `webapp/src/utils/sessio
 
 Defined in `webapp/src/config/features.ts`.
 
-- `features.activities = false`: activity tabs/panels remain hidden.
 - `features.templates = false`: templates/dashboard feature area remains hidden.
 - `features.documentenTab = false`: documenten tab remains hidden in rapportage setup.
 

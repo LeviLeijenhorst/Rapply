@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native'
 
 import { colors } from '../../../design/theme/colors'
 import { webTransitionSmooth } from '../../../design/theme/transitions'
-import { CoacheeAvatarIcon } from '../../../icons/CoacheeAvatarIcon'
+import { ClientAvatarIcon } from '../../../icons/ClientAvatarIcon'
 import { MoreOptionsIcon } from '../../../icons/MoreOptionsIcon'
 import { ActionMenu } from '../../../ui/overlays/ActionMenu'
 import { TrashIcon } from '../../../icons/TrashIcon'
@@ -51,21 +51,21 @@ export function ArchivedClientCard({ name, onRestore, onDelete }: Props) {
   return (
     <>
       <View style={styles.card}>
-        {/* Archived coachee card */}
+        {/* Archived client card */}
         <View style={styles.iconCircle}>
-          {/* Coachee icon */}
-          <CoacheeAvatarIcon color={colors.selected} size={24} />
+          {/* Client icon */}
+          <ClientAvatarIcon color={colors.selected} size={24} />
         </View>
 
-        {/* Coachee text */}
+        {/* Client text */}
         <View style={styles.textColumn}>
-          {/* Coachee name */}
+          {/* Client name */}
           <Text isSemibold numberOfLines={1} style={styles.name}>
             {name}
           </Text>
         </View>
 
-        {/* Coachee actions */}
+        {/* Client actions */}
         <View style={styles.actions}>
           <Pressable
             ref={moreButtonRef}
@@ -158,5 +158,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.hoverBackground,
   },
 })
+
 
 

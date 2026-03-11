@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 import { LoadingSpinner } from '../../../ui/LoadingSpinner'
 
@@ -11,7 +11,7 @@ import { HoursPerMonthIcon } from '../../../icons/HoursPerMonthIcon'
 import { VerslagGenererenIcon } from '../../../icons/VerslagGenererenIcon'
 import { CalendarCircleIcon } from '../../../icons/CalendarCircleIcon'
 import { StandaardVerslagIcon } from '../../../icons/StandaardVerslagIcon'
-import { CoacheesIcon } from '../../../icons/CoacheesIcon'
+import { ClientsIcon } from '../../../icons/ClientsIcon'
 import { SecuritySafeIcon } from '../../../icons/SecuritySafeIcon'
 import { fetchPricingPlansAndVisibility, fetchPricingVisibility } from '../../../api/contact/pricingAndContactApi'
 import { Button } from '../../../ui/Button'
@@ -56,9 +56,9 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
   const [isExtraMinutesCheckoutBusy, setIsExtraMinutesCheckoutBusy] = useState(false)
   const [isCancelBusy, setIsCancelBusy] = useState(false)
   const [hourlyRate, setHourlyRate] = useState(75)
-  const [sessionsPerWeek, setSessionsPerWeek] = useState(10)
+  const [inputsPerWeek, setInputsPerWeek] = useState(10)
   const [currentMinutes, setCurrentMinutes] = useState(20)
-  const [newSessionsPercentage, setNewSessionsPercentage] = useState(50)
+  const [newInputsPercentage, setNewInputsPercentage] = useState(50)
   const { showErrorToast } = useToast()
   const inputWebStyle = useMemo(() => ({ outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any), [])
   const rangeInputWebStyle = useMemo(() => ({ cursor: 'pointer', accentColor: colors.selected } as any), [])
@@ -116,10 +116,10 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
   const monthlySubscriptionCost = primaryPlan?.monthlyPrice ?? 0
   const toolMinutes = 8
   const weeksPerYear = 46
-  const currentHoursWeek = (sessionsPerWeek * currentMinutes) / 60
-  const toolHoursWeek = (sessionsPerWeek * toolMinutes) / 60
+  const currentHoursWeek = (inputsPerWeek * currentMinutes) / 60
+  const toolHoursWeek = (inputsPerWeek * toolMinutes) / 60
   const hoursSavedWeek = Math.max(0, currentHoursWeek - toolHoursWeek)
-  const eurSavedWeek = hoursSavedWeek * hourlyRate * (newSessionsPercentage / 100)
+  const eurSavedWeek = hoursSavedWeek * hourlyRate * (newInputsPercentage / 100)
   const eurSavedMonth = eurSavedWeek * 4.33
   const eurSavedYear = eurSavedWeek * weeksPerYear
   const monthlyNetProfit = eurSavedMonth - monthlySubscriptionCost
@@ -287,10 +287,10 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                       <View style={styles.inputRow}>
                         <View style={styles.textInputWrap}>
                           <TextInput
-                            value={String(sessionsPerWeek)}
+                            value={String(inputsPerWeek)}
                             onChangeText={(value) => {
                               const digitsOnly = value.replace(/[^\d]/g, '')
-                              setSessionsPerWeek(clamp(digitsOnly ? Number(digitsOnly) : 0, 1, 40))
+                              setInputsPerWeek(clamp(digitsOnly ? Number(digitsOnly) : 0, 1, 40))
                             }}
                             keyboardType="numeric"
                             style={[styles.textInput, inputWebStyle]}
@@ -306,8 +306,8 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                           min={1}
                           max={40}
                           step={1}
-                          value={sessionsPerWeek}
-                          onChange={(event) => setSessionsPerWeek(Number(event.currentTarget.value))}
+                          value={inputsPerWeek}
+                          onChange={(event) => setInputsPerWeek(Number(event.currentTarget.value))}
                           style={{ ...(styles.rangeInput as any), ...rangeInputWebStyle }}
                         />
                       </View>
@@ -351,10 +351,10 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                       <View style={styles.inputRow}>
                         <View style={styles.textInputWrap}>
                           <TextInput
-                            value={String(newSessionsPercentage)}
+                            value={String(newInputsPercentage)}
                             onChangeText={(value) => {
                               const digitsOnly = value.replace(/[^\d]/g, '')
-                              setNewSessionsPercentage(clamp(digitsOnly ? Number(digitsOnly) : 0, 0, 100))
+                              setNewInputsPercentage(clamp(digitsOnly ? Number(digitsOnly) : 0, 0, 100))
                             }}
                             keyboardType="numeric"
                             style={[styles.textInput, inputWebStyle]}
@@ -370,8 +370,8 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                           min={0}
                           max={100}
                           step={1}
-                          value={newSessionsPercentage}
-                          onChange={(event) => setNewSessionsPercentage(Number(event.currentTarget.value))}
+                          value={newInputsPercentage}
+                          onChange={(event) => setNewInputsPercentage(Number(event.currentTarget.value))}
                           style={{ ...(styles.rangeInput as any), ...rangeInputWebStyle }}
                         />
                       </View>
@@ -434,8 +434,8 @@ export function MySubscriptionModal({ visible, onClose }: Props) {
                         <Text style={styles.featureText}>Veilige opslag binnen de EU</Text>
                       </View>
                       <View style={styles.featureRow}>
-                        <CoacheesIcon color={colors.selected} size={22} />
-                        <Text style={styles.featureText}>Alle informatie over al je cli�nten op ��n plek</Text>
+                        <ClientsIcon color={colors.selected} size={22} />
+                        <Text style={styles.featureText}>Alle informatie over al je cli?nten op ??n plek</Text>
                       </View>
                     </View>
                     <Button
@@ -770,4 +770,5 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 })
+
 

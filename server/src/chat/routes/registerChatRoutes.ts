@@ -1,6 +1,6 @@
 import type { Express, RequestHandler } from "express"
 import { normalizeText } from "../../ai/shared/normalize"
-import { requireAuthenticatedUser } from "../../auth"
+import { requireAuthenticatedUser } from "../../identity/auth"
 import { readManualPricingContextForUser } from "../../billing/manualPricing"
 import { isMollieConfigured, syncMollieSubscriptionForUser, syncRecentMolliePaymentsForUser } from "../../billing/mollie"
 import { ensureBillingUser, readBillingStatus } from "../../billing/store"

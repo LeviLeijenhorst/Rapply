@@ -1,10 +1,10 @@
-import { getCoacheeUpsertValues, type CoacheeUpsertValues } from '../../../types/clientProfile'
+import { getClientUpsertValues, type ClientUpsertValues } from '../../../types/clientProfile'
 
-export function createInitialNewClientValues(): CoacheeUpsertValues {
-  return getCoacheeUpsertValues(null)
+export function createInitialNewClientValues(): ClientUpsertValues {
+  return getClientUpsertValues(null)
 }
 
-export function sanitizeNewClientValues(values: CoacheeUpsertValues): CoacheeUpsertValues {
+export function sanitizeNewClientValues(values: ClientUpsertValues): ClientUpsertValues {
   return {
     ...values,
     clientAddress: '',
@@ -13,6 +13,7 @@ export function sanitizeNewClientValues(values: CoacheeUpsertValues): CoacheeUps
   }
 }
 
-export function isNewClientFormValid(values: CoacheeUpsertValues): boolean {
+export function isNewClientFormValid(values: ClientUpsertValues): boolean {
   return values.firstName.trim().length > 0 && values.lastName.trim().length > 0
 }
+

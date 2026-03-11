@@ -10,8 +10,6 @@ type ReportRow = {
   state: "incomplete" | "needs_review" | "complete"
   report_text: string
   report_date: string | null
-  first_sick_day: string | null
-  wvp_week_number: string | null
   created_at_unix_ms: number
   updated_at_unix_ms: number
 }
@@ -28,8 +26,6 @@ function mapReportRowToReport(row: ReportRow): Report {
     state: row.state,
     reportText: row.report_text,
     reportDate: row.report_date,
-    firstSickDay: row.first_sick_day,
-    wvpWeekNumber: row.wvp_week_number,
     createdAtUnixMs: Number(row.created_at_unix_ms),
     updatedAtUnixMs: Number(row.updated_at_unix_ms),
   }
@@ -39,7 +35,7 @@ function mapReportRowToReport(row: ReportRow): Report {
 export async function listReports(userId: string): Promise<Report[]> {
   const rows = await queryMany<ReportRow>(
     `
-    select id, client_id, source_input_id, title, report_type, state, report_text, report_date, first_sick_day, wvp_week_number, created_at_unix_ms, updated_at_unix_ms
+    select id, client_id, source_input_id, title, report_type, state, report_text, report_date, created_at_unix_ms, updated_at_unix_ms
     from public.reports
     where owner_user_id = $1
     order by updated_at_unix_ms desc
@@ -75,9 +71,9 @@ export async function saveReport(userId: string, report: Report): Promise<void> 
     `
     insert into public.reports (
       id, owner_user_id, client_id, source_input_id, title, report_type, state, report_text,
-      report_date, first_sick_day, wvp_week_number, created_at_unix_ms, updated_at_unix_ms
+      report_date, created_at_unix_ms, updated_at_unix_ms
     )
-    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     on conflict (id) do update
       set client_id = excluded.client_id,
           source_input_id = excluded.source_input_id,
@@ -86,8 +82,6 @@ export async function saveReport(userId: string, report: Report): Promise<void> 
           state = excluded.state,
           report_text = excluded.report_text,
           report_date = excluded.report_date,
-          first_sick_day = excluded.first_sick_day,
-          wvp_week_number = excluded.wvp_week_number,
           updated_at_unix_ms = excluded.updated_at_unix_ms
     `,
     [
@@ -100,8 +94,6 @@ export async function saveReport(userId: string, report: Report): Promise<void> 
       report.state,
       report.reportText,
       report.reportDate,
-      report.firstSickDay,
-      report.wvpWeekNumber,
       report.createdAtUnixMs,
       report.updatedAtUnixMs,
     ],

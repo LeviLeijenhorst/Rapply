@@ -28,7 +28,7 @@ async function wait(ms: number): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, ms))
 }
 
-export async function generateSessionSummary(params: {
+export async function generateInputSummary(params: {
   prompt: string
   signal?: AbortSignal
   responseMode?: SummaryResponseMode
@@ -61,3 +61,4 @@ export async function generateSessionSummary(params: {
 
   return summary
 }
+

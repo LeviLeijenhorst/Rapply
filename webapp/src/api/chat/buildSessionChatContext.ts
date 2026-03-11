@@ -1,7 +1,7 @@
 import type { Snippet } from '../../types/snippet'
 import type { Note } from '../../types/note'
 
-export function buildSessionChatContext(params: {
+export function buildInputChatContext(params: {
   transcript: string
   summary: string
   snippets: Snippet[]
@@ -11,3 +11,4 @@ export function buildSessionChatContext(params: {
   const noteText = params.notes.map((note) => `- ${note.title}: ${note.text}`).join('\n')
   return `Transcript:\n${params.transcript}\n\nSummary:\n${params.summary}\n\nSnippets:\n${snippetText}\n\nNotes:\n${noteText}`
 }
+

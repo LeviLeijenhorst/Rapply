@@ -1,6 +1,6 @@
 import type { Express } from "express"
 import express from "express"
-import { requireAuthenticatedUser } from "../../auth"
+import { requireAuthenticatedUser } from "../../identity/auth"
 import { asyncHandler, sendError } from "../../http"
 import { createAudioBlob, readAudioBlob } from "../audioBlobs"
 import { createAudioStream, createAudioStreamChunk, readAudioStreamChunk, readAudioStreamManifest, updateAudioStreamDetails } from "../audioStreams"

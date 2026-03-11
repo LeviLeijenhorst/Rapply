@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import { LoadingSpinner } from '../../../../ui/LoadingSpinner'
 
@@ -18,7 +18,7 @@ type Props = {
   isLoading?: boolean
   onTranscriptMentionPress?: (seconds: number) => void
   exportTitle?: string
-  onRequestPdfEdit?: (params: { text: string; title?: string; practiceSettings: PdfPracticeSettings }) => void
+  onRequestPdfEdit?: (params: { text: string; title?: string; organizationSettings: PdfPracticeSettings }) => void
 }
 
 const pdfStartToken = '[[PDF_START]]'
@@ -414,13 +414,13 @@ async function addBrandHeader(
   marginTop: number,
   marginRight: number,
   pageWidth: number,
-  practiceSettings: PdfPracticeSettings,
+  organizationSettings: PdfPracticeSettings,
   fallbackLogoDataUrl: string | null,
 ) {
   let logoBottomY = marginTop
   const logoTopMargin = 24
   const logoRightMargin = 24
-  const candidateLogos = [String(practiceSettings.logoDataUrl || '').trim(), String(fallbackLogoDataUrl || '').trim()].filter(Boolean)
+  const candidateLogos = [String(organizationSettings.logoDataUrl || '').trim(), String(fallbackLogoDataUrl || '').trim()].filter(Boolean)
   const maxWidth = 130
   const maxHeight = 34
   for (const rawLogo of candidateLogos) {
@@ -543,7 +543,7 @@ function buildWordBodyHtml(messageText: string) {
   return htmlLines.join('\n')
 }
 
-export async function exportMessageToWord(messageText: string, reportTitle: string | undefined, _practiceSettings: PdfPracticeSettings) {
+export async function exportMessageToWord(messageText: string, reportTitle: string | undefined, _organizationSettings: PdfPracticeSettings) {
   if (typeof window === 'undefined') return
   const bodyHtml = buildWordBodyHtml(messageText)
   const html = `<!doctype html>
@@ -580,7 +580,7 @@ export async function exportMessageToWord(messageText: string, reportTitle: stri
   window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000)
 }
 
-export async function exportMessageToPdf(messageText: string, reportTitle: string | undefined, practiceSettings: PdfPracticeSettings) {
+export async function exportMessageToPdf(messageText: string, reportTitle: string | undefined, organizationSettings: PdfPracticeSettings) {
   if (typeof window === 'undefined') return
   const { default: jsPDF } = await import('jspdf')
 
@@ -595,7 +595,7 @@ export async function exportMessageToPdf(messageText: string, reportTitle: strin
   const footerLineY = pageHeight - footerHeight
   const contentX = marginLeft
   const maxWidth = pageWidth - marginLeft - marginRight
-  const accentColor = hexToRgbColor(practiceSettings.tintColor)
+  const accentColor = hexToRgbColor(organizationSettings.tintColor)
 
   const bodyLineHeight = 17
   const headingTwoFontSize = 20
@@ -616,7 +616,7 @@ export async function exportMessageToPdf(messageText: string, reportTitle: strin
     marginTop,
     marginRight,
     pageWidth,
-    practiceSettings,
+    organizationSettings,
     fallbackLogoDataUrl,
   )
   let cursorY = marginTop + brandHeaderOffset
@@ -748,8 +748,8 @@ export async function exportMessageToPdf(messageText: string, reportTitle: strin
     marginLeft,
     marginRight,
     footerFontSize,
-    String(practiceSettings.website || '').trim(),
-    String(practiceSettings.practiceName || '').trim(),
+    String(organizationSettings.website || '').trim(),
+    String(organizationSettings.practiceName || '').trim(),
     accentColor,
   )
   const fileName = buildPdfFileName(title)
@@ -818,15 +818,15 @@ function renderInlineSegments({
 
 export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, exportTitle, onRequestPdfEdit }: Props) {
   const { data } = useLocalAppData() as any
-  const practiceSettings = (data as any)?.practiceSettings ?? {}
+  const organizationSettings = (data as any)?.organizationSettings ?? {}
   const pdfPracticeSettings = useMemo<PdfPracticeSettings>(
     () => ({
-      practiceName: practiceSettings.practiceName,
-      website: practiceSettings.website,
-      tintColor: practiceSettings.tintColor,
-      logoDataUrl: practiceSettings.logoDataUrl,
+      practiceName: organizationSettings.practiceName,
+      website: organizationSettings.website,
+      tintColor: organizationSettings.tintColor,
+      logoDataUrl: organizationSettings.logoDataUrl,
     }),
-    [practiceSettings.logoDataUrl, practiceSettings.practiceName, practiceSettings.tintColor, practiceSettings.website],
+    [organizationSettings.logoDataUrl, organizationSettings.practiceName, organizationSettings.tintColor, organizationSettings.website],
   )
   const isAssistant = role === 'assistant'
   const [showCopyNotification, setShowCopyNotification] = useState(false)
@@ -933,7 +933,7 @@ export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, e
                       onPress={() => {
                         const nextText = exportableText || displayText
                         if (onRequestPdfEdit) {
-                          onRequestPdfEdit({ text: nextText, title: exportTitle, practiceSettings: pdfPracticeSettings })
+                          onRequestPdfEdit({ text: nextText, title: exportTitle, organizationSettings: pdfPracticeSettings })
                           return
                         }
                         void exportMessageToPdf(nextText, exportTitle, pdfPracticeSettings)
@@ -1072,6 +1072,7 @@ const styles = StyleSheet.create({
     color: colors.selected,
   },
 })
+
 
 
 

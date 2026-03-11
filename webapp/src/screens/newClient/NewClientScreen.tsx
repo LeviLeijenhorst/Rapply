@@ -1,12 +1,12 @@
-ï»¿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
-import { saveCoacheeFromUpsert } from './workflows/clientsScreenFunctionality'
+import { saveClientFromUpsert } from './workflows/clientsScreenFunctionality'
 import { useLocalAppData } from '../../storage/LocalAppDataProvider'
 import { colors } from '../../design/theme/colors'
 import { Text } from '../../ui/Text'
 import { SecuritySafeIcon } from '../../icons/SecuritySafeIcon'
-import type { CoacheeUpsertValues } from '../../types/clientProfile'
+import type { ClientUpsertValues } from '../../types/clientProfile'
 import { NewClientForm } from './components/NewClientForm'
 import { getNewClientTrajectoryLabel } from './selectors/newClientSelectors'
 import { createInitialNewClientValues, isNewClientFormValid, sanitizeNewClientValues } from './viewModels/newClientViewModel'
@@ -17,27 +17,27 @@ type Props = {
 }
 
 export function NewClientScreen({ onBack, onSaved }: Props) {
-  const { data, createCoachee, createTrajectory, updateCoachee, updateTrajectory } = useLocalAppData()
-  const [values, setValues] = useState<CoacheeUpsertValues>(() => createInitialNewClientValues())
+  const { data, createClient, createTrajectory, updateClient, updateTrajectory } = useLocalAppData()
+  const [values, setValues] = useState<ClientUpsertValues>(() => createInitialNewClientValues())
 
   const canSave = isNewClientFormValid(values)
   const trajectoryLabel = getNewClientTrajectoryLabel(data)
 
-  function setValue(key: keyof CoacheeUpsertValues, value: string) {
+  function setValue(key: keyof ClientUpsertValues, value: string) {
     setValues((previous) => ({ ...previous, [key]: value }))
   }
 
   function handleSave() {
     if (!canSave) return
-    const result = saveCoacheeFromUpsert({
-      api: { createCoachee, createTrajectory, updateCoachee, updateTrajectory },
+    const result = saveClientFromUpsert({
+      api: { createClient, createTrajectory, updateClient, updateTrajectory },
       data,
       mode: 'create',
-      editCoacheeId: null,
+      editClientId: null,
       values: sanitizeNewClientValues(values),
     })
-    if (!result.createdCoacheeId) return
-    onSaved(result.createdCoacheeId)
+    if (!result.createdClientId) return
+    onSaved(result.createdClientId)
   }
 
   return (
@@ -48,7 +48,7 @@ export function NewClientScreen({ onBack, onSaved }: Props) {
           <View style={styles.privacyTextWrap}>
             <Text isSemibold style={styles.privacyTitle}>Privacy & AVG</Text>
             <Text style={styles.privacyBody}>
-              Alle cliÃ«ntgegevens worden versleuteld opgeslagen conform AVG-richtlijnen en uitsluitend gebruikt voor re-integratiedoeleinden.
+              Alle cliëntgegevens worden versleuteld opgeslagen conform AVG-richtlijnen en uitsluitend gebruikt voor re-integratiedoeleinden.
             </Text>
           </View>
         </View>
@@ -61,7 +61,7 @@ export function NewClientScreen({ onBack, onSaved }: Props) {
               disabled={!canSave}
               style={({ hovered }) => [styles.primaryButton, !canSave ? styles.primaryButtonDisabled : undefined, hovered && canSave ? styles.primaryButtonHovered : undefined]}
             >
-              <Text isSemibold style={styles.primaryButtonText}>CliÃ«nt opslaan</Text>
+              <Text isSemibold style={styles.primaryButtonText}>Cliënt opslaan</Text>
             </Pressable>
           </View>
           <NewClientForm values={values} trajectoryLabel={trajectoryLabel} onChange={setValue} />
@@ -162,3 +162,4 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+

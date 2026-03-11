@@ -1,7 +1,7 @@
 import { callSecureApi } from '../secureApi'
-import type { Coachee } from '../../storage/types'
+import type { Client } from '../../storage/types'
 
-export async function createClientRemote(client: Coachee): Promise<void> {
+export async function createClientRemote(client: Client): Promise<void> {
   await callSecureApi('/clients/create', { client })
 }
 
@@ -10,7 +10,6 @@ export async function updateClientRemote(params: {
   name?: string
   clientDetails?: string
   employerDetails?: string
-  firstSickDay?: string
   isArchived?: boolean
   updatedAtUnixMs: number
 }): Promise<void> {
@@ -20,10 +19,6 @@ export async function updateClientRemote(params: {
 export async function deleteClientRemote(id: string): Promise<void> {
   await callSecureApi('/clients/delete', { id })
 }
-
-export const createCoacheeRemote = createClientRemote
-export const updateCoacheeRemote = updateClientRemote
-export const deleteCoacheeRemote = deleteClientRemote
 
 export const clientApi = {
   create: createClientRemote,

@@ -1,5 +1,5 @@
 import type { Express } from "express"
-import { requireAuthenticatedUser } from "../../auth"
+import { requireAuthenticatedUser } from "../../identity/auth"
 import { asyncHandler } from "../../http"
 import { readWorkspaceData } from "../readWorkspaceData"
 

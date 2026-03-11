@@ -2,11 +2,55 @@ import { callSecureApi } from '../secureApi'
 import type { Snippet } from '../../storage/types'
 
 type SnippetExtractResponse = {
-  snippets?: Snippet[]
+  snippets?: unknown[]
 }
 
 type SnippetTextResponse = {
   text?: string
+}
+
+type RemoteSnippet = {
+  id?: unknown
+  clientId?: unknown
+  trajectoryId?: unknown
+  sourceSessionId?: unknown
+  sourceInputId?: unknown
+  itemId?: unknown
+  snippetType?: unknown
+  field?: unknown
+  text?: unknown
+  snippetDate?: unknown
+  date?: unknown
+  approvalStatus?: unknown
+  status?: unknown
+  createdAtUnixMs?: unknown
+  updatedAtUnixMs?: unknown
+}
+
+function normalizeExtractedSnippet(value: unknown): Snippet | null {
+  const source = (value && typeof value === 'object' ? value : {}) as RemoteSnippet
+  const id = String(source.id ?? '').trim()
+  const trajectoryId = String(source.trajectoryId ?? '').trim()
+  const inputId = String(source.sourceSessionId ?? source.sourceInputId ?? source.itemId ?? '').trim()
+  const field = String(source.snippetType ?? source.field ?? '').trim()
+  if (!id || !trajectoryId || !inputId || !field) return null
+
+  const now = Date.now()
+  const statusRaw = String(source.approvalStatus ?? source.status ?? '').trim()
+  const status: Snippet['status'] = statusRaw === 'approved' || statusRaw === 'rejected' ? statusRaw : 'pending'
+
+  return {
+    id,
+    trajectoryId,
+    inputId,
+    itemId: inputId,
+    field,
+    text: String(source.text ?? ''),
+    date: Number.isFinite(Number(source.snippetDate)) ? Number(source.snippetDate) : Number.isFinite(Number(source.date)) ? Number(source.date) : now,
+    status,
+    createdAtUnixMs: Number.isFinite(Number(source.createdAtUnixMs)) ? Number(source.createdAtUnixMs) : now,
+    updatedAtUnixMs: Number.isFinite(Number(source.updatedAtUnixMs)) ? Number(source.updatedAtUnixMs) : now,
+  }
 }
 
 export async function extractSnippetsForItem(params: {
@@ -25,7 +69,10 @@ export async function extractSnippetsForItem(params: {
     transcript: params.transcript,
     itemDate: params.itemDate,
   })
-  return Array.isArray(response?.snippets) ? response.snippets : []
+  if (!Array.isArray(response?.snippets)) return []
+  return response.snippets
+    .map(normalizeExtractedSnippet)
+    .filter((snippet): snippet is Snippet => Boolean(snippet))
 }
 
 export async function extractSnippets(params: {
@@ -69,4 +116,5 @@ export async function aiOverwriteSnippetText(params: {
   })
   return String(response?.text || '').trim()
 }
+
 

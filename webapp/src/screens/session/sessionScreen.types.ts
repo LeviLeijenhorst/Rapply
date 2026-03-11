@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 import type { Snippet, SnippetStatus } from '@/storage/types'
 
-export type SessionScreenProps = {
+export type InputScreenProps = {
   id: string
   title: string
   clientName: string
@@ -10,7 +10,7 @@ export type SessionScreenProps = {
   onBack: () => void
 }
 
-export type SessionDataItem = {
+export type InputDataItem = {
   id: string
   inputId?: string
   clientId?: string | null
@@ -22,7 +22,7 @@ export type SessionDataItem = {
   transcriptionStatus?: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
 }
 
-export type SessionNoteItem = {
+export type InputNoteItem = {
   id: string
   sessionId?: string
   title?: string
@@ -30,7 +30,7 @@ export type SessionNoteItem = {
   createdAtUnixMs: number
 }
 
-export type SessionSnippetItem = Snippet & {
+export type InputSnippetItem = Snippet & {
   inputId?: string
 }
 
@@ -43,8 +43,8 @@ export type RightTabsProps = {
 
 export type RightPanelProps = {
   inputId: string
-  notes: SessionNoteItem[]
-  snippets: SessionSnippetItem[]
+  notes: InputNoteItem[]
+  snippets: InputSnippetItem[]
   summary: string | null
   transcript: string | null
   onCreateNote: (inputId: string, values: { title: string; text: string }) => void
@@ -53,13 +53,13 @@ export type RightPanelProps = {
 }
 
 export type NotesTabProps = {
-  notes: SessionNoteItem[]
-  onEditNote: (note: SessionNoteItem) => void
-  onDeleteNote: (note: SessionNoteItem) => void
+  notes: InputNoteItem[]
+  onEditNote: (note: InputNoteItem) => void
+  onDeleteNote: (note: InputNoteItem) => void
 }
 
 export type SnippetSectionProps = {
-  snippets: SessionSnippetItem[]
+  snippets: InputSnippetItem[]
   canRegenerate?: boolean
   isRegenerating?: boolean
   onRegenerate?: () => void
@@ -102,8 +102,8 @@ export type UseChatbotTabLogicParams = {
   inputId: string
   summary: string | null
   transcript: string | null
-  snippets: SessionSnippetItem[]
-  notes: SessionNoteItem[]
+  snippets: InputSnippetItem[]
+  notes: InputNoteItem[]
 }
 
 export type ExpandedChatModalProps = {
@@ -111,3 +111,4 @@ export type ExpandedChatModalProps = {
   onClose: () => void
   children: ReactNode
 }
+

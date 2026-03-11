@@ -6,7 +6,7 @@ type Props = {
   size?: number
 }
 
-export function CoacheeAvatarIcon({ color, size = 24 }: Props) {
+export function ClientAvatarIcon({ color, size = 24 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -33,4 +33,5 @@ export function CoacheeAvatarIcon({ color, size = 24 }: Props) {
     </Svg>
   )
 }
+
 

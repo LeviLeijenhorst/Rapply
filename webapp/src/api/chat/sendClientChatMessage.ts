@@ -16,7 +16,7 @@ export async function sendClientChatMessage(params: {
       action: 'chat_request',
       path: typeof window !== 'undefined' ? window.location.pathname : null,
       metadata: {
-        scope: 'coachee',
+        scope: 'client',
         sessionId: null,
         messageCount: params.messages.length,
         totalCharacters: params.messages.reduce((count, message) => count + String(message.text || '').length, 0),
@@ -28,7 +28,7 @@ export async function sendClientChatMessage(params: {
   const response = await callSecureApi<ChatResponse>('/chat', {
     messages: params.messages.map((message) => ({ role: message.role, content: message.text })),
     temperature: params.temperature,
-    scope: 'coachee',
+    scope: 'client',
   })
 
   const text = String(response?.text || '').trim()
@@ -38,3 +38,4 @@ export async function sendClientChatMessage(params: {
 
   return text
 }
+

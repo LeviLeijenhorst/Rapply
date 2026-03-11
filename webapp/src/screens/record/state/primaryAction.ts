@@ -1,12 +1,12 @@
 import type { OptionKey } from '../utils'
-import type { NewSessionStep } from '../types'
+import type { NewInputStep } from '../types'
 
-type SessionKind = 'recording' | 'upload' | 'intake'
+type InputKind = 'recording' | 'upload' | 'intake'
 
-type CreateSessionFn = (
+type CreateInputFn = (
   values: { kind: 'recording' | 'upload' },
   options?: {
-    sessionKind?: SessionKind
+    sessionKind?: InputKind
     overrideShouldSaveAudio?: boolean
     audioForTranscription?: { blob: Blob; mimeType: string }
     recordingDurationSeconds?: number | null
@@ -17,16 +17,16 @@ type Params = {
   hasRecordingConsent: boolean
   isPrimaryActionDisabled: boolean
   limitedMode: boolean
-  selectedCoacheeId: string | null
-  selectedCoacheeResolvedId: string | null
+  selectedClientId: string | null
+  selectedClientResolvedId: string | null
   selectedOption: OptionKey | null
-  step: NewSessionStep
-  createAndOpenSession: CreateSessionFn
+  step: NewInputStep
+  createAndOpenInput: CreateInputFn
   handleClose: () => void
-  onOpenGeschrevenGespreksverslag: (coacheeId: string | null) => void
+  onOpenGeschrevenGespreksverslag: (clientId: string | null) => void
   saveSelectedFileToAudioStore: () => Promise<void>
   setHasRecordingConsent: (value: boolean) => void
-  setStep: (step: NewSessionStep) => void
+  setStep: (step: NewInputStep) => void
   clearSubscriptionReturnDraft: () => Promise<void>
 }
 
@@ -36,11 +36,11 @@ export function runPrimaryFooterAction(params: Params) {
 
   if (params.step === 'recorded') {
     if (params.selectedOption === 'upload') {
-      void params.createAndOpenSession({ kind: 'upload' })
+      void params.createAndOpenInput({ kind: 'upload' })
       return
     }
     if (params.selectedOption === 'gesprek' || params.selectedOption === 'gespreksverslag' || params.selectedOption === 'intake') {
-      void params.createAndOpenSession(
+      void params.createAndOpenInput(
         { kind: 'recording' },
         params.selectedOption === 'intake' ? { sessionKind: 'intake' } : undefined,
       )
@@ -68,7 +68,7 @@ export function runPrimaryFooterAction(params: Params) {
   if (!params.selectedOption) return
 
   if (params.selectedOption === 'schrijven') {
-    params.onOpenGeschrevenGespreksverslag(params.selectedCoacheeResolvedId ?? params.selectedCoacheeId ?? null)
+    params.onOpenGeschrevenGespreksverslag(params.selectedClientResolvedId ?? params.selectedClientId ?? null)
     void params.clearSubscriptionReturnDraft()
     params.handleClose()
     return
@@ -82,6 +82,7 @@ export function runPrimaryFooterAction(params: Params) {
   params.setHasRecordingConsent(false)
   params.setStep('consent')
 }
+
 
 
 

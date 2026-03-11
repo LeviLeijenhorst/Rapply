@@ -1,7 +1,7 @@
 import type { Express } from "express"
 import { readClientInput } from "../readClientInput"
 import { createClient, deleteClient, updateClient } from "../store"
-import { requireAuthenticatedUser } from "../../auth"
+import { requireAuthenticatedUser } from "../../identity/auth"
 import { asyncHandler } from "../../http"
 import { readId, readOptionalText, readUnixMs } from "../../routes/parsers/scalars"
 
@@ -21,9 +21,8 @@ export function registerClientRoutes(app: Express): void {
     const name = readOptionalText(payload.name)
     const clientDetails = readOptionalText(payload.clientDetails, true)
     const employerDetails = readOptionalText(payload.employerDetails, true)
-    const firstSickDay = readOptionalText(payload.firstSickDay, true)
     const isArchived = typeof payload.isArchived === "boolean" ? payload.isArchived : undefined
-    await updateClient(user.userId, { id, name, clientDetails, employerDetails, firstSickDay, isArchived, updatedAtUnixMs })
+    await updateClient(user.userId, { id, name, clientDetails, employerDetails, isArchived, updatedAtUnixMs })
     res.status(200).json({ ok: true })
   })
 

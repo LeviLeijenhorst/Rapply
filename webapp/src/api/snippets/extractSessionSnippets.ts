@@ -3,7 +3,7 @@ import type { Snippet } from '../../types/snippet'
 
 type SnippetExtractResponse = { snippets?: Snippet[] }
 
-export async function extractSessionSnippets(params: {
+export async function extractInputSnippets(params: {
   sessionId: string
   clientId: string
   trajectoryId: string
@@ -12,7 +12,7 @@ export async function extractSessionSnippets(params: {
   sessionDate: number
 }): Promise<Snippet[]> {
   const response = await callSecureApi<SnippetExtractResponse>('/ai/snippet-extract', {
-    sourceSessionId: params.sessionId,
+    sourceInputId: params.sessionId,
     clientId: params.clientId,
     trajectoryId: params.trajectoryId,
     sourceInputType: params.inputType,
@@ -21,3 +21,4 @@ export async function extractSessionSnippets(params: {
   })
   return Array.isArray(response?.snippets) ? response.snippets : []
 }
+

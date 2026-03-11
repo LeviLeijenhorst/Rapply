@@ -3,7 +3,7 @@ import type { ScrollView, TextInput } from 'react-native'
 import { useWindowDimensions } from 'react-native'
 
 import { useLocalAppData } from '@/storage/LocalAppDataProvider'
-import { isSessionReportArtifact } from '@/types/sessionArtifacts'
+import { isInputReportArtifact } from '@/types/sessionArtifacts'
 
 import type {
   DashboardContinueItem,
@@ -61,7 +61,7 @@ function formatContinueSubtitle(kind: string, title: string): string {
   return `Sessie - ${title}`
 }
 
-function normalizeSessionLikeId(id: string): string {
+function normalizeInputLikeId(id: string): string {
   const raw = String(id || '').trim().toLowerCase()
   if (!raw) return ''
   if (raw.startsWith('session-')) return raw.slice('session-'.length)
@@ -139,27 +139,27 @@ export function useDashboardScreenModel(props: DashboardScreenProps): DashboardS
   const clientById = useMemo(
     () =>
       new Map(
-        data.coachees.map((coachee) => [
-          coachee.id,
+        data.clients.map((client) => [
+          client.id,
           {
-            name: String(coachee.name || '').trim() || 'Onbekende client',
-            profilePhotoUri: pickProfilePhotoUri(coachee.clientDetails),
+            name: String(client.name || '').trim() || 'Onbekende client',
+            profilePhotoUri: pickProfilePhotoUri(client.clientDetails),
           },
         ]),
       ),
-    [data.coachees],
+    [data.clients],
   )
 
   const sessionByLookupKey = useMemo(() => {
-    const map = new Map<string, (typeof data.sessions)[number]>()
+    const map = new Map<string, (typeof data.inputs)[number]>()
 
-    for (const session of data.sessions) {
+    for (const session of data.inputs) {
       const raw = String(session.id || '').trim()
       if (!raw) continue
 
       map.set(raw, session)
 
-      const normalized = normalizeSessionLikeId(raw)
+      const normalized = normalizeInputLikeId(raw)
       if (normalized) {
         map.set(normalized, session)
 
@@ -169,48 +169,48 @@ export function useDashboardScreenModel(props: DashboardScreenProps): DashboardS
     }
 
     return map
-  }, [data.sessions])
+  }, [data.inputs])
 
   const quickInputActions = useMemo(() => getQuickInputActions(props.onOpenRecord), [props.onOpenRecord])
 
   const continueItems = useMemo<DashboardContinueItem[]>(
     () =>
-      [...data.sessions]
+      [...data.inputs]
         .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
-        .filter((session) => !!session.coacheeId)
+        .filter((session) => !!session.clientId)
         .slice(0, 5)
         .map((session) => {
-          const client = session.coacheeId ? clientById.get(session.coacheeId) : null
+          const client = session.clientId ? clientById.get(session.clientId) : null
           const title = String(session.title || '').trim() || 'Naamloze sessie'
           return {
             id: session.id,
-            clientId: session.coacheeId || '',
+            clientId: session.clientId || '',
             clientName: client?.name || 'Onbekende client',
             subtitle: formatContinueSubtitle(session.kind, title),
             profilePhotoUri: client?.profilePhotoUri || null,
           }
         }),
-    [clientById, data.sessions],
+    [clientById, data.inputs],
   )
 
   const openActionItems = useMemo<DashboardOpenActionItem[]>(() => {
-    const writtenBySessionId = new Map(data.writtenReports.map((report) => [report.sessionId, report]))
+    const writtenByInputId = new Map(data.inputSummaries.map((report) => [report.sessionId, report]))
 
-    const reportItems: DashboardOpenActionItem[] = data.sessions
-      .filter((session) => isSessionReportArtifact(session))
+    const reportItems: DashboardOpenActionItem[] = data.inputs
+      .filter((session) => isInputReportArtifact(session))
       .filter((session) => {
-        const reportText = writtenBySessionId.get(session.id)?.text ?? ''
+        const reportText = writtenByInputId.get(session.id)?.text ?? ''
         return reportText.trim().length === 0
       })
       .map((session) => {
-        const client = session.coacheeId ? clientById.get(session.coacheeId) : null
+        const client = session.clientId ? clientById.get(session.clientId) : null
         const title = String(session.title || '').trim() || 'Rapportage'
         return {
           id: `report-${session.id}`,
           kind: 'report',
           itemLabel: `Rapportage: ${title}`,
           statusLabel: 'Controleren',
-          clientId: session.coacheeId ?? null,
+          clientId: session.clientId ?? null,
           clientName: client?.name || 'Zonder client',
           sessionId: session.id,
           createdAtLabel: toDateLabel(session.createdAtUnixMs),
@@ -226,16 +226,16 @@ export function useDashboardScreenModel(props: DashboardScreenProps): DashboardS
       if (snippet.status !== 'pending') continue
 
       const rawItemId = String(snippet.itemId || '').trim()
-      const normalizedItemId = normalizeSessionLikeId(rawItemId)
+      const normalizedItemId = normalizeInputLikeId(rawItemId)
       const compactItemId = normalizedItemId.replace(/[^a-z0-9]/g, '')
-      const linkedSession =
+      const linkedInput =
         sessionByLookupKey.get(rawItemId) ??
         sessionByLookupKey.get(normalizedItemId) ??
         sessionByLookupKey.get(compactItemId) ??
         null
-      const client = linkedSession?.coacheeId ? clientById.get(linkedSession.coacheeId) : null
-      const sessionTitle = linkedSession?.title?.trim() || 'Onbekende sessie'
-      const groupId = linkedSession ? linkedSession.id : `snippet-${rawItemId || snippet.id}`
+      const client = linkedInput?.clientId ? clientById.get(linkedInput.clientId) : null
+      const sessionTitle = linkedInput?.title?.trim() || 'Onbekende sessie'
+      const groupId = linkedInput ? linkedInput.id : `snippet-${rawItemId || snippet.id}`
 
       const existing = groupedSnippetItems.get(groupId)
       if (existing) {
@@ -253,9 +253,9 @@ export function useDashboardScreenModel(props: DashboardScreenProps): DashboardS
         kind: 'snippet',
         itemLabel: `Sessie: ${sessionTitle}`,
         statusLabel: '1 open',
-        clientId: linkedSession?.coacheeId ?? null,
+        clientId: linkedInput?.clientId ?? null,
         clientName: client?.name || 'Zonder client',
-        sessionId: linkedSession?.id ?? null,
+        sessionId: linkedInput?.id ?? null,
         createdAtLabel: toDateLabel(snippet.createdAtUnixMs),
         createdAtUnixMs: snippet.createdAtUnixMs,
         updatedLabel: toRelativeDateLabel(snippet.updatedAtUnixMs),
@@ -267,7 +267,7 @@ export function useDashboardScreenModel(props: DashboardScreenProps): DashboardS
     const snippetItems = [...groupedSnippetItems.values()].map(({ pendingCount: _pendingCount, ...item }) => item)
 
     return [...reportItems, ...snippetItems].sort((a, b) => b.updatedAtUnixMs - a.updatedAtUnixMs)
-  }, [clientById, data.sessions, data.snippets, data.writtenReports, sessionByLookupKey])
+  }, [clientById, data.inputs, data.snippets, data.inputSummaries, sessionByLookupKey])
 
   const filteredOpenActionItems = useMemo(() => {
     const normalizedQuery = String(openActionQuery || '').trim().toLowerCase()
@@ -295,13 +295,13 @@ export function useDashboardScreenModel(props: DashboardScreenProps): DashboardS
     const weekStartUnixMs = weekStartDate.getTime()
     const weekEndUnixMs = weekStartUnixMs + 7 * 24 * 60 * 60 * 1000
 
-    const sessionsThisWeek = data.sessions.filter(
+    const inputsThisWeek = data.inputs.filter(
       (session) => session.createdAtUnixMs >= weekStartUnixMs && session.createdAtUnixMs < weekEndUnixMs,
     ).length
-    const reportsThisWeek = data.writtenReports.filter(
+    const reportsThisWeek = data.inputSummaries.filter(
       (report) => report.updatedAtUnixMs >= weekStartUnixMs && report.updatedAtUnixMs < weekEndUnixMs,
     ).length
-    const activeClients = data.coachees.filter((coachee) => !coachee.isArchived).length
+    const activeClients = data.clients.filter((client) => !client.isArchived).length
 
     return [
       {
@@ -313,9 +313,9 @@ export function useDashboardScreenModel(props: DashboardScreenProps): DashboardS
         onPress: props.onOpenClientsPage,
       },
       {
-        id: 'sessions-this-week',
+        id: 'inputs-this-week',
         title: 'Sessies deze week',
-        value: String(sessionsThisWeek),
+        value: String(inputsThisWeek),
         accentFrom: '#1B4EC2',
         accentTo: '#2A6DFF',
         onPress: scrollToOpenActions,
@@ -337,7 +337,7 @@ export function useDashboardScreenModel(props: DashboardScreenProps): DashboardS
         onPress: scrollToOpenActions,
       },
     ]
-  }, [data.coachees, data.sessions, data.writtenReports, props.onOpenClientsPage, props.onOpenReportsPage, scrollToOpenActions, totalOpenActionItems])
+  }, [data.clients, data.inputs, data.inputSummaries, props.onOpenClientsPage, props.onOpenReportsPage, scrollToOpenActions, totalOpenActionItems])
 
   return {
     scrollRef,
@@ -352,3 +352,4 @@ export function useDashboardScreenModel(props: DashboardScreenProps): DashboardS
     dashboardStatCards,
   }
 }
+

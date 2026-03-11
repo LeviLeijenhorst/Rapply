@@ -1,5 +1,5 @@
-import type { Snippet as LegacySnippet } from '../types'
+import type { Snippet } from '../types'
 
 export type SnippetStore = {
-  snippets: LegacySnippet[]
+  snippets: Snippet[]
 }

@@ -11,11 +11,11 @@ import { useChatbotTabLogic } from '@/screens/session/components/chatbotTab/Chat
 import { ExpandedChatModal } from '@/screens/session/components/modals/ExpandedChatModal'
 import { NotesTab } from '@/screens/session/components/NotesTab'
 import { RightTabs } from '@/screens/session/components/RightTabs'
-import type { RightPanelProps, RightTabKey, SessionNoteItem } from '@/screens/session/sessionScreen.types'
+import type { RightPanelProps, RightTabKey, InputNoteItem } from '@/screens/session/sessionScreen.types'
 import { ChatComposer } from '@/screens/shared/components/chat/ChatComposer'
 import { ConfirmChatClearModal } from '@/screens/shared/modals/ConfirmChatClearModal'
-import { ConfirmNoteDeleteModal } from '@/screens/shared/modals/notes/ConfirmNoteDeleteModal'
-import { NoteEditModal } from '@/screens/shared/modals/notes/NoteEditModal'
+import { ConfirmNoteDeleteModal } from '@/screens/shared/modals/ConfirmNoteDeleteModal'
+import { NoteEditModal } from '@/screens/shared/modals/NoteEditModal'
 import { MainContainer } from '@/ui/animated/MainContainer'
 
 export function RightPanel({
@@ -30,8 +30,8 @@ export function RightPanel({
 }: RightPanelProps) {
   const [activeTabKey, setActiveTabKey] = useState<RightTabKey>('notes')
   const [noteComposerValue, setNoteComposerValue] = useState('')
-  const [editingNote, setEditingNote] = useState<SessionNoteItem | null>(null)
-  const [pendingDeleteNote, setPendingDeleteNote] = useState<SessionNoteItem | null>(null)
+  const [editingNote, setEditingNote] = useState<InputNoteItem | null>(null)
+  const [pendingDeleteNote, setPendingDeleteNote] = useState<InputNoteItem | null>(null)
 
   const sortedNotes = useMemo(
     () => [...notes].sort((leftNote, rightNote) => leftNote.createdAtUnixMs - rightNote.createdAtUnixMs),
@@ -186,3 +186,4 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
 })
+

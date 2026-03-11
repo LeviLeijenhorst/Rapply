@@ -5,33 +5,23 @@ export async function createTrajectoryRemote(trajectory: Trajectory): Promise<vo
   await callSecureApi('/trajectories/create', {
     trajectory: {
       ...trajectory,
-      clientId: trajectory.coacheeId,
-      serviceType: trajectory.dienstType,
-      planOfAction: trajectory.planVanAanpak,
+      clientId: trajectory.clientId,
     },
   })
 }
 
 export async function updateTrajectoryRemote(params: {
   id: string
-  coacheeId?: string
+  clientId?: string
   name?: string
-  dienstType?: string
   uwvContactName?: string | null
-  uwvContactPhone?: string | null
-  uwvContactEmail?: string | null
   orderNumber?: string | null
   startDate?: string | null
-  planVanAanpak?: Trajectory['planVanAanpak']
-  maxHours?: number
-  maxAdminHours?: number
   updatedAtUnixMs: number
 }): Promise<void> {
   await callSecureApi('/trajectories/update', {
     ...params,
-    clientId: params.coacheeId,
-    serviceType: params.dienstType,
-    planOfAction: params.planVanAanpak,
+    clientId: params.clientId,
   })
 }
 

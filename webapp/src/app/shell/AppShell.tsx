@@ -7,7 +7,7 @@ import { Navbar } from './components/Navbar'
 import { Sidebar, SidebarItemKey } from './components/Sidebar'
 import { Text } from '../../ui/Text'
 import type { ClientLeftTabKey } from '../../screens/client/clientScreen.types'
-import { NewSessionModal } from '../../screens/record/NewSessionModal'
+import { NewInputModal } from '../../screens/record/NewInputModal'
 import { FeedbackModal } from './modals/FeedbackModal'
 import { SettingsMenu } from './menus/SettingsMenu'
 import { MyAccountModal } from './modals/MyAccountModal'
@@ -63,26 +63,26 @@ export function AppShell({ onLogout }: Props) {
   const { width } = useWindowDimensions()
   const isTooSmall = width < 1100
   const isSidebarCompact = width < 700
-  const { data, createSession, isAppDataLoaded, updateSession } = useLocalAppData()
+  const { data, createInput, isAppDataLoaded, updateInput } = useLocalAppData()
   const e2ee = useE2ee()
   const { usedMinutes, totalMinutes, isLoading: isUsageLoading } = useBillingUsage()
   useAudioUploadQueue(true)
   const hasResumedPendingAudioRef = useRef(false)
 
-  const [selectedSidebarItemKey, setSelectedSidebarItemKey] = useState<SidebarItemKey>('coachees')
+  const [selectedSidebarItemKey, setSelectedSidebarItemKey] = useState<SidebarItemKey>('clients')
   const [selectedSessieId, setSelectedSessieId] = useState<string | null>(null)
-  const [sessionIdPendingTemplatePicker, setSessionIdPendingTemplatePicker] = useState<string | null>(null)
-  const [rapportageOnlySessionId, setRapportageOnlySessionId] = useState<string | null>(null)
+  const [sessionIdPendingTemplatePicker, setInputIdPendingTemplatePicker] = useState<string | null>(null)
+  const [rapportageOnlyInputId, setRapportageOnlyInputId] = useState<string | null>(null)
   const [rapportageScreenMode, setRapportageScreenMode] = useState<'controleren' | 'bewerken'>('controleren')
-  const [rapportageEditSessionId, setRapportageEditSessionId] = useState<string | null>(null)
-  const [selectedCoacheeId, setSelectedCoacheeId] = useState<string | null>(null)
+  const [rapportageEditInputId, setRapportageEditInputId] = useState<string | null>(null)
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   const [selectedTrajectoryId, setSelectedTrajectoryId] = useState<string | null>(null)
-  const [sessionOriginRoute, setSessionOriginRoute] = useState<RouteState | null>(null)
-  const [coacheeTabById, setCoacheeTabById] = useState<Record<string, ClientLeftTabKey>>({})
-  const [isNewSessionModalOpen, setIsNewSessionModalOpen] = useState(false)
-  const [mobileSessionInitialOption, setMobileSessionInitialOption] = useState<'gesprek' | 'gespreksverslag' | null>(null)
-  const [newSessionCoacheeId, setNewSessionCoacheeId] = useState<string | null>(null)
-  const [newSessionTrajectoryId, setNewSessionTrajectoryId] = useState<string | null>(null)
+  const [sessionOriginRoute, setInputOriginRoute] = useState<RouteState | null>(null)
+  const [clientTabById, setClientTabById] = useState<Record<string, ClientLeftTabKey>>({})
+  const [isNewInputModalOpen, setIsNewInputModalOpen] = useState(false)
+  const [mobileInputInitialOption, setMobileInputInitialOption] = useState<'gesprek' | 'gespreksverslag' | null>(null)
+  const [newInputClientId, setNewInputClientId] = useState<string | null>(null)
+  const [newInputTrajectoryId, setNewInputTrajectoryId] = useState<string | null>(null)
   const [isNieuweRapportageOpen, setIsNieuweRapportageOpen] = useState(false)
   const [isRecordPageOpen, setIsRecordPageOpen] = useState(false)
   const [isNewClientPageOpen, setIsNewClientPageOpen] = useState(false)
@@ -109,7 +109,7 @@ export function AppShell({ onLogout }: Props) {
   const [isEndToEndEncryptiePageOpen, setIsEndToEndEncryptiePageOpen] = useState(false)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [isDeleteAccountConfirmModalOpen, setIsDeleteAccountConfirmModalOpen] = useState(false)
-  const [restoreNewSessionDraftFromSubscriptionReturn, setRestoreNewSessionDraftFromSubscriptionReturn] = useState(false)
+  const [restoreNewInputDraftFromSubscriptionReturn, setRestoreNewInputDraftFromSubscriptionReturn] = useState(false)
   const [isRecordingBusy, setIsRecordingBusy] = useState(false)
   const { showToast, showErrorToast } = useToast()
   const isCurrentUserAdmin = currentUserAccountType === 'admin'
@@ -168,9 +168,9 @@ export function AppShell({ onLogout }: Props) {
     void (async () => {
       try {
         await resumePendingPreviewAudioTasks({
-          sessions: data.sessions,
+          inputs: data.inputs,
           e2ee,
-          updateSession,
+          updateInput,
         })
         if (isCancelled) return
       } catch (error) {
@@ -181,21 +181,21 @@ export function AppShell({ onLogout }: Props) {
     return () => {
       isCancelled = true
     }
-  }, [data.sessions, e2ee, isAppDataLoaded, updateSession])
+  }, [data.inputs, e2ee, isAppDataLoaded, updateInput])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const tryRestoreNewSessionDraft = () => {
+    const tryRestoreNewInputDraft = () => {
       const shouldRestore = consumeSubscriptionReturnResumeRequest()
       if (!shouldRestore) return
-      setRestoreNewSessionDraftFromSubscriptionReturn(true)
-      setIsNewSessionModalOpen(true)
+      setRestoreNewInputDraftFromSubscriptionReturn(true)
+      setIsNewInputModalOpen(true)
     }
 
-    tryRestoreNewSessionDraft()
-    window.addEventListener('pageshow', tryRestoreNewSessionDraft)
-    return () => window.removeEventListener('pageshow', tryRestoreNewSessionDraft)
+    tryRestoreNewInputDraft()
+    window.addEventListener('pageshow', tryRestoreNewInputDraft)
+    return () => window.removeEventListener('pageshow', tryRestoreNewInputDraft)
   }, [])
 
   const applyRoute = useCallback(
@@ -207,7 +207,7 @@ export function AppShell({ onLogout }: Props) {
         setIsRecordPageOpen,
         setIsNewClientPageOpen,
         setRapportageScreenMode,
-        setRapportageEditSessionId,
+        setRapportageEditInputId,
         setIsEndToEndEncryptiePageOpen,
         setSelectedSidebarItemKey,
         setIsAdminScreenOpen,
@@ -215,10 +215,10 @@ export function AppShell({ onLogout }: Props) {
         setIsAdminWachtlijstScreenOpen,
         setOverlayScreenKey,
         setSelectedSessieId,
-        setSessionIdPendingTemplatePicker,
-        setSelectedCoacheeId,
+        setInputIdPendingTemplatePicker,
+        setSelectedClientId,
         setSelectedTrajectoryId,
-        setSessionOriginRoute,
+        setInputOriginRoute,
       })
     },
     [isCurrentUserAdmin],
@@ -247,19 +247,19 @@ export function AppShell({ onLogout }: Props) {
     }
     if (sessionOriginRoute && selectedSessieId) {
       navigateTo(sessionOriginRoute)
-      setSessionOriginRoute(null)
+      setInputOriginRoute(null)
       return
     }
-    if (selectedSidebarItemKey === 'coachees' && selectedCoacheeId) {
-      navigateTo({ kind: 'coachees' })
+    if (selectedSidebarItemKey === 'clients' && selectedClientId) {
+      navigateTo({ kind: 'clients' })
       return
     }
-    if (selectedSidebarItemKey === 'coachees' && selectedTrajectoryId && selectedCoacheeId) {
-      navigateTo({ kind: 'coachee', coacheeId: selectedCoacheeId })
+    if (selectedSidebarItemKey === 'clients' && selectedTrajectoryId && selectedClientId) {
+      navigateTo({ kind: 'client', clientId: selectedClientId })
       return
     }
-    navigateTo({ kind: 'coachees' })
-  }, [navigateTo, selectedCoacheeId, selectedSidebarItemKey, selectedTrajectoryId, sessionOriginRoute, selectedSessieId, setSessionOriginRoute])
+    navigateTo({ kind: 'clients' })
+  }, [navigateTo, selectedClientId, selectedSidebarItemKey, selectedTrajectoryId, sessionOriginRoute, selectedSessieId, setInputOriginRoute])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -279,7 +279,7 @@ export function AppShell({ onLogout }: Props) {
       window.location.pathname === '/sessies' ||
       window.location.pathname === '/sessies/'
     ) {
-      const nextPath = buildPathFromRoute({ kind: 'coachees' })
+      const nextPath = buildPathFromRoute({ kind: 'clients' })
       window.history.replaceState({ path: nextPath }, '', nextPath)
     }
     handlePopState()
@@ -298,16 +298,16 @@ export function AppShell({ onLogout }: Props) {
         isRecordPageOpen,
         isNewClientPageOpen,
         overlayScreenKey,
-        selectedCoacheeId,
+        selectedClientId,
         selectedSessieId,
         selectedSidebarItemKey,
         selectedTrajectoryId,
       }),
-    [isAdminContactScreenOpen, isAdminScreenOpen, isAdminWachtlijstScreenOpen, isNieuweRapportageOpen, rapportageScreenMode, isRecordPageOpen, isNewClientPageOpen, overlayScreenKey, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey, selectedTrajectoryId],
+    [isAdminContactScreenOpen, isAdminScreenOpen, isAdminWachtlijstScreenOpen, isNieuweRapportageOpen, rapportageScreenMode, isRecordPageOpen, isNewClientPageOpen, overlayScreenKey, selectedClientId, selectedSessieId, selectedSidebarItemKey, selectedTrajectoryId],
   )
 
-  const [newlyCreatedCoacheeId, setNewlyCreatedCoacheeId] = useState<string | null>(null)
-  const [newlyCreatedCoacheeName, setNewlyCreatedCoacheeName] = useState<string | null>(null)
+  const [newlyCreatedClientId, setNewlyCreatedClientId] = useState<string | null>(null)
+  const [newlyCreatedClientName, setNewlyCreatedClientName] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isAppDataLoaded) return
@@ -316,14 +316,14 @@ export function AppShell({ onLogout }: Props) {
       const resolvedSessieId = resolveRouteEntityId(
         selectedSessieId,
         'session',
-        data.sessions.map((item) => item.id),
+        data.inputs.map((item) => item.id),
       )
       if (resolvedSessieId && resolvedSessieId !== selectedSessieId) {
         setSelectedSessieId(resolvedSessieId)
         if (typeof window !== 'undefined') {
           const nextPath =
-            selectedCoacheeId && selectedTrajectoryId
-              ? buildPathFromRoute({ kind: 'item', coacheeId: selectedCoacheeId, trajectoryId: selectedTrajectoryId, itemId: resolvedSessieId })
+            selectedClientId && selectedTrajectoryId
+              ? buildPathFromRoute({ kind: 'item', clientId: selectedClientId, trajectoryId: selectedTrajectoryId, itemId: resolvedSessieId })
               : buildPathFromRoute({ kind: 'sessie', sessieId: resolvedSessieId })
           if (window.location.pathname !== nextPath) {
             window.history.replaceState({ path: nextPath }, '', nextPath)
@@ -333,16 +333,16 @@ export function AppShell({ onLogout }: Props) {
       }
     }
 
-    if (selectedCoacheeId) {
-      const resolvedCoacheeId = resolveRouteEntityId(
-        selectedCoacheeId,
-        'coachee',
-        data.coachees.map((item) => item.id),
+    if (selectedClientId) {
+      const resolvedClientId = resolveRouteEntityId(
+        selectedClientId,
+        'client',
+        data.clients.map((item) => item.id),
       )
-      if (resolvedCoacheeId && resolvedCoacheeId !== selectedCoacheeId) {
-        setSelectedCoacheeId(resolvedCoacheeId)
+      if (resolvedClientId && resolvedClientId !== selectedClientId) {
+        setSelectedClientId(resolvedClientId)
         if (typeof window !== 'undefined') {
-          const nextPath = buildPathFromRoute({ kind: 'coachee', coacheeId: resolvedCoacheeId })
+          const nextPath = buildPathFromRoute({ kind: 'client', clientId: resolvedClientId })
           if (window.location.pathname !== nextPath) {
             window.history.replaceState({ path: nextPath }, '', nextPath)
           }
@@ -355,72 +355,72 @@ export function AppShell({ onLogout }: Props) {
         'trajectory',
         data.trajectories.map((item) => item.id),
       )
-      if (resolvedTrajectoryId && resolvedTrajectoryId !== selectedTrajectoryId && selectedCoacheeId) {
+      if (resolvedTrajectoryId && resolvedTrajectoryId !== selectedTrajectoryId && selectedClientId) {
         setSelectedTrajectoryId(resolvedTrajectoryId)
         if (typeof window !== 'undefined') {
-          const nextPath = buildPathFromRoute({ kind: 'trajectory', coacheeId: selectedCoacheeId, trajectoryId: resolvedTrajectoryId })
+          const nextPath = buildPathFromRoute({ kind: 'trajectory', clientId: selectedClientId, trajectoryId: resolvedTrajectoryId })
           if (window.location.pathname !== nextPath) {
             window.history.replaceState({ path: nextPath }, '', nextPath)
           }
         }
       }
     }
-  }, [data.coachees, data.sessions, data.trajectories, isAppDataLoaded, selectedCoacheeId, selectedSessieId, selectedTrajectoryId])
+  }, [data.clients, data.inputs, data.trajectories, isAppDataLoaded, selectedClientId, selectedSessieId, selectedTrajectoryId])
 
-  const openNewCoacheeModal = useCallback(() => {
+  const openNewClientModal = useCallback(() => {
     navigateTo({ kind: 'new-client' })
   }, [navigateTo])
 
-  const openNewSessionModal = useCallback(
-    (coacheeId: string | null, trajectoryId: string | null = null, initialOption: 'gesprek' | 'gespreksverslag' | null = null) => {
+  const openNewInputModal = useCallback(
+    (clientId: string | null, trajectoryId: string | null = null, initialOption: 'gesprek' | 'gespreksverslag' | null = null) => {
       if (isRecordingBusy) return
-      setMobileSessionInitialOption(initialOption)
-      setNewSessionCoacheeId(coacheeId)
-      setNewSessionTrajectoryId(trajectoryId)
-      setIsNewSessionModalOpen(true)
+      setMobileInputInitialOption(initialOption)
+      setNewInputClientId(clientId)
+      setNewInputTrajectoryId(trajectoryId)
+      setIsNewInputModalOpen(true)
     },
     [isRecordingBusy],
   )
 
-  const openMobileLimitedSession = useCallback((option: 'gesprek' | 'gespreksverslag') => {
+  const openMobileLimitedInput = useCallback((option: 'gesprek' | 'gespreksverslag') => {
     if (isRecordingBusy) return
-    setMobileSessionInitialOption(option)
-    setNewSessionCoacheeId(null)
-    setNewSessionTrajectoryId(null)
-    setIsNewSessionModalOpen(true)
+    setMobileInputInitialOption(option)
+    setNewInputClientId(null)
+    setNewInputTrajectoryId(null)
+    setIsNewInputModalOpen(true)
   }, [isRecordingBusy])
 
   useEffect(() => {
-    if (newlyCreatedCoacheeId) {
-      const coachee = data.coachees.find((c) => c.id === newlyCreatedCoacheeId && !c.isArchived)
-      if (coachee) {
-        setNewlyCreatedCoacheeName(coachee.name)
+    if (newlyCreatedClientId) {
+      const client = data.clients.find((c) => c.id === newlyCreatedClientId && !c.isArchived)
+      if (client) {
+        setNewlyCreatedClientName(client.name)
       }
     }
-  }, [data.coachees, newlyCreatedCoacheeId])
+  }, [data.clients, newlyCreatedClientId])
 
   const breadcrumbItems = useMemo(
     () =>
       buildBreadcrumbItems({
-        coachees: data.coachees,
-        sessions: data.sessions,
+        clients: data.clients,
+        inputs: data.inputs,
         trajectories: data.trajectories,
         isNieuweRapportageOpen,
         isRecordPageOpen,
         isNewClientPageOpen,
         rapportageScreenMode,
-        selectedCoacheeId,
+        selectedClientId,
         selectedSessieId,
         selectedSidebarItemKey,
         selectedTrajectoryId,
         navigateTo,
       }),
-    [data.coachees, data.sessions, data.trajectories, isNieuweRapportageOpen, isRecordPageOpen, isNewClientPageOpen, navigateTo, rapportageScreenMode, selectedCoacheeId, selectedSessieId, selectedSidebarItemKey, selectedTrajectoryId],
+    [data.clients, data.inputs, data.trajectories, isNieuweRapportageOpen, isRecordPageOpen, isNewClientPageOpen, navigateTo, rapportageScreenMode, selectedClientId, selectedSessieId, selectedSidebarItemKey, selectedTrajectoryId],
   )
 
   const hasBreadcrumbs = breadcrumbItems.length >= 2 && !isEndToEndEncryptiePageOpen
-  const isCoacheeOverviewPage = selectedSidebarItemKey === 'coachees' && !!selectedCoacheeId && !selectedTrajectoryId && !selectedSessieId
-  const isCoacheeDetailPage = selectedSidebarItemKey === 'coachees' && !!selectedCoacheeId
+  const isClientOverviewPage = selectedSidebarItemKey === 'clients' && !!selectedClientId && !selectedTrajectoryId && !selectedSessieId
+  const isClientDetailPage = selectedSidebarItemKey === 'clients' && !!selectedClientId
   const isE2eeSetupBannerVisible = false
   const isSettingsSelected = isEndToEndEncryptiePageOpen
 
@@ -469,60 +469,60 @@ export function AppShell({ onLogout }: Props) {
         </View>
         <View style={styles.mobileLimitedFooter}>
           <Pressable
-            onPress={() => openMobileLimitedSession('gesprek')}
+            onPress={() => openMobileLimitedInput('gesprek')}
             style={({ hovered }) => [styles.mobileLimitedPrimaryButton, hovered ? styles.mobileLimitedPrimaryButtonHovered : undefined]}
           >
             <Text isBold style={styles.mobileLimitedPrimaryButtonText}>Gesprek opnemen</Text>
           </Pressable>
           <Pressable
-            onPress={() => openMobileLimitedSession('gespreksverslag')}
+            onPress={() => openMobileLimitedInput('gespreksverslag')}
             style={({ hovered }) => [styles.mobileLimitedPrimaryButton, hovered ? styles.mobileLimitedPrimaryButtonHovered : undefined]}
           >
             <Text isBold style={styles.mobileLimitedPrimaryButtonText}>Verslag opnemen</Text>
           </Pressable>
         </View>
 
-        <NewSessionModal
-          visible={isNewSessionModalOpen}
+        <NewInputModal
+          visible={isNewInputModalOpen}
           limitedMode
-          initialOption={mobileSessionInitialOption}
+          initialOption={mobileInputInitialOption}
           onRecordingBusyChange={setIsRecordingBusy}
-          initialCoacheeId={null}
+          initialClientId={null}
           initialTrajectoryId={null}
           onOpenGeschrevenGespreksverslag={() => undefined}
-          restoreDraftFromSubscriptionReturn={restoreNewSessionDraftFromSubscriptionReturn}
-          onRestoreDraftHandled={() => setRestoreNewSessionDraftFromSubscriptionReturn(false)}
+          restoreDraftFromSubscriptionReturn={restoreNewInputDraftFromSubscriptionReturn}
+          onRestoreDraftHandled={() => setRestoreNewInputDraftFromSubscriptionReturn(false)}
           onClose={() => {
             setIsRecordingBusy(false)
-            setIsNewSessionModalOpen(false)
-            setMobileSessionInitialOption(null)
-            setNewlyCreatedCoacheeId(null)
-            setNewSessionCoacheeId(null)
-            setNewSessionTrajectoryId(null)
+            setIsNewInputModalOpen(false)
+            setMobileInputInitialOption(null)
+            setNewlyCreatedClientId(null)
+            setNewInputClientId(null)
+            setNewInputTrajectoryId(null)
           }}
           onOpenMySubscription={() => {
             if (!canOpenSubscription) return
             setIsMySubscriptionModalOpen(true)
           }}
-          onOpenNewCoachee={() => {
-              setIsNewSessionModalOpen(false)
-              setMobileSessionInitialOption(null)
-              setNewSessionCoacheeId(null)
-              setNewSessionTrajectoryId(null)
-              openNewCoacheeModal()
+          onOpenNewClient={() => {
+              setIsNewInputModalOpen(false)
+              setMobileInputInitialOption(null)
+              setNewInputClientId(null)
+              setNewInputTrajectoryId(null)
+              openNewClientModal()
             }}
-          newlyCreatedCoacheeId={newlyCreatedCoacheeId}
-          onNewlyCreatedCoacheeHandled={() => setNewlyCreatedCoacheeId(null)}
-          onOpenSession={(sessionId) => {
-            const openedSession = data.sessions.find((item) => item.id === sessionId)
+          newlyCreatedClientId={newlyCreatedClientId}
+          onNewlyCreatedClientHandled={() => setNewlyCreatedClientId(null)}
+          onOpenInput={(sessionId: string) => {
+            const openedInput = data.inputs.find((item) => item.id === sessionId)
             const nextRoute =
-              openedSession?.coacheeId && openedSession?.trajectoryId
-                ? ({ kind: 'item', coacheeId: openedSession.coacheeId, trajectoryId: openedSession.trajectoryId, itemId: sessionId } as const)
+              openedInput?.clientId && openedInput?.trajectoryId
+                ? ({ kind: 'item', clientId: openedInput.clientId, trajectoryId: openedInput.trajectoryId, itemId: sessionId } as const)
                 : ({ kind: 'sessie', sessieId: sessionId } as const)
-            setIsNewSessionModalOpen(false)
-            setMobileSessionInitialOption(null)
-            setNewSessionTrajectoryId(null)
-            setSessionOriginRoute(null)
+            setIsNewInputModalOpen(false)
+            setMobileInputInitialOption(null)
+            setNewInputTrajectoryId(null)
+            setInputOriginRoute(null)
             navigateTo(nextRoute)
           }}
         />
@@ -553,7 +553,7 @@ export function AppShell({ onLogout }: Props) {
         breadcrumbItems={breadcrumbItems}
         onPressNieuweRapportage={() => navigateTo({ kind: 'nieuwe-rapportage' })}
         isNieuweRapportageDisabled
-        onPressRecord={() => openNewSessionModal(null, null, null)}
+        onPressRecord={() => openNewInputModal(null, null, null)}
         isRecordDisabled={isRecordingBusy}
       />
       <>
@@ -581,19 +581,19 @@ export function AppShell({ onLogout }: Props) {
             <View
               style={[
                 styles.mainContent,
-                isCoacheeDetailPage || isNieuweRapportageOpen || isRecordPageOpen || isNewClientPageOpen || !!selectedSessieId || selectedSidebarItemKey === 'mijnPraktijk'
+                isClientDetailPage || isNieuweRapportageOpen || isRecordPageOpen || isNewClientPageOpen || !!selectedSessieId || selectedSidebarItemKey === 'mijnPraktijk'
                   ? styles.mainContentNoFrame
                   : undefined,
-                hasBreadcrumbs && !isCoacheeOverviewPage && !isNieuweRapportageOpen && !isRecordPageOpen && !isNewClientPageOpen && !selectedSessieId ? styles.mainContentWithBreadcrumbs : undefined,
+                hasBreadcrumbs && !isClientOverviewPage && !isNieuweRapportageOpen && !isRecordPageOpen && !isNewClientPageOpen && !selectedSessieId ? styles.mainContentWithBreadcrumbs : undefined,
                 isE2eeSetupBannerVisible
-                  ? (hasBreadcrumbs && !isCoacheeOverviewPage && !isNieuweRapportageOpen && !isRecordPageOpen && !isNewClientPageOpen && !selectedSessieId ? styles.mainContentWithE2eeBarAndBreadcrumbs : styles.mainContentWithE2eeBar)
+                  ? (hasBreadcrumbs && !isClientOverviewPage && !isNieuweRapportageOpen && !isRecordPageOpen && !isNewClientPageOpen && !selectedSessieId ? styles.mainContentWithE2eeBarAndBreadcrumbs : styles.mainContentWithE2eeBar)
                   : undefined,
               ]}
             >
               <MainContainer contentKey={mainContentKey}>
                 <AppShellRouteView
                   canOpenSubscription={canOpenSubscription}
-                  coacheeTabById={coacheeTabById}
+                  clientTabById={clientTabById}
                   data={data}
                   goBack={goBack}
                   isAdminContactScreenOpen={isAdminContactScreenOpen}
@@ -607,37 +607,37 @@ export function AppShell({ onLogout }: Props) {
                   isRecordingBusy={isRecordingBusy}
                   mainContentTextStyle={styles.mainContentText}
                   navigateTo={navigateTo}
-                  newlyCreatedCoacheeName={newlyCreatedCoacheeName}
-                  onClearNewlyCreatedCoachee={() => {
-                    setNewlyCreatedCoacheeId(null)
-                    setNewlyCreatedCoacheeName(null)
+                  newlyCreatedClientName={newlyCreatedClientName}
+                  onClearNewlyCreatedClient={() => {
+                    setNewlyCreatedClientId(null)
+                    setNewlyCreatedClientName(null)
                   }}
-                  onOpenNewCoachee={() => {
-              setIsNewSessionModalOpen(false)
-              setMobileSessionInitialOption(null)
-              setNewSessionCoacheeId(null)
-              setNewSessionTrajectoryId(null)
-              openNewCoacheeModal()
+                  onOpenNewClient={() => {
+              setIsNewInputModalOpen(false)
+              setMobileInputInitialOption(null)
+              setNewInputClientId(null)
+              setNewInputTrajectoryId(null)
+              openNewClientModal()
             }}
-                  onOpenNewSessionModal={openNewSessionModal}
-                  onSetCoacheeTabById={(coacheeId, tabKey) => {
-                    setCoacheeTabById((previous) => {
-                      if (previous[coacheeId] === tabKey) return previous
-                      return { ...previous, [coacheeId]: tabKey }
+                  onOpenNewInputModal={openNewInputModal}
+                  onSetClientTabById={(clientId, tabKey) => {
+                    setClientTabById((previous) => {
+                      if (previous[clientId] === tabKey) return previous
+                      return { ...previous, [clientId]: tabKey }
                     })
                   }}
-                  onSetRapportageEditSessionId={setRapportageEditSessionId}
-                  onSetRapportageOnlySessionId={setRapportageOnlySessionId}
+                  onSetRapportageEditInputId={setRapportageEditInputId}
+                  onSetRapportageOnlyInputId={setRapportageOnlyInputId}
                   onSetRapportageScreenMode={setRapportageScreenMode}
                   onSetSelectedSidebarItemKey={setSelectedSidebarItemKey}
-                  onSetSessionIdPendingTemplatePicker={setSessionIdPendingTemplatePicker}
-                  onSetSessionOriginRoute={setSessionOriginRoute}
+                  onSetInputIdPendingTemplatePicker={setInputIdPendingTemplatePicker}
+                  onSetInputOriginRoute={setInputOriginRoute}
                   onToggleE2eePage={setIsEndToEndEncryptiePageOpen}
                   overlayScreenKey={overlayScreenKey}
-                  rapportageEditSessionId={rapportageEditSessionId}
-                  rapportageOnlySessionId={rapportageOnlySessionId}
+                  rapportageEditInputId={rapportageEditInputId}
+                  rapportageOnlyInputId={rapportageOnlyInputId}
                   rapportageScreenMode={rapportageScreenMode}
-                  selectedCoacheeId={selectedCoacheeId}
+                  selectedClientId={selectedClientId}
                   selectedSidebarItemKey={selectedSidebarItemKey}
                   selectedSessieId={selectedSessieId}
                   selectedTrajectoryId={selectedTrajectoryId}
@@ -697,57 +697,57 @@ export function AppShell({ onLogout }: Props) {
             showSubscriptionItem={canOpenSubscription}
           />
 
-          <NewSessionModal
-            visible={isNewSessionModalOpen}
+          <NewInputModal
+            visible={isNewInputModalOpen}
             onRecordingBusyChange={setIsRecordingBusy}
-            initialCoacheeId={newSessionCoacheeId}
-            initialTrajectoryId={newSessionTrajectoryId}
-            onOpenGeschrevenGespreksverslag={(coacheeId) => {
-              setIsNewSessionModalOpen(false)
-              setMobileSessionInitialOption(null)
-              setNewSessionCoacheeId(null)
-              setNewSessionTrajectoryId(null)
-              setRapportageOnlySessionId(null)
-              setSelectedCoacheeId(coacheeId)
+            initialClientId={newInputClientId}
+            initialTrajectoryId={newInputTrajectoryId}
+            onOpenGeschrevenGespreksverslag={(clientId: string | null) => {
+              setIsNewInputModalOpen(false)
+              setMobileInputInitialOption(null)
+              setNewInputClientId(null)
+              setNewInputTrajectoryId(null)
+              setRapportageOnlyInputId(null)
+              setSelectedClientId(clientId)
               setRapportageScreenMode('controleren')
-              setRapportageEditSessionId(null)
+              setRapportageEditInputId(null)
               navigateTo({ kind: 'nieuwe-rapportage' })
             }}
-            restoreDraftFromSubscriptionReturn={restoreNewSessionDraftFromSubscriptionReturn}
-            onRestoreDraftHandled={() => setRestoreNewSessionDraftFromSubscriptionReturn(false)}
+            restoreDraftFromSubscriptionReturn={restoreNewInputDraftFromSubscriptionReturn}
+            onRestoreDraftHandled={() => setRestoreNewInputDraftFromSubscriptionReturn(false)}
             onClose={() => {
               setIsRecordingBusy(false)
-              setIsNewSessionModalOpen(false)
-              setMobileSessionInitialOption(null)
-              setNewlyCreatedCoacheeId(null)
-              setNewSessionCoacheeId(null)
-              setNewSessionTrajectoryId(null)
+              setIsNewInputModalOpen(false)
+              setMobileInputInitialOption(null)
+              setNewlyCreatedClientId(null)
+              setNewInputClientId(null)
+              setNewInputTrajectoryId(null)
             }}
             onOpenMySubscription={() => {
               if (!canOpenSubscription) return
               setIsMySubscriptionModalOpen(true)
             }}
-            onOpenNewCoachee={() => {
-              setIsNewSessionModalOpen(false)
-              setMobileSessionInitialOption(null)
-              setNewSessionCoacheeId(null)
-              setNewSessionTrajectoryId(null)
-              openNewCoacheeModal()
+            onOpenNewClient={() => {
+              setIsNewInputModalOpen(false)
+              setMobileInputInitialOption(null)
+              setNewInputClientId(null)
+              setNewInputTrajectoryId(null)
+              openNewClientModal()
             }}
-            newlyCreatedCoacheeId={newlyCreatedCoacheeId}
-            onNewlyCreatedCoacheeHandled={() => setNewlyCreatedCoacheeId(null)}
-            onOpenSession={(sessionId) => {
-              const openedSession = data.sessions.find((item) => item.id === sessionId)
+            newlyCreatedClientId={newlyCreatedClientId}
+            onNewlyCreatedClientHandled={() => setNewlyCreatedClientId(null)}
+            onOpenInput={(sessionId: string) => {
+              const openedInput = data.inputs.find((item) => item.id === sessionId)
               const nextRoute =
-                openedSession?.coacheeId && openedSession?.trajectoryId
-                  ? ({ kind: 'item', coacheeId: openedSession.coacheeId, trajectoryId: openedSession.trajectoryId, itemId: sessionId } as const)
+                openedInput?.clientId && openedInput?.trajectoryId
+                  ? ({ kind: 'item', clientId: openedInput.clientId, trajectoryId: openedInput.trajectoryId, itemId: sessionId } as const)
                   : ({ kind: 'sessie', sessieId: sessionId } as const)
-              setIsNewSessionModalOpen(false)
-              setMobileSessionInitialOption(null)
-              setNewSessionCoacheeId(null)
-              setNewSessionTrajectoryId(null)
-              setRapportageOnlySessionId(null)
-              setSessionOriginRoute(null)
+              setIsNewInputModalOpen(false)
+              setMobileInputInitialOption(null)
+              setNewInputClientId(null)
+              setNewInputTrajectoryId(null)
+              setRapportageOnlyInputId(null)
+              setInputOriginRoute(null)
               navigateTo(nextRoute)
             }}
           />
@@ -962,6 +962,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+
+
+
 
 
 

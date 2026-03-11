@@ -7,7 +7,7 @@ import { fontSizes } from '@/design/tokens/fontSizes'
 import { radius } from '@/design/tokens/radius'
 import { rnShadows } from '@/design/tokens/shadows'
 import { spacing } from '@/design/tokens/spacing'
-import { SessionThumbsDownIcon, SessionThumbsUpIcon } from '@/icons/SessionPageIcons'
+import { InputThumbsDownIcon, InputThumbsUpIcon } from '@/icons/InputPageIcons'
 import { TrashIcon } from '@/icons/TrashIcon'
 import type { SnippetSectionProps } from '@/screens/session/sessionScreen.types'
 import type { SnippetStatus } from '@/storage/types'
@@ -84,7 +84,7 @@ export function SnippetSection({
                       hovered ? styles.iconHover : undefined,
                     ]}
                   >
-                    <SessionThumbsUpIcon size={18} />
+                    <InputThumbsUpIcon size={18} />
                   </Pressable>
                   <Pressable
                     onPress={() => onUpdateSnippetStatus(snippet.id, 'rejected')}
@@ -94,7 +94,7 @@ export function SnippetSection({
                       hovered ? styles.iconHover : undefined,
                     ]}
                   >
-                    <SessionThumbsDownIcon size={18} />
+                    <InputThumbsDownIcon size={18} />
                   </Pressable>
                   <Pressable
                     onPress={() => onDeleteSnippet(snippet.id)}
@@ -210,3 +210,4 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 })
+

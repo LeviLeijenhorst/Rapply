@@ -3,7 +3,6 @@ export type Client = {
   name: string
   clientDetails: string
   employerDetails: string
-  firstSickDay: string
   createdAtUnixMs: number
   updatedAtUnixMs: number
   isArchived: boolean

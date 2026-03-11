@@ -8,9 +8,9 @@ export type ClientLeftTabKey = 'sessies' | 'notities' | 'rapportages' | 'documen
 
 export type ClientRightTabKey = 'chatbot' | 'status'
 
-export type SessionListItem = {
+export type InputListItem = {
   id: string
-  targetSessionId: string
+  targetInputId: string
   title: string
   trajectoryLabel: string
   kind: string
@@ -29,7 +29,6 @@ export type ClientRecord = {
   name: string
   clientDetails?: string
   employerDetails?: string
-  firstSickDay?: string
   createdAtUnixMs: number
 }
 
@@ -44,7 +43,7 @@ export type ClientTrajectory = {
   createdAtUnixMs: number
 }
 
-export type ClientSession = {
+export type ClientInput = {
   id: string
   clientId?: string | null
   trajectoryId?: string | null
@@ -55,8 +54,6 @@ export type ClientSession = {
   uploadFileName?: string | null
   summary?: string | null
   reportDate?: string | null
-  wvpWeekNumber?: string | null
-  reportFirstSickDay?: string | null
   createdAtUnixMs: number
   transcriptionStatus: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
 }
@@ -91,10 +88,10 @@ export type ClientTemplate = {
 export type ClientDataShape = {
   clients: ClientRecord[]
   trajectories: ClientTrajectory[]
-  sessions: ClientSession[]
+  inputs: ClientInput[]
   notes: ClientNote[]
   snippets: ClientSnippet[]
-  writtenReports: ClientWrittenReport[]
+  inputSummaries: ClientWrittenReport[]
   templates: ClientTemplate[]
 }
 
@@ -106,24 +103,24 @@ export type ClientIntentTemplate = {
 export type ClientScreenProps = {
   clientId: string
   onBack: () => void
-  onSelectSession: (sessionId: string, sourceTab: ClientLeftTabKey) => void
-  onPressCreateSession: (trajectoryId: string | null) => void
+  onSelectInput: (sessionId: string, sourceTab: ClientLeftTabKey) => void
+  onPressCreateInput: (trajectoryId: string | null) => void
   onPressCreateReports: (trajectoryId: string | null) => void
   initialLeftActiveTabKey?: ClientLeftTabKey
   initialRightActiveTabKey?: ClientRightTabKey
   onLeftActiveTabChange?: (tabKey: ClientLeftTabKey) => void
-  isCreateSessionDisabled?: boolean
+  isCreateInputDisabled?: boolean
 }
 
 export type ClientLeftTabsProps = {
   activeTabKey: ClientLeftTabKey
-  filteredSessions: SessionListItem[]
+  filteredInputs: InputListItem[]
   hoveredItemId: string | null
   hoveredMenuItemId: string | null
   isDocumentsTab: boolean
   isSearchExpanded: boolean
   leftColumnStyle: any
-  menuSessionId: string | null
+  menuInputId: string | null
   searchInputRef: React.RefObject<TextInput | null>
   searchPlaceholder: string
   searchQuery: string
@@ -132,8 +129,8 @@ export type ClientLeftTabsProps = {
   showsDurationColumn: boolean
   tableFirstColumnLabel: string
   onAddItem: () => void
-  onOpenRowMenu: (item: SessionListItem, event?: any) => void
-  onPressRow: (item: SessionListItem) => void
+  onOpenRowMenu: (item: InputListItem, event?: any) => void
+  onPressRow: (item: InputListItem) => void
   onSelectTab: (tabKey: ClientLeftTabKey) => void
   setHoveredItemId: Dispatch<SetStateAction<string | null>>
   setHoveredMenuItemId: Dispatch<SetStateAction<string | null>>
@@ -170,3 +167,4 @@ export type ClientChatbotProps = {
   setComposerText: (value: string) => void
   setIsNoMinutesCtaDismissed: (value: boolean) => void
 }
+

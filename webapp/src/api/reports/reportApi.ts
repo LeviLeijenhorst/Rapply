@@ -1,10 +1,23 @@
 import { callSecureApi } from '../secureApi'
-import type { WrittenReport } from '../../storage/types'
 
-export async function setWrittenReportRemote(report: WrittenReport): Promise<void> {
-  await callSecureApi('/written-reports/set', { report })
+export type ReportSavePayload = {
+  id?: string
+  clientId?: string | null
+  trajectoryId?: string | null
+  sourceSessionId?: string | null
+  title?: string
+  reportType?: string
+  state?: 'incomplete' | 'needs_review' | 'complete'
+  reportText?: string
+  reportDate?: string | null
+  createdAtUnixMs: number
+  updatedAtUnixMs: number
+}
+
+export async function saveReportRemote(report: ReportSavePayload): Promise<void> {
+  await callSecureApi('/reports/save', { report })
 }
 
 export const reportApi = {
-  save: setWrittenReportRemote,
+  save: saveReportRemote,
 }

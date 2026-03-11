@@ -6,7 +6,6 @@ type ClientRow = {
   name: string
   client_details: string
   employer_details: string
-  trajectory_start_date: string | null
   created_at_unix_ms: number
   updated_at_unix_ms: number
   is_archived: boolean
@@ -18,7 +17,6 @@ function mapClientRow(row: ClientRow): Client {
     name: row.name,
     clientDetails: row.client_details ?? "",
     employerDetails: row.employer_details ?? "",
-    firstSickDay: row.trajectory_start_date ?? "",
     createdAtUnixMs: Number(row.created_at_unix_ms),
     updatedAtUnixMs: Number(row.updated_at_unix_ms),
     isArchived: row.is_archived,
@@ -28,7 +26,7 @@ function mapClientRow(row: ClientRow): Client {
 export async function listClients(userId: string): Promise<Client[]> {
   const rows = await queryMany<ClientRow>(
     `
-    select c.id, c.name, coalesce(c.client_details, '') as client_details, coalesce(c.employer_details, '') as employer_details, c.trajectory_start_date, c.created_at_unix_ms, c.updated_at_unix_ms, c.is_archived
+    select c.id, c.name, coalesce(c.client_details, '') as client_details, coalesce(c.employer_details, '') as employer_details, c.created_at_unix_ms, c.updated_at_unix_ms, c.is_archived
     from public.clients c
     join public.client_owners co on co.client_id = c.id
     where co.user_id = $1
@@ -53,17 +51,16 @@ export async function createClient(userId: string, client: Client): Promise<void
 
   await execute(
     `
-    insert into public.clients (id, name, client_details, employer_details, trajectory_start_date, trajectory_end_date, created_at_unix_ms, updated_at_unix_ms, is_archived)
-    values ($1, $2, $3, $4, $5, null, $6, $7, $8)
+    insert into public.clients (id, name, client_details, employer_details, created_at_unix_ms, updated_at_unix_ms, is_archived)
+    values ($1, $2, $3, $4, $5, $6, $7)
     on conflict (id) do update
       set name = excluded.name,
           client_details = excluded.client_details,
           employer_details = excluded.employer_details,
-          trajectory_start_date = excluded.trajectory_start_date,
           updated_at_unix_ms = excluded.updated_at_unix_ms,
           is_archived = excluded.is_archived
     `,
-    [client.id, client.name, client.clientDetails, client.employerDetails, client.firstSickDay, client.createdAtUnixMs, client.updatedAtUnixMs, client.isArchived],
+    [client.id, client.name, client.clientDetails, client.employerDetails, client.createdAtUnixMs, client.updatedAtUnixMs, client.isArchived],
   )
 
   await execute(
@@ -112,7 +109,6 @@ export async function updateClient(
     name?: string | null
     clientDetails?: string | null
     employerDetails?: string | null
-    firstSickDay?: string | null
     isArchived?: boolean
     updatedAtUnixMs: number
   },
@@ -137,11 +133,6 @@ export async function updateClient(
   if (params.employerDetails !== undefined) {
     updates.push(`employer_details = $${index++}`)
     values.push(params.employerDetails)
-  }
-
-  if (params.firstSickDay !== undefined) {
-    updates.push(`trajectory_start_date = $${index++}`)
-    values.push(params.firstSickDay)
   }
 
   if (typeof params.isArchived === "boolean") {

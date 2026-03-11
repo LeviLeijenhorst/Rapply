@@ -8,7 +8,7 @@ import { Text } from '../../../ui/Text'
 import { SidebarItem } from './SidebarItem'
 import { ProfileCircleIcon } from '../../../icons/ProfileCircleIcon'
 
-export type SidebarItemKey = 'coachees' | 'activities' | 'reports' | 'mijnPraktijk' | 'archief' | 'admin' | 'adminContact' | 'adminWachtlijst'
+export type SidebarItemKey = 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'archief' | 'admin' | 'adminContact' | 'adminWachtlijst'
 
 type AnchorPoint = { x: number; y: number }
 
@@ -68,16 +68,16 @@ export function Sidebar({
         <View style={styles.menuItemsCompact}>
           <SidebarItem
             label="Dashboard"
-            isSelected={selectedSidebarItemKey === 'activities'}
-            onPress={() => onSelectSidebarItem('activities')}
-            icon={<HomeIcon color={selectedSidebarItemKey === 'activities' ? '#BE0165' : '#2C111F'} />}
+            isSelected={selectedSidebarItemKey === 'dashboard'}
+            onPress={() => onSelectSidebarItem('dashboard')}
+            icon={<HomeIcon color={selectedSidebarItemKey === 'dashboard' ? '#BE0165' : '#2C111F'} />}
             isCompact
           />
           <SidebarItem
             label="Cliënten"
-            isSelected={selectedSidebarItemKey === 'coachees'}
-            onPress={() => onSelectSidebarItem('coachees')}
-            icon={<PeopleIcon color={selectedSidebarItemKey === 'coachees' ? '#BE0165' : '#2C111F'} />}
+            isSelected={selectedSidebarItemKey === 'clients'}
+            onPress={() => onSelectSidebarItem('clients')}
+            icon={<PeopleIcon color={selectedSidebarItemKey === 'clients' ? '#BE0165' : '#2C111F'} />}
             isCompact
           />
           <SidebarItem
@@ -112,15 +112,15 @@ export function Sidebar({
         <View style={styles.menuItems}>
           <SidebarItem
             label="Dashboard"
-            isSelected={selectedSidebarItemKey === 'activities'}
-            onPress={() => onSelectSidebarItem('activities')}
-            icon={<HomeIcon color={selectedSidebarItemKey === 'activities' ? '#BE0165' : '#2C111F'} />}
+            isSelected={selectedSidebarItemKey === 'dashboard'}
+            onPress={() => onSelectSidebarItem('dashboard')}
+            icon={<HomeIcon color={selectedSidebarItemKey === 'dashboard' ? '#BE0165' : '#2C111F'} />}
           />
           <SidebarItem
             label="Cliënten"
-            isSelected={selectedSidebarItemKey === 'coachees'}
-            onPress={() => onSelectSidebarItem('coachees')}
-            icon={<PeopleIcon color={selectedSidebarItemKey === 'coachees' ? '#BE0165' : '#2C111F'} />}
+            isSelected={selectedSidebarItemKey === 'clients'}
+            onPress={() => onSelectSidebarItem('clients')}
+            icon={<PeopleIcon color={selectedSidebarItemKey === 'clients' ? '#BE0165' : '#2C111F'} />}
           />
           <SidebarItem
             label="Rapportages"
@@ -352,3 +352,5 @@ function NotificationIcon({ color }: SidebarIconProps) {
     </Svg>
   )
 }
+
+

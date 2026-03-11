@@ -8,7 +8,7 @@ const sessionChatInstructions = [
   'Do not invent action items or facts.',
 ].join('\n')
 
-export function buildSessionChatPrompt(params: {
+export function buildInputChatPrompt(params: {
   contextMessages: LocalChatMessage[]
   chatHistory: LocalChatMessage[]
 }): LocalChatMessage[] {
@@ -18,3 +18,4 @@ export function buildSessionChatPrompt(params: {
     ...params.chatHistory,
   ]
 }
+

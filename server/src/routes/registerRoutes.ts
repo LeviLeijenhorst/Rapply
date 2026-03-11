@@ -1,22 +1,22 @@
 import type { Express, RequestHandler } from "express"
 import { registerAccountRoutes } from "../account/routes/registerAccountRoutes"
-import { authImplementationVersion } from "../auth"
-import { requireAuthenticatedUser } from "../auth"
+import { authImplementationVersion } from "../identity/auth"
+import { requireAuthenticatedUser } from "../identity/auth"
 import { registerChatRoutes } from "../chat/routes/registerChatRoutes"
 import { registerClientRoutes } from "../clients/routes/registerClientRoutes"
 import { registerEncryptionRoutes } from "../encryption/routes/registerEncryptionRoutes"
 import { env } from "../env"
 import { registerNoteRoutes } from "../notes/routes/registerNoteRoutes"
-import { registerPracticeSettingsRoutes } from "../practiceSettings/routes/registerPracticeSettingsRoutes"
 import { registerReportRoutes } from "../reports/routes/registerReportRoutes"
 import { registerSessionRoutes } from "../sessions/routes/registerSessionRoutes"
 import { registerSnippetRoutes } from "../snippets/routes/registerSnippetRoutes"
 import { registerSummaryRoutes } from "../summaries/routes/registerSummaryRoutes"
-import { registerTemplateRoutes } from "../templates/routes/registerTemplateRoutes"
 import { registerBillingRoutes } from "../billing/routes/registerBillingRoutes"
 import { registerAuthRoutes } from "../identity/routes/registerAuthRoutes"
 import { registerSystemRoutes } from "../system/registerSystemRoutes"
 import { registerTranscriptionRoutes } from "../transcription/routes/registerTranscriptionRoutes"
+import { registerOrganizationSettingsRoutes } from "../organizationSettings/routes/registerOrganizationSettingsRoutes"
+import { registerUserSettingsRoutes } from "../userSettings/routes/registerUserSettingsRoutes"
 import { registerWorkspaceRoutes } from "../workspace/routes/registerWorkspaceRoutes"
 import { asyncHandler } from "../http"
 
@@ -76,9 +76,9 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
   registerSessionRoutes(app)
   registerSnippetRoutes(app, { rateLimitAi: params.rateLimitAi })
   registerNoteRoutes(app)
-  registerTemplateRoutes(app)
   registerReportRoutes(app)
-  registerPracticeSettingsRoutes(app)
+  registerOrganizationSettingsRoutes(app)
+  registerUserSettingsRoutes(app)
   registerAccountRoutes(app)
   registerChatRoutes(app, { rateLimitAi: params.rateLimitAi })
   registerSummaryRoutes(app, { rateLimitAi: params.rateLimitAi })
@@ -124,6 +124,34 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
     asyncHandler(async (req, res) => {
       await requireAuthenticatedUser(req)
       res.status(200).json({ ok: true, disabled: true })
+    }),
+  )
+  app.post(
+    "/templates/create",
+    asyncHandler(async (req, res) => {
+      await requireAuthenticatedUser(req)
+      res.status(200).json({ ok: true, disabled: true })
+    }),
+  )
+  app.post(
+    "/templates/update",
+    asyncHandler(async (req, res) => {
+      await requireAuthenticatedUser(req)
+      res.status(200).json({ ok: true, disabled: true })
+    }),
+  )
+  app.post(
+    "/templates/delete",
+    asyncHandler(async (req, res) => {
+      await requireAuthenticatedUser(req)
+      res.status(200).json({ ok: true, disabled: true })
+    }),
+  )
+  app.post(
+    "/templates/defaults",
+    asyncHandler(async (req, res) => {
+      await requireAuthenticatedUser(req)
+      res.status(200).json({ templates: [] })
     }),
   )
   app.post(

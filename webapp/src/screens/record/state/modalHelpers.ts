@@ -35,13 +35,13 @@ export async function validateUploadFileDuration(params: {
   return { durationSeconds, warning: null }
 }
 
-export function resolveDefaultTrajectoryIdForCoachee(params: {
-  coacheeId: string | null | undefined
+export function resolveDefaultTrajectoryIdForClient(params: {
+  clientId: string | null | undefined
   initialTrajectoryId: string | null | undefined
-  trajectoriesByCoacheeId: Map<string, Array<{ id: string }>>
+  trajectoriesByClientId: Map<string, Array<{ id: string }>>
 }): string | null {
-  if (!params.coacheeId) return null
-  const trajectories = params.trajectoriesByCoacheeId.get(params.coacheeId) ?? []
+  if (!params.clientId) return null
+  const trajectories = params.trajectoriesByClientId.get(params.clientId) ?? []
   if (trajectories.length === 0) return null
   const matchingInitial = params.initialTrajectoryId
     ? trajectories.find((trajectory) => trajectory.id === params.initialTrajectoryId)
@@ -70,3 +70,4 @@ export function getDropdownMaxHeight(params: {
     params.onResolved(Math.max(120, availableHeight))
   })
 }
+

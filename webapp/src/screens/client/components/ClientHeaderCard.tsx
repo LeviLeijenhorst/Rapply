@@ -13,13 +13,13 @@ type Props = {
   clientName: string
   clientPhone: string
   durationLabel: string
-  isCreateSessionDisabled: boolean
+  isCreateInputDisabled: boolean
   reportCount: number
   sessionCount: number
   trajectoryName: string
   onOpenEditClient: () => void
   onPressCreateReports: () => void
-  onPressCreateSession: () => void
+  onPressCreateInput: () => void
 }
 
 export function ClientHeaderCard({
@@ -27,13 +27,13 @@ export function ClientHeaderCard({
   clientName,
   clientPhone,
   durationLabel,
-  isCreateSessionDisabled,
+  isCreateInputDisabled,
   reportCount,
   sessionCount,
   trajectoryName,
   onOpenEditClient,
   onPressCreateReports,
-  onPressCreateSession,
+  onPressCreateInput,
 }: Props) {
   return (
     <View style={styles.profileCard}>
@@ -64,17 +64,17 @@ export function ClientHeaderCard({
         </View>
         <View style={styles.profileActions}>
           <Pressable
-            disabled={isCreateSessionDisabled}
+            disabled={isCreateInputDisabled}
             style={({ hovered }) => [
-              styles.newSessionButton,
+              styles.newInputButton,
               webTransitionSmooth,
-              isCreateSessionDisabled ? styles.newSessionButtonDisabled : undefined,
-              hovered && !isCreateSessionDisabled ? styles.newSessionButtonHovered : undefined,
+              isCreateInputDisabled ? styles.newInputButtonDisabled : undefined,
+              hovered && !isCreateInputDisabled ? styles.newInputButtonHovered : undefined,
             ]}
-            onPress={onPressCreateSession}
+            onPress={onPressCreateInput}
           >
             <PlusIcon color="#FFFFFF" size={22} />
-            <Text numberOfLines={1} style={styles.newSessionButtonText}>
+            <Text numberOfLines={1} style={styles.newInputButtonText}>
               Nieuwe input
             </Text>
           </Pressable>
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   profileMetaItem: { flexBasis: '30%', maxWidth: '30%', minWidth: 180 },
   profileMetaLabel: { fontSize: 16, lineHeight: 20, color: 'rgba(44,17,31,0.5)' },
   profileMetaValue: { marginTop: 4, fontSize: 16, lineHeight: 20, color: '#2C111F' },
-  newSessionButton: {
+  newInputButton: {
     minWidth: 203,
     height: 40,
     borderRadius: 8,
@@ -205,9 +205,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
-  newSessionButtonHovered: { backgroundColor: '#A50058' },
-  newSessionButtonDisabled: { backgroundColor: '#C6C6C6', borderColor: '#C6C6C6' },
-  newSessionButtonText: { fontSize: 16, lineHeight: 20, color: '#FFFFFF' },
+  newInputButtonHovered: { backgroundColor: '#A50058' },
+  newInputButtonDisabled: { backgroundColor: '#C6C6C6', borderColor: '#C6C6C6' },
+  newInputButtonText: { fontSize: 16, lineHeight: 20, color: '#FFFFFF' },
   newReportButton: {
     minWidth: 204,
     height: 40,
@@ -225,3 +225,4 @@ const styles = StyleSheet.create({
   newReportButtonHovered: { backgroundColor: colors.hoverBackground },
   newReportButtonText: { fontSize: 16, lineHeight: 20, color: '#2C111F' },
 })
+

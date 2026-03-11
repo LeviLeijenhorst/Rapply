@@ -7,6 +7,8 @@ export type FieldType = 'text' | 'multichoice'
 export type NewReportScreenProps = {
   initialCoacheeId?: string | null
   initialSessionId?: string | null
+  initialClientId?: string | null
+  initialInputId?: string | null
   mode?: RapportagePageMode
 }
 

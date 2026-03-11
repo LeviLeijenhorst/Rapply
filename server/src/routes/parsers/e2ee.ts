@@ -1,4 +1,4 @@
-import type { RecoveryPolicy } from "../../e2ee"
+import type { RecoveryPolicy } from "../../encryption/e2ee"
 import { readRequiredNumber, readText } from "./scalars"
 
 const allowedE2eeObjectTypes = new Set([

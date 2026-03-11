@@ -1,5 +1,5 @@
-import type { Coachee as LegacyClient } from '../types'
+import type { Client } from '../types'
 
 export type ClientStore = {
-  clients: LegacyClient[]
+  clients: Client[]
 }

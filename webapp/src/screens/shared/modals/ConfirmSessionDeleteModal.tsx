@@ -13,7 +13,7 @@ type Props = {
   onConfirm: () => void
 }
 
-export function ConfirmSessionDeleteModal({ visible, sessionTitle, onClose, onConfirm }: Props) {
+export function ConfirmInputDeleteModal({ visible, sessionTitle, onClose, onConfirm }: Props) {
   if (!visible) return null
 
   const description = sessionTitle
@@ -150,5 +150,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+
 
 

@@ -18,13 +18,13 @@ import type { ClientLeftTabsProps } from '@/screens/client/clientScreen.types'
 
 export function ClientLeftTabs({
   activeTabKey,
-  filteredSessions,
+  filteredInputs,
   hoveredItemId,
   hoveredMenuItemId,
   isDocumentsTab,
   isSearchExpanded,
   leftColumnStyle,
-  menuSessionId,
+  menuInputId,
   searchInputRef,
   searchPlaceholder,
   searchQuery,
@@ -73,14 +73,14 @@ export function ClientLeftTabs({
       </View>
 
       <View style={[styles.card, styles.bottomCardConnected]}>
-        <View style={styles.sessionsHeaderRow}>
-          <View style={styles.sessionsHeaderTitleWrap}>
-            <Text isSemibold style={styles.sessionsHeaderTitle}>
+        <View style={styles.inputsHeaderRow}>
+          <View style={styles.inputsHeaderTitleWrap}>
+            <Text isSemibold style={styles.inputsHeaderTitle}>
               {title}
             </Text>
-            <Text style={styles.sessionsHeaderCount}>{`(${filteredSessions.length})`}</Text>
+            <Text style={styles.inputsHeaderCount}>{`(${filteredInputs.length})`}</Text>
           </View>
-          <View style={styles.sessionsHeaderActions}>
+          <View style={styles.inputsHeaderActions}>
             {shouldShowSearch ? (
               <ExpandableSearchField
                 isExpanded={isSearchExpanded}
@@ -126,18 +126,18 @@ export function ClientLeftTabs({
           ) : (
             <>
               <View style={styles.tableHeaderRow}>
-                <Text style={[styles.tableHeaderText, styles.tableSessionCol]}>{tableFirstColumnLabel}</Text>
+                <Text style={[styles.tableHeaderText, styles.tableInputCol]}>{tableFirstColumnLabel}</Text>
                 <Text style={[styles.tableHeaderText, styles.tableDateCol]}>Datum</Text>
                 {showsDurationColumn ? <Text style={[styles.tableHeaderText, styles.tableDurationCol]}>Duur</Text> : null}
               </View>
 
-              <ScrollView style={styles.sessionsScroll} contentContainerStyle={styles.sessionsScrollContent} showsVerticalScrollIndicator={false}>
-                {filteredSessions.length === 0 ? (
+              <ScrollView style={styles.inputsScroll} contentContainerStyle={styles.inputsScrollContent} showsVerticalScrollIndicator={false}>
+                {filteredInputs.length === 0 ? (
                   <View style={styles.emptyTableState}>
-                    <Text style={styles.emptySessionsText}>Geen items gevonden.</Text>
+                    <Text style={styles.emptyInputsText}>Geen items gevonden.</Text>
                   </View>
                 ) : null}
-                {filteredSessions.map((item) => (
+                {filteredInputs.map((item) => (
                   <Pressable
                     key={item.id}
                     onPress={() => onPressRow(item)}
@@ -153,11 +153,11 @@ export function ClientLeftTabs({
                     onHoverOut={() => setHoveredItemId((previous) => (previous === item.id ? null : previous))}
                     style={({ hovered }) => [styles.tableRow, hovered ? styles.tableRowHovered : undefined]}
                   >
-                    <View style={styles.tableSessionCol}>
-                      <Text isSemibold style={styles.tableSessionTitle}>
+                    <View style={styles.tableInputCol}>
+                      <Text isSemibold style={styles.tableInputTitle}>
                         {item.title}
                       </Text>
-                      <Text style={styles.tableSessionSub}>{item.trajectoryLabel}</Text>
+                      <Text style={styles.tableInputSub}>{item.trajectoryLabel}</Text>
                     </View>
                     <View style={styles.tableDateCol}>
                       <Text style={styles.tableDateMain}>{item.dateLabel}</Text>
@@ -170,7 +170,7 @@ export function ClientLeftTabs({
                     ) : null}
                     <Pressable
                       pointerEvents={
-                        hoveredItemId === item.id || hoveredMenuItemId === item.id || menuSessionId === item.id
+                        hoveredItemId === item.id || hoveredMenuItemId === item.id || menuInputId === item.id
                           ? 'auto'
                           : 'none'
                       }
@@ -182,7 +182,7 @@ export function ClientLeftTabs({
                       }}
                       style={({ hovered }) => [
                         styles.rowMenuButton,
-                        hoveredItemId === item.id || hoveredMenuItemId === item.id || menuSessionId === item.id
+                        hoveredItemId === item.id || hoveredMenuItemId === item.id || menuInputId === item.id
                           ? undefined
                           : styles.rowMenuButtonHidden,
                         hovered ? styles.rowMenuButtonHovered : undefined,
@@ -322,11 +322,11 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   bottomCardConnected: { marginTop: 0, borderTopLeftRadius: 0, borderTopRightRadius: 12 },
-  sessionsHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingHorizontal: 24, paddingVertical: 20 },
-  sessionsHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 0 },
-  sessionsHeaderTitleWrap: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
-  sessionsHeaderTitle: { fontSize: 24, lineHeight: 34, color: '#2C111F' },
-  sessionsHeaderCount: { fontSize: 24, lineHeight: 34, color: 'rgba(44,17,31,0.5)', fontFamily: typography.fontFamilyRegular },
+  inputsHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingHorizontal: 24, paddingVertical: 20 },
+  inputsHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 0 },
+  inputsHeaderTitleWrap: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  inputsHeaderTitle: { fontSize: 24, lineHeight: 34, color: '#2C111F' },
+  inputsHeaderCount: { fontSize: 24, lineHeight: 34, color: 'rgba(44,17,31,0.5)', fontFamily: typography.fontFamilyRegular },
   searchField: { backgroundColor: '#F9FAFB', borderColor: '#DFE0E2' },
   searchFieldInput: { fontFamily: typography.fontFamilyMedium, color: '#656565' },
   quickAddButton: {
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   tableHeaderText: { fontSize: 16, lineHeight: 20, color: 'rgba(44,17,31,0.5)' },
-  tableSessionCol: { flex: 1.45, minWidth: 0 },
+  tableInputCol: { flex: 1.45, minWidth: 0 },
   tableDateCol: { width: 170 },
   tableDurationCol: { width: 90 },
   tableRow: {
@@ -366,8 +366,8 @@ const styles = StyleSheet.create({
     ...({ cursor: 'pointer' } as any),
   },
   tableRowHovered: { backgroundColor: '#FAFAFA' },
-  tableSessionTitle: { fontSize: 16, lineHeight: 20, color: '#2C111F', paddingRight: 8 },
-  tableSessionSub: { marginTop: 4, fontSize: 14, lineHeight: 18, color: 'rgba(44,17,31,0.5)' },
+  tableInputTitle: { fontSize: 16, lineHeight: 20, color: '#2C111F', paddingRight: 8 },
+  tableInputSub: { marginTop: 4, fontSize: 14, lineHeight: 18, color: 'rgba(44,17,31,0.5)' },
   tableDateMain: { fontSize: 14, lineHeight: 16, color: 'rgba(44,17,31,0.5)', fontFamily: typography.fontFamilySemibold },
   tableDateSub: { marginTop: 2, fontSize: 14, lineHeight: 16, color: 'rgba(44,17,31,0.5)' },
   tableDurationText: { fontSize: 14, lineHeight: 16, color: 'rgba(44,17,31,0.5)' },
@@ -384,10 +384,11 @@ const styles = StyleSheet.create({
   },
   rowMenuButtonHidden: { opacity: 0 },
   rowMenuButtonHovered: { backgroundColor: colors.hoverBackground },
-  sessionsScroll: { flex: 1 },
-  sessionsScrollContent: { gap: 0, paddingBottom: 0 },
+  inputsScroll: { flex: 1 },
+  inputsScrollContent: { gap: 0, paddingBottom: 0 },
   emptyTableState: { paddingVertical: 24, alignItems: 'center', justifyContent: 'center' },
-  emptySessionsText: { fontSize: 14, lineHeight: 20, color: colors.textSecondary, textAlign: 'center' },
+  emptyInputsText: { fontSize: 14, lineHeight: 20, color: colors.textSecondary, textAlign: 'center' },
   documentsPlaceholder: { borderTopWidth: 1, borderTopColor: '#DFE0E2', paddingHorizontal: 24, paddingVertical: 28 },
   documentsPlaceholderText: { fontSize: 15, lineHeight: 22, color: 'rgba(44,17,31,0.6)' },
 })
+

@@ -1,18 +1,18 @@
 import type { LocalAppData, Trajectory } from '../../../storage/types'
-import { getCoacheeUpsertValues, serializeCoacheeUpsertValues, type CoacheeUpsertValues } from '../../../types/clientProfile'
-import { isSessionNotesArtifact } from '../../../types/sessionArtifacts'
+import { getClientUpsertValues, serializeClientUpsertValues, type ClientUpsertValues } from '../../../types/clientProfile'
+import { isInputNotesArtifact } from '../../../types/sessionArtifacts'
 
-type CoacheeMutationApi = {
-  createCoachee: (values: { name: string; clientDetails?: string; employerDetails?: string; firstSickDay?: string }) => string
+type ClientMutationApi = {
+  createClient: (values: { name: string; clientDetails?: string; employerDetails?: string }) => string
   createTrajectory: (values: {
-    coacheeId: string
+    clientId: string
     name: string
     dienstType?: string
     uwvContactName?: string | null
     orderNumber?: string | null
     startDate?: string | null
   }) => string
-  updateCoachee: (coacheeId: string, values: { name?: string; clientDetails?: string; employerDetails?: string; firstSickDay?: string }) => void
+  updateClient: (clientId: string, values: { name?: string; clientDetails?: string; employerDetails?: string }) => void
   updateTrajectory: (
     trajectoryId: string,
     values: {
@@ -25,46 +25,45 @@ type CoacheeMutationApi = {
   ) => void
 }
 
-type SaveCoacheeParams = {
-  api: CoacheeMutationApi
+type SaveClientParams = {
+  api: ClientMutationApi
   data: LocalAppData
   mode: 'create' | 'edit'
-  editCoacheeId: string | null
-  values: CoacheeUpsertValues
+  editClientId: string | null
+  values: ClientUpsertValues
 }
 
-function getPrimaryTrajectoryForCoachee(data: LocalAppData, coacheeId: string): Trajectory | null {
+function getPrimaryTrajectoryForClient(data: LocalAppData, clientId: string): Trajectory | null {
   return (
     data.trajectories
-      .filter((trajectory) => trajectory.coacheeId === coacheeId)
+      .filter((trajectory) => trajectory.clientId === clientId)
       .sort((a, b) => a.createdAtUnixMs - b.createdAtUnixMs)[0] ?? null
   )
 }
 
-function buildTrajectoryPatch(values: CoacheeUpsertValues) {
+function buildTrajectoryPatch(values: ClientUpsertValues) {
   return {
     name: 'Werkfit maken',
     dienstType: 'Werkfit maken',
     uwvContactName: values.uwvContactName.trim() || null,
     orderNumber: values.orderNumber.trim() || null,
-    startDate: values.firstSickDay.trim() || null,
   }
 }
 
-export function getCoacheeSessionCounts(data: LocalAppData): Map<string, number> {
+export function getClientInputCounts(data: LocalAppData): Map<string, number> {
   const counts = new Map<string, number>()
-  for (const session of data.sessions) {
-    if (isSessionNotesArtifact(session)) continue
-    if (!session.coacheeId) continue
-    counts.set(session.coacheeId, (counts.get(session.coacheeId) ?? 0) + 1)
+  for (const session of data.inputs) {
+    if (isInputNotesArtifact(session)) continue
+    if (!session.clientId) continue
+    counts.set(session.clientId, (counts.get(session.clientId) ?? 0) + 1)
   }
   return counts
 }
 
-export function getUpsertTrajectoryOptions(data: LocalAppData, upsertMode: 'create' | 'edit', upsertCoacheeId: string | null) {
+export function getUpsertTrajectoryOptions(data: LocalAppData, upsertMode: 'create' | 'edit', upsertClientId: string | null) {
   const trajectories =
-    upsertMode === 'edit' && upsertCoacheeId
-      ? data.trajectories.filter((trajectory) => trajectory.coacheeId === upsertCoacheeId)
+    upsertMode === 'edit' && upsertClientId
+      ? data.trajectories.filter((trajectory) => trajectory.clientId === upsertClientId)
       : data.trajectories
 
   return trajectories.map((trajectory) => ({
@@ -73,47 +72,47 @@ export function getUpsertTrajectoryOptions(data: LocalAppData, upsertMode: 'crea
   }))
 }
 
-export function getInitialUpsertValuesForEdit(data: LocalAppData, coacheeId: string): CoacheeUpsertValues {
-  const coachee = data.coachees.find((item) => item.id === coacheeId) ?? null
-  const primaryTrajectory = getPrimaryTrajectoryForCoachee(data, coacheeId)
+export function getInitialUpsertValuesForEdit(data: LocalAppData, clientId: string): ClientUpsertValues {
+  const client = data.clients.find((item) => item.id === clientId) ?? null
+  const primaryTrajectory = getPrimaryTrajectoryForClient(data, clientId)
 
   return {
-    ...getCoacheeUpsertValues(coachee),
+    ...getClientUpsertValues(client),
     trajectoryId: primaryTrajectory?.id ?? '',
     orderNumber: String(primaryTrajectory?.orderNumber || ''),
     uwvContactName: String(primaryTrajectory?.uwvContactName || ''),
-    firstSickDay: String(primaryTrajectory?.startDate || coachee?.firstSickDay || ''),
   }
 }
 
-export function saveCoacheeFromUpsert({ api, data, mode, editCoacheeId, values }: SaveCoacheeParams): { didSave: boolean; createdCoacheeId: string | null } {
-  const serialized = serializeCoacheeUpsertValues(values)
+export function saveClientFromUpsert({ api, data, mode, editClientId, values }: SaveClientParams): { didSave: boolean; createdClientId: string | null } {
+  const serialized = serializeClientUpsertValues(values)
   const trimmedName = serialized.name.trim()
-  if (!trimmedName) return { didSave: false, createdCoacheeId: null }
+  if (!trimmedName) return { didSave: false, createdClientId: null }
 
   if (mode === 'create') {
-    const createdCoacheeId = api.createCoachee(serialized)
-    if (!createdCoacheeId) return { didSave: false, createdCoacheeId: null }
+    const createdClientId = api.createClient(serialized)
+    if (!createdClientId) return { didSave: false, createdClientId: null }
 
     api.createTrajectory({
-      coacheeId: createdCoacheeId,
+      clientId: createdClientId,
       ...buildTrajectoryPatch(values),
     })
-    return { didSave: true, createdCoacheeId }
+    return { didSave: true, createdClientId }
   }
 
-  if (!editCoacheeId) return { didSave: false, createdCoacheeId: null }
+  if (!editClientId) return { didSave: false, createdClientId: null }
 
-  api.updateCoachee(editCoacheeId, serialized)
-  const existingTrajectory = getPrimaryTrajectoryForCoachee(data, editCoacheeId)
+  api.updateClient(editClientId, serialized)
+  const existingTrajectory = getPrimaryTrajectoryForClient(data, editClientId)
   if (existingTrajectory?.id) {
     api.updateTrajectory(existingTrajectory.id, buildTrajectoryPatch(values))
   } else {
     api.createTrajectory({
-      coacheeId: editCoacheeId,
+      clientId: editClientId,
       ...buildTrajectoryPatch(values),
     })
   }
 
-  return { didSave: true, createdCoacheeId: null }
+  return { didSave: true, createdClientId: null }
 }
+

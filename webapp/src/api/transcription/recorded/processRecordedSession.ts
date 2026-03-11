@@ -1,7 +1,8 @@
 import { createAudioBlobRemote } from '../../audio/audioBlobApi'
-import { chargeRealtimeTranscription } from '../realtimeTranscriptionApi'
-import { isTranscriptionCancelledError, transcribeAudio } from '../transcribeAudio'
-import { generateStructuredSessionSummary } from '../../summaries/generateSessionSummaryFromTranscript'
+import { chargeRealtimeTranscription } from '../realtime/transcribeAudioRealtime'
+import { isTranscriptionCancelledError, transcribeAudioBatch } from '../batch/transcribeAudioBatch'
+import { generateStructuredInputSummary } from '../../summaries/generateInputSummaryFromTranscript'
+import { extractSnippetsForItem } from '../../snippets/snippetGenerationApi'
 import {
   finishTranscriptionRun,
   isTranscriptionRunActive,
@@ -18,14 +19,15 @@ import {
   markPendingPreviewAudioUploaded,
   setPendingPreviewProcessingState,
 } from '../../../audio/pendingPreviewStore'
-import type { Session } from '../../../storage/types'
+import type { Input } from '../../../storage/types'
+import type { Snippet } from '../../../storage/types'
 
-type SessionUpdate = {
+type InputUpdate = {
   audioBlobId?: string | null
   audioDurationSeconds?: number | null
   transcript?: string | null
   summary?: string | null
-  summaryStructured?: Session['summaryStructured']
+  summaryStructured?: Input['summaryStructured']
   transcriptionStatus?: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
   transcriptionError?: string | null
 }
@@ -35,10 +37,41 @@ type E2eeAudio = {
   shouldStoreAudioAsOctetStream: boolean
 }
 
-const activeProcessingSessionIds = new Set<string>()
+const activeProcessingInputIds = new Set<string>()
 const AUDIO_BLOB_SAVE_TIMEOUT_MS = 2 * 60 * 60_000
 
-export async function processRecordedSession(params: {
+async function maybeExtractSnippets(params: {
+  enabled: boolean
+  sessionId: string
+  clientId: string
+  trajectoryId: string
+  transcript: string
+  itemDate: number
+  onCreatedSnippets?: (snippets: Snippet[]) => void
+}) {
+  if (!params.enabled) return
+  const transcript = String(params.transcript || '').trim()
+  if (!transcript) return
+  if (!params.clientId || !params.trajectoryId) return
+
+  try {
+    const snippets = await extractSnippetsForItem({
+      itemId: params.sessionId,
+      clientId: params.clientId,
+      trajectoryId: params.trajectoryId,
+      sourceInputType: 'recording',
+      transcript,
+      itemDate: params.itemDate,
+    })
+    if (snippets.length > 0) {
+      params.onCreatedSnippets?.(snippets)
+    }
+  } catch (error) {
+    console.warn('[processRecordedInput] snippet extraction failed', error)
+  }
+}
+
+export async function processRecordedInput(params: {
   sessionId: string
   audioBlob: Blob
   mimeType: string
@@ -54,7 +87,14 @@ export async function processRecordedSession(params: {
   }
   initialAudioBlobId: string | null
   e2ee: E2eeAudio
-  updateSession: (sessionId: string, values: SessionUpdate) => void
+  updateInput: (sessionId: string, values: InputUpdate) => void
+  snippetExtraction?: {
+    enabled: boolean
+    clientId: string | null
+    trajectoryId: string | null
+    itemDate: number
+    onCreatedSnippets?: (snippets: Snippet[]) => void
+  }
 }): Promise<void> {
   const {
     sessionId,
@@ -66,13 +106,14 @@ export async function processRecordedSession(params: {
     summaryTemplate,
     initialAudioBlobId,
     e2ee,
-    updateSession,
+    updateInput,
+    snippetExtraction,
   } = params
 
-  if (activeProcessingSessionIds.has(sessionId)) {
+  if (activeProcessingInputIds.has(sessionId)) {
     return
   }
-  activeProcessingSessionIds.add(sessionId)
+  activeProcessingInputIds.add(sessionId)
 
   const runId = startTranscriptionRun(sessionId)
 
@@ -95,7 +136,7 @@ export async function processRecordedSession(params: {
         throw new Error('Geen audio id teruggekregen van de server.')
       }
       ensuredAudioBlobId = nextId
-      updateSession(sessionId, { audioBlobId: ensuredAudioBlobId })
+      updateInput(sessionId, { audioBlobId: ensuredAudioBlobId })
       await markPendingPreviewAudioUploaded({ sessionId, audioBlobId: ensuredAudioBlobId })
       await clearPendingPreviewAudioIfEligible(sessionId)
     } else if (shouldSaveAudio && ensuredAudioBlobId) {
@@ -103,7 +144,7 @@ export async function processRecordedSession(params: {
       await clearPendingPreviewAudioIfEligible(sessionId)
     }
 
-    updateSession(sessionId, {
+    updateInput(sessionId, {
       transcriptionStatus: 'transcribing',
       transcriptionError: null,
     })
@@ -119,24 +160,24 @@ export async function processRecordedSession(params: {
 
       const summaryAbortController = new AbortController()
       setSummaryAbortController(sessionId, runId, summaryAbortController)
-      updateSession(sessionId, {
+      updateInput(sessionId, {
         transcript: presetTranscript,
         transcriptionStatus: 'generating',
         transcriptionError: null,
       })
       hasTranscriptResult = true
-      const generatedStructuredSummary = await generateStructuredSessionSummary({
+      const generatedStructuredSummary = await generateStructuredInputSummary({
         transcript: presetTranscript,
         signal: summaryAbortController.signal,
       })
       console.log('[STRUCTURED_SUMMARY_RESULT]', generatedStructuredSummary)
       if (!isTranscriptionRunActive(sessionId, runId)) return
-      const transcriptionStatus: SessionUpdate['transcriptionStatus'] = 'done'
+      const transcriptionStatus: InputUpdate['transcriptionStatus'] = 'done'
       if (transcriptionStatus === 'done') {
         console.log('[SESSION_UPDATE_VALUES]', {
           summaryStructured: generatedStructuredSummary,
         })
-        updateSession(sessionId, {
+        updateInput(sessionId, {
           summaryStructured: generatedStructuredSummary,
           summary: null,
           audioBlobId: null,
@@ -145,6 +186,15 @@ export async function processRecordedSession(params: {
           transcriptionError: null,
         })
       }
+      await maybeExtractSnippets({
+        enabled: Boolean(snippetExtraction?.enabled),
+        sessionId,
+        clientId: String(snippetExtraction?.clientId || '').trim(),
+        trajectoryId: String(snippetExtraction?.trajectoryId || '').trim(),
+        transcript: presetTranscript,
+        itemDate: Number(snippetExtraction?.itemDate) || Date.now(),
+        onCreatedSnippets: snippetExtraction?.onCreatedSnippets,
+      })
       await markPendingPreviewTranscriptionSucceeded(sessionId)
       await clearPendingPreviewAudioIfEligible(sessionId)
       finishTranscriptionRun(sessionId, runId)
@@ -153,7 +203,7 @@ export async function processRecordedSession(params: {
 
     const transcriptionAbortController = new AbortController()
     setTranscriptionAbortController(sessionId, runId, transcriptionAbortController)
-    const { transcript, summary } = await transcribeAudio({
+    const { transcript, summary } = await transcribeAudioBatch({
       audioBlob,
       mimeType,
       languageCode: 'nl',
@@ -170,13 +220,22 @@ export async function processRecordedSession(params: {
 
     const cleanedSummary = String(summary || '').trim()
     if (cleanedSummary) {
-      updateSession(sessionId, {
+      updateInput(sessionId, {
         transcript,
         summary: cleanedSummary,
         audioBlobId: null,
         audioDurationSeconds: null,
         transcriptionStatus: 'done',
         transcriptionError: null,
+      })
+      await maybeExtractSnippets({
+        enabled: Boolean(snippetExtraction?.enabled),
+        sessionId,
+        clientId: String(snippetExtraction?.clientId || '').trim(),
+        trajectoryId: String(snippetExtraction?.trajectoryId || '').trim(),
+        transcript,
+        itemDate: Number(snippetExtraction?.itemDate) || Date.now(),
+        onCreatedSnippets: snippetExtraction?.onCreatedSnippets,
       })
       await markPendingPreviewTranscriptionSucceeded(sessionId)
       await clearPendingPreviewAudioIfEligible(sessionId)
@@ -186,24 +245,24 @@ export async function processRecordedSession(params: {
 
     const summaryAbortController = new AbortController()
     setSummaryAbortController(sessionId, runId, summaryAbortController)
-    updateSession(sessionId, {
+    updateInput(sessionId, {
       transcript,
       transcriptionStatus: 'generating',
       transcriptionError: null,
     })
     hasTranscriptResult = true
-    const generatedStructuredSummary = await generateStructuredSessionSummary({
+    const generatedStructuredSummary = await generateStructuredInputSummary({
       transcript,
       signal: summaryAbortController.signal,
     })
     console.log('[STRUCTURED_SUMMARY_RESULT]', generatedStructuredSummary)
     if (!isTranscriptionRunActive(sessionId, runId)) return
-    const transcriptionStatus: SessionUpdate['transcriptionStatus'] = 'done'
+    const transcriptionStatus: InputUpdate['transcriptionStatus'] = 'done'
     if (transcriptionStatus === 'done') {
       console.log('[SESSION_UPDATE_VALUES]', {
         summaryStructured: generatedStructuredSummary,
       })
-      updateSession(sessionId, {
+      updateInput(sessionId, {
         summaryStructured: generatedStructuredSummary,
         summary: null,
         audioBlobId: null,
@@ -212,6 +271,15 @@ export async function processRecordedSession(params: {
         transcriptionError: null,
       })
     }
+    await maybeExtractSnippets({
+      enabled: Boolean(snippetExtraction?.enabled),
+      sessionId,
+      clientId: String(snippetExtraction?.clientId || '').trim(),
+      trajectoryId: String(snippetExtraction?.trajectoryId || '').trim(),
+      transcript,
+      itemDate: Number(snippetExtraction?.itemDate) || Date.now(),
+      onCreatedSnippets: snippetExtraction?.onCreatedSnippets,
+    })
     await markPendingPreviewTranscriptionSucceeded(sessionId)
     await clearPendingPreviewAudioIfEligible(sessionId)
     finishTranscriptionRun(sessionId, runId)
@@ -227,7 +295,7 @@ export async function processRecordedSession(params: {
     }
 
     if (hasTranscriptResult) {
-      updateSession(sessionId, {
+      updateInput(sessionId, {
         transcriptionStatus: 'done',
         transcriptionError: errorMessage,
       })
@@ -246,13 +314,14 @@ export async function processRecordedSession(params: {
       await clearPendingPreviewAudio(sessionId)
     }
 
-    updateSession(sessionId, {
+    updateInput(sessionId, {
       transcriptionStatus: 'error',
       transcriptionError: errorMessage,
     })
     finishTranscriptionRun(sessionId, runId)
     throw error
   } finally {
-    activeProcessingSessionIds.delete(sessionId)
+    activeProcessingInputIds.delete(sessionId)
   }
 }
+

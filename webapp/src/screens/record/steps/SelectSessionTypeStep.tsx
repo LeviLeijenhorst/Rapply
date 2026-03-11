@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { Image, Pressable, ScrollView, View } from 'react-native'
 
 import { Text } from '../../../ui/Text'
@@ -7,11 +7,11 @@ import { MonitorIcon } from '../../../icons/MonitorIcon'
 import { MicrophoneSmallIcon } from '../../../icons/MicrophoneSmallIcon'
 import { Mp3UploadIcon } from '../../../icons/Mp3UploadIcon'
 import { colors } from '../../../design/theme/colors'
-import { SessionOptionRow } from '../components/SessionOptionRow'
+import { InputOptionRow } from '../components/InputOptionRow'
 import { styles } from '../styles'
 import type { OptionKey } from '../utils'
 
-type SelectSessionTypeStepModel = {
+type SelectInputTypeStepModel = {
   limitedMode: boolean
   gesprekOptionLabel: string
   gespreksverslagOptionLabel: string
@@ -20,14 +20,14 @@ type SelectSessionTypeStepModel = {
   selectedOptionGroup: 'gesprek' | 'gespreksverslag' | null
 }
 
-export function SelectSessionTypeStep({
+export function SelectInputTypeStep({
   limitedMode,
   gesprekOptionLabel,
   gespreksverslagOptionLabel,
   onSelectOption,
   selectedOption,
   selectedOptionGroup,
-}: SelectSessionTypeStepModel) {
+}: SelectInputTypeStepModel) {
   if (limitedMode) {
     return (
       <View style={styles.mobileSelectBody}>
@@ -75,25 +75,25 @@ export function SelectSessionTypeStep({
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.selectList}>
-        <SessionOptionRow
+        <InputOptionRow
           label={gesprekOptionLabel}
           isSelected={selectedOptionGroup === 'gesprek'}
           onPress={() => onSelectOption('gesprek')}
           leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
         />
-        <SessionOptionRow
+        <InputOptionRow
           label={gespreksverslagOptionLabel}
           isSelected={selectedOptionGroup === 'gespreksverslag'}
           onPress={() => onSelectOption('gespreksverslag')}
           leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
         />
-        <SessionOptionRow
+        <InputOptionRow
           label="Gespreksverslag schrijven"
           isSelected={selectedOption === 'schrijven'}
           onPress={() => onSelectOption('schrijven')}
           leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
         />
-        <SessionOptionRow
+        <InputOptionRow
           label="Bestand uploaden"
           isSelected={selectedOption === 'upload'}
           onPress={() => onSelectOption('upload')}
@@ -103,6 +103,7 @@ export function SelectSessionTypeStep({
     </ScrollView>
   )
 }
+
 
 
 

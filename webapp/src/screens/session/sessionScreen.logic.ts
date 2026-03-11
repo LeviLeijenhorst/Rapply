@@ -1,58 +1,58 @@
 import { useMemo, useState } from 'react'
 
 import { extractSnippets } from '@/api/snippets/snippetGenerationApi'
-import type { SessionDataItem, SessionNoteItem, SessionScreenProps, SessionSnippetItem } from '@/screens/session/sessionScreen.types'
+import type { InputDataItem, InputNoteItem, InputScreenProps, InputSnippetItem } from '@/screens/session/sessionScreen.types'
 import { useLocalAppData } from '@/storage/LocalAppDataProvider'
 import { useToast } from '@/toast/ToastProvider'
 
-function selectSnippetsForInput(snippets: SessionSnippetItem[], inputId: string): SessionSnippetItem[] {
+function selectSnippetsForInput(snippets: InputSnippetItem[], inputId: string): InputSnippetItem[] {
   const normalizedInputId = String(inputId || '').trim()
   if (!normalizedInputId) return []
   return snippets.filter((snippet) => String(snippet.inputId || '').trim() === normalizedInputId)
 }
 
-export function useSessionScreen(props: SessionScreenProps) {
+export function useInputScreen(props: InputScreenProps) {
   const { id } = props
-  const { data, createNote, updateNote, deleteNote, updateSession, updateSnippet, deleteSnippet } = useLocalAppData()
+  const { data, createNote, createSnippet, updateNote, deleteNote, updateInput, updateSnippet, deleteSnippet } = useLocalAppData()
   const { showErrorToast, showToast } = useToast()
   const [isRegeneratingSnippets, setIsRegeneratingSnippets] = useState(false)
 
   const appData = data as any
 
-  const session = useMemo<SessionDataItem | null>(() => {
-    if (!Array.isArray(appData.sessions)) return null
-    const rawSession = appData.sessions.find((item: any) => item.id === id)
-    if (!rawSession) return null
+  const session = useMemo<InputDataItem | null>(() => {
+    if (!Array.isArray(appData.inputs)) return null
+    const rawInput = appData.inputs.find((item: any) => item.id === id)
+    if (!rawInput) return null
     return {
-      ...rawSession,
-      inputId: String(rawSession.inputId || rawSession.id || '').trim() || undefined,
-      clientId: String(rawSession.clientId || '').trim() || undefined,
-      type: rawSession.type,
+      ...rawInput,
+      inputId: String(rawInput.inputId || rawInput.id || '').trim() || undefined,
+      clientId: String(rawInput.clientId || '').trim() || undefined,
+      type: rawInput.type,
     }
-  }, [appData.sessions, id])
+  }, [appData.inputs, id])
 
   const resolvedInputId = session?.inputId || id
 
-  const sessionNotes = useMemo<SessionNoteItem[]>(
+  const sessionNotes = useMemo<InputNoteItem[]>(
     () =>
       (Array.isArray(appData.notes) ? appData.notes : [])
-        .filter((note: SessionNoteItem) => note.sessionId === resolvedInputId)
-        .sort((leftNote: SessionNoteItem, rightNote: SessionNoteItem) => leftNote.createdAtUnixMs - rightNote.createdAtUnixMs),
+        .filter((note: InputNoteItem) => note.sessionId === resolvedInputId)
+        .sort((leftNote: InputNoteItem, rightNote: InputNoteItem) => leftNote.createdAtUnixMs - rightNote.createdAtUnixMs),
     [appData.notes, resolvedInputId],
   )
 
-  const sessionSnippets = useMemo<SessionSnippetItem[]>(
+  const sessionSnippets = useMemo<InputSnippetItem[]>(
     () => selectSnippetsForInput(Array.isArray(appData.snippets) ? appData.snippets : [], resolvedInputId),
     [appData.snippets, resolvedInputId],
   )
 
-  const isSessionMissing = !session
+  const isInputMissing = !session
   const summary = session?.summary || null
   const transcriptionStatus = session?.transcriptionStatus || 'idle'
   const transcript = session?.transcript || null
   const canRegenerateSnippets = sessionSnippets.length === 0 && Boolean(String(transcript || '').trim())
 
-  async function handleRegenerateSessionSnippets() {
+  async function handleRegenerateInputSnippets() {
     if (!session) return
 
     const sessionTranscript = String(session.transcript || '').trim()
@@ -75,7 +75,24 @@ export function useSessionScreen(props: SessionScreenProps) {
         itemDate: Number(session.createdAtUnixMs) || Date.now(),
       })
 
-      updateSession(session.id, {})
+      const existingSnippetIds = new Set((Array.isArray(appData.snippets) ? appData.snippets : []).map((snippet: InputSnippetItem) => snippet.id))
+      for (const snippet of generatedSnippets) {
+        if (existingSnippetIds.has(snippet.id)) continue
+        createSnippet({
+          id: snippet.id,
+          trajectoryId: snippet.trajectoryId,
+          inputId: snippet.inputId,
+          itemId: snippet.itemId ?? snippet.inputId,
+          field: snippet.field,
+          text: snippet.text,
+          date: snippet.date,
+          status: snippet.status,
+          createdAtUnixMs: snippet.createdAtUnixMs,
+          updatedAtUnixMs: snippet.updatedAtUnixMs,
+        })
+      }
+
+      updateInput(session.id, {})
 
       if (generatedSnippets.length === 0) {
         showToast('Geen snippets gevonden in deze sessie.')
@@ -83,7 +100,7 @@ export function useSessionScreen(props: SessionScreenProps) {
         showToast(`${generatedSnippets.length} snippet${generatedSnippets.length === 1 ? '' : 's'} gegenereerd.`)
       }
     } catch (error) {
-      console.error('[SessionScreen] Snippet regeneration failed', error)
+      console.error('[InputScreen] Snippet regeneration failed', error)
       showErrorToast('Snippets genereren is mislukt. Probeer opnieuw.')
     } finally {
       setIsRegeneratingSnippets(false)
@@ -101,7 +118,7 @@ export function useSessionScreen(props: SessionScreenProps) {
   return {
     session,
     resolvedInputId,
-    isSessionMissing,
+    isInputMissing,
     summary,
     transcriptionStatus,
     transcript,
@@ -109,7 +126,7 @@ export function useSessionScreen(props: SessionScreenProps) {
     sessionNotes,
     sessionSnippets,
     isRegeneratingSnippets,
-    handleRegenerateSessionSnippets,
+    handleRegenerateInputSnippets,
     handleUpdateSnippetStatus,
     handleDeleteSnippet,
     createNote,
@@ -117,4 +134,5 @@ export function useSessionScreen(props: SessionScreenProps) {
     deleteNote,
   }
 }
+
 

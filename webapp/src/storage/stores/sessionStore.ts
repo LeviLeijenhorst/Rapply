@@ -1,5 +1,5 @@
-import type { Session as LegacySession } from '../types'
+import type { Input } from '../types'
 
-export type SessionStore = {
-  sessions: LegacySession[]
+export type InputStore = {
+  inputs: Input[]
 }

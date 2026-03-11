@@ -1,0 +1,295 @@
+import { StyleSheet } from 'react-native'
+
+import { colors } from '../../../../design/theme/colors'
+
+export const styles = StyleSheet.create({
+  container: {
+    width: 820,
+    maxWidth: '94vw',
+    maxHeight: '92vh' as any,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ),
+    overflow: 'visible',
+    position: 'relative',
+  },
+  modalInner: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    overflow: 'visible',
+  },
+  header: {
+    width: '100%',
+    height: 72,
+    padding: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    position: 'relative',
+    zIndex: 2,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FCE3F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    lineHeight: 22,
+    color: colors.textStrong,
+  },
+  bodyScroll: {
+    width: '100%',
+    maxHeight: '68vh' as any,
+    ...( { overflow: 'visible' } as any ),
+  },
+  body: {
+    padding: 24,
+    gap: 12,
+    ...( { overflow: 'visible' } as any ),
+  },
+  field: {
+    width: '100%',
+    gap: 8,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textStrong,
+  },
+  inputRow: {
+    width: '100%',
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    ...( { cursor: 'pointer' } as any ),
+  },
+  inputRowHovered: {
+    borderColor: colors.selected,
+  },
+  inputRowDisabled: {
+    opacity: 0.6,
+  },
+  inputRowReadOnly: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#D5D7DA',
+  },
+  textInput: {
+    flex: 1,
+    padding: 0,
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.textStrong,
+  },
+  inputCursorPointer: {
+    ...( { cursor: 'pointer' } as any ),
+  },
+  dropdownValueText: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.textStrong,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dateInputWrap: {
+    flex: 1,
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    ...( { cursor: 'pointer' } as any ),
+  },
+  dateInputWrapHovered: {
+    borderColor: colors.selected,
+  },
+  dateInputWrapInvalid: {
+    borderColor: '#D92D20',
+  },
+  calendarButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    ...( { cursor: 'pointer' } as any ),
+  },
+  calendarButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+    borderColor: colors.selected,
+  },
+  calendarPanel: {
+    position: 'absolute',
+    zIndex: 50,
+    width: 336,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E3E3E3',
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ),
+  },
+  calendarPanelTransitionBase: {
+    ...( { transitionProperty: 'opacity, transform', transitionDuration: '180ms', transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transformOrigin: '100% 100%', willChange: 'opacity, transform' } as any ),
+  },
+  calendarPanelTransitionOpen: {
+    opacity: 1,
+    ...( { transform: 'translateY(0px) scale(1)' } as any ),
+  },
+  calendarPanelTransitionClosed: {
+    opacity: 0,
+    ...( { transform: 'translateY(8px) scale(0.96)' } as any ),
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  calendarNavButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#E6C1D6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rotatedChevron: {
+    transform: [{ rotate: '180deg' }],
+  },
+  calendarNavButtonHovered: {
+    backgroundColor: '#FCEFF6',
+  },
+  calendarNavButtonText: {
+    color: colors.selected,
+    fontSize: 14,
+    lineHeight: 16,
+  },
+  calendarMonthTitle: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+    textTransform: 'capitalize',
+  },
+  calendarWeekRow: {
+    flexDirection: 'row',
+    marginBottom: 6,
+  },
+  calendarDayLabelWrap: {
+    width: `${100 / 7}%` as any,
+    alignItems: 'center',
+  },
+  calendarDayLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    color: '#777777',
+    textTransform: 'uppercase',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: 4,
+  },
+  calendarDayButton: {
+    width: `${100 / 7}%` as any,
+    aspectRatio: 1,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calendarDayButtonOutside: {
+    backgroundColor: '#FAFAFA',
+  },
+  calendarDayButtonSelected: {
+    backgroundColor: colors.selected,
+  },
+  calendarDayButtonHovered: {
+    backgroundColor: '#F8E4EF',
+  },
+  calendarDayText: {
+    fontSize: 13,
+    lineHeight: 16,
+    color: '#1D0A00',
+  },
+  calendarDayTextOutside: {
+    color: '#999999',
+  },
+  calendarDayTextSelected: {
+    color: '#FFFFFF',
+  },
+  footer: {
+    width: '100%',
+    padding: 0,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 0,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    overflow: 'hidden',
+  },
+  footerSecondaryButton: {
+    height: 48,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 24,
+    minWidth: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomLeftRadius: 16,
+  },
+  footerSecondaryButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  footerSecondaryButtonText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textStrong,
+  },
+  footerPrimaryButton: {
+    height: 48,
+    backgroundColor: colors.selected,
+    paddingHorizontal: 24,
+    minWidth: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomRightRadius: 16,
+  },
+  footerPrimaryButtonDisabled: {
+    backgroundColor: '#CFA5BC',
+  },
+  footerPrimaryButtonHovered: {
+    backgroundColor: '#A50058',
+  },
+  footerPrimaryButtonText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#FFFFFF',
+  },
+})

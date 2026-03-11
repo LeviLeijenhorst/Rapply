@@ -343,18 +343,18 @@ export async function listPendingPreviewAudioTasks(): Promise<PendingPreviewTask
     })
 
     const nowMs = Date.now()
-    const deleteSessionIds: string[] = []
+    const deleteInputIds: string[] = []
     for (const record of records) {
       if (canDeleteExpired(record, nowMs) || canDeleteCompleted(record)) {
-        deleteSessionIds.push(record.sessionId)
+        deleteInputIds.push(record.sessionId)
       }
     }
-    if (deleteSessionIds.length > 0) {
-      await Promise.all(deleteSessionIds.map((sessionId) => deleteRecord(sessionId)))
+    if (deleteInputIds.length > 0) {
+      await Promise.all(deleteInputIds.map((sessionId) => deleteRecord(sessionId)))
     }
 
     return records
-      .filter((record) => !deleteSessionIds.includes(record.sessionId))
+      .filter((record) => !deleteInputIds.includes(record.sessionId))
       .filter((record) => !record.transcriptionSucceeded)
       .filter((record) => !record.audioBlobId)
       .filter((record) => record.processingState !== 'failed')
@@ -387,3 +387,4 @@ export async function clearPendingPreviewAudio(sessionId: string): Promise<void>
   if (!sessionId) return
   await deleteRecord(sessionId)
 }
+

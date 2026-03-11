@@ -7,7 +7,7 @@ export type DashboardScreenProps = {
   onOpenRecord: () => void
   onOpenClientsPage: () => void
   onOpenReportsPage: () => void
-  onOpenSession: (sessionId: string) => void
+  onOpenInput: (sessionId: string) => void
 }
 
 export type QuickInputIconKey =
@@ -52,7 +52,7 @@ export type DashboardOpenActionItem = {
 }
 
 export type DashboardStatCardData = {
-  id: 'active-clients' | 'sessions-this-week' | 'reports-this-week' | 'open-action-items'
+  id: 'active-clients' | 'inputs-this-week' | 'reports-this-week' | 'open-action-items'
   title: string
   value: string
   accentFrom: string
@@ -72,3 +72,4 @@ export type DashboardScreenModel = {
   filteredOpenActionItems: DashboardOpenActionItem[]
   dashboardStatCards: DashboardStatCardData[]
 }
+

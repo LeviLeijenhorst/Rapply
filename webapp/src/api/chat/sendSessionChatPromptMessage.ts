@@ -1,13 +1,14 @@
-import { sendSessionChatMessage as sendSessionChatMessageTransport } from './sendSessionChatMessage'
+import { sendInputChatMessage as sendInputChatMessageTransport } from './sendInputChatMessage'
 import type { ChatMessage, LocalChatMessage } from './types'
-import { buildSessionChatPrompt } from './buildSessionChatPrompt'
+import { buildInputChatPrompt } from './buildInputChatPrompt'
 
-export async function sendSessionChatMessage(messages: ChatMessage[], sessionId: string, contextMessages: LocalChatMessage[] = []): Promise<string> {
-  return sendSessionChatMessageTransport({
+export async function sendInputChatMessage(messages: ChatMessage[], sessionId: string, contextMessages: LocalChatMessage[] = []): Promise<string> {
+  return sendInputChatMessageTransport({
     sessionId,
-    messages: buildSessionChatPrompt({
+    messages: buildInputChatPrompt({
       contextMessages,
       chatHistory: messages,
     }),
   })
 }
+

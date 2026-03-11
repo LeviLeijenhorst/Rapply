@@ -5,31 +5,31 @@ import { LoadingScreen } from '../../ui/LoadingScreen'
 import { Text } from '../../ui/Text'
 import { ClientsScreen } from '../../screens/clients/ClientsScreen'
 import { ClientScreen } from '../../screens/client/ClientScreen'
-import { SessionScreen } from '../../screens/session/SessionScreen'
+import { InputScreen } from '../../screens/session/InputScreen'
 import { NewReportScreen } from '../../screens/newReport/NewReportScreen'
 import { ReportScreen } from '../../screens/report/ReportScreen'
 import { OrganizationScreen } from '../../screens/organization/OrganizationScreen'
 import { ReportsScreen } from '../../screens/reports/ReportsScreen'
 import { NewClientScreen } from '../../screens/newClient/NewClientScreen'
 import { DashboardScreen } from '../../screens/dashboard/DashboardScreen'
-import { getCoacheeDisplayName } from '../../types/client'
+import { getClientDisplayName } from '../../types/client'
 import type { ClientLeftTabKey } from '../../screens/client/clientScreen.types'
 import type { RouteState } from './routeHelpers'
 
 type Props = {
   canOpenSubscription: boolean
-  coacheeTabById: Record<string, ClientLeftTabKey>
+  clientTabById: Record<string, ClientLeftTabKey>
   data: {
-    coachees: Array<{ id: string; name: string; isArchived?: boolean }>
-    sessions: Array<{
+    clients: Array<{ id: string; name: string; isArchived?: boolean }>
+    inputs: Array<{
       id: string
       title: string
-      coacheeId: string | null
+      clientId: string | null
       trajectoryId: string | null
       createdAtUnixMs: number
       kind: string
     }>
-    trajectories: Array<{ id: string; coacheeId: string; name: string }>
+    trajectories: Array<{ id: string; clientId: string; name: string }>
   }
   goBack: () => void
   isAdminContactScreenOpen: boolean
@@ -43,24 +43,24 @@ type Props = {
   isRecordingBusy: boolean
   mainContentTextStyle: any
   navigateTo: (route: RouteState) => void
-  newlyCreatedCoacheeName: string | null
-  onClearNewlyCreatedCoachee: () => void
-  onOpenNewCoachee: () => void
-  onOpenNewSessionModal: (coacheeId: string | null, trajectoryId?: string | null, initialOption?: 'gesprek' | 'gespreksverslag' | null) => void
-  onSetCoacheeTabById: (coacheeId: string, tabKey: ClientLeftTabKey) => void
-  onSetRapportageEditSessionId: (sessionId: string | null) => void
-  onSetRapportageOnlySessionId: (sessionId: string | null) => void
+  newlyCreatedClientName: string | null
+  onClearNewlyCreatedClient: () => void
+  onOpenNewClient: () => void
+  onOpenNewInputModal: (clientId: string | null, trajectoryId?: string | null, initialOption?: 'gesprek' | 'gespreksverslag' | null) => void
+  onSetClientTabById: (clientId: string, tabKey: ClientLeftTabKey) => void
+  onSetRapportageEditInputId: (sessionId: string | null) => void
+  onSetRapportageOnlyInputId: (sessionId: string | null) => void
   onSetRapportageScreenMode: (mode: 'controleren' | 'bewerken') => void
-  onSetSelectedSidebarItemKey: (key: 'coachees' | 'reports') => void
-  onSetSessionIdPendingTemplatePicker: (sessionId: string | null) => void
-  onSetSessionOriginRoute: (route: RouteState | null) => void
+  onSetSelectedSidebarItemKey: (key: 'clients' | 'reports') => void
+  onSetInputIdPendingTemplatePicker: (sessionId: string | null) => void
+  onSetInputOriginRoute: (route: RouteState | null) => void
   onToggleE2eePage: (open: boolean) => void
   overlayScreenKey: 'archief' | null
-  rapportageEditSessionId: string | null
-  rapportageOnlySessionId: string | null
+  rapportageEditInputId: string | null
+  rapportageOnlyInputId: string | null
   rapportageScreenMode: 'controleren' | 'bewerken'
-  selectedCoacheeId: string | null
-  selectedSidebarItemKey: 'coachees' | 'activities' | 'reports' | 'mijnPraktijk' | 'archief' | 'admin' | 'adminContact' | 'adminWachtlijst'
+  selectedClientId: string | null
+  selectedSidebarItemKey: 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'archief' | 'admin' | 'adminContact' | 'adminWachtlijst'
   selectedSessieId: string | null
   selectedTrajectoryId: string | null
   sessionIdPendingTemplatePicker: string | null
@@ -74,58 +74,58 @@ export function AppShellRouteView(props: Props) {
     return <EmptyPageMessage message="Beveiligingspagina is niet meer beschikbaar." onGoHome={() => props.onToggleE2eePage(false)} />
   }
   if (props.isAdminScreenOpen) {
-    return <EmptyPageMessage message="Admin-overzicht is niet meer beschikbaar." onGoHome={() => props.navigateTo({ kind: 'coachees' })} />
+    return <EmptyPageMessage message="Admin-overzicht is niet meer beschikbaar." onGoHome={() => props.navigateTo({ kind: 'clients' })} />
   }
   if (props.isAdminContactScreenOpen) {
-    return <EmptyPageMessage message="Contactbeheer is niet meer beschikbaar." onGoHome={() => props.navigateTo({ kind: 'coachees' })} />
+    return <EmptyPageMessage message="Contactbeheer is niet meer beschikbaar." onGoHome={() => props.navigateTo({ kind: 'clients' })} />
   }
   if (props.isAdminWachtlijstScreenOpen) {
-    return <EmptyPageMessage message="Wachtlijstbeheer is niet meer beschikbaar." onGoHome={() => props.navigateTo({ kind: 'coachees' })} />
+    return <EmptyPageMessage message="Wachtlijstbeheer is niet meer beschikbaar." onGoHome={() => props.navigateTo({ kind: 'clients' })} />
   }
   if (props.overlayScreenKey === 'archief') {
-    return <EmptyPageMessage message="Archief komt binnenkort beschikbaar" onGoHome={() => props.navigateTo({ kind: 'coachees' })} />
+    return <EmptyPageMessage message="Archief komt binnenkort beschikbaar" onGoHome={() => props.navigateTo({ kind: 'clients' })} />
   }
 
   if (props.isRecordPageOpen) {
-    return <EmptyPageMessage message="Opnemen opent direct vanuit 'Nieuw item'." onGoHome={() => props.navigateTo({ kind: 'coachees' })} />
+    return <EmptyPageMessage message="Opnemen opent direct vanuit 'Nieuw item'." onGoHome={() => props.navigateTo({ kind: 'clients' })} />
   }
 
   if (props.isNewClientPageOpen) {
     return (
       <NewClientScreen
-        onBack={() => props.navigateTo({ kind: 'coachees' })}
-        onSaved={(clientId) => props.navigateTo({ kind: 'coachee', coacheeId: clientId })}
+        onBack={() => props.navigateTo({ kind: 'clients' })}
+        onSaved={(clientId) => props.navigateTo({ kind: 'client', clientId: clientId })}
       />
     )
   }
 
   if (props.isNieuweRapportageOpen) {
-    if (props.rapportageEditSessionId) {
+    if (props.rapportageEditInputId) {
       return (
         <ReportScreen
-          initialCoacheeId={props.selectedCoacheeId}
-          initialSessionId={props.rapportageEditSessionId}
+          initialClientId={props.selectedClientId}
+          initialInputId={props.rapportageEditInputId}
           mode={props.rapportageScreenMode}
         />
       )
     }
     return (
       <NewReportScreen
-        initialCoacheeId={props.selectedCoacheeId}
+        initialClientId={props.selectedClientId}
       />
     )
   }
 
   if (props.selectedSessieId) {
-    const selectedSessie = props.data.sessions.find((item) => item.id === props.selectedSessieId)
+    const selectedSessie = props.data.inputs.find((item) => item.id === props.selectedSessieId)
     if (!selectedSessie) {
-      return <EmptyPageMessage message="Deze sessie bestaat niet meer." onGoHome={() => props.navigateTo({ kind: 'coachees' })} />
+      return <EmptyPageMessage message="Deze sessie bestaat niet meer." onGoHome={() => props.navigateTo({ kind: 'clients' })} />
     }
     const sessieTitle = selectedSessie.title ?? 'Sessie'
-    const clientName = getCoacheeDisplayName(props.data.coachees, selectedSessie.coacheeId)
+    const clientName = getClientDisplayName(props.data.clients, selectedSessie.clientId)
     const date = new Date(selectedSessie.createdAtUnixMs).toLocaleDateString('nl-NL')
     return (
-      <SessionScreen
+      <InputScreen
         id={props.selectedSessieId}
         title={sessieTitle}
         clientName={clientName}
@@ -139,87 +139,87 @@ export function AppShellRouteView(props: Props) {
     return (
       <ReportsScreen
         onOpenReport={(sessionId) => {
-          props.onSetSessionOriginRoute({ kind: 'reports' })
-          props.onSetRapportageOnlySessionId(null)
+          props.onSetInputOriginRoute({ kind: 'reports' })
+          props.onSetRapportageOnlyInputId(null)
           props.onSetRapportageScreenMode('bewerken')
-          props.onSetRapportageEditSessionId(sessionId)
+          props.onSetRapportageEditInputId(sessionId)
           props.navigateTo({ kind: 'nieuwe-rapportage' })
         }}
       />
     )
   }
 
-  if (props.selectedSidebarItemKey === 'coachees') {
-    if (props.selectedCoacheeId) {
-      const selectedCoachee = props.data.coachees.find((c) => c.id === props.selectedCoacheeId)
-      if (!selectedCoachee) {
-        return <EmptyPageMessage message="Deze client bestaat niet meer." onGoHome={() => props.navigateTo({ kind: 'coachees' })} />
+  if (props.selectedSidebarItemKey === 'clients') {
+    if (props.selectedClientId) {
+      const selectedClient = props.data.clients.find((c) => c.id === props.selectedClientId)
+      if (!selectedClient) {
+        return <EmptyPageMessage message="Deze client bestaat niet meer." onGoHome={() => props.navigateTo({ kind: 'clients' })} />
       }
       if (props.selectedTrajectoryId) {
         const hasSelectedTrajectory = props.data.trajectories.some(
-          (trajectory) => trajectory.id === props.selectedTrajectoryId && trajectory.coacheeId === props.selectedCoacheeId,
+          (trajectory) => trajectory.id === props.selectedTrajectoryId && trajectory.clientId === props.selectedClientId,
         )
         if (!hasSelectedTrajectory) {
-          return <EmptyPageMessage message="Dit traject bestaat niet meer." onGoHome={() => props.navigateTo({ kind: 'coachee', coacheeId: props.selectedCoacheeId! })} />
+          return <EmptyPageMessage message="Dit traject bestaat niet meer." onGoHome={() => props.navigateTo({ kind: 'client', clientId: props.selectedClientId! })} />
         }
-        return <EmptyPageMessage message="Trajectdetail is niet meer beschikbaar." onGoHome={() => props.navigateTo({ kind: 'coachee', coacheeId: props.selectedCoacheeId! })} />
+        return <EmptyPageMessage message="Trajectdetail is niet meer beschikbaar." onGoHome={() => props.navigateTo({ kind: 'client', clientId: props.selectedClientId! })} />
       }
       return (
         <ClientScreen
-          clientId={props.selectedCoacheeId}
+          clientId={props.selectedClientId}
           onBack={props.goBack}
-          initialLeftActiveTabKey={props.coacheeTabById[props.selectedCoacheeId] ?? 'sessies'}
+          initialLeftActiveTabKey={props.clientTabById[props.selectedClientId] ?? 'sessies'}
           initialRightActiveTabKey="chatbot"
-          onLeftActiveTabChange={(tabKey) => props.onSetCoacheeTabById(props.selectedCoacheeId!, tabKey)}
-          onSelectSession={(sessionId, sourceTab) => {
-            const selectedSession = props.data.sessions.find((session) => session.id === sessionId) ?? null
+          onLeftActiveTabChange={(tabKey) => props.onSetClientTabById(props.selectedClientId!, tabKey)}
+          onSelectInput={(sessionId, sourceTab) => {
+            const selectedInput = props.data.inputs.find((session) => session.id === sessionId) ?? null
             const shouldOpenAsRapportage = sourceTab === 'rapportages'
             if (shouldOpenAsRapportage) {
-              props.onSetSessionOriginRoute({ kind: 'coachee', coacheeId: props.selectedCoacheeId! })
-              props.onSetRapportageOnlySessionId(null)
+              props.onSetInputOriginRoute({ kind: 'client', clientId: props.selectedClientId! })
+              props.onSetRapportageOnlyInputId(null)
               props.onSetRapportageScreenMode('bewerken')
-              props.onSetRapportageEditSessionId(sessionId)
+              props.onSetRapportageEditInputId(sessionId)
               props.navigateTo({ kind: 'nieuwe-rapportage' })
               return
             }
-            if (selectedSession?.coacheeId && selectedSession?.trajectoryId) {
-              props.onSetSessionOriginRoute({ kind: 'coachee', coacheeId: props.selectedCoacheeId! })
-              props.onSetRapportageOnlySessionId(null)
-              props.navigateTo({ kind: 'item', coacheeId: selectedSession.coacheeId, trajectoryId: selectedSession.trajectoryId, itemId: sessionId })
+            if (selectedInput?.clientId && selectedInput?.trajectoryId) {
+              props.onSetInputOriginRoute({ kind: 'client', clientId: props.selectedClientId! })
+              props.onSetRapportageOnlyInputId(null)
+              props.navigateTo({ kind: 'item', clientId: selectedInput.clientId, trajectoryId: selectedInput.trajectoryId, itemId: sessionId })
               return
             }
-            props.onSetRapportageOnlySessionId(null)
+            props.onSetRapportageOnlyInputId(null)
             props.navigateTo({ kind: 'sessie', sessieId: sessionId })
           }}
-          onPressCreateSession={(trajectoryId) => props.onOpenNewSessionModal(props.selectedCoacheeId!, trajectoryId)}
+          onPressCreateInput={(trajectoryId) => props.onOpenNewInputModal(props.selectedClientId!, trajectoryId)}
           onPressCreateReports={() => {
-            props.onSetRapportageOnlySessionId(null)
+            props.onSetRapportageOnlyInputId(null)
             props.onSetRapportageScreenMode('controleren')
-            props.onSetRapportageEditSessionId(null)
+            props.onSetRapportageEditInputId(null)
             props.navigateTo({ kind: 'nieuwe-rapportage' })
           }}
-          isCreateSessionDisabled={props.isRecordingBusy}
+          isCreateInputDisabled={props.isRecordingBusy}
         />
       )
     }
 
     return (
       <ClientsScreen
-        onSelectCoachee={(coacheeId) => props.navigateTo({ kind: 'coachee', coacheeId })}
+        onSelectClient={(clientId) => props.navigateTo({ kind: 'client', clientId })}
         onOpenNewClientPage={() => props.navigateTo({ kind: 'new-client' })}
       />
     )
   }
 
-  if (props.selectedSidebarItemKey === 'activities') {
+  if (props.selectedSidebarItemKey === 'dashboard') {
     return (
       <DashboardScreen
-        onSelectClient={(clientId) => props.navigateTo({ kind: 'coachee', coacheeId: clientId })}
+        onSelectClient={(clientId) => props.navigateTo({ kind: 'client', clientId: clientId })}
         onOpenNewClientPage={() => props.navigateTo({ kind: 'new-client' })}
         onOpenRecord={() => props.navigateTo({ kind: 'record' })}
-        onOpenClientsPage={() => props.navigateTo({ kind: 'coachees' })}
+        onOpenClientsPage={() => props.navigateTo({ kind: 'clients' })}
         onOpenReportsPage={() => props.navigateTo({ kind: 'reports' })}
-        onOpenSession={(sessionId) => props.navigateTo({ kind: 'sessie', sessieId: sessionId })}
+        onOpenInput={(sessionId) => props.navigateTo({ kind: 'sessie', sessieId: sessionId })}
       />
     )
   }
@@ -230,3 +230,5 @@ export function AppShellRouteView(props: Props) {
 
   return <Text style={props.mainContentTextStyle}>{props.selectedSidebarItemKey}</Text>
 }
+
+

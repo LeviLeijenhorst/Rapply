@@ -1,21 +1,21 @@
 import { useRef, useState } from 'react'
 import { Animated, TextInput, View } from 'react-native'
 
-import type { RealtimeTranscriberSession, TranscriptionMode } from '../../../api/transcription/realtime/startRealtimeTranscription'
-import type { NewSessionStep } from '../types'
-import { buildDefaultSessionTitle, type OptionKey } from '../utils'
+import type { RealtimeTranscriberInput, TranscriptionMode } from '../../../api/transcription/realtime/transcribeAudioRealtime'
+import type { NewInputStep } from '../types'
+import { buildDefaultInputTitle, type OptionKey } from '../utils'
 
-export function useNewSessionModalState(visible: boolean) {
+export function useNewInputModalState(visible: boolean) {
   const [isRendered, setIsRendered] = useState(visible)
-  const [step, setStep] = useState<NewSessionStep>('select')
+  const [step, setStep] = useState<NewInputStep>('select')
   const [selectedOption, setSelectedOption] = useState<OptionKey | null>(null)
   const [selectedOptionGroup, setSelectedOptionGroup] = useState<'gesprek' | 'gespreksverslag' | null>(null)
   const [, setOpenOptionGroup] = useState<'gesprek' | 'gespreksverslag' | null>(null)
-  const [isCoacheeOpen, setIsCoacheeOpen] = useState(false)
-  const [selectedCoacheeId, setSelectedCoacheeId] = useState<string | null>(null)
+  const [isClientOpen, setIsClientOpen] = useState(false)
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   const [selectedTrajectoryId, setSelectedTrajectoryId] = useState<string | null>(null)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
-  const [sessionTitle, setSessionTitle] = useState(() => buildDefaultSessionTitle(null))
+  const [sessionTitle, setInputTitle] = useState(() => buildDefaultInputTitle(null))
   const [selectedAudioFile, setSelectedAudioFile] = useState<File | null>(null)
   const [selectedUploadFileDurationSeconds, setSelectedUploadFileDurationSeconds] = useState<number | null>(null)
   const [uploadFileDurationWarning, setUploadFileDurationWarning] = useState<string | null>(null)
@@ -27,10 +27,10 @@ export function useNewSessionModalState(visible: boolean) {
   const sessionTitleInputRef = useRef<TextInput | null>(null)
   const uploadDropAreaRef = useRef<View | null>(null)
   const isUploadDragActiveRef = useRef(false)
-  const coacheeTriggerRef = useRef<any>(null)
+  const clientTriggerRef = useRef<any>(null)
   const hasAutoStartedRecordingRef = useRef(false)
   const hasAutoSubmittedRecordingRef = useRef(false)
-  const [coacheeDropdownMaxHeight, setCoacheeDropdownMaxHeight] = useState<number | null>(null)
+  const [clientDropdownMaxHeight, setClientDropdownMaxHeight] = useState<number | null>(null)
   const [recordingNotes, setRecordingNotes] = useState<Array<{ id: string; seconds: number; text: string }>>([])
   const [recordingNoteDraft, setRecordingNoteDraft] = useState('')
 
@@ -48,7 +48,7 @@ export function useNewSessionModalState(visible: boolean) {
   const [isRealtimeTranscriberStarting, setIsRealtimeTranscriberStarting] = useState(false)
   const [liveTranscriptText, setLiveTranscriptText] = useState('')
   const [liveTranscriptError, setLiveTranscriptError] = useState<string | null>(null)
-  const liveTranscriberRef = useRef<RealtimeTranscriberSession | null>(null)
+  const liveTranscriberRef = useRef<RealtimeTranscriberInput | null>(null)
   const realtimeOperationIdRef = useRef<string | null>(null)
   const backdropOpacity = useRef(new Animated.Value(0)).current
   const modalOpacity = useRef(new Animated.Value(0)).current
@@ -67,13 +67,13 @@ export function useNewSessionModalState(visible: boolean) {
     audioForTranscription,
     audioPreviewUrl,
     backdropOpacity,
-    coacheeDropdownMaxHeight,
-    coacheeTriggerRef,
+    clientDropdownMaxHeight,
+    clientTriggerRef,
     hasAutoStartedRecordingRef,
     hasAutoSubmittedRecordingRef,
     hasRecordingConsent,
     insufficientMinutesContext,
-    isCoacheeOpen,
+    isClientOpen,
     isInsufficientMinutesWarningVisible,
     isMinimizeAnimating,
     isMinimized,
@@ -97,7 +97,7 @@ export function useNewSessionModalState(visible: boolean) {
     recordingNotes,
     recordingNotesRevealProgress,
     selectedAudioFile,
-    selectedCoacheeId,
+    selectedClientId,
     selectedOption,
     selectedOptionGroup,
     selectedTemplateId,
@@ -114,10 +114,10 @@ export function useNewSessionModalState(visible: boolean) {
     setAudioDurationSeconds,
     setAudioForTranscription,
     setAudioPreviewUrl,
-    setCoacheeDropdownMaxHeight,
+    setClientDropdownMaxHeight,
     setHasRecordingConsent,
     setInsufficientMinutesContext,
-    setIsCoacheeOpen,
+    setIsClientOpen,
     setIsInsufficientMinutesWarningVisible,
     setIsMinimizeAnimating,
     setIsMinimized,
@@ -133,13 +133,13 @@ export function useNewSessionModalState(visible: boolean) {
     setRecordingNoteDraft,
     setRecordingNotes,
     setSelectedAudioFile,
-    setSelectedCoacheeId,
+    setSelectedClientId,
     setSelectedOption,
     setSelectedOptionGroup,
     setSelectedTemplateId,
     setSelectedTrajectoryId,
     setSelectedUploadFileDurationSeconds,
-    setSessionTitle,
+    setInputTitle,
     setShouldRenderRecordingNotesPanel,
     setShouldSaveAudio,
     setStep,
@@ -149,3 +149,4 @@ export function useNewSessionModalState(visible: boolean) {
     selectedUploadFileDurationSeconds,
   }
 }
+

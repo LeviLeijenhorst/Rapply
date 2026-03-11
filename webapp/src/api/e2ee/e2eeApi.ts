@@ -4,7 +4,7 @@ export type E2eeRecoveryPolicy = 'self_service' | 'custodian_only' | 'hybrid'
 export type E2eeCustodyMode = 'server_managed' | 'user_managed'
 
 export type E2eeObjectType =
-  | 'coachee'
+  | 'client'
   | 'session'
   | 'note'
   | 'written_report'
@@ -131,4 +131,5 @@ export async function e2eeGetObjectKeysBatch(params: {
 }): Promise<{ objectKeys: { objectType: string; objectId: string; keyVersion: number; cryptoVersion: number; wrappedDek: string; updatedAtUnixMs: number }[] }> {
   return callSecureApi('/e2ee/object-key/get-batch', params)
 }
+
 

@@ -1,38 +1,34 @@
 import { createDefaultLocalAppData } from './defaultData'
 import { readJsonFromLocalStorage, writeJsonToLocalStorage } from './localStorageJson'
-import { Activity, ActivityTemplate, Coachee, LocalAppData, Note, Session, Snippet, SnippetStatus, Template, Trajectory, WrittenReport } from './types'
-import { inferTemplateCategoryFromName } from '../content/templateCategories'
+import type {
+  Client,
+  Input,
+  InputSummary,
+  LocalAppData,
+  Note,
+  OrganizationSettings,
+  Snippet,
+  SnippetStatus,
+  Template,
+  Trajectory,
+  UserSettings,
+} from './types'
 
-const storageKey = 'coachscribe.localAppData.v3'
-const previousStorageKey = 'coachscribe.localAppData.v2'
-
-const mockCoacheeNames = new Set(['Sanne Jansen', 'Mark de Vries', 'Fatima El Amrani', 'Tom van Dijk', 'Jonas Kroon', 'Levi Leijenhorst', 'Gary Kasparov'])
-const mockSessionTitles = new Set([
-  'Sessie #3 (naamloos)',
-  'Sessie #2 (naamloos)',
-  'Sessie #1 (naamloos)',
-  'Verslag #1 (naamloos)',
-  'Intakegesprek',
-  'Test',
-])
-
-function isMockLocalData(data: LocalAppData) {
-  if (data.coachees.some((coachee) => mockCoacheeNames.has(coachee.name))) return true
-  if (data.sessions.some((session) => mockSessionTitles.has(session.title))) return true
-  return false
-}
+const storageKey = 'coachscribe.localAppData.v4'
+const previousStorageKeys = ['coachscribe.localAppData.v3', 'coachscribe.localAppData.v2']
 
 export function loadLocalAppData(): LocalAppData {
-  const stored = readJsonFromLocalStorage<LocalAppData>(storageKey)
-  if (stored.ok) {
-    if (!isMockLocalData(stored.value)) return normalizeLocalAppData(stored.value)
-  }
-  const previous = readJsonFromLocalStorage<LocalAppData>(previousStorageKey)
-  if (previous.ok && !isMockLocalData(previous.value)) {
+  const current = readJsonFromLocalStorage<LocalAppData>(storageKey)
+  if (current.ok) return normalizeLocalAppData(current.value)
+
+  for (const previousKey of previousStorageKeys) {
+    const previous = readJsonFromLocalStorage<unknown>(previousKey)
+    if (!previous.ok) continue
     const migrated = normalizeLocalAppData(previous.value)
     writeJsonToLocalStorage(storageKey, migrated)
     return migrated
   }
+
   const initial = createDefaultLocalAppData()
   writeJsonToLocalStorage(storageKey, initial)
   return initial
@@ -42,663 +38,534 @@ export function saveLocalAppData(data: LocalAppData) {
   writeJsonToLocalStorage(storageKey, data)
 }
 
-function normalizeLocalAppData(data: LocalAppData): LocalAppData {
+function normalizeLocalAppData(raw: unknown): LocalAppData {
   const fallback = createDefaultLocalAppData()
-  const coachees = Array.isArray(data.coachees)
-    ? data.coachees.map((coachee) => ({
-        ...coachee,
-        clientDetails: typeof (coachee as any).clientDetails === 'string' ? (coachee as any).clientDetails : '',
-        employerDetails: typeof (coachee as any).employerDetails === 'string' ? (coachee as any).employerDetails : '',
-        firstSickDay: typeof (coachee as any).firstSickDay === 'string' ? (coachee as any).firstSickDay : '',
-      }))
-    : fallback.coachees
-  const normalizedTrajectoriesFromInput = Array.isArray((data as any).trajectories) ? ((data as any).trajectories as any[]) : []
-  const trajectories: Trajectory[] = normalizedTrajectoriesFromInput
-    .map((trajectory) => {
-      const coacheeId = typeof trajectory?.coacheeId === 'string' ? trajectory.coacheeId.trim() : ''
-      if (!coacheeId) return null
+  const source = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+
+  return {
+    clients: normalizeClients(source.clients ?? source.coachees, fallback.clients),
+    trajectories: normalizeTrajectories(source.trajectories, normalizeClients(source.clients ?? source.coachees, fallback.clients), fallback.trajectories),
+    inputs: normalizeInputs(source.inputs ?? source.sessions, fallback.inputs),
+    snippets: normalizeSnippets(source.snippets, fallback.snippets),
+    notes: normalizeNotes(source.notes, fallback.notes),
+    templates: normalizeTemplates(source.templates, fallback.templates),
+    inputSummaries: normalizeInputSummaries(source.inputSummaries ?? source.writtenReports, fallback.inputSummaries),
+    organizationSettings: normalizeOrganizationSettings(source.organizationSettings ?? source.practiceSettings, fallback.organizationSettings),
+    userSettings: normalizeUserSettings(source.userSettings ?? source.practiceSettings, fallback.userSettings),
+  }
+}
+
+function normalizeClients(raw: unknown, fallback: Client[]): Client[] {
+  if (!Array.isArray(raw)) return fallback
+  return raw
+    .map((item) => {
       const now = Date.now()
+      const candidate = item as Record<string, unknown>
+      const id = String(candidate.id ?? '').trim()
+      const name = String(candidate.name ?? '').trim()
+      if (!id || !name) return null
       return {
-        id: typeof trajectory?.id === 'string' && trajectory.id.trim() ? trajectory.id : defaultTrajectoryIdForCoachee(coacheeId),
-        coacheeId,
-        name: typeof trajectory?.name === 'string' && trajectory.name.trim() ? trajectory.name.trim() : 'Default',
-        dienstType: typeof trajectory?.dienstType === 'string' && trajectory.dienstType.trim() ? trajectory.dienstType.trim() : 'Werkfit maken',
-        uwvContactName: typeof trajectory?.uwvContactName === 'string' ? trajectory.uwvContactName : null,
-        uwvContactPhone: typeof trajectory?.uwvContactPhone === 'string' ? trajectory.uwvContactPhone : null,
-        uwvContactEmail: typeof trajectory?.uwvContactEmail === 'string' ? trajectory.uwvContactEmail : null,
-        orderNumber: typeof trajectory?.orderNumber === 'string' ? trajectory.orderNumber : null,
-        startDate: typeof trajectory?.startDate === 'string' ? trajectory.startDate : null,
-        planVanAanpak:
-          trajectory?.planVanAanpak && typeof trajectory.planVanAanpak === 'object' && typeof trajectory.planVanAanpak.documentId === 'string'
-            ? { documentId: trajectory.planVanAanpak.documentId }
-            : null,
-        maxHours: Number.isFinite(trajectory?.maxHours) ? Number(trajectory.maxHours) : 41,
-        maxAdminHours: Number.isFinite(trajectory?.maxAdminHours) ? Number(trajectory.maxAdminHours) : 3,
-        createdAtUnixMs: Number.isFinite(trajectory?.createdAtUnixMs) ? Number(trajectory.createdAtUnixMs) : now,
-        updatedAtUnixMs: Number.isFinite(trajectory?.updatedAtUnixMs) ? Number(trajectory.updatedAtUnixMs) : now,
+        id,
+        name,
+        clientDetails: String(candidate.clientDetails ?? ''),
+        employerDetails: String(candidate.employerDetails ?? ''),
+        createdAtUnixMs: Number.isFinite(candidate.createdAtUnixMs) ? Number(candidate.createdAtUnixMs) : now,
+        updatedAtUnixMs: Number.isFinite(candidate.updatedAtUnixMs) ? Number(candidate.updatedAtUnixMs) : now,
+        isArchived: Boolean(candidate.isArchived),
+      } satisfies Client
+    })
+    .filter((client): client is Client => Boolean(client))
+}
+
+function normalizeTrajectories(raw: unknown, clients: Client[], fallback: Trajectory[]): Trajectory[] {
+  const now = Date.now()
+  const normalized = (Array.isArray(raw) ? raw : [])
+    .map((item) => {
+      const candidate = item as Record<string, unknown>
+      const id = String(candidate.id ?? '').trim()
+      const clientId = String(candidate.clientId ?? candidate.coacheeId ?? '').trim()
+      if (!id || !clientId) return null
+      return {
+        id,
+        clientId,
+        name: String(candidate.name ?? '').trim() || 'Traject',
+        uwvContactName: typeof candidate.uwvContactName === 'string' ? candidate.uwvContactName : null,
+        orderNumber: typeof candidate.orderNumber === 'string' ? candidate.orderNumber : null,
+        startDate: typeof candidate.startDate === 'string' ? candidate.startDate : null,
+        createdAtUnixMs: Number.isFinite(candidate.createdAtUnixMs) ? Number(candidate.createdAtUnixMs) : now,
+        updatedAtUnixMs: Number.isFinite(candidate.updatedAtUnixMs) ? Number(candidate.updatedAtUnixMs) : now,
       } satisfies Trajectory
     })
     .filter((trajectory): trajectory is Trajectory => Boolean(trajectory))
 
-  const trajectoryByCoacheeId = new Map<string, Trajectory>()
-  for (const trajectory of trajectories) {
-    if (!trajectoryByCoacheeId.has(trajectory.coacheeId)) {
-      trajectoryByCoacheeId.set(trajectory.coacheeId, trajectory)
-    }
-  }
-  for (const coachee of coachees) {
-    if (trajectoryByCoacheeId.has(coachee.id)) continue
-    const id = defaultTrajectoryIdForCoachee(coachee.id)
-    const defaultTrajectory: Trajectory = {
-      id,
-      coacheeId: coachee.id,
-      name: 'Default',
-      dienstType: 'Werkfit maken',
-      uwvContactName: null,
-      uwvContactPhone: null,
-      uwvContactEmail: null,
-      orderNumber: null,
-      startDate: null,
-      planVanAanpak: null,
-      maxHours: 41,
-      maxAdminHours: 3,
-      createdAtUnixMs: coachee.createdAtUnixMs,
-      updatedAtUnixMs: coachee.updatedAtUnixMs,
-    }
-    trajectories.unshift(defaultTrajectory)
-    trajectoryByCoacheeId.set(coachee.id, defaultTrajectory)
-  }
+  if (normalized.length > 0) return normalized
+  if (clients.length === 0) return fallback
 
-  const sessions = Array.isArray(data.sessions)
-    ? data.sessions.map((session) => ({
-        ...session,
-        trajectoryId:
-          typeof (session as any).trajectoryId === 'string'
-            ? (session as any).trajectoryId
-            : typeof (session as any).coacheeId === 'string' && trajectoryByCoacheeId.get((session as any).coacheeId)
-              ? trajectoryByCoacheeId.get((session as any).coacheeId)?.id ?? null
-              : null,
-        kind:
-          (session as any).kind === 'recording' ||
-          (session as any).kind === 'upload' ||
-          (session as any).kind === 'written' ||
-          (session as any).kind === 'notes' ||
-          (session as any).kind === 'intake'
-            ? (session as any).kind
-            : 'written',
-        reportDate: typeof (session as any).reportDate === 'string' ? (session as any).reportDate : null,
-        wvpWeekNumber: typeof (session as any).wvpWeekNumber === 'string' ? (session as any).wvpWeekNumber : null,
-        reportFirstSickDay: typeof (session as any).reportFirstSickDay === 'string' ? (session as any).reportFirstSickDay : null,
-        summaryStructured:
-          (session as any).summaryStructured && typeof (session as any).summaryStructured === 'object'
-            ? {
-                doelstelling: String((session as any).summaryStructured.doelstelling || ''),
-                belastbaarheid: String((session as any).summaryStructured.belastbaarheid || ''),
-                belemmeringen: String((session as any).summaryStructured.belemmeringen || ''),
-                voortgang: String((session as any).summaryStructured.voortgang || ''),
-                arbeidsmarktorientatie: String((session as any).summaryStructured.arbeidsmarktorientatie || ''),
-              }
-            : null,
-      }))
-    : fallback.sessions
-  const notes = Array.isArray(data.notes)
-    ? data.notes.map((n) => ({
-        ...n,
-        title: typeof (n as any).title === "string" ? (n as any).title : "",
-      }))
-    : fallback.notes
-  const activities: Activity[] = Array.isArray((data as any).activities)
-    ? ((data as any).activities as any[]).map((activity) => ({
-        id: String(activity?.id || ''),
-        trajectoryId: String(activity?.trajectoryId || ''),
-        sessionId: typeof activity?.sessionId === 'string' ? activity.sessionId : null,
-        templateId: typeof activity?.templateId === 'string' ? activity.templateId : null,
-        name: String(activity?.name || ''),
-        category: String(activity?.category || ''),
-        status: (activity?.status === 'executed' ? 'executed' : 'planned') as Activity['status'],
-        plannedHours: Number.isFinite(activity?.plannedHours) ? Number(activity.plannedHours) : null,
-        actualHours: Number.isFinite(activity?.actualHours) ? Number(activity.actualHours) : null,
-        source: (activity?.source === 'ai_detected' ? 'ai_detected' : 'manual') as Activity['source'],
-        isAdmin: typeof activity?.isAdmin === 'boolean' ? activity.isAdmin : false,
-        createdAtUnixMs: Number.isFinite(activity?.createdAtUnixMs) ? Number(activity.createdAtUnixMs) : 0,
-        updatedAtUnixMs: Number.isFinite(activity?.updatedAtUnixMs) ? Number(activity.updatedAtUnixMs) : 0,
-      }))
-      .filter((activity) => activity.id && activity.trajectoryId && activity.name)
-    : fallback.activities
+  return clients.map((client) => ({
+    id: defaultTrajectoryIdForClient(client.id),
+    clientId: client.id,
+    name: 'Traject',
+    uwvContactName: null,
+    orderNumber: null,
+    startDate: null,
+    createdAtUnixMs: client.createdAtUnixMs,
+    updatedAtUnixMs: client.updatedAtUnixMs,
+  }))
+}
 
-  const activityTemplates: ActivityTemplate[] = Array.isArray((data as any).activityTemplates)
-      ? ((data as any).activityTemplates as any[]).map((template) => ({
-        id: String(template?.id || ''),
-        name: String(template?.name || ''),
-        description: typeof template?.description === 'string' ? template.description : '',
-        category: String(template?.category || ''),
-        defaultHours: Number.isFinite(template?.defaultHours) ? Number(template.defaultHours) : 0,
-        isAdmin: typeof template?.isAdmin === 'boolean' ? template.isAdmin : false,
-        organizationId: typeof template?.organizationId === 'string' ? template.organizationId : null,
-        isActive: typeof template?.isActive === 'boolean' ? template.isActive : true,
-        createdAtUnixMs: Number.isFinite(template?.createdAtUnixMs) ? Number(template.createdAtUnixMs) : 0,
-        updatedAtUnixMs: Number.isFinite(template?.updatedAtUnixMs) ? Number(template.updatedAtUnixMs) : 0,
-      }))
-      .filter((template) => template.id && template.name && template.category)
-    : fallback.activityTemplates
+function normalizeInputs(raw: unknown, fallback: Input[]): Input[] {
+  if (!Array.isArray(raw)) return fallback
+  return raw
+    .map((item) => {
+      const now = Date.now()
+      const candidate = item as Record<string, unknown>
+      const id = String(candidate.id ?? '').trim()
+      if (!id) return null
+      const type = normalizeInputType(candidate.type ?? candidate.kind)
+      return {
+        id,
+        clientId: nullableText(candidate.clientId ?? candidate.coacheeId),
+        trajectoryId: nullableText(candidate.trajectoryId),
+        title: String(candidate.title ?? '').trim() || 'Input',
+        createdAtUnixMs: Number.isFinite(candidate.createdAtUnixMs) ? Number(candidate.createdAtUnixMs) : now,
+        updatedAtUnixMs: Number.isFinite(candidate.updatedAtUnixMs) ? Number(candidate.updatedAtUnixMs) : now,
+        type,
+        kind: mapTypeToKind(type),
+        audioBlobId: nullableText(candidate.audioBlobId),
+        audioDurationSeconds: Number.isFinite(candidate.audioDurationSeconds) ? Number(candidate.audioDurationSeconds) : null,
+        uploadFileName: nullableText(candidate.uploadFileName),
+        transcript: nullableText(candidate.transcript),
+        summary: nullableText(candidate.summary),
+        reportDate: nullableText(candidate.reportDate),
+        transcriptionStatus: normalizeTranscriptionStatus(candidate.transcriptionStatus),
+        transcriptionError: nullableText(candidate.transcriptionError),
+      } satisfies Input
+    })
+    .filter(Boolean) as Input[]
+}
 
-  const snippets: Snippet[] = Array.isArray((data as any).snippets)
-    ? ((data as any).snippets as any[])
-      .map((snippet) => {
-        const status = snippet?.status === 'approved' || snippet?.status === 'rejected' ? snippet.status : 'pending'
-        return {
-          id: String(snippet?.id || ''),
-          trajectoryId: String(snippet?.trajectoryId || ''),
-          itemId: String(snippet?.itemId || ''),
-          field: String(snippet?.field || ''),
-          text: String(snippet?.text || ''),
-          date: Number.isFinite(snippet?.date) ? Number(snippet.date) : 0,
-          status: status as SnippetStatus,
-          createdAtUnixMs: Number.isFinite(snippet?.createdAtUnixMs) ? Number(snippet.createdAtUnixMs) : 0,
-          updatedAtUnixMs: Number.isFinite(snippet?.updatedAtUnixMs) ? Number(snippet.updatedAtUnixMs) : 0,
-        } satisfies Snippet
-      })
-      .filter((snippet) => snippet.id && snippet.trajectoryId && snippet.itemId && snippet.field)
-    : fallback.snippets
+function normalizeSnippets(raw: unknown, fallback: Snippet[]): Snippet[] {
+  if (!Array.isArray(raw)) return fallback
+  return raw
+    .map((item) => {
+      const now = Date.now()
+      const candidate = item as Record<string, unknown>
+      const id = String(candidate.id ?? '').trim()
+      const trajectoryId = String(candidate.trajectoryId ?? '').trim()
+      const inputId = String(candidate.inputId ?? candidate.itemId ?? '').trim()
+      const field = String(candidate.field ?? '').trim()
+      if (!id || !trajectoryId || !inputId || !field) return null
+      return {
+        id,
+        trajectoryId,
+        inputId,
+        itemId: inputId,
+        field,
+        text: String(candidate.text ?? ''),
+        date: Number.isFinite(candidate.date) ? Number(candidate.date) : now,
+        status: normalizeSnippetStatus(candidate.status),
+        createdAtUnixMs: Number.isFinite(candidate.createdAtUnixMs) ? Number(candidate.createdAtUnixMs) : now,
+        updatedAtUnixMs: Number.isFinite(candidate.updatedAtUnixMs) ? Number(candidate.updatedAtUnixMs) : now,
+      } satisfies Snippet
+    })
+    .filter(Boolean) as Snippet[]
+}
 
+function normalizeNotes(raw: unknown, fallback: Note[]): Note[] {
+  if (!Array.isArray(raw)) return fallback
+  return raw
+    .map((item) => {
+      const candidate = item as Record<string, unknown>
+      const id = String(candidate.id ?? '').trim()
+      const sessionId = String(candidate.sessionId ?? candidate.inputId ?? '').trim()
+      if (!id || !sessionId) return null
+      const now = Date.now()
+      return {
+        id,
+        sessionId,
+        title: String(candidate.title ?? ''),
+        text: String(candidate.text ?? ''),
+        createdAtUnixMs: Number.isFinite(candidate.createdAtUnixMs) ? Number(candidate.createdAtUnixMs) : now,
+        updatedAtUnixMs: Number.isFinite(candidate.updatedAtUnixMs) ? Number(candidate.updatedAtUnixMs) : now,
+      } satisfies Note
+    })
+    .filter((note): note is Note => Boolean(note))
+}
+
+function normalizeTemplates(raw: unknown, fallback: Template[]): Template[] {
+  if (!Array.isArray(raw)) return fallback
+  return raw
+    .map((item) => {
+      const candidate = item as Record<string, unknown>
+      const id = String(candidate.id ?? '').trim()
+      if (!id) return null
+      return {
+        id,
+        name: String(candidate.name ?? '').trim() || 'Template',
+        category: candidate.category === 'ander-verslag' ? 'ander-verslag' : 'gespreksverslag',
+        description: String(candidate.description ?? ''),
+        sections: Array.isArray(candidate.sections) ? (candidate.sections as Template['sections']) : [],
+        isDefault: Boolean(candidate.isDefault),
+        isSaved: candidate.isSaved !== false,
+      } satisfies Template
+    })
+    .filter(Boolean) as Template[]
+}
+
+function normalizeInputSummaries(raw: unknown, fallback: InputSummary[]): InputSummary[] {
+  if (!Array.isArray(raw)) return fallback
+  return raw
+    .map((item) => {
+      const candidate = item as Record<string, unknown>
+      const inputId = String(candidate.inputId ?? candidate.sessionId ?? '').trim()
+      if (!inputId) return null
+      return {
+        inputId,
+        text: String(candidate.text ?? ''),
+        updatedAtUnixMs: Number.isFinite(candidate.updatedAtUnixMs) ? Number(candidate.updatedAtUnixMs) : Date.now(),
+      } satisfies InputSummary
+    })
+    .filter((summary): summary is InputSummary => Boolean(summary))
+}
+
+function normalizeOrganizationSettings(raw: unknown, fallback: OrganizationSettings): OrganizationSettings {
+  const candidate = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   return {
-    ...data,
-    coachees,
-    trajectories,
-    sessions,
-    activities,
-    activityTemplates,
-    snippets,
-    notes,
-    templates: Array.isArray(data.templates)
-      ? data.templates.map((template) => ({
-          ...template,
-          category:
-            (template as any).category === 'gespreksverslag' || (template as any).category === 'ander-verslag'
-              ? (template as any).category
-              : inferTemplateCategoryFromName(String((template as any).name || '')),
-          description: typeof (template as any).description === 'string' ? (template as any).description : '',
-          isDefault: typeof (template as any).isDefault === 'boolean' ? (template as any).isDefault : false,
-        }))
-      : fallback.templates,
-    practiceSettings: data.practiceSettings
-      ? {
-          practiceName: typeof data.practiceSettings.practiceName === 'string' ? data.practiceSettings.practiceName : '',
-          website: typeof data.practiceSettings.website === 'string' ? data.practiceSettings.website : '',
-          visitAddress: typeof data.practiceSettings.visitAddress === 'string' ? data.practiceSettings.visitAddress : '',
-          postalAddress: typeof data.practiceSettings.postalAddress === 'string' ? data.practiceSettings.postalAddress : '',
-          postalCodeCity: typeof data.practiceSettings.postalCodeCity === 'string' ? data.practiceSettings.postalCodeCity : '',
-          contactName: typeof data.practiceSettings.contactName === 'string' ? data.practiceSettings.contactName : '',
-          contactRole: typeof data.practiceSettings.contactRole === 'string' ? data.practiceSettings.contactRole : '',
-          contactPhone: typeof data.practiceSettings.contactPhone === 'string' ? data.practiceSettings.contactPhone : '',
-          contactEmail: typeof data.practiceSettings.contactEmail === 'string' ? data.practiceSettings.contactEmail : '',
-          tintColor: typeof data.practiceSettings.tintColor === 'string' ? data.practiceSettings.tintColor : '#BE0165',
-          logoDataUrl: typeof data.practiceSettings.logoDataUrl === 'string' ? data.practiceSettings.logoDataUrl : null,
-          updatedAtUnixMs: Number.isFinite(data.practiceSettings.updatedAtUnixMs) ? Number(data.practiceSettings.updatedAtUnixMs) : 0,
-        }
-      : fallback.practiceSettings,
+    name: String(candidate.name ?? candidate.practiceName ?? fallback.name),
+    practiceName: String(candidate.practiceName ?? candidate.name ?? fallback.name),
+    website: String(candidate.website ?? fallback.website),
+    visitAddress: String(candidate.visitAddress ?? fallback.visitAddress),
+    postalAddress: String(candidate.postalAddress ?? fallback.postalAddress),
+    postalCodeCity: String(candidate.postalCodeCity ?? fallback.postalCodeCity),
+    tintColor: String(candidate.tintColor ?? fallback.tintColor ?? '#BE0165'),
+    logoDataUrl: typeof candidate.logoDataUrl === 'string' ? candidate.logoDataUrl : null,
+    contactName: String(candidate.contactName ?? ''),
+    contactRole: String(candidate.contactRole ?? ''),
+    contactPhone: String(candidate.contactPhone ?? ''),
+    contactEmail: String(candidate.contactEmail ?? ''),
+    updatedAtUnixMs: Number.isFinite(candidate.updatedAtUnixMs) ? Number(candidate.updatedAtUnixMs) : fallback.updatedAtUnixMs,
   }
 }
 
-function defaultTrajectoryIdForCoachee(coacheeId: string): string {
-  return `trajectory_default_${String(coacheeId || '').trim()}`
+function normalizeUserSettings(raw: unknown, fallback: UserSettings): UserSettings {
+  const candidate = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  return {
+    name: String(candidate.name ?? candidate.contactName ?? fallback.name),
+    role: String(candidate.role ?? candidate.contactRole ?? fallback.role),
+    phone: String(candidate.phone ?? candidate.contactPhone ?? fallback.phone),
+    email: String(candidate.email ?? candidate.contactEmail ?? fallback.email),
+    updatedAtUnixMs: Number.isFinite(candidate.updatedAtUnixMs) ? Number(candidate.updatedAtUnixMs) : fallback.updatedAtUnixMs,
+  }
 }
 
-export function createCoachee(data: LocalAppData, coachee: Coachee): LocalAppData {
-  return { ...data, coachees: [coachee, ...data.coachees] }
+function normalizeInputType(value: unknown): Input['type'] {
+  switch (value) {
+    case 'recorded-session':
+    case 'uploaded-session':
+    case 'spoken-recap':
+    case 'written-recap':
+    case 'uploaded-document':
+      return value
+    case 'recording':
+      return 'recorded-session'
+    case 'upload':
+      return 'uploaded-session'
+    case 'written':
+      return 'written-recap'
+    case 'notes':
+    case 'intake':
+      return 'spoken-recap'
+    default:
+      return 'written-recap'
+  }
 }
 
-export function updateCoacheeName(data: LocalAppData, coacheeId: string, name: string): LocalAppData {
-  const trimmedName = name.trim()
-  if (!trimmedName) return data
-  return { ...data, coachees: data.coachees.map((c) => (c.id === coacheeId ? { ...c, name: trimmedName } : c)) }
+function mapTypeToKind(type: Input['type']): Input['kind'] {
+  switch (type) {
+    case 'recorded-session':
+      return 'recording'
+    case 'uploaded-session':
+      return 'upload'
+    case 'written-recap':
+      return 'written'
+    default:
+      return 'intake'
+  }
 }
 
-export function updateCoachee(
+function normalizeTranscriptionStatus(value: unknown): Input['transcriptionStatus'] {
+  switch (value) {
+    case 'idle':
+    case 'transcribing':
+    case 'generating':
+    case 'done':
+    case 'error':
+      return value
+    default:
+      return 'idle'
+  }
+}
+
+function normalizeSnippetStatus(value: unknown): SnippetStatus {
+  switch (value) {
+    case 'approved':
+    case 'rejected':
+      return value
+    default:
+      return 'pending'
+  }
+}
+
+function nullableText(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  return value
+}
+
+function defaultTrajectoryIdForClient(clientId: string): string {
+  return `trajectory_default_${String(clientId || '').trim()}`
+}
+
+export function createClient(data: LocalAppData, client: Client): LocalAppData {
+  return { ...data, clients: [client, ...data.clients] }
+}
+
+export function updateClient(
   data: LocalAppData,
-  coacheeId: string,
-  values: { name?: string; clientDetails?: string; employerDetails?: string; firstSickDay?: string },
+  clientId: string,
+  values: { name?: string; clientDetails?: string; employerDetails?: string },
 ): LocalAppData {
   return {
     ...data,
-    coachees: data.coachees.map((coachee) => {
-      if (coachee.id !== coacheeId) return coachee
+    clients: data.clients.map((client) => {
+      if (client.id !== clientId) return client
       return {
-        ...coachee,
-        ...(values.name !== undefined ? { name: values.name.trim() } : {}),
-        ...(values.clientDetails !== undefined ? { clientDetails: values.clientDetails.trim() } : {}),
-        ...(values.employerDetails !== undefined ? { employerDetails: values.employerDetails.trim() } : {}),
-        ...(values.firstSickDay !== undefined ? { firstSickDay: values.firstSickDay.trim() } : {}),
+        ...client,
+        ...(values.name !== undefined ? { name: values.name } : null),
+        ...(values.clientDetails !== undefined ? { clientDetails: values.clientDetails } : null),
+        ...(values.employerDetails !== undefined ? { employerDetails: values.employerDetails } : null),
+        updatedAtUnixMs: Date.now(),
       }
     }),
   }
 }
 
-export function archiveCoachee(data: LocalAppData, coacheeId: string): LocalAppData {
-  return { ...data, coachees: data.coachees.map((c) => (c.id === coacheeId ? { ...c, isArchived: true } : c)) }
-}
-
-export function restoreCoachee(data: LocalAppData, coacheeId: string): LocalAppData {
-  return { ...data, coachees: data.coachees.map((c) => (c.id === coacheeId ? { ...c, isArchived: false } : c)) }
-}
-
-export function deleteCoachee(data: LocalAppData, coacheeId: string): LocalAppData {
-  const remainingCoachees = data.coachees.filter((c) => c.id !== coacheeId)
-  const removedTrajectoryIds = new Set(data.trajectories.filter((trajectory) => trajectory.coacheeId === coacheeId).map((trajectory) => trajectory.id))
-  const remainingTrajectories = data.trajectories.filter((trajectory) => trajectory.coacheeId !== coacheeId)
-  const remainingSessions = data.sessions.filter((s) => s.coacheeId !== coacheeId)
-  const remainingSessionIds = new Set(remainingSessions.map((session) => session.id))
-  const remainingActivities = data.activities.filter((activity) => !removedTrajectoryIds.has(activity.trajectoryId))
-  const remainingSnippets = data.snippets.filter(
-    (snippet) => !removedTrajectoryIds.has(snippet.trajectoryId) && remainingSessionIds.has(snippet.itemId),
-  )
-  const remainingNotes = data.notes.filter((n) => remainingSessions.some((s) => s.id === n.sessionId))
-  const remainingWrittenReports = data.writtenReports.filter((r) => remainingSessions.some((s) => s.id === r.sessionId))
+export function archiveClient(data: LocalAppData, clientId: string): LocalAppData {
   return {
     ...data,
-    coachees: remainingCoachees,
-    trajectories: remainingTrajectories,
-    sessions: remainingSessions,
-    activities: remainingActivities,
-    snippets: remainingSnippets,
-    activityTemplates: data.activityTemplates,
-    notes: remainingNotes,
-    writtenReports: remainingWrittenReports,
+    clients: data.clients.map((client) => (client.id === clientId ? { ...client, isArchived: true, updatedAtUnixMs: Date.now() } : client)),
   }
 }
 
-export function createSession(data: LocalAppData, session: Session): { data: LocalAppData; sessionId: string } {
-  return { data: { ...data, sessions: [session, ...data.sessions] }, sessionId: session.id }
+export function restoreClient(data: LocalAppData, clientId: string): LocalAppData {
+  return {
+    ...data,
+    clients: data.clients.map((client) => (client.id === clientId ? { ...client, isArchived: false, updatedAtUnixMs: Date.now() } : client)),
+  }
 }
 
-export function createTrajectory(data: LocalAppData, trajectory: Trajectory): { data: LocalAppData; trajectoryId: string } {
-  return { data: { ...data, trajectories: [trajectory, ...data.trajectories] }, trajectoryId: trajectory.id }
+export function deleteClient(data: LocalAppData, clientId: string): LocalAppData {
+  const remainingTrajectories = data.trajectories.filter((trajectory) => trajectory.clientId !== clientId)
+  const removedTrajectoryIds = new Set(data.trajectories.filter((trajectory) => trajectory.clientId === clientId).map((trajectory) => trajectory.id))
+  const removedInputIds = new Set(data.inputs.filter((input) => input.clientId === clientId || removedTrajectoryIds.has(String(input.trajectoryId ?? ''))).map((input) => input.id))
+
+  return {
+    ...data,
+    clients: data.clients.filter((client) => client.id !== clientId),
+    trajectories: remainingTrajectories,
+    inputs: data.inputs.filter((input) => !removedInputIds.has(input.id)),
+    snippets: data.snippets.filter((snippet) => !removedTrajectoryIds.has(snippet.trajectoryId) && !removedInputIds.has(snippet.inputId)),
+    notes: data.notes.filter((note) => !removedInputIds.has(note.sessionId)),
+    inputSummaries: data.inputSummaries.filter((summary) => !removedInputIds.has(summary.inputId)),
+  }
+}
+
+export function createTrajectory(data: LocalAppData, trajectory: Trajectory): LocalAppData {
+  return { ...data, trajectories: [trajectory, ...data.trajectories] }
 }
 
 export function updateTrajectory(
   data: LocalAppData,
   trajectoryId: string,
-  values: {
-    coacheeId?: string
-    name?: string
-    dienstType?: string
-    uwvContactName?: string | null
-    uwvContactPhone?: string | null
-    uwvContactEmail?: string | null
-    orderNumber?: string | null
-    startDate?: string | null
-    planVanAanpak?: Trajectory['planVanAanpak']
-    maxHours?: number
-    maxAdminHours?: number
-    updatedAtUnixMs?: number
-  },
+  values: { clientId?: string; name?: string; uwvContactName?: string | null; orderNumber?: string | null; startDate?: string | null },
 ): LocalAppData {
-  const updatedAtUnixMs = values.updatedAtUnixMs ?? Date.now()
   return {
     ...data,
     trajectories: data.trajectories.map((trajectory) => {
       if (trajectory.id !== trajectoryId) return trajectory
       return {
         ...trajectory,
-        ...(values.coacheeId !== undefined ? { coacheeId: values.coacheeId } : {}),
-        ...(values.name !== undefined ? { name: values.name.trim() } : {}),
-        ...(values.dienstType !== undefined ? { dienstType: values.dienstType.trim() } : {}),
-        ...(values.uwvContactName !== undefined ? { uwvContactName: values.uwvContactName } : {}),
-        ...(values.uwvContactPhone !== undefined ? { uwvContactPhone: values.uwvContactPhone } : {}),
-        ...(values.uwvContactEmail !== undefined ? { uwvContactEmail: values.uwvContactEmail } : {}),
-        ...(values.orderNumber !== undefined ? { orderNumber: values.orderNumber } : {}),
-        ...(values.startDate !== undefined ? { startDate: values.startDate } : {}),
-        ...(values.planVanAanpak !== undefined ? { planVanAanpak: values.planVanAanpak } : {}),
-        ...(values.maxHours !== undefined ? { maxHours: values.maxHours } : {}),
-        ...(values.maxAdminHours !== undefined ? { maxAdminHours: values.maxAdminHours } : {}),
-        updatedAtUnixMs,
+        ...(values.clientId !== undefined ? { clientId: values.clientId } : null),
+        ...(values.name !== undefined ? { name: values.name } : null),
+        ...(values.uwvContactName !== undefined ? { uwvContactName: values.uwvContactName } : null),
+        ...(values.orderNumber !== undefined ? { orderNumber: values.orderNumber } : null),
+        ...(values.startDate !== undefined ? { startDate: values.startDate } : null),
+        updatedAtUnixMs: Date.now(),
       }
     }),
   }
 }
 
 export function deleteTrajectory(data: LocalAppData, trajectoryId: string): LocalAppData {
+  const removedInputIds = new Set(data.inputs.filter((input) => input.trajectoryId === trajectoryId).map((input) => input.id))
   return {
     ...data,
     trajectories: data.trajectories.filter((trajectory) => trajectory.id !== trajectoryId),
-    sessions: data.sessions.map((session) => (session.trajectoryId === trajectoryId ? { ...session, trajectoryId: null } : session)),
-    activities: data.activities.filter((activity) => activity.trajectoryId !== trajectoryId),
-    snippets: data.snippets.filter((snippet) => snippet.trajectoryId !== trajectoryId),
+    inputs: data.inputs.filter((input) => input.trajectoryId !== trajectoryId),
+    snippets: data.snippets.filter((snippet) => snippet.trajectoryId !== trajectoryId && !removedInputIds.has(snippet.inputId)),
+    notes: data.notes.filter((note) => !removedInputIds.has(note.sessionId)),
+    inputSummaries: data.inputSummaries.filter((summary) => !removedInputIds.has(summary.inputId)),
   }
 }
 
-export function createActivityTemplate(
-  data: LocalAppData,
-  template: ActivityTemplate,
-): { data: LocalAppData; templateId: string } {
-  return { data: { ...data, activityTemplates: [template, ...data.activityTemplates] }, templateId: template.id }
+export function createInput(data: LocalAppData, input: Input): LocalAppData {
+  return { ...data, inputs: [input, ...data.inputs] }
 }
 
-export function updateActivityTemplate(
-  data: LocalAppData,
-  templateId: string,
-  values: {
-    name?: string
-    description?: string
-    category?: string
-    defaultHours?: number
-    isAdmin?: boolean
-    organizationId?: string | null
-    isActive?: boolean
-    updatedAtUnixMs?: number
-  },
-): LocalAppData {
-  const updatedAtUnixMs = values.updatedAtUnixMs ?? Date.now()
+export function updateInput(data: LocalAppData, inputId: string, values: Partial<Omit<Input, 'id'>>): LocalAppData {
   return {
     ...data,
-    activityTemplates: data.activityTemplates.map((template) => {
-      if (template.id !== templateId) return template
+    inputs: data.inputs.map((input) => {
+      if (input.id !== inputId) return input
       return {
-        ...template,
-        ...(values.name !== undefined ? { name: values.name.trim() } : {}),
-        ...(values.description !== undefined ? { description: values.description.trim() } : {}),
-        ...(values.category !== undefined ? { category: values.category.trim() } : {}),
-        ...(values.defaultHours !== undefined ? { defaultHours: values.defaultHours } : {}),
-        ...(values.isAdmin !== undefined ? { isAdmin: values.isAdmin } : {}),
-        ...(values.organizationId !== undefined ? { organizationId: values.organizationId } : {}),
-        ...(values.isActive !== undefined ? { isActive: values.isActive } : {}),
-        updatedAtUnixMs,
+        ...input,
+        ...values,
+        updatedAtUnixMs: values.updatedAtUnixMs ?? Date.now(),
       }
     }),
   }
 }
 
-export function deleteActivityTemplate(data: LocalAppData, templateId: string): LocalAppData {
+export function deleteInput(data: LocalAppData, inputId: string): LocalAppData {
   return {
     ...data,
-    activityTemplates: data.activityTemplates.filter((template) => template.id !== templateId),
-    activities: data.activities.map((activity) => (activity.templateId === templateId ? { ...activity, templateId: null } : activity)),
+    inputs: data.inputs.filter((input) => input.id !== inputId),
+    snippets: data.snippets.filter((snippet) => snippet.inputId !== inputId),
+    notes: data.notes.filter((note) => note.sessionId !== inputId),
+    inputSummaries: data.inputSummaries.filter((summary) => summary.inputId !== inputId),
   }
 }
 
-export function createActivity(data: LocalAppData, activity: Activity): { data: LocalAppData; activityId: string } {
-  return { data: { ...data, activities: [activity, ...data.activities] }, activityId: activity.id }
-}
-
-export function updateActivity(
-  data: LocalAppData,
-  activityId: string,
-  values: {
-    trajectoryId?: string
-    sessionId?: string | null
-    templateId?: string | null
-    name?: string
-    category?: string
-    status?: Activity['status']
-    plannedHours?: number | null
-    actualHours?: number | null
-    source?: Activity['source']
-    isAdmin?: boolean
-    updatedAtUnixMs?: number
-  },
-): LocalAppData {
-  const updatedAtUnixMs = values.updatedAtUnixMs ?? Date.now()
-  return {
-    ...data,
-    activities: data.activities.map((activity) => {
-      if (activity.id !== activityId) return activity
-      return {
-        ...activity,
-        ...(values.trajectoryId !== undefined ? { trajectoryId: values.trajectoryId } : {}),
-        ...(values.sessionId !== undefined ? { sessionId: values.sessionId } : {}),
-        ...(values.templateId !== undefined ? { templateId: values.templateId } : {}),
-        ...(values.name !== undefined ? { name: values.name.trim() } : {}),
-        ...(values.category !== undefined ? { category: values.category.trim() } : {}),
-        ...(values.status !== undefined ? { status: values.status } : {}),
-        ...(values.plannedHours !== undefined ? { plannedHours: values.plannedHours } : {}),
-        ...(values.actualHours !== undefined ? { actualHours: values.actualHours } : {}),
-        ...(values.source !== undefined ? { source: values.source } : {}),
-        ...(values.isAdmin !== undefined ? { isAdmin: values.isAdmin } : {}),
-        updatedAtUnixMs,
-      }
-    }),
-  }
-}
-
-export function deleteActivity(data: LocalAppData, activityId: string): LocalAppData {
-  return { ...data, activities: data.activities.filter((activity) => activity.id !== activityId) }
-}
-
-export function createSnippet(data: LocalAppData, snippet: Snippet): { data: LocalAppData; snippetId: string } {
-  return { data: { ...data, snippets: [snippet, ...data.snippets] }, snippetId: snippet.id }
+export function createSnippet(data: LocalAppData, snippet: Snippet): LocalAppData {
+  return { ...data, snippets: [snippet, ...data.snippets] }
 }
 
 export function updateSnippet(
   data: LocalAppData,
   snippetId: string,
-  values: {
-    field?: string
-    text?: string
-    status?: SnippetStatus
-    updatedAtUnixMs?: number
-  },
+  values: { field?: string; text?: string; status?: SnippetStatus },
 ): LocalAppData {
-  const updatedAtUnixMs = values.updatedAtUnixMs ?? Date.now()
   return {
     ...data,
     snippets: data.snippets.map((snippet) => {
       if (snippet.id !== snippetId) return snippet
       return {
         ...snippet,
-        ...(values.field !== undefined ? { field: values.field.trim() } : {}),
-        ...(values.text !== undefined ? { text: values.text.trim() } : {}),
-        ...(values.status !== undefined ? { status: values.status } : {}),
-        updatedAtUnixMs,
+        ...(values.field !== undefined ? { field: values.field } : null),
+        ...(values.text !== undefined ? { text: values.text } : null),
+        ...(values.status !== undefined ? { status: values.status } : null),
+        updatedAtUnixMs: Date.now(),
       }
     }),
   }
 }
 
 export function deleteSnippet(data: LocalAppData, snippetId: string): LocalAppData {
-  return { ...data, snippets: data.snippets.filter((snippet) => snippet.id !== snippetId) }
-}
-
-export function listSessionsForCoachee(data: LocalAppData, coacheeId: string): Session[] {
-  return data.sessions.filter((s) => s.coacheeId === coacheeId).sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
-}
-
-export function updateSession(
-  data: LocalAppData,
-  sessionId: string,
-  values: {
-    coacheeId?: string | null
-    trajectoryId?: string | null
-    kind?: Session['kind']
-    title?: string
-    createdAtUnixMs?: number
-    audioBlobId?: string | null
-    audioDurationSeconds?: number | null
-    uploadFileName?: string | null
-    transcript?: string | null
-    summary?: string | null
-    summaryStructured?: Session['summaryStructured']
-    reportDate?: string | null
-    wvpWeekNumber?: string | null
-    reportFirstSickDay?: string | null
-    transcriptionStatus?: Session['transcriptionStatus']
-    transcriptionError?: string | null
-  }
-): LocalAppData {
-  const currentSession = data.sessions.find((session) => session.id === sessionId)
-  if (!currentSession) return data
-
-  const hasChanges =
-    (values.coacheeId !== undefined && values.coacheeId !== currentSession.coacheeId) ||
-    (values.trajectoryId !== undefined && values.trajectoryId !== currentSession.trajectoryId) ||
-    (values.kind !== undefined && values.kind !== currentSession.kind) ||
-    (values.title !== undefined && values.title.trim() !== currentSession.title) ||
-    (values.createdAtUnixMs !== undefined && values.createdAtUnixMs !== currentSession.createdAtUnixMs) ||
-    (values.audioBlobId !== undefined && values.audioBlobId !== currentSession.audioBlobId) ||
-    (values.audioDurationSeconds !== undefined && values.audioDurationSeconds !== currentSession.audioDurationSeconds) ||
-    (values.uploadFileName !== undefined && values.uploadFileName !== currentSession.uploadFileName) ||
-    (values.transcript !== undefined && values.transcript !== currentSession.transcript) ||
-    (values.summary !== undefined && values.summary !== currentSession.summary) ||
-    (values.summaryStructured !== undefined &&
-      JSON.stringify(values.summaryStructured) !== JSON.stringify(currentSession.summaryStructured)) ||
-    (values.reportDate !== undefined && values.reportDate !== currentSession.reportDate) ||
-    (values.wvpWeekNumber !== undefined && values.wvpWeekNumber !== currentSession.wvpWeekNumber) ||
-    (values.reportFirstSickDay !== undefined && values.reportFirstSickDay !== currentSession.reportFirstSickDay) ||
-    (values.transcriptionStatus !== undefined && values.transcriptionStatus !== currentSession.transcriptionStatus) ||
-    (values.transcriptionError !== undefined && values.transcriptionError !== currentSession.transcriptionError)
-
-  if (!hasChanges) return data
-
-  const now = Date.now()
   return {
     ...data,
-    sessions: data.sessions.map((s) => {
-      if (s.id !== sessionId) return s
+    snippets: data.snippets.filter((snippet) => snippet.id !== snippetId),
+  }
+}
+
+export function createNote(data: LocalAppData, note: Note): LocalAppData {
+  return { ...data, notes: [note, ...data.notes] }
+}
+
+export function updateNote(data: LocalAppData, noteId: string, values: { title?: string; text: string }): LocalAppData {
+  return {
+    ...data,
+    notes: data.notes.map((note) => {
+      if (note.id !== noteId) return note
       return {
-        ...s,
-        ...(values.coacheeId !== undefined ? { coacheeId: values.coacheeId } : {}),
-        ...(values.trajectoryId !== undefined ? { trajectoryId: values.trajectoryId } : {}),
-        ...(values.kind !== undefined ? { kind: values.kind } : {}),
-        ...(values.title !== undefined ? { title: values.title.trim() } : {}),
-        ...(values.createdAtUnixMs !== undefined ? { createdAtUnixMs: values.createdAtUnixMs } : {}),
-        ...(values.audioBlobId !== undefined ? { audioBlobId: values.audioBlobId } : {}),
-        ...(values.audioDurationSeconds !== undefined ? { audioDurationSeconds: values.audioDurationSeconds } : {}),
-        ...(values.uploadFileName !== undefined ? { uploadFileName: values.uploadFileName } : {}),
-        ...(values.transcript !== undefined ? { transcript: values.transcript } : {}),
-        ...(values.summary !== undefined ? { summary: values.summary } : {}),
-        ...(values.summaryStructured !== undefined ? { summaryStructured: values.summaryStructured } : {}),
-        ...(values.reportDate !== undefined ? { reportDate: values.reportDate } : {}),
-        ...(values.wvpWeekNumber !== undefined ? { wvpWeekNumber: values.wvpWeekNumber } : {}),
-        ...(values.reportFirstSickDay !== undefined ? { reportFirstSickDay: values.reportFirstSickDay } : {}),
-        ...(values.transcriptionStatus !== undefined ? { transcriptionStatus: values.transcriptionStatus } : {}),
-        ...(values.transcriptionError !== undefined ? { transcriptionError: values.transcriptionError } : {}),
-        updatedAtUnixMs: now,
+        ...note,
+        text: values.text,
+        ...(values.title !== undefined ? { title: values.title } : null),
+        updatedAtUnixMs: Date.now(),
       }
     }),
-  }
-}
-
-export function deleteSession(data: LocalAppData, sessionId: string): LocalAppData {
-  const remainingSessions = data.sessions.filter((s) => s.id !== sessionId)
-  const remainingActivities = data.activities.filter((activity) => activity.sessionId !== sessionId)
-  const remainingSnippets = data.snippets.filter((snippet) => snippet.itemId !== sessionId)
-  const remainingNotes = data.notes.filter((n) => n.sessionId !== sessionId)
-  const remainingWrittenReports = data.writtenReports.filter((r) => r.sessionId !== sessionId)
-  return {
-    ...data,
-    sessions: remainingSessions,
-    activities: remainingActivities,
-    snippets: remainingSnippets,
-    notes: remainingNotes,
-    writtenReports: remainingWrittenReports,
-  }
-}
-
-export function listNotesForSession(data: LocalAppData, sessionId: string): Note[] {
-  return data.notes.filter((n) => n.sessionId === sessionId).sort((a, b) => b.updatedAtUnixMs - a.updatedAtUnixMs)
-}
-
-export function createNote(data: LocalAppData, note: Note): { data: LocalAppData; noteId: string } {
-  const noteWithTitle = { ...note, title: typeof note.title === "string" ? note.title : "" }
-  return { data: { ...data, notes: [noteWithTitle, ...data.notes] }, noteId: note.id }
-}
-
-export function updateNote(
-  data: LocalAppData,
-  noteId: string,
-  values: { title?: string; text: string },
-): LocalAppData {
-  const trimmedText = values.text.trim()
-  if (!trimmedText) return data
-  const now = Date.now()
-  const title = typeof values.title === "string" ? values.title.trim() : ""
-  return {
-    ...data,
-    notes: data.notes.map((n) =>
-      n.id === noteId ? { ...n, title, text: trimmedText, updatedAtUnixMs: now } : n,
-    ),
   }
 }
 
 export function deleteNote(data: LocalAppData, noteId: string): LocalAppData {
-  return { ...data, notes: data.notes.filter((n) => n.id !== noteId) }
-}
-
-export function getWrittenReport(data: LocalAppData, sessionId: string): WrittenReport | null {
-  return data.writtenReports.find((r) => r.sessionId === sessionId) ?? null
-}
-
-export function setWrittenReport(data: LocalAppData, sessionId: string, text: string): LocalAppData {
-  const now = Date.now()
-  const trimmedText = text.trim()
-  const existing = data.writtenReports.find((report) => report.sessionId === sessionId)
-  if (existing && existing.text.trim() === trimmedText) return data
-  const nextReport: WrittenReport = { sessionId, text: trimmedText, updatedAtUnixMs: now }
-  const without = data.writtenReports.filter((r) => r.sessionId !== sessionId)
-  return { ...data, writtenReports: [nextReport, ...without] }
-}
-
-export function createTemplate(data: LocalAppData, template: Template): { data: LocalAppData; templateId: string } {
-  return { data: { ...data, templates: [template, ...data.templates] }, templateId: template.id }
-}
-
-export function updateTemplate(
-  data: LocalAppData,
-  templateId: string,
-  values: { name?: string; description?: string; sections?: Template['sections']; isSaved?: boolean; updatedAtUnixMs: number },
-): LocalAppData {
   return {
     ...data,
-    templates: data.templates.map((template) => {
-      if (template.id !== templateId) return template
-      return {
-        ...template,
-        ...(typeof values.name === 'string' ? { name: values.name.trim() } : {}),
-        ...(typeof values.description === 'string' ? { description: values.description.trim() } : {}),
-        ...(values.sections ? { sections: values.sections } : {}),
-        ...(typeof values.isSaved === 'boolean' ? { isSaved: values.isSaved } : {}),
-        updatedAtUnixMs: values.updatedAtUnixMs,
-      }
-    }),
+    notes: data.notes.filter((note) => note.id !== noteId),
+  }
+}
+
+export function createTemplate(data: LocalAppData, template: Template): LocalAppData {
+  return { ...data, templates: [template, ...data.templates] }
+}
+
+export function updateTemplate(data: LocalAppData, templateId: string, values: Partial<Template>): LocalAppData {
+  return {
+    ...data,
+    templates: data.templates.map((template) => (template.id === templateId ? { ...template, ...values } : template)),
   }
 }
 
 export function deleteTemplate(data: LocalAppData, templateId: string): LocalAppData {
-  return { ...data, templates: data.templates.filter((template) => template.id !== templateId) }
-}
-
-export function updatePracticeSettings(
-  data: LocalAppData,
-  values: {
-    practiceName?: string
-    website?: string
-    visitAddress?: string
-    postalAddress?: string
-    postalCodeCity?: string
-    contactName?: string
-    contactRole?: string
-    contactPhone?: string
-    contactEmail?: string
-    tintColor?: string
-    logoDataUrl?: string | null
-    updatedAtUnixMs: number
-  },
-): LocalAppData {
   return {
     ...data,
-    practiceSettings: {
-      ...data.practiceSettings,
-      ...(values.practiceName !== undefined ? { practiceName: values.practiceName.trim() } : {}),
-      ...(values.website !== undefined ? { website: values.website.trim() } : {}),
-      ...(values.visitAddress !== undefined ? { visitAddress: values.visitAddress.trim() } : {}),
-      ...(values.postalAddress !== undefined ? { postalAddress: values.postalAddress.trim() } : {}),
-      ...(values.postalCodeCity !== undefined ? { postalCodeCity: values.postalCodeCity.trim() } : {}),
-      ...(values.contactName !== undefined ? { contactName: values.contactName.trim() } : {}),
-      ...(values.contactRole !== undefined ? { contactRole: values.contactRole.trim() } : {}),
-      ...(values.contactPhone !== undefined ? { contactPhone: values.contactPhone.trim() } : {}),
-      ...(values.contactEmail !== undefined ? { contactEmail: values.contactEmail.trim() } : {}),
-      ...(values.tintColor !== undefined ? { tintColor: values.tintColor } : {}),
-      ...(values.logoDataUrl !== undefined ? { logoDataUrl: values.logoDataUrl } : {}),
-      updatedAtUnixMs: values.updatedAtUnixMs,
+    templates: data.templates.filter((template) => template.id !== templateId),
+  }
+}
+
+export function toggleTemplateSaved(data: LocalAppData, templateId: string): LocalAppData {
+  return {
+    ...data,
+    templates: data.templates.map((template) =>
+      template.id === templateId ? { ...template, isSaved: !(template.isSaved !== false) } : template,
+    ),
+  }
+}
+
+export function setInputSummary(data: LocalAppData, inputId: string, text: string): LocalAppData {
+  const existing = data.inputSummaries.find((summary) => summary.inputId === inputId)
+  if (existing) {
+    return {
+      ...data,
+      inputSummaries: data.inputSummaries.map((summary) =>
+        summary.inputId === inputId ? { ...summary, text, updatedAtUnixMs: Date.now() } : summary,
+      ),
+    }
+  }
+
+  return {
+    ...data,
+    inputSummaries: [{ inputId, text, updatedAtUnixMs: Date.now() }, ...data.inputSummaries],
+  }
+}
+
+export function updateOrganizationSettings(data: LocalAppData, values: Partial<Omit<OrganizationSettings, 'updatedAtUnixMs'>>): LocalAppData {
+  return {
+    ...data,
+    organizationSettings: {
+      ...data.organizationSettings,
+      ...values,
+      updatedAtUnixMs: Date.now(),
     },
   }
 }
+
+export function updateUserSettings(data: LocalAppData, values: Partial<Omit<UserSettings, 'updatedAtUnixMs'>>): LocalAppData {
+  return {
+    ...data,
+    userSettings: {
+      ...data.userSettings,
+      ...values,
+      updatedAtUnixMs: Date.now(),
+    },
+  }
+}
+
+

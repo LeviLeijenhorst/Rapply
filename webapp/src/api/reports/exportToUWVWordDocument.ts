@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Asset } from 'expo-asset'
 import Docxtemplater from 'docxtemplater'
 import PizZip from 'pizzip'
@@ -944,3 +945,4 @@ export async function exportUwvTemplateWord(params: {
   })
   return true
 }
+

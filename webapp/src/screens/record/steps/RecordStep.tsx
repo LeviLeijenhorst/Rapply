@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { Animated, Pressable, TextInput, View } from 'react-native'
 
 import { Text } from '../../../ui/Text'
@@ -28,7 +28,7 @@ type RecordStepModel = {
   liveWaveHeights: number[]
   recordingNotesRevealProgress: Animated.Value
   shouldRenderNotesPanel: boolean
-  selectedCoacheeName: string | null
+  selectedClientName: string | null
   recordingNotes: Array<{ id: string; seconds: number; text: string }>
   recordingNoteDraft: string
   recorder: RecorderState
@@ -48,7 +48,7 @@ export function RecordStep({
   liveWaveHeights,
   recordingNotesRevealProgress,
   shouldRenderNotesPanel,
-  selectedCoacheeName,
+  selectedClientName,
   recordingNotes,
   recordingNoteDraft,
   recorder,
@@ -65,8 +65,8 @@ export function RecordStep({
         <View style={styles.recordingCardIdentity}>
           <View style={styles.recordingCardAvatar} />
           <View>
-            <Text isSemibold style={styles.recordingCardName}>{selectedCoacheeName || 'Naamloze opname'}</Text>
-            <Text style={styles.recordingCardSessionLabel}>Sessie #9</Text>
+            <Text isSemibold style={styles.recordingCardName}>{selectedClientName || 'Naamloze opname'}</Text>
+            <Text style={styles.recordingCardInputLabel}>Sessie #9</Text>
           </View>
         </View>
         <View style={styles.recordingCardMoreButton}>
@@ -227,3 +227,4 @@ export function RecordStep({
     </View>
   )
 }
+

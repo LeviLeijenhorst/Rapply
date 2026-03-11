@@ -1,5 +1,5 @@
 import type { Express, RequestHandler } from "express"
-import { requireAuthenticatedUser } from "../../auth"
+import { requireAuthenticatedUser } from "../../identity/auth"
 import { asyncHandler, sendError } from "../../http"
 import { readId, readOptionalId, readOptionalInteger, readOptionalText, readRequiredNumber, readText } from "../../routes/parsers/scalars"
 import { cancelMeetingRecording } from "../cancelMeetingRecording"

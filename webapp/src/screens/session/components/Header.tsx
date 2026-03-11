@@ -4,26 +4,26 @@ import { StyleSheet, View } from 'react-native'
 import { semanticColorTokens } from '@/design/tokens/colors'
 import { fontSizes } from '@/design/tokens/fontSizes'
 import { spacing } from '@/design/tokens/spacing'
-import { SessionCalendarIcon, SessionUserProfileIcon } from '@/icons/SessionPageIcons'
+import { InputCalendarIcon, InputUserProfileIcon } from '@/icons/InputPageIcons'
 import type { HeaderProps } from '@/screens/session/sessionScreen.types'
 import { Text } from '@/ui/Text'
 
 export function Header({ title, clientName, date }: HeaderProps) {
   return (
     <View style={styles.container}>
-      {/* Session title */}
+      {/* Input title */}
       <Text isSemibold style={styles.title}>{title}</Text>
 
-      {/* Session meta row */}
+      {/* Input meta row */}
       <View style={styles.metaRow}>
         <View style={styles.metaItem}>
-          <SessionUserProfileIcon size={16} />
+          <InputUserProfileIcon size={16} />
           <Text style={styles.metaText}>{clientName}</Text>
         </View>
         {date ? (
           <View style={styles.metaItem}>
             <Text style={styles.separator}>•</Text>
-            <SessionCalendarIcon size={16} />
+            <InputCalendarIcon size={16} />
             <Text style={styles.metaText}>{date}</Text>
           </View>
         ) : null}
@@ -64,3 +64,4 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 })
+

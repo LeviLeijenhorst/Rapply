@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 
-import { sendSessionChatMessage } from '@/api/chat/sendSessionChatMessage'
+import { sendInputChatMessage } from '@/api/chat/sendInputChatMessage'
 import type { ChatbotMessage, UseChatbotTabLogicParams } from '@/screens/session/sessionScreen.types'
 
-function buildSessionChatSystemPrompt(params: {
+function buildInputChatSystemPrompt(params: {
   summary: string | null
   transcript: string | null
   snippets: UseChatbotTabLogicParams['snippets']
@@ -59,11 +59,11 @@ export function useChatbotTabLogic({ inputId, summary, transcript, snippets, not
     setIsChatSending(true)
 
     try {
-      const aiResponse = await sendSessionChatMessage({
+      const aiResponse = await sendInputChatMessage({
         messages: [
           {
             role: 'system',
-            text: buildSessionChatSystemPrompt({
+            text: buildInputChatSystemPrompt({
               summary,
               transcript,
               snippets,
@@ -123,4 +123,5 @@ export function useChatbotTabLogic({ inputId, summary, transcript, snippets, not
     handleConfirmClearChat,
   }
 }
+
 

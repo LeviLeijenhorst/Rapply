@@ -1,5 +1,5 @@
 import type { Express, RequestHandler } from "express"
-import { requireAuthenticatedUser } from "../../auth"
+import { requireAuthenticatedUser } from "../../identity/auth"
 import { asyncHandler } from "../../http"
 
 type RegisterBillingRoutesParams = {

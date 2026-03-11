@@ -1,14 +1,12 @@
 import type { Express } from "express"
-import { requireAuthenticatedUser } from "../../auth"
+import { requireAuthenticatedUser } from "../../identity/auth"
 import { asyncHandler } from "../../http"
 import { readReport } from "../readReport"
 import { saveReport } from "../store"
 
 const reportSaveRoutePath = "/reports/save"
-// Older clients still post written reports to this route.
-const legacyWrittenReportSaveRoutePath = "/written-reports/set"
 
-// Registers report save routes for current and older clients.
+// Registers report save route.
 export function registerReportRoutes(app: Express): void {
   const saveRoute = asyncHandler(async (req, res) => {
     const user = await requireAuthenticatedUser(req)
@@ -18,5 +16,4 @@ export function registerReportRoutes(app: Express): void {
   })
 
   app.post(reportSaveRoutePath, saveRoute)
-  app.post(legacyWrittenReportSaveRoutePath, saveRoute)
 }

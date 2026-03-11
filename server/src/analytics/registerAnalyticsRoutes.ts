@@ -1,7 +1,7 @@
 import crypto from "crypto"
 import type { Express, Request, RequestHandler } from "express"
-import { requireAuthenticatedUser } from "../auth"
-import { isAdminEmail, normalizeEmail } from "../admin"
+import { requireAuthenticatedUser } from "../identity/auth"
+import { isAdminEmail, normalizeEmail } from "../identity/admin"
 import { execute, queryMany } from "../db"
 import { asyncHandler, sendError } from "../http"
 

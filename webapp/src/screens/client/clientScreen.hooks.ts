@@ -5,12 +5,12 @@ import { sendClientChatMessage } from '@/api/chat/sendClientChatPromptMessage'
 import type { LocalChatMessage } from '@/api/chat/types'
 import { fetchBillingStatus } from '@/api/billing/billingApi'
 import { buildClientStructuredSystemMessages } from '@/content/assistantContext'
-import { clearAssistantChatForClient, loadAssistantChatForClient, saveAssistantChatForClient } from '@/storage/assistantChatStore'
+import { clearChatBotForClient, loadChatBotForClient, saveChatBotForClient } from '@/storage/chatBotStore'
 import { createChatMessageId, type ChatStateMessage } from '@/types/chatState'
 import type {
   ClientRecord,
   ClientRightTabKey,
-  ClientSession,
+  ClientInput,
   ClientSnippet,
   ClientWrittenReport,
 } from '@/screens/client/clientScreen.types'
@@ -18,7 +18,7 @@ import type {
 type Params = {
   activeTrajectoryName: string | null
   rightActiveTabKey: ClientRightTabKey
-  chatContextSessionIds: Set<string>
+  chatContextInputIds: Set<string>
   chatScrollRef: React.RefObject<ScrollView | null>
   client: ClientRecord | null
   clientId: string
@@ -26,10 +26,10 @@ type Params = {
   onStatusFallbackText: string
   reportCount: number
   sessionCount: number
-  sessions: ClientSession[]
+  inputs: ClientInput[]
   sessionItemsForStatus: Array<{ title: string; trajectoryLabel: string; dateLabel: string; timeLabel: string }>
   snippets: ClientSnippet[]
-  writtenReports: ClientWrittenReport[]
+  inputSummaries: ClientWrittenReport[]
 }
 
 type BillingStatus = {
@@ -63,14 +63,14 @@ function formatDutchDateTime(unixMs: number): string {
   })
 }
 
-function readSessionClientId(session: ClientSession): string {
+function readInputClientId(session: ClientInput): string {
   return String((session as any).clientId || '')
 }
 
 export function useClientChatbot({
   activeTrajectoryName,
   rightActiveTabKey,
-  chatContextSessionIds,
+  chatContextInputIds,
   chatScrollRef,
   client,
   clientId,
@@ -78,10 +78,10 @@ export function useClientChatbot({
   onStatusFallbackText,
   reportCount,
   sessionCount,
-  sessions,
+  inputs,
   sessionItemsForStatus,
   snippets,
-  writtenReports,
+  inputSummaries,
 }: Params) {
   const [composerText, setComposerText] = useState('')
   const [chatMessages, setChatMessages] = useState<ChatStateMessage[]>([])
@@ -95,11 +95,11 @@ export function useClientChatbot({
   const previousMessageCountRef = useRef(0)
   const shouldSkipChatSaveRef = useRef(false)
 
-  const writtenReportBySessionId = useMemo(() => new Map(writtenReports.map((item) => [item.sessionId, item])), [writtenReports])
+  const writtenReportByInputId = useMemo(() => new Map(inputSummaries.map((item) => [item.sessionId, item])), [inputSummaries])
 
   useEffect(() => {
     shouldSkipChatSaveRef.current = true
-    const loadedMessages = loadAssistantChatForClient(clientId)
+    const loadedMessages = loadChatBotForClient(clientId)
     setChatMessages(loadedMessages)
     previousMessageCountRef.current = loadedMessages.length
     setComposerText('')
@@ -111,7 +111,7 @@ export function useClientChatbot({
       shouldSkipChatSaveRef.current = false
       return
     }
-    saveAssistantChatForClient(clientId, chatMessages)
+    saveChatBotForClient(clientId, chatMessages)
   }, [chatMessages, clientId])
 
   useEffect(() => {
@@ -131,10 +131,10 @@ export function useClientChatbot({
 
     let isCancelled = false
     async function generateStatus() {
-      const sessionsForClient = sessions
-        .filter((session) => readSessionClientId(session) === clientId)
+      const inputsForClient = inputs
+        .filter((session) => readInputClientId(session) === clientId)
         .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
-      const sessionById = new Map(sessionsForClient.map((session) => [session.id, session]))
+      const sessionById = new Map(inputsForClient.map((session) => [session.id, session]))
 
       const approvedSnippets = snippets
         .filter((snippet) => snippet.status === 'approved')
@@ -180,7 +180,7 @@ export function useClientChatbot({
         .join('\n\n')
 
       const timelineEvents: Array<{ atUnixMs: number; label: string }> = []
-      for (const session of sessionsForClient) {
+      for (const session of inputsForClient) {
         const eventLines = [`${formatDutchDateTime(session.createdAtUnixMs)} | Sessie | ${String(session.title || 'Sessie').trim()}`]
         const snippetSet = snippetsByInput.get(session.id)
         if (snippetSet && snippetSet.snippets.length > 0) {
@@ -197,7 +197,7 @@ export function useClientChatbot({
           label: eventLines.join('\n'),
         })
       }
-      for (const report of writtenReports) {
+      for (const report of inputSummaries) {
         const session = sessionById.get(report.sessionId)
         if (!session) continue
         timelineEvents.push({
@@ -243,7 +243,7 @@ export function useClientChatbot({
     return () => {
       isCancelled = true
     }
-  }, [activeTrajectoryName, rightActiveTabKey, clientId, clientName, onStatusFallbackText, reportCount, sessionCount, sessions, snippets, writtenReports, sessionItemsForStatus])
+  }, [activeTrajectoryName, rightActiveTabKey, clientId, clientName, onStatusFallbackText, reportCount, sessionCount, inputs, snippets, inputSummaries, sessionItemsForStatus])
 
   function appendNoMinutesAssistantMessage() {
     const noMinutesText = 'U heeft geen minuten meer. Ga naar Mijn abonnement om extra minuten toe te voegen.'
@@ -293,31 +293,28 @@ export function useClientChatbot({
         clientCreatedAtUnixMs: client?.createdAtUnixMs ?? null,
         clientDetails: client?.clientDetails ?? '',
         employerDetails: client?.employerDetails ?? '',
-        firstSickDay: client?.firstSickDay ?? '',
-        includeSessionReports: true,
-        sessions: sessions
-          .filter((session) => readSessionClientId(session) === clientId && chatContextSessionIds.has(session.id))
+        includeInputReports: true,
+        inputs: inputs
+          .filter((session) => readInputClientId(session) === clientId && chatContextInputIds.has(session.id))
           .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
           .slice(0, 25)
           .map((session) => ({
             title: session.title,
             createdAtUnixMs: session.createdAtUnixMs,
             summary: session.summary ?? null,
-            reportText: writtenReportBySessionId.get(session.id)?.text ?? null,
+            reportText: writtenReportByInputId.get(session.id)?.text ?? null,
             reportDate: session.reportDate,
-            wvpWeekNumber: session.wvpWeekNumber,
-            reportFirstSickDay: session.reportFirstSickDay,
           })),
         snippets: snippets
           .filter((snippet) => snippet.status === 'approved')
-          .filter((snippet) => chatContextSessionIds.has(snippet.itemId))
+          .filter((snippet) => chatContextInputIds.has(snippet.itemId))
           .map((snippet) => ({
             sessionId: snippet.itemId,
             field: snippet.field,
             text: snippet.text,
           })),
         maxTotalCharacters: 18000,
-        maxSessionCharacters: 3500,
+        maxInputCharacters: 3500,
       })
 
       const responseText = await sendClientChatMessage(
@@ -340,7 +337,7 @@ export function useClientChatbot({
     setChatMessages([])
     setComposerText('')
     setIsChatSending(false)
-    clearAssistantChatForClient(clientId)
+    clearChatBotForClient(clientId)
     scrollChatToEnd(chatScrollRef)
   }
 
@@ -367,3 +364,5 @@ export function useClientChatbot({
     statusSummaryAi,
   }
 }
+
+

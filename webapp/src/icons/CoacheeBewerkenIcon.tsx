@@ -5,7 +5,7 @@ type Props = {
   color: string
 }
 
-export function CoacheeBewerkenIcon({ color }: Props) {
+export function ClientBewerkenIcon({ color }: Props) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
       <Path d="M22 13V15C22 20 20 22 15 22H9C4 22 2 20 2 15V13.48" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
@@ -29,4 +29,5 @@ export function CoacheeBewerkenIcon({ color }: Props) {
     </Svg>
   )
 }
+
 

@@ -1,5 +1,5 @@
-import { isSessionReportArtifact } from '../../../types/sessionArtifacts'
-import type { Coachee, LocalAppData } from '../../../storage/types'
+import { isInputReportArtifact } from '../../../types/sessionArtifacts'
+import type { Client, LocalAppData } from '../../../storage/types'
 
 export type ClientListStatus = 'active' | 'closed'
 
@@ -12,8 +12,8 @@ export type ClientListItem = {
   reportCount: number
   status: ClientListStatus
   statusLabel: 'Actief' | 'Afgesloten'
-  lastSessionLabel: string
-  lastSessionAtUnixMs: number | null
+  lastInputLabel: string
+  lastInputAtUnixMs: number | null
 }
 
 function toRelativeDateLabel(valueUnixMs: number | null): string {
@@ -70,12 +70,12 @@ function pickProfilePhotoUri(clientDetails: string): string | null {
   return null
 }
 
-function toClientListItem(client: Coachee, data: LocalAppData): ClientListItem {
-  const sessions = data.sessions.filter((session) => session.coacheeId === client.id)
-  const trajectories = data.trajectories.filter((trajectory) => trajectory.coacheeId === client.id)
-  const reports = sessions.filter((session) => isSessionReportArtifact(session))
-  const lastSessionAtUnixMs =
-    sessions.length > 0 ? Math.max(...sessions.map((session) => session.createdAtUnixMs)) : null
+function toClientListItem(client: Client, data: LocalAppData): ClientListItem {
+  const inputs = data.inputs.filter((session) => session.clientId === client.id)
+  const trajectories = data.trajectories.filter((trajectory) => trajectory.clientId === client.id)
+  const reports = inputs.filter((session) => isInputReportArtifact(session))
+  const lastInputAtUnixMs =
+    inputs.length > 0 ? Math.max(...inputs.map((session) => session.createdAtUnixMs)) : null
   const status: ClientListStatus = client.isArchived ? 'closed' : 'active'
 
   return {
@@ -83,26 +83,27 @@ function toClientListItem(client: Coachee, data: LocalAppData): ClientListItem {
     clientName: client.name,
     profilePhotoUri: pickProfilePhotoUri(client.clientDetails),
     trajectoryCount: trajectories.length,
-    sessionCount: sessions.length,
+    sessionCount: inputs.length,
     reportCount: reports.length,
     status,
     statusLabel: status === 'active' ? 'Actief' : 'Afgesloten',
-    lastSessionLabel: toRelativeDateLabel(lastSessionAtUnixMs),
-    lastSessionAtUnixMs,
+    lastInputLabel: toRelativeDateLabel(lastInputAtUnixMs),
+    lastInputAtUnixMs,
   }
 }
 
 export function selectClientListItems(data: LocalAppData): ClientListItem[] {
-  return data.coachees
+  return data.clients
     .map((client) => toClientListItem(client, data))
     .sort((a, b) => {
-      if ((b.lastSessionAtUnixMs ?? 0) !== (a.lastSessionAtUnixMs ?? 0)) {
-        return (b.lastSessionAtUnixMs ?? 0) - (a.lastSessionAtUnixMs ?? 0)
+      if ((b.lastInputAtUnixMs ?? 0) !== (a.lastInputAtUnixMs ?? 0)) {
+        return (b.lastInputAtUnixMs ?? 0) - (a.lastInputAtUnixMs ?? 0)
       }
       return a.clientName.localeCompare(b.clientName, 'nl')
     })
 }
 
-export function selectActiveClients(clients: Coachee[]) {
+export function selectActiveClients(clients: Client[]) {
   return clients.filter((client) => !client.isArchived)
 }
+

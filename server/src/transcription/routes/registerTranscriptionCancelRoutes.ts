@@ -1,5 +1,5 @@
 import type { Express } from "express"
-import { requireAuthenticatedUser } from "../../auth"
+import { requireAuthenticatedUser } from "../../identity/auth"
 import { asyncHandler, sendError } from "../../http"
 import { refundChargedSeconds } from "../store"
 import type { RegisterTranscriptionRoutesParams } from "./types"

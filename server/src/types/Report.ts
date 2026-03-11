@@ -7,8 +7,6 @@ export type Report = {
   reportType: string
   reportText: string
   reportDate: string | null
-  firstSickDay: string | null
-  wvpWeekNumber: string | null
   createdAtUnixMs: number
   updatedAtUnixMs: number
   state: "incomplete" | "needs_review" | "complete"

@@ -19,7 +19,7 @@ const ENTRA_AUTH_INTENT_KEY = 'entra_auth_intent'
 const ENTRA_ACCESS_TOKEN_KEY = 'entra_access_token'
 const ENTRA_REFRESH_TOKEN_KEY = 'entra_refresh_token'
 
-function getSessionStorage(): Storage | null {
+function getInputStorage(): Storage | null {
   if (typeof window === 'undefined') return null
   try {
     return window.sessionStorage
@@ -29,19 +29,19 @@ function getSessionStorage(): Storage | null {
 }
 
 function getStoredValue(key: string): string | null {
-  const storage = getSessionStorage()
+  const storage = getInputStorage()
   if (!storage) return null
   return storage.getItem(key)
 }
 
 function setStoredValue(key: string, value: string) {
-  const storage = getSessionStorage()
+  const storage = getInputStorage()
   if (!storage) return
   storage.setItem(key, value)
 }
 
 function removeStoredValue(key: string) {
-  const storage = getSessionStorage()
+  const storage = getInputStorage()
   if (!storage) return
   storage.removeItem(key)
 }
@@ -155,8 +155,8 @@ export async function signInWithEntra(values?: { screenHint?: 'signup'; prompt?:
   const codeChallenge = await generateCodeChallenge(codeVerifier)
   const state = generateOAuthState()
 
-  if (!getSessionStorage()) {
-    throw new Error('Session storage is not available. Please disable strict browser storage restrictions and try again.')
+  if (!getInputStorage()) {
+    throw new Error('Input storage is not available. Please disable strict browser storage restrictions and try again.')
   }
   setStoredValue(ENTRA_CODE_VERIFIER_KEY, codeVerifier)
   setStoredValue(ENTRA_REDIRECT_URI_KEY, redirectUri)
@@ -190,7 +190,7 @@ export async function signUpWithEntra(): Promise<void> {
 }
 
 export async function handleAuthCallback(): Promise<EntraAuthResult> {
-  if (typeof window === 'undefined' || !getSessionStorage()) {
+  if (typeof window === 'undefined' || !getInputStorage()) {
     throw new Error('Not in browser environment')
   }
 
@@ -389,4 +389,5 @@ export async function clearEntraLocalTokens(): Promise<void> {
 export async function signOutFromEntra(): Promise<void> {
   await clearEntraLocalTokens()
 }
+
 

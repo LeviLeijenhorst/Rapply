@@ -10,7 +10,6 @@ export function readClientInput(value: unknown): Client {
     name: readText(payload.name, "client.name"),
     clientDetails: readOptionalText(payload.clientDetails, true) ?? "",
     employerDetails: readOptionalText(payload.employerDetails, true) ?? "",
-    firstSickDay: readOptionalText(payload.firstSickDay, true) ?? "",
     createdAtUnixMs,
     updatedAtUnixMs,
     isArchived: typeof payload.isArchived === "boolean" ? payload.isArchived : false,

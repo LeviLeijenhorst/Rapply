@@ -9,28 +9,28 @@ import { Text } from '../../ui/Text'
 import { MainContainer } from '../../ui/animated/MainContainer'
 import { StepBody } from './StepBody'
 import { MinimizedRecordingLayer } from './components/MinimizedRecordingLayer'
-import { SessionWarningModals } from './components/SessionWarningModals'
-import { useNewSessionModalController } from './state/useNewSessionModalController'
-import type { NewSessionModalArgs } from './types'
+import { InputWarningModals } from './components/InputWarningModals'
+import { useNewInputModalController } from './state/useNewInputModalController'
+import type { NewInputModalArgs } from './types'
 import { styles } from './styles'
 import { formatTimeLabel } from './utils'
 
-type SessionModalViewModel = ReturnType<typeof useNewSessionModalController>['viewProps']
+type InputModalViewModel = ReturnType<typeof useNewInputModalController>['viewProps']
 
-export function NewSessionModal(args: NewSessionModalArgs) {
-  const controller = useNewSessionModalController(args)
+export function NewInputModal(args: NewInputModalArgs) {
+  const controller = useNewInputModalController(args)
   if (!controller.isRendered) return null
-  return <SessionModalContent {...controller.viewProps} />
+  return <InputModalContent {...controller.viewProps} />
 }
 
-function SessionModalContent({
+function InputModalContent({
   audioDurationSeconds,
   audioPreviewUrl,
   backdropOpacity,
   bars,
-  coacheeDropdownMaxHeight,
-  coacheeOptions,
-  coacheeTriggerRef,
+  clientDropdownMaxHeight,
+  clientOptions,
+  clientTriggerRef,
   defaultDropdownMaxHeight,
   displayedRecordingElapsedSeconds,
   displayedRecordingMaxSeconds,
@@ -41,9 +41,9 @@ function SessionModalContent({
   handleBackdropPress,
   handleOpenSubscriptionFromInsufficientMinutes,
   handlePrimaryActionPress,
-  handleSelectCoachee,
+  handleSelectClient,
   handleSelectOption,
-  handleAddCoachee,
+  handleAddClient,
   handleCancelRecording,
   handleCloseInsufficientMinutes,
   handleCloseRecordedWarning,
@@ -54,11 +54,11 @@ function SessionModalContent({
   handleMinimizedCloseWarningConfirm,
   handleMinimizedPauseOrResume,
   handleToggleAudioSave,
-  handleToggleCoacheeDropdown,
+  handleToggleClientDropdown,
   handleToggleConsent,
   hasRecordingConsent,
   insufficientMinutesContext,
-  isCoacheeOpen,
+  isClientOpen,
   isCompactConsent,
   isCompactFooter,
   isCompactUploadFooter,
@@ -95,7 +95,7 @@ function SessionModalContent({
   retryRecordingAfterError,
   saveRecordingNote,
   selectedAudioFile,
-  selectedCoacheeName,
+  selectedClientName,
   selectedOption,
   selectedOptionGroup,
   sessionTitle,
@@ -103,7 +103,7 @@ function SessionModalContent({
   setAudioDurationSeconds,
   setIsMinimizedCloseWarningVisible,
   setRecordingNoteDraft,
-  setSessionTitle,
+  setInputTitle,
   setWaveBarCount,
   shouldRenderRecordingNotesPanel,
   shouldSaveAudio,
@@ -119,7 +119,7 @@ function SessionModalContent({
   waveBarCount,
   windowHeight,
   windowWidth,
-}: SessionModalViewModel) {
+}: InputModalViewModel) {
   if (shouldShowMinimized) {
     return (
       <MinimizedRecordingLayer
@@ -236,14 +236,14 @@ function SessionModalContent({
               audioDurationSeconds={audioDurationSeconds}
               audioPreviewUrl={audioPreviewUrl}
               bars={bars}
-              coacheeDropdownMaxHeight={coacheeDropdownMaxHeight}
-              coacheeOptions={coacheeOptions}
+              clientDropdownMaxHeight={clientDropdownMaxHeight}
+              clientOptions={clientOptions}
               defaultDropdownMaxHeight={defaultDropdownMaxHeight}
               displayedRecordingElapsedSeconds={displayedRecordingElapsedSeconds}
               gesprekOptionLabel={gesprekOptionLabel}
               gespreksverslagOptionLabel={gespreksverslagOptionLabel}
               hasRecordingConsent={hasRecordingConsent}
-              isCoacheeOpen={isCoacheeOpen}
+              isClientOpen={isClientOpen}
               isCompactConsent={isCompactConsent}
               isRecordingPaused={isRecordingPaused}
               isUploadDragActive={isUploadDragActive}
@@ -255,7 +255,7 @@ function SessionModalContent({
               recordingNotesRevealProgress={recordingNotesRevealProgress}
               shouldRenderRecordingNotesPanel={shouldRenderRecordingNotesPanel}
               selectedAudioFile={selectedAudioFile}
-              selectedCoacheeName={selectedCoacheeName}
+              selectedClientName={selectedClientName}
               selectedOption={selectedOption}
               selectedOptionGroup={selectedOptionGroup}
               sessionTitle={sessionTitle}
@@ -265,20 +265,20 @@ function SessionModalContent({
               uploadDropAreaRef={uploadDropAreaRef}
               uploadFileDurationWarning={uploadFileDurationWarning}
               waveBarCount={waveBarCount}
-              coacheeTriggerRef={coacheeTriggerRef}
-              onAddCoachee={handleAddCoachee}
+              clientTriggerRef={clientTriggerRef}
+              onAddClient={handleAddClient}
               onCancelRecording={handleCancelRecording}
               onOpenConsentHelpPage={openConsentHelpPage}
               onOpenFilePicker={openFilePicker}
               onRetryRecordingAfterError={retryRecordingAfterError}
-              onSelectCoachee={handleSelectCoachee}
+              onSelectClient={handleSelectClient}
               onSelectOption={handleSelectOption}
-              onSessionTitleChange={setSessionTitle}
+              onInputTitleChange={setInputTitle}
               onSetWaveBarCount={setWaveBarCount}
               onRecordingNoteDraftChange={setRecordingNoteDraft}
               onSaveRecordingNote={saveRecordingNote}
               onToggleAudioSave={handleToggleAudioSave}
-              onToggleCoacheeDropdown={handleToggleCoacheeDropdown}
+              onToggleClientDropdown={handleToggleClientDropdown}
               onToggleConsent={handleToggleConsent}
               onUpdateAudioDuration={setAudioDurationSeconds}
             />
@@ -412,7 +412,7 @@ function SessionModalContent({
           </View>
         ) : null}
       </Animated.View>
-      <SessionWarningModals
+      <InputWarningModals
         insufficientMinutesContext={insufficientMinutesContext}
         isInsufficientMinutesWarningVisible={isInsufficientMinutesWarningVisible}
         isRecordedCloseWarningVisible={isRecordedCloseWarningVisible}
@@ -425,3 +425,4 @@ function SessionModalContent({
     </View>
   )
 }
+

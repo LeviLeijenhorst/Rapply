@@ -7,14 +7,14 @@ import { Text } from '../../ui/Text'
 import { ArchivedClientCard } from './components/ArchivedClientCard'
 
 export function ArchiveScreen() {
-  const { data, restoreCoachee, deleteCoachee } = useLocalAppData()
+  const { data, restoreClient, deleteClient } = useLocalAppData()
 
   const archivedClients = useMemo(
     () =>
-      data.coachees
+      data.clients
         .filter((client) => client.isArchived)
         .sort((a, b) => a.name.localeCompare(b.name, 'nl-NL', { sensitivity: 'base' })),
-    [data.coachees],
+    [data.clients],
   )
 
   return (
@@ -33,8 +33,8 @@ export function ArchiveScreen() {
             <ArchivedClientCard
               key={client.id}
               name={client.name}
-              onRestore={() => restoreCoachee(client.id)}
-              onDelete={() => deleteCoachee(client.id)}
+              onRestore={() => restoreClient(client.id)}
+              onDelete={() => deleteClient(client.id)}
             />
           ))
         )}
@@ -84,3 +84,4 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 })
+

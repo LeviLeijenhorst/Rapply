@@ -1,22 +1,22 @@
 import { buildClientKnowledge } from '../snippets/buildClientKnowledge'
-import { extractSessionSnippets } from '../snippets/extractSessionSnippets'
+import { extractInputSnippets } from '../snippets/extractInputSnippets'
 import { classifySnippetType } from '../snippets/classifySnippetType'
 import { generateReport } from '../reports/generateReport'
-import { generateSessionSummary } from '../summaries/generateSessionSummaryFromTranscript'
+import { generateInputSummary } from '../summaries/generateInputSummaryFromTranscript'
 import { normalizeTranscript } from '../transcription/normalizeTranscript'
-import type { SessionInput } from '../transcription/types'
+import type { InputInput } from '../transcription/types'
 
-export async function processSessionInput(params: {
+export async function processInputInput(params: {
   sessionId: string
   clientId: string
   trajectoryId: string
-  input: SessionInput
+  input: InputInput
   reportTemplateName?: string
 }) {
   const transcript = await normalizeTranscript(params.input)
   const [summary, extractedSnippets] = await Promise.all([
-    generateSessionSummary({ transcript }),
-    extractSessionSnippets({
+    generateInputSummary({ transcript }),
+    extractInputSnippets({
       sessionId: params.sessionId,
       clientId: params.clientId,
       trajectoryId: params.trajectoryId,
@@ -32,7 +32,7 @@ export async function processSessionInput(params: {
     ? await generateReport({
         clientId: params.clientId,
         templateName: params.reportTemplateName,
-        selectedSessionIds: [params.sessionId],
+        selectedInputIds: [params.sessionId],
         approvedSnippets: reportRelevantSnippets,
         clientKnowledge,
       })
@@ -47,3 +47,4 @@ export async function processSessionInput(params: {
     reportDraft,
   }
 }
+

@@ -1,8 +1,8 @@
 import type { Snippet } from '../../types/snippet'
 import { classifySnippetType } from '../snippets/classifySnippetType'
 
-export function selectReportInputs(snippets: Snippet[], selectedSessionIds: string[]) {
-  const selected = new Set(selectedSessionIds)
+export function selectReportInputs(snippets: Snippet[], selectedInputIds: string[]) {
+  const selected = new Set(selectedInputIds)
 
   return snippets.filter((snippet) => {
     const sessionId = (snippet as any).sessionId ?? (snippet as any).itemId
@@ -10,3 +10,4 @@ export function selectReportInputs(snippets: Snippet[], selectedSessionIds: stri
     return snippet.status === 'approved' && selected.has(String(sessionId || '')) && classifySnippetType(String(field || '')) === 'report'
   })
 }
+

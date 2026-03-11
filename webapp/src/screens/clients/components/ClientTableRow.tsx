@@ -49,8 +49,8 @@ export function ClientTableRow({ item, onPress }: Props) {
       <View style={[styles.cell, styles.statusCell]}>
         <ClientStatusPill status={item.status} label={item.statusLabel} />
       </View>
-      <View style={[styles.cell, styles.lastSessionCell]}>
-        <Text style={styles.lastSessionText}>{item.lastSessionLabel}</Text>
+      <View style={[styles.cell, styles.lastInputCell]}>
+        <Text style={styles.lastInputText}>{item.lastInputLabel}</Text>
       </View>
       <View style={[styles.cell, styles.chevronCell]}>
         <ChevronRightIcon color="#93858D" size={16} />
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   statusCell: {
     width: 100,
   },
-  lastSessionCell: {
+  lastInputCell: {
     width: 160,
   },
   chevronCell: {
@@ -139,9 +139,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: colors.textStrong,
   },
-  lastSessionText: {
+  lastInputText: {
     fontSize: 16,
     lineHeight: 20,
     color: colors.textSecondary,
   },
 })
+

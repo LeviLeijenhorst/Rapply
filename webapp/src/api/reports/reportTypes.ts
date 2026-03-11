@@ -4,9 +4,10 @@ import type { Snippet } from '../../types/snippet'
 export type ReportGenerationInput = {
   clientId: string
   templateName: string
-  selectedSessionIds: string[]
+  selectedInputIds: string[]
   approvedSnippets: Snippet[]
   clientKnowledge: string
 }
 
 export type ReportDraft = Omit<Report, 'id' | 'createdAt' | 'updatedAt'>
+

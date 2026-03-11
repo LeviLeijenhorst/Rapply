@@ -6,7 +6,7 @@ type ChatResponse = {
   text?: string
 }
 
-export async function sendSessionChatMessage(params: {
+export async function sendInputChatMessage(params: {
   messages: LocalChatMessage[]
   sessionId: string
   temperature?: number
@@ -40,3 +40,4 @@ export async function sendSessionChatMessage(params: {
 
   return text
 }
+

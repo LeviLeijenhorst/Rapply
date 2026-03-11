@@ -2,15 +2,15 @@ import type { SidebarItemKey } from './components/Sidebar'
 import { features } from '../../config/features'
 
 export type RouteState =
-  | { kind: 'activities' }
+  | { kind: 'dashboard' }
   | { kind: 'record' }
   | { kind: 'reports' }
   | { kind: 'new-client' }
   | { kind: 'sessie'; sessieId: string }
-  | { kind: 'item'; coacheeId: string; trajectoryId: string; itemId: string }
-  | { kind: 'coachees' }
-  | { kind: 'coachee'; coacheeId: string }
-  | { kind: 'trajectory'; coacheeId: string; trajectoryId: string }
+  | { kind: 'item'; clientId: string; trajectoryId: string; itemId: string }
+  | { kind: 'clients' }
+  | { kind: 'client'; clientId: string }
+  | { kind: 'trajectory'; clientId: string; trajectoryId: string }
   | { kind: 'templates' }
   | { kind: 'nieuwe-rapportage' }
   | { kind: 'mijn-praktijk' }
@@ -19,7 +19,7 @@ export type RouteState =
   | { kind: 'admin-contact' }
   | { kind: 'admin-wachtlijst' }
 
-const DISABLED_FEATURE_FALLBACK_ROUTE: RouteState = { kind: 'coachees' }
+const DISABLED_FEATURE_FALLBACK_ROUTE: RouteState = { kind: 'clients' }
 
 function stripPrefix(value: string, prefix: string) {
   return value.startsWith(`${prefix}-`) ? value.slice(prefix.length + 1) : value
@@ -40,8 +40,6 @@ export function resolveRouteEntityId(value: string, prefix: string, existingIds:
 }
 
 export function normalizeRouteForAvailability(route: RouteState): RouteState {
-  // Dashboard uses the legacy "activities" route key and must stay reachable,
-  // even when the old activities feature flag is disabled.
   if (route.kind === 'templates' && !features.templates) return DISABLED_FEATURE_FALLBACK_ROUTE
   return route
 }
@@ -54,13 +52,13 @@ export function parseRouteFromPath(pathname: string): RouteState {
   if (parts[0] === 'opnemen') return { kind: 'record' }
   if (parts[0] === 'rapportages') return { kind: 'reports' }
 
-  if (parts[0] === 'clienten' || parts[0] === 'coachees' || parts[0] === 'coaches') {
+  if (parts[0] === 'clienten' || parts[0] === 'clients' || parts[0] === 'coaches') {
     if (parts[1] === 'nieuw') return { kind: 'new-client' }
     const trajectSegment = parts[0] === 'clienten' ? 'trajecten' : 'trajectories'
     if (parts[1] && parts[2] === trajectSegment && parts[3] && parts[4] === 'items' && parts[5]) {
       return {
         kind: 'item',
-        coacheeId: ensurePrefix(parts[1], 'coachee'),
+        clientId: ensurePrefix(parts[1], 'client'),
         trajectoryId: ensurePrefix(parts[3], 'trajectory'),
         itemId: ensurePrefix(parts[5], 'session'),
       }
@@ -68,18 +66,18 @@ export function parseRouteFromPath(pathname: string): RouteState {
     if (parts[1] && parts[2] === trajectSegment && parts[3]) {
       return {
         kind: 'trajectory',
-        coacheeId: ensurePrefix(parts[1], 'coachee'),
+        clientId: ensurePrefix(parts[1], 'client'),
         trajectoryId: ensurePrefix(parts[3], 'trajectory'),
       }
     }
-    if (parts[1]) return { kind: 'coachee', coacheeId: ensurePrefix(parts[1], 'coachee') }
-    return { kind: 'coachees' }
+    if (parts[1]) return { kind: 'client', clientId: ensurePrefix(parts[1], 'client') }
+    return { kind: 'clients' }
   }
 
-  if (parts[0] === 'activiteiten') return { kind: 'activities' }
+  if (parts[0] === 'dashboard' || parts[0] === 'activiteiten') return { kind: 'dashboard' }
   if (parts[0] === 'sessies') {
     if (parts[1]) return { kind: 'sessie', sessieId: ensurePrefix(parts[1], 'session') }
-    return { kind: 'activities' }
+    return { kind: 'dashboard' }
   }
   if (parts[0] === 'templates') return { kind: 'templates' }
   if (parts[0] === 'nieuwe-rapportage') return { kind: 'nieuwe-rapportage' }
@@ -89,23 +87,23 @@ export function parseRouteFromPath(pathname: string): RouteState {
   if (parts[0] === 'admin') return { kind: 'admin' }
   if (parts[0] === 'admin-contact') return { kind: 'admin-contact' }
   if (parts[0] === 'admin-wachtlijst') return { kind: 'admin-wachtlijst' }
-  return { kind: 'coachees' }
+  return { kind: 'clients' }
 }
 
 export function buildPathFromRoute(routeInput: RouteState): string {
   const route = normalizeRouteForAvailability(routeInput)
-  if (route.kind === 'activities') return '/activiteiten'
+  if (route.kind === 'dashboard') return '/dashboard'
   if (route.kind === 'record') return '/opnemen'
   if (route.kind === 'reports') return '/rapportages'
   if (route.kind === 'new-client') return '/clienten/nieuw'
   if (route.kind === 'sessie') return `/sessies/${stripPrefix(route.sessieId, 'session')}`
   if (route.kind === 'item') {
-    return `/clienten/${stripPrefix(route.coacheeId, 'coachee')}/trajecten/${stripPrefix(route.trajectoryId, 'trajectory')}/items/${stripPrefix(route.itemId, 'session')}`
+    return `/clienten/${stripPrefix(route.clientId, 'client')}/trajecten/${stripPrefix(route.trajectoryId, 'trajectory')}/items/${stripPrefix(route.itemId, 'session')}`
   }
-  if (route.kind === 'coachees') return '/clienten'
-  if (route.kind === 'coachee') return `/clienten/${stripPrefix(route.coacheeId, 'coachee')}`
+  if (route.kind === 'clients') return '/clienten'
+  if (route.kind === 'client') return `/clienten/${stripPrefix(route.clientId, 'client')}`
   if (route.kind === 'trajectory') {
-    return `/clienten/${stripPrefix(route.coacheeId, 'coachee')}/trajecten/${stripPrefix(route.trajectoryId, 'trajectory')}`
+    return `/clienten/${stripPrefix(route.clientId, 'client')}/trajecten/${stripPrefix(route.trajectoryId, 'trajectory')}`
   }
   if (route.kind === 'templates') return '/templates'
   if (route.kind === 'nieuwe-rapportage') return '/nieuwe-rapportage'
@@ -117,13 +115,15 @@ export function buildPathFromRoute(routeInput: RouteState): string {
 }
 
 export function routeFromSidebarItemKey(sidebarItemKey: SidebarItemKey): RouteState {
-  if (sidebarItemKey === 'coachees') return { kind: 'coachees' }
-  if (sidebarItemKey === 'activities') return { kind: 'activities' }
+  if (sidebarItemKey === 'clients') return { kind: 'clients' }
+  if (sidebarItemKey === 'dashboard') return { kind: 'dashboard' }
   if (sidebarItemKey === 'reports') return { kind: 'reports' }
   if (sidebarItemKey === 'admin') return { kind: 'admin' }
   if (sidebarItemKey === 'adminContact') return { kind: 'admin-contact' }
   if (sidebarItemKey === 'adminWachtlijst') return { kind: 'admin-wachtlijst' }
   if (sidebarItemKey === 'mijnPraktijk') return { kind: 'mijn-praktijk' }
   if (sidebarItemKey === 'archief') return { kind: 'archief' }
-  return { kind: 'coachees' }
+  return { kind: 'clients' }
 }
+
+

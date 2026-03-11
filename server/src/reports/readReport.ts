@@ -55,8 +55,6 @@ export function readReport(value: unknown): Report {
     state: readOptionalReportState(payload.state) ?? "needs_review",
     reportText: readReportText(payload),
     reportDate: readOptionalText(payload.reportDate, true) ?? null,
-    firstSickDay: readOptionalText(payload.firstSickDay, true) ?? null,
-    wvpWeekNumber: readOptionalText(payload.wvpWeekNumber, true) ?? null,
     createdAtUnixMs: readCreatedAtUnixMs(payload),
     updatedAtUnixMs: readUnixMs(payload.updatedAtUnixMs, "report.updatedAtUnixMs"),
   }

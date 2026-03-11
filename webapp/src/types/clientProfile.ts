@@ -17,7 +17,6 @@ export type ClientUpsertValues = {
   employerContactName: string
   employerEmail: string
   employerPhone: string
-  firstSickDay: string
 }
 
 type ParsedClientDetails = {
@@ -78,7 +77,6 @@ export function getClientUpsertValues(client: ClientRecord | null | undefined): 
       employerContactName: '',
       employerEmail: '',
       employerPhone: '',
-      firstSickDay: '',
     }
   }
 
@@ -103,18 +101,13 @@ export function getClientUpsertValues(client: ClientRecord | null | undefined): 
     employerContactName: String(employerDetails?.contactName ?? '').trim(),
     employerEmail: String(employerDetails?.email ?? '').trim(),
     employerPhone: String(employerDetails?.phone ?? '').trim(),
-    firstSickDay: String((client as any).firstSickDay ?? '').trim(),
   }
 }
-
-export const getCoacheeUpsertValues = getClientUpsertValues
-export type CoacheeUpsertValues = ClientUpsertValues
 
 export function serializeClientUpsertValues(values: ClientUpsertValues): {
   name: string
   clientDetails: string
   employerDetails: string
-  firstSickDay: string
 } {
   const firstName = values.firstName.trim()
   const initials = values.initials.trim()
@@ -145,11 +138,8 @@ export function serializeClientUpsertValues(values: ClientUpsertValues): {
     name,
     clientDetails,
     employerDetails,
-    firstSickDay: values.firstSickDay.trim(),
   }
 }
-
-export const serializeCoacheeUpsertValues = serializeClientUpsertValues
 
 export function formatClientDetailsForPrompt(clientDetailsRaw: string | null | undefined): string[] {
   const details = parseJsonObject<ParsedClientDetails>(clientDetailsRaw)
@@ -165,7 +155,6 @@ export function formatClientDetailsForPrompt(clientDetailsRaw: string | null | u
   if (String(details.city ?? '').trim()) lines.push(`Woonplaats client: ${String(details.city ?? '').trim()}`)
   return lines
 }
-export const formatCoacheeDetailsForPrompt = formatClientDetailsForPrompt
 
 export function formatEmployerDetailsForPrompt(employerDetailsRaw: string | null | undefined): string[] {
   const details = parseJsonObject<ParsedEmployerDetails>(employerDetailsRaw)

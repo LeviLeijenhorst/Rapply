@@ -5,7 +5,7 @@ type DraftOptionKey = 'gesprek' | 'gespreksverslag' | 'spraakGespreksverslag' | 
 type StoredSubscriptionReturnDraft = {
   id: string
   selectedOption: DraftOptionKey
-  selectedCoacheeId: string | null
+  selectedClientId: string | null
   selectedTemplateId: string | null
   sessionTitle: string
   shouldSaveAudio: boolean
@@ -21,8 +21,8 @@ const databaseName = 'coachscribe-new-session-drafts'
 const databaseVersion = 1
 const storeName = 'drafts'
 const subscriptionReturnDraftId = 'subscription-return'
-const resumeRequestStorageKey = 'coachscribe.newSession.subscriptionReturnResumeRequest'
-const draftMetaStorageKey = 'coachscribe.newSession.subscriptionReturnDraftMeta'
+const resumeRequestStorageKey = 'coachscribe.newInput.subscriptionReturnResumeRequest'
+const draftMetaStorageKey = 'coachscribe.newInput.subscriptionReturnDraftMeta'
 const draftTtlMs = 24 * 60 * 60 * 1000
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -151,7 +151,7 @@ export async function saveSubscriptionReturnDraft(draft: Omit<SubscriptionReturn
     id: subscriptionReturnDraftId,
     createdAtMs,
     selectedOption: draft.selectedOption,
-    selectedCoacheeId: draft.selectedCoacheeId ?? null,
+    selectedClientId: draft.selectedClientId ?? null,
     selectedTemplateId: draft.selectedTemplateId ?? null,
     sessionTitle: String(draft.sessionTitle || ''),
     shouldSaveAudio: draft.shouldSaveAudio !== false,
@@ -172,7 +172,7 @@ export async function readAndClearSubscriptionReturnDraft(): Promise<Subscriptio
   if (Date.now() - Number(record.createdAtMs || 0) > draftTtlMs) return null
   return {
     selectedOption: record.selectedOption,
-    selectedCoacheeId: record.selectedCoacheeId,
+    selectedClientId: record.selectedClientId,
     selectedTemplateId: record.selectedTemplateId,
     sessionTitle: record.sessionTitle,
     shouldSaveAudio: record.shouldSaveAudio !== false,
@@ -188,4 +188,5 @@ export async function clearSubscriptionReturnDraft(): Promise<void> {
   clearDraftMeta()
   clearResumeRequest()
 }
+
 

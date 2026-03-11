@@ -1,4 +1,4 @@
-import { createUploadUrl, getTranscriptionUploadsContainerClient } from "../azureBlob"
+import { createUploadUrl, getTranscriptionUploadsContainerClient } from "../encryption/azureBlob"
 
 // Normalizes blob names before they are passed to Azure Storage.
 function normalizeBlobName(blobName: string): string {
