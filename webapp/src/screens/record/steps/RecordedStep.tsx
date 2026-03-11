@@ -1,24 +1,24 @@
 ﻿import React from 'react'
 import { Pressable, ScrollView, TextInput, View } from 'react-native'
 
-import { AnimatedDropdownPanel } from '../../../ui/AnimatedDropdownPanel'
-import { AudioPlayerCard } from '../../session/components/AudioPlayerCard'
+import { Dropdown } from '../../../ui/animated/Dropdown'
+import { AudioPlayerCard } from '../../shared/components/audio/AudioPlayerCard'
 import { Text } from '../../../ui/Text'
-import { CoachscribeLogo } from '../../../ui/CoachscribeLogo'
+import { CoachscribeLogo } from '../../../components/brand/CoachscribeLogo'
 import { ChevronDownIcon } from '../../../icons/ChevronDownIcon'
 import { MicrophoneSmallIcon } from '../../../icons/MicrophoneSmallIcon'
 import { ProfileCircleIcon } from '../../../icons/ProfileCircleIcon'
 import { colors } from '../../../design/theme/colors'
 import { unassignedCoacheeLabel } from '../../../types/client'
-import { maxDuration, type OptionKey } from '../newInputModalUtils'
-import { styles } from '../newInputModalStyles'
+import { maxDuration, type OptionKey } from '../utils'
+import { styles } from '../styles'
 
 type CoacheeOption = {
   id: string | null
   name: string
 }
 
-type Props = {
+type RecordedStepModel = {
   audioDurationSeconds: number | null
   audioPreviewUrl: string | null
   coacheeDropdownMaxHeight: number | null
@@ -60,7 +60,7 @@ export function RecordedStep({
   onToggleAudioSave,
   onToggleCoacheeDropdown,
   onUpdateAudioDuration,
-}: Props) {
+}: RecordedStepModel) {
   return (
     <View style={styles.recordedBody}>
       {limitedMode ? (
@@ -123,7 +123,7 @@ export function RecordedStep({
             <ChevronDownIcon color={colors.textStrong} size={20} />
           </Pressable>
 
-          <AnimatedDropdownPanel
+          <Dropdown
             visible={isCoacheeOpen}
             id="new-session-coachee-panel"
             style={[styles.coacheePanel, { maxHeight: coacheeDropdownMaxHeight ?? defaultDropdownMaxHeight }]}
@@ -162,14 +162,16 @@ export function RecordedStep({
               ]}
             >
               <ProfileCircleIcon />
-              <Text style={styles.coacheeItemAddText}>+ Nieuwe cliënt</Text>
+              <Text style={styles.coacheeItemAddText}>+ Nieuwe cli�nt</Text>
             </Pressable>
-          </AnimatedDropdownPanel>
+          </Dropdown>
         </View>
       </View>
     </View>
   )
 }
+
+
 
 
 

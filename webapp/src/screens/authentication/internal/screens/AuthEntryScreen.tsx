@@ -4,7 +4,7 @@ import { LoadingSpinner } from '../../../../ui/LoadingSpinner'
 import Svg, { G, Rect } from 'react-native-svg'
 
 import { AuthCard } from '../ui/AuthCard'
-import { CoachscribeLogo } from '../../../../ui/CoachscribeLogo'
+import { CoachscribeLogo } from '../../../../components/brand/CoachscribeLogo'
 import { Text } from '../../../../ui/Text'
 import { colors } from '../../../../design/theme/colors'
 import { useToast } from '../../../../toast/ToastProvider'

@@ -1,462 +1,62 @@
-
+ï»¿
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 
-import { ChatMessage } from '../session/components/ChatMessage'
-import { ChatComposer } from '../session/components/ChatComposer'
-import { Text } from '../../ui/Text'
+import { ChatMessage } from '@/screens/shared/components/chat/ChatMessage'
+import { ChatComposer } from '@/screens/shared/components/chat/ChatComposer'
+import { Text } from '@/ui/Text'
 import {
   buildAssistantReportContext,
+  buildFallbackReportFromTemplate,
+  buildFieldsFromTemplate,
+  buildGeneratedFieldMap,
   buildReportGenerationSourceText,
+  buildReportTextFromFields,
+  capitalizeFirstLetter,
+  extractBsn,
   exportReportWord,
+  formatDateLabel,
+  formatOnBlur,
   generateReportText,
+  getGroupTitle,
+  isActivityHoursDistribution,
+  isMainActivityMultichoice,
+  isSpecialistExpertiseDetail,
+  isSpecialistTariffDetail,
+  isSpecialistTariffQuestion,
+  isWerkfitTemplate,
+  normalizeFieldValueForStorage,
+  normalizeMatchValue,
+  normalizeYesNo,
+  parsePostalCodeAndCity,
+  parseStreetAndHouseNumber,
+  placeholderForField,
+  sanitizeCurrencyInput,
+  sanitizeOnChange,
+  sanitizePhoneInput,
   sendReportAssistantMessage,
-} from '../../hooks/reports/newReport/newReportWorkflows'
-import { useLocalAppData } from '../../storage/LocalAppDataProvider'
-import type { Template } from '../../storage/types'
-import { resolveSummaryTemplateSections } from '../../api/summaries/resolveSummaryTemplateSections'
-import { features } from '../../config/features'
-import { colors } from '../../design/theme/colors'
-import { useToast } from '../../toast/ToastProvider'
-import { createChatMessageId, type ChatStateMessage } from '../../types/chatState'
-import { parseReportSections } from '../../types/reportStructure'
-import { isSessionNotesArtifact, isSessionPrimaryInputArtifact, isSessionReportArtifact } from '../../types/sessionArtifacts'
-
-type InputTabKey = 'sessies' | 'rapportages' | 'notities'
-type ViewMode = 'setup' | 'edit'
-type RapportagePageMode = 'controleren' | 'bewerken'
-
-type Props = {
-  initialCoacheeId?: string | null
-  initialSessionId?: string | null
-  mode?: RapportagePageMode
-}
-
-type InputRow = {
-  id: string
-  title: string
-  dateLabel: string
-  createdAtUnixMs: number
-}
-
-type MetadataKind = 'none' | 'name' | 'initials' | 'surname' | 'order' | 'bsn' | 'email' | 'phone' | 'months'
-type FieldType = 'text' | 'multichoice'
-
-type UwvField = {
-  key: string
-  rawLabel: string
-  label: string
-  numberPrefix: string
-  metadataKind: MetadataKind
-  singleLine: boolean
-  type: FieldType
-  options?: string[]
-}
-
-type UwvFieldGroup = {
-  key: string
-  title: string
-  fields: UwvField[]
-}
-
-type ActivityAllocationRow = {
-  id: string
-  activity: string
-  hours: string
-}
+  splitCoacheeName,
+  toPlaceholderKey,
+} from '@/screens/newReport/newReport.logic'
+import { useLocalAppData } from '@/storage/LocalAppDataProvider'
+import { features } from '@/config/features'
+import { colors } from '@/design/theme/colors'
+import { useToast } from '@/toast/ToastProvider'
+import { createChatMessageId, type ChatStateMessage } from '@/types/chatState'
+import { isSessionNotesArtifact, isSessionPrimaryInputArtifact, isSessionReportArtifact } from '@/types/sessionArtifacts'
+import { useNewReportScreenProps } from '@/screens/newReport/newReport.hooks'
+import type {
+  ActivityAllocationRow,
+  InputRow,
+  InputTabKey,
+  NewReportScreenProps,
+  UwvField,
+  UwvFieldGroup,
+  ViewMode,
+} from '@/screens/newReport/newReport.types'
 
 const MULTILINE_BASE_HEIGHT = 48
-
-function normalizeMatchValue(value: string): string {
-  return String(value || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-}
-
-function formatDateLabel(createdAtUnixMs: number): string {
-  return new Date(createdAtUnixMs).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
-}
-
-function extractNumberPrefix(rawTitle: string): string {
-  const match = String(rawTitle || '').trim().match(/^(\d{1,2})(?:[._]\d+)?\b/)
-  return match ? String(match[1]) : '0'
-}
-
-function cleanLabel(raw: string): string {
-  return String(raw || '').replace(/^\d{1,2}(?:[._]\d+)?\s*/, '').trim()
-}
-
-function capitalizeFirstLetter(value: string): string {
-  const raw = String(value || '')
-  if (!raw) return ''
-  return raw.charAt(0).toUpperCase() + raw.slice(1)
-}
-
-function capitalizeFirstLetterLowerRest(value: string): string {
-  const raw = String(value || '')
-  if (!raw) return ''
-  return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase()
-}
-
-function formatInitials(value: string): string {
-  const letters = String(value || '').replace(/[^a-zA-Z]/g, '').toUpperCase().split('')
-  return letters.length === 0 ? '' : `${letters.join('.')}.`
-}
-
-function sanitizeInitialsOnChange(previousValue: string, nextValue: string): string {
-  const previous = String(previousValue || '')
-  const next = String(nextValue || '')
-  const previousLetters = previous.replace(/[^a-zA-Z]/g, '').toUpperCase()
-  const nextLetters = next.replace(/[^a-zA-Z]/g, '').toUpperCase()
-  if (next.length < previous.length && nextLetters.length === previousLetters.length && previousLetters.length > 0) {
-    return formatInitials(previousLetters.slice(0, -1))
-  }
-  return formatInitials(nextLetters)
-}
-
-function normalizeYesNo(value: string): 'ja' | 'nee' | '' {
-  const normalized = normalizeMatchValue(value)
-  if (normalized === 'ja') return 'ja'
-  if (normalized === 'nee') return 'nee'
-  return ''
-}
-
-function sanitizeCurrencyInput(value: string): string {
-  const replaced = String(value || '').replace(/\./g, ',')
-  const cleaned = replaced.replace(/[^0-9,]/g, '')
-  const [whole, ...fractionParts] = cleaned.split(',')
-  if (fractionParts.length === 0) return whole
-  return `${whole},${fractionParts.join('')}`
-}
-
-function sanitizePhoneInput(value: string): string {
-  const raw = String(value || '')
-  let sanitized = raw.replace(/[^\d+]/g, '')
-  const hasLeadingPlus = sanitized.startsWith('+')
-  sanitized = sanitized.replace(/\+/g, '')
-  return `${hasLeadingPlus ? '+' : ''}${sanitized}`
-}
-
-function parseStreetAndHouseNumber(addressLine: string): { street: string; houseNumber: string } {
-  const normalized = String(addressLine || '').trim()
-  if (!normalized) return { street: '', houseNumber: '' }
-  const match = normalized.match(/^(.*?)(\d+[a-zA-Z0-9\-\/]*)$/)
-  if (!match) return { street: normalized, houseNumber: '' }
-  return { street: String(match[1] || '').trim().replace(/,\s*$/, ''), houseNumber: String(match[2] || '').trim() }
-}
-
-function parsePostalCodeAndCity(value: string): { postalCode: string; city: string } {
-  const normalized = String(value || '').trim()
-  if (!normalized) return { postalCode: '', city: '' }
-  const match = normalized.match(/^([1-9][0-9]{3}\s?[A-Za-z]{2})[\s,]+(.+)$/)
-  if (!match) return { postalCode: '', city: normalized }
-  return { postalCode: String(match[1] || '').toUpperCase().replace(/\s+/g, ' ').trim(), city: String(match[2] || '').trim() }
-}
-
-function toPlaceholderKey(value: string): string {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-}
-
-function stripSectionNumberPrefix(value: string): string {
-  return String(value || '')
-    .replace(/^\s*\d{1,2}(?:[._-]\d+)?\s*/, '')
-    .replace(/^\s*[-:.)]\s*/, '')
-    .trim()
-}
-
-function extractNumberKeyFromHeading(title: string): string {
-  const raw = String(title || '').trim()
-  const directMatch = raw.match(/^(\d{1,2})\s*[._-]\s*([0-9a-z])\b/i)
-  if (!directMatch) return ''
-  return `${Number(directMatch[1])}.${String(directMatch[2]).toLowerCase()}`
-}
-
-function buildGeneratedFieldMap(reportText: string): { byNumberKey: Map<string, string>; byLabel: Map<string, string> } {
-  const byNumberKey = new Map<string, string>()
-  const byLabel = new Map<string, string>()
-  const sections = parseReportSections(reportText || '')
-  for (const section of sections) {
-    const title = String(section.title || '').trim()
-    const value = String(section.content || '').trim()
-    if (!title || !value) continue
-    const numberKey = extractNumberKeyFromHeading(title)
-    if (numberKey) byNumberKey.set(numberKey, value)
-    const cleanedTitle = stripSectionNumberPrefix(title)
-    if (cleanedTitle) byLabel.set(normalizeMatchValue(cleanedTitle), value)
-  }
-  return { byNumberKey, byLabel }
-}
-
-function replaceFieldLabel(field: UwvField): string {
-  const normalizedRaw = normalizeMatchValue(field.rawLabel)
-  const normalizedLabel = normalizeMatchValue(field.label)
-  if (normalizedLabel.includes('welke hoofdactiviteiten zijn in het werkplan of plan van aanpak benoemd')) return 'Welke hoofdactiviteiten zijn in het werkplan of Plan van aanpak benoemd?'
-  if (normalizedLabel.includes('verdeling begeleidingsuren over de re integratieactiviteiten')) return 'Hoe verdeelt U de begeleidingsuren over de re-integratieactiviteiten?'
-  if (normalizedLabel.includes('afwijkingen van werkplan of plan van aanpak')) return 'Als U met de invulling van de re-integratieactiviteiten afwijkt van het werkplan of Plan van aanpak, geef aan op welke onderdelen U ervan afwijkt en waarom.'
-  if (normalizedLabel.includes('maximale individuele doorlooptijd')) return 'Wat is de maximale individuele doorlooptijd van de re-integratiedienst?'
-  if (normalizedLabel.includes('verwachting client van inzet resultaat en begeleiding')) return 'Wat verwacht de cliënt van de inzet en het resultaat van de re-integratiedienst? En van de begeleiding door uw organisatie?'
-  if (normalizedLabel.includes('visie op re integratiemogelijkheden van de client')) return 'Wat is uw visie op de re-integratiemogelijkheden van de cliënt?'
-  if (normalizedLabel.includes('verwachting van inzet en resultaat van de re integratiedienst')) return 'Wat verwacht de cliënt van de inzet en het resultaat van de re-integratiedienst?'
-  if (normalizedLabel.includes('is er sprake van specialistisch uurtarief')) return 'Is er sprake van specialistisch uurtarief?'
-  if (normalizedLabel.includes('specialistische expertise motivering en aantal uren')) return 'Motiveer welke specialistische expertise voor de cliënt nodig is en hoeveel uren u adviseert.'
-  if (normalizedLabel.includes('hoger specialistisch uurtarief en motivering')) return 'Wat is het in rekening te brengen (hogere) uurtarief voor de specialistische expertise? Motiveer waarom dit tarief noodzakelijk is.'
-  if (normalizedRaw.includes('ondertekening contactpersoon re integratiebedrijf') && normalizedLabel.includes('naam')) return 'Naam contactpersoon re-integratiebedrijf'
-  if ((normalizedRaw.includes('ondertekening client') || normalizedRaw.includes('ondertekening klant')) && normalizedLabel.includes('naam')) return 'Naam cliënt'
-  return field.label
-}
-
-function isMainActivityMultichoice(label: string): boolean {
-  return normalizeMatchValue(label).includes('welke hoofdactiviteiten zijn in het werkplan of plan van aanpak benoemd')
-}
-
-function isSpecialistTariffQuestion(label: string): boolean {
-  return normalizeMatchValue(label).includes('is er sprake van specialistisch uurtarief')
-}
-
-function isActivityHoursDistribution(label: string): boolean {
-  return normalizeMatchValue(label).includes('hoe verdeelt u de begeleidingsuren over de re integratieactiviteiten')
-}
-
-function isSpecialistExpertiseDetail(label: string): boolean {
-  return normalizeMatchValue(label).includes('motiveer welke specialistische expertise voor de client nodig is en hoeveel uren u adviseert')
-}
-
-function isSpecialistTariffDetail(label: string): boolean {
-  return normalizeMatchValue(label).includes('wat is het in rekening te brengen hogere uurtarief voor de specialistische expertise motiveer waarom dit tarief noodzakelijk is')
-}
-
-function splitCoacheeName(name: string): { initials: string; surname: string; full: string } {
-  const cleaned = String(name || '').trim()
-  if (!cleaned) return { initials: '', surname: '', full: '' }
-  const parts = cleaned.split(/\s+/)
-  if (parts.length === 1) return { initials: '', surname: capitalizeFirstLetterLowerRest(parts[0]), full: capitalizeFirstLetter(cleaned) }
-  const surname = capitalizeFirstLetterLowerRest(parts[parts.length - 1])
-  const initials = formatInitials(parts.slice(0, -1).map((part) => part.charAt(0)).join(''))
-  return { initials, surname, full: capitalizeFirstLetter(cleaned) }
-}
-
-function extractBsn(value: string): string {
-  const matches = String(value || '').match(/\b\d{8,9}\b/g) || []
-  return matches.find((candidate) => candidate.length === 8 || candidate.length === 9) || ''
-}
-
-function getGroupTitle(templateName: string, numberPrefix: string): string {
-  const normalizedTemplateName = normalizeMatchValue(templateName).replace(/\s+/g, '')
-  if (normalizedTemplateName === 'reintegratieplanwerkfitmaken') {
-    if (numberPrefix === '1') return 'Gegevens cli\u00ebnt'
-    if (numberPrefix === '2') return 'Gegevens UWV'
-    if (numberPrefix === '3') return 'Gegevens re-integratiebedrijf'
-    if (numberPrefix === '4') return 'Ordernummer'
-    if (numberPrefix === '5') return 'Re-integratieactiviteiten en begeleidingsuren'
-    if (numberPrefix === '6') return 'Doorlooptijd'
-    if (numberPrefix === '7') return 'Visie op dienstverlening'
-    if (numberPrefix === '8') return 'Specialistisch uurtarief'
-    if (numberPrefix === '10') return 'Ondertekening'
-    return `Onderdeel ${numberPrefix}`
-  }
-  if (normalizedTemplateName === 'eindrapportagewerkfitmaken') {
-    if (numberPrefix === '1') return 'Gegevens cli\u00ebnt'
-    if (numberPrefix === '2') return 'Gegevens UWV'
-    if (numberPrefix === '3') return 'Gegevens re-integratiebedrijf'
-    if (numberPrefix === '4') return 'Ordernummer'
-    if (numberPrefix === '5') return 'Beindiging dienstverlening'
-    if (numberPrefix === '6') return 'Voortijdige terugmelding'
-    if (numberPrefix === '7') return 'Resultaten traject'
-    if (numberPrefix === '8') return 'Ervaring cli\u00ebnt'
-    if (numberPrefix === '9' || numberPrefix === '10') return 'Ondertekening'
-  }
-  return `Onderdeel ${numberPrefix}`
-}
-
-function isWerkfitTemplate(template: Pick<Template, 'name'>): boolean {
-  const normalized = normalizeMatchValue(template.name)
-  if (!normalized.includes('werkfit')) return false
-  if (normalized.includes('eindrapportage')) return false
-  return normalized.includes('re integratieplan') || normalized.includes('reintegratieplan')
-}
-
-function detectWerkfitReportTypeContext(templateName: string): { reportType: string; perspective: 'forward-looking plan' | 'retrospective evaluation' | 'generic report' } {
-  const normalized = normalizeMatchValue(templateName).replace(/\s+/g, '')
-  if (normalized === 'reintegratieplanwerkfitmaken') {
-    return { reportType: 'Re-integratieplan Werkfit maken', perspective: 'forward-looking plan' }
-  }
-  if (normalized === 'eindrapportagewerkfitmaken') {
-    return { reportType: 'Eindrapportage Werkfit maken', perspective: 'retrospective evaluation' }
-  }
-  return { reportType: String(templateName || '').trim() || 'Onbekend rapporttype', perspective: 'generic report' }
-}
-
-function detectMetadataKind(label: string, numberPrefix: string): MetadataKind {
-  const normalized = normalizeMatchValue(label)
-  if (normalized.includes('voorletters')) return 'initials'
-  if (normalized.includes('achternaam')) return 'surname'
-  if (normalized.includes('burgerservicenummer') || normalized === 'bsn') return 'bsn'
-  if (normalized.includes('ordernummer')) return 'order'
-  if (normalized.includes('e mailadres') || normalized.includes('e-mailadres')) return 'email'
-  if (normalized.includes('telefoonnummer')) return 'phone'
-  if (normalized.includes('doorlooptijd')) return 'months'
-  if (normalized.includes('naam contactpersoon re integratiebedrijf')) return 'name'
-  if (normalized.includes('naam client') || normalized.includes('naam cliënt')) return 'name'
-  if (['1', '2', '3', '4'].includes(numberPrefix) && normalized.includes('naam')) return 'name'
-  if (['1', '2', '3', '4'].includes(numberPrefix) && normalized.includes('functie')) return 'name'
-  return 'none'
-}
-
-function placeholderForField(field: UwvField): string {
-  const normalized = normalizeMatchValue(field.label)
-  if (field.metadataKind === 'initials') return 'Bijv. J.P.'
-  if (field.metadataKind === 'surname') return 'Bijv. Jansen'
-  if (field.metadataKind === 'bsn') return '8 of 9 cijfers'
-  if (field.metadataKind === 'order') return 'Bijv. 123456'
-  if (field.metadataKind === 'months') return 'Aantal maanden, bijv. 6'
-  if (field.metadataKind === 'email') return 'Bijv. naam@organisatie.nl'
-  if (field.metadataKind === 'phone') return 'Bijv. 0612345678'
-  if (normalized.includes('postadres straatnaam') || normalized.includes('bezoekadres straatnaam')) return 'Bijv. Hoofdstraat'
-  if (normalized.includes('postadres huisnummer') || normalized.includes('bezoekadres huisnummer')) return 'Bijv. 12A'
-  if (normalized.includes('postadres postcode') || normalized.includes('bezoekadres postcode')) return 'Bijv. 1234 AB'
-  if (normalized.includes('postadres plaats') || normalized.includes('bezoekadres plaats')) return 'Bijv. Utrecht'
-  if (normalized.includes('bezoekadres')) return 'Bijv. Hoofdstraat 12'
-  if (normalized.includes('postadres')) return 'Bijv. Postbus 123'
-  if (normalized.includes('postcode en plaats')) return 'Bijv. 1234 AB Utrecht'
-  if (normalized.includes('functie contactpersoon')) return 'Bijv. Re-integratiecoach'
-  if (normalized.includes('naam organisatie')) return 'Bijv. Voorbeeld B.V.'
-  if (field.metadataKind === 'name') return 'Bijv. Jan de Vries'
-  return 'Typ uw antwoord'
-}
-
-function formatOnBlur(kind: MetadataKind, value: string): string {
-  if (kind === 'initials') return formatInitials(value)
-  if (kind === 'surname') return capitalizeFirstLetterLowerRest(value)
-  if (kind === 'name') return capitalizeFirstLetter(value)
-  if (kind === 'email') return String(value || '').trim().toLowerCase()
-  if (kind === 'bsn') return String(value || '').replace(/\D/g, '').slice(0, 9)
-  if (kind === 'months') return String(value || '').replace(/\D/g, '')
-  if (kind === 'phone') return sanitizePhoneInput(value)
-  return value
-}
-
-function sanitizeOnChange(kind: MetadataKind, value: string, previousValue = ''): string {
-  if (kind === 'initials') return sanitizeInitialsOnChange(previousValue, value)
-  if (kind === 'surname') return capitalizeFirstLetterLowerRest(value)
-  if (kind === 'name') return capitalizeFirstLetter(value)
-  if (kind === 'bsn') return String(value || '').replace(/\D/g, '').slice(0, 9)
-  if (kind === 'months') return String(value || '').replace(/\D/g, '')
-  if (kind === 'phone') return sanitizePhoneInput(value)
-  return value
-}
-
-function normalizeFieldValueForStorage(field: Pick<UwvField, 'metadataKind'>, value: string): string {
-  const raw = String(value || '')
-  if (field.metadataKind === 'months') return raw.replace(/\D/g, '')
-  return raw
-}
-
-function buildFieldsFromTemplate(template: Template | null): UwvField[] {
-  if (!template?.name) return []
-  const normalizedTemplateName = normalizeMatchValue(template.name).replace(/\s+/g, '')
-    const normalizedTemplate = resolveSummaryTemplateSections({ name: template.name, sections: [] })
-  const sections: Array<{ title?: string; description?: string }> = Array.isArray(normalizedTemplate.sections)
-    ? normalizedTemplate.sections
-    : []
-  const fields: UwvField[] = []
-  let hasInsertedAddressBlocks = false
-
-  sections.forEach((section, index) => {
-    const rawTitle = String(section.title || '').trim()
-    if (!rawTitle) return
-
-    const numberPrefix = extractNumberPrefix(rawTitle)
-    const normalizedRaw = normalizeMatchValue(rawTitle)
-    if (normalizedRaw.includes('handtekening')) return
-    if (normalizedTemplateName === 'reintegratieplanwerkfitmaken' && numberPrefix === '9') return
-
-    if (normalizedRaw.includes('voorletters en achternaam')) {
-      fields.push({ key: `${index}-initials`, rawLabel: rawTitle, label: 'Voorletters', numberPrefix, metadataKind: 'initials', singleLine: true, type: 'text' })
-      fields.push({ key: `${index}-surname`, rawLabel: rawTitle, label: 'Achternaam', numberPrefix, metadataKind: 'surname', singleLine: true, type: 'text' })
-      return
-    }
-
-    let label = cleanLabel(rawTitle)
-    const normalizedLabel = normalizeMatchValue(label)
-    if (normalizedLabel.includes('ondertekening contactpersoon re integratiebedrijf') && normalizedLabel.includes('naam')) {
-      label = 'Naam contactpersoon re-integratiebedrijf'
-    }
-    if ((normalizedLabel.includes('ondertekening client') || normalizedLabel.includes('ondertekening klant')) && normalizedLabel.includes('naam')) {
-      label = 'Naam cli\u00ebnt'
-    }
-
-    label = replaceFieldLabel({ key: `${index}-${label}`, rawLabel: rawTitle, label, numberPrefix, metadataKind: 'none', singleLine: false, type: 'text' })
-    const normalizedResolvedLabel = normalizeMatchValue(label)
-
-    const isAddressSourceLabel =
-      normalizedResolvedLabel.includes('postadres') ||
-      normalizedResolvedLabel.includes('bezoekadres') ||
-      normalizedResolvedLabel.includes('postcode en plaats')
-    const shouldInsertAddressBlocksForGroupThree =
-      numberPrefix === '3' && (isAddressSourceLabel || normalizedTemplateName === 'eindrapportagewerkfitmaken')
-    if (shouldInsertAddressBlocksForGroupThree) {
-      if (!hasInsertedAddressBlocks) {
-        hasInsertedAddressBlocks = true
-        const addressFields = [
-          'Postadres straatnaam',
-          'Postadres huisnummer',
-          'Postadres postcode',
-          'Postadres plaats',
-          'Bezoekadres straatnaam',
-          'Bezoekadres huisnummer',
-          'Bezoekadres postcode',
-          'Bezoekadres plaats',
-        ]
-        addressFields.forEach((addressLabel, addressIndex) => {
-          fields.push({
-            key: `${index}-address-${addressIndex}`,
-            rawLabel: rawTitle,
-            label: addressLabel,
-            numberPrefix,
-            metadataKind: 'none',
-            singleLine: true,
-            type: 'text',
-          })
-        })
-      }
-      if (isAddressSourceLabel) return
-    }
-
-    const fieldType: FieldType = isMainActivityMultichoice(label) || isSpecialistTariffQuestion(label) ? 'multichoice' : 'text'
-
-    const metadataKind = detectMetadataKind(label, numberPrefix)
-    const forceSingleLineLabels = ['bezoekadres', 'postadres', 'postcode en plaats', 'functie contactpersoon']
-    const isForceSingleLine = forceSingleLineLabels.some((item) => normalizeMatchValue(label).includes(item))
-    const singleLine = fieldType === 'text' ? (metadataKind !== 'none' || isForceSingleLine) : false
-
-    fields.push({
-      key: `${index}-${label}`,
-      rawLabel: rawTitle,
-      label,
-      numberPrefix,
-      metadataKind,
-      singleLine,
-      type: fieldType,
-      options: fieldType === 'multichoice'
-        ? (isMainActivityMultichoice(label)
-          ? ['Versterken werknemersvaardigheden', 'Verbeteren persoonlijke effectiviteit', 'In beeld brengen arbeidsmarktpositie']
-          : ['Ja', 'Nee'])
-        : undefined,
-    })
-  })
-
-  return fields
-}
 
 function SessiesIcon() {
   return (
@@ -504,36 +104,9 @@ function UwvLogoIcon() {
   )
 }
 
-function buildFallbackReportFromTemplate(template: Template): string {
-  if (!Array.isArray(template.sections) || template.sections.length === 0) return ''
-  return template.sections
-    .map((section) => `### ${String(section.title || '').trim() || 'Onderdeel'}\n${String(section.description || '').trim() || '-'}`)
-    .join('\n\n')
-    .trim()
-}
 
-function buildTemplatePromptText(template: Template | null): string {
-  if (!template) return ''
-  const sections = Array.isArray(template.sections) ? template.sections : []
-  const sectionLines = sections
-    .map((section, index) => {
-      const title = String(section.title || '').trim() || `Onderdeel ${index + 1}`
-      const description = String(section.description || '').trim()
-      return description ? `${index + 1}. ${title}: ${description}` : `${index + 1}. ${title}`
-    })
-    .join('\n')
-  if (!sectionLines) return `Maak nu een volledig verslag op basis van dit verslagtype: ${template.name}.`
-  return [
-    `Maak nu een volledig verslag op basis van dit verslagtype: ${template.name}.`,
-    'Gebruik exact de onderstaande koppen en volgorde.',
-    'Voeg geen extra koppen toe en laat geen kop weg.',
-    '',
-    'Onderdelen met uitleg:',
-    sectionLines,
-  ].join('\n')
-}
-
-export function NewReportScreen({ initialCoacheeId = null, initialSessionId = null, mode = 'controleren' }: Props) {
+export function NewReportScreen(props: NewReportScreenProps) {
+  const { initialCoacheeId, initialSessionId, mode } = useNewReportScreenProps(props)
   const { data, createSession, setWrittenReport, updateSession } = useLocalAppData()
   const { showErrorToast, showToast } = useToast()
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
@@ -549,6 +122,7 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
   const [isGenerating, setIsGenerating] = useState(false)
   const [generateError, setGenerateError] = useState<string | null>(null)
   const [generatedReportText, setGeneratedReportText] = useState(initialSessionReportText)
+  const [currentReportSessionId, setCurrentReportSessionId] = useState<string | null>(initialSessionId)
 
   const activeCoachees = useMemo(() => data.coachees.filter((item) => !item.isArchived), [data.coachees])
   const selectedCoachee = useMemo(() => {
@@ -635,6 +209,7 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
     if (!initialSessionId) return
     setViewMode('edit')
     setGeneratedReportText(initialSessionReportText)
+    setCurrentReportSessionId(initialSessionId)
   }, [initialSessionId, initialSessionReportText])
 
   useEffect(() => {
@@ -794,7 +369,7 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
       }
       if (isSpecialistTariffDetail(field.label)) {
         const entry = specialistTariffByField[field.key] || { hourlyRate: '', motivation: '' }
-        const serialized = `Uurtarief exclusief btw: € ${entry.hourlyRate}\nMotivering: ${entry.motivation}`.trim()
+        const serialized = `Uurtarief exclusief btw: â‚¬ ${entry.hourlyRate}\nMotivering: ${entry.motivation}`.trim()
         setFieldValues((current) => (current[field.key] === serialized ? current : { ...current, [field.key]: serialized }))
       }
     }
@@ -816,19 +391,32 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
       let hasChanges = false
       const next = { ...current }
       for (const field of uwvFields) {
-        if (String(next[field.key] || '').trim()) continue
         const rawMatch = String(field.rawLabel || '').trim().match(/^(\d{1,2})(?:[._]([0-9a-z]+))?/i)
         const numberKey = rawMatch ? `${Number(rawMatch[1])}.${String(rawMatch[2] || '').toLowerCase()}` : ''
         const candidateByNumber = numberKey ? generatedMap.byNumberKey.get(numberKey) : ''
         const candidateByLabel = generatedMap.byLabel.get(normalizeMatchValue(field.label))
         const nextValue = normalizeFieldValueForStorage(field, String(candidateByNumber || candidateByLabel || '').trim())
         if (!nextValue) continue
+        if (next[field.key] === nextValue) continue
         next[field.key] = nextValue
         hasChanges = true
       }
       return hasChanges ? next : current
     })
   }, [generatedReportText, uwvFields])
+
+  useEffect(() => {
+    if (viewMode !== 'edit' || !currentReportSessionId) return
+    const nextReportText = buildReportTextFromFields(groupedFields, fieldValues)
+    if (!nextReportText) return
+    setWrittenReport(currentReportSessionId, nextReportText)
+    updateSession(currentReportSessionId, {
+      summary: nextReportText,
+      summaryStructured: null,
+      transcriptionStatus: 'done',
+      transcriptionError: null,
+    })
+  }, [currentReportSessionId, fieldValues, groupedFields, viewMode])
 
   const activeRows = activeTab === 'sessies' ? sessionRows : activeTab === 'rapportages' ? rapportageRows : noteRows
   const activeSelectedIds =
@@ -936,6 +524,7 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
     if (!selectedTemplate || isGenerating) return
     const sessionId = createSession({ coacheeId: selectedCoachee?.id ?? null, trajectoryId: selectedTrajectory?.id ?? null, title: selectedTemplate.name.trim() || 'Rapportage', kind: 'written', audioBlobId: null, audioDurationSeconds: null, uploadFileName: null, transcriptionStatus: 'generating', transcriptionError: null })
     if (!sessionId) return
+    setCurrentReportSessionId(sessionId)
 
     if (isMountedRef.current) {
       setGenerateError(null)
@@ -1031,19 +620,7 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
         showErrorToast('Selecteer eerst een rapporttemplate.')
         return
       }
-      const defaultReportText = groupedFields
-        .map((group) => {
-          const lines = group.fields
-            .map((field) => {
-              const value = String(fieldValues[field.key] || '').trim()
-              if (!value) return ''
-              return `### ${field.rawLabel || field.label}\n${value}`
-            })
-            .filter(Boolean)
-          return lines.join('\n\n')
-        })
-        .filter(Boolean)
-        .join('\n\n')
+      const defaultReportText = buildReportTextFromFields(groupedFields, fieldValues)
       const reportText = String(generatedReportText || defaultReportText || '').trim()
       const contextValues: Record<string, string> = {}
       for (const field of uwvFields) {
@@ -1109,10 +686,10 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
         showErrorToast('Geen UWV-formulier gekoppeld aan dit rapporttype.')
         return
       }
-      showToast('UWV-document geëxporteerd.')
+      showToast('UWV-document geÃ«xporteerd.')
     } catch (error) {
       console.error('[NewReportScreen] UWV Word export failed', error)
-      showErrorToast('Het UWV-formulier kon niet worden geëxporteerd.')
+      showErrorToast('Het UWV-formulier kon niet worden geÃ«xporteerd.')
     }
   }
   async function handleSendAssistantMessage() {
@@ -1207,7 +784,7 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
               <View style={styles.setupSummaryCard}>
                 <View style={styles.avatarCircle}><Text isSemibold style={styles.avatarText}>{selectedCoachee?.name.slice(0, 1).toUpperCase() || '?'}</Text></View>
                 <View style={styles.summaryMeta}>
-                  <Text isSemibold style={styles.summaryName}>{selectedCoachee?.name || 'Geen cliënt geselecteerd'}</Text>
+                  <Text isSemibold style={styles.summaryName}>{selectedCoachee?.name || 'Geen cliÃ«nt geselecteerd'}</Text>
                   <View style={styles.summaryLine}><Text style={styles.summaryLabel}>Template</Text><Text style={styles.summaryValue}>{selectedTemplate?.name || '-'}</Text></View>
                   <View style={styles.summaryLine}><Text style={styles.summaryLabel}>Sessies</Text><Text style={styles.summaryValue}>{`${selectedSessionIds.length} geselecteerd`}</Text></View>
                   <View style={styles.summaryLine}><Text style={styles.summaryLabel}>Rapportages</Text><Text style={styles.summaryValue}>{`${selectedRapportageIds.length} geselecteerd`}</Text></View>
@@ -1400,7 +977,7 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
                                 <View style={styles.fieldItem}>
                                   <Text style={styles.fieldLabel}>Uurtarief exclusief btw</Text>
                                   <View style={styles.currencyWrap}>
-                                    <Text style={styles.currencyPrefix}>€</Text>
+                                    <Text style={styles.currencyPrefix}>â‚¬</Text>
                                     <TextInput
                                       value={entry.hourlyRate}
                                       onChangeText={(nextValue) => setSpecialistTariffByField((current) => ({ ...current, [field.key]: { ...entry, hourlyRate: sanitizeCurrencyInput(nextValue) } }))}
@@ -1543,6 +1120,10 @@ export function NewReportScreen({ initialCoacheeId = null, initialSessionId = nu
               onSend={() => {
                 void handleSendAssistantMessage()
               }}
+              showDisclaimer={false}
+              sendIconVariant="arrow"
+              preferCenteredSingleLine
+              forceSingleLine
               isSendDisabled={isAssistantSending || assistantMessage.trim().length === 0}
             />
           </View>
@@ -1563,8 +1144,8 @@ const styles = StyleSheet.create({
   setupContentRow: { flexDirection: 'row', gap: 24, alignItems: 'flex-start' },
   setupLeftColumn: { flex: 1, minWidth: 0 },
   setupRightColumn: { width: 437, gap: 16 },
-  setupCard: { borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFE0E2', padding: 20, ...( { boxShadow: '0px 2px 8px rgba(0,0,0,0.08)' } as any ) },
-  setupSummaryCard: { borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFE0E2', padding: 20, flexDirection: 'row', gap: 14, ...( { boxShadow: '0px 2px 8px rgba(0,0,0,0.08)' } as any ) },
+  setupCard: { borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFE0E2', padding: 20, ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ) },
+  setupSummaryCard: { borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFE0E2', padding: 20, flexDirection: 'row', gap: 14, ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ) },
   setupSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
   setupSectionTitle: { fontSize: 16, lineHeight: 20, color: '#2C111F' },
   setupSectionSubtitle: { marginTop: 4, fontSize: 14, lineHeight: 18, color: '#93858D' },
@@ -1623,7 +1204,7 @@ const styles = StyleSheet.create({
   exportButton: { minHeight: 44, borderRadius: 8, paddingHorizontal: 14, borderWidth: 1, borderColor: '#007ACF', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 10 },
   exportButtonHovered: { backgroundColor: '#EFF7FF' },
   exportButtonText: { fontSize: 14, lineHeight: 18, color: '#007ACF' },
-  formCard: { borderRadius: 12, borderWidth: 1, backgroundColor: '#FFFFFF', padding: 16, gap: 12, ...( { boxShadow: '0px 2px 8px rgba(0,0,0,0.08)' } as any ) },
+  formCard: { borderRadius: 12, borderWidth: 1, backgroundColor: '#FFFFFF', padding: 16, gap: 12, ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ) },
   formCardComplete: { borderColor: '#008234' },
   formCardIncomplete: { borderColor: '#DC2626' },
   formCardHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
@@ -1668,7 +1249,7 @@ const styles = StyleSheet.create({
   currencyWrap: { minHeight: 48, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
   currencyPrefix: { fontSize: 14, lineHeight: 18, color: '#2C111F' },
   currencyInput: { flex: 1 },
-  assistantCard: { borderRadius: 12, borderWidth: 1, borderColor: '#DFE0E2', backgroundColor: '#FFFFFF', height: '100%', ...( { boxShadow: '0px 2px 8px rgba(0,0,0,0.08)' } as any ) },
+  assistantCard: { borderRadius: 12, borderWidth: 1, borderColor: '#DFE0E2', backgroundColor: '#FFFFFF', height: '100%', ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ) },
   assistantHeader: { minHeight: 72, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center' },
   assistantTitle: { fontSize: 20, lineHeight: 24, color: '#2C111F' },
   assistantSubtitle: { fontSize: 14, lineHeight: 18, color: '#93858D' },

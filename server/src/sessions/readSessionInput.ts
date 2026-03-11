@@ -1,17 +1,25 @@
 import type { Session } from "../types/Session"
 import { readId, readOptionalId, readOptionalNumber, readOptionalText, readText, readUnixMs } from "../routes/parsers/scalars"
 
-function readOptionalStructuredSessionSummary(value: unknown): Session["summaryStructured"] | undefined {
+function readSummaryField(payload: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const value = readOptionalText(payload[key], true)
+    if (value) return value
+  }
+  return ""
+}
+
+export function readOptionalStructuredSessionSummary(value: unknown): Session["summaryStructured"] | undefined {
   if (value === undefined) return undefined
   if (value === null) return null
   if (typeof value !== "object") return undefined
   const payload = value as Record<string, unknown>
   return {
-    doelstelling: readOptionalText(payload.doelstelling, true) ?? "",
-    belastbaarheid: readOptionalText(payload.belastbaarheid, true) ?? "",
-    belemmeringen: readOptionalText(payload.belemmeringen, true) ?? "",
-    voortgang: readOptionalText(payload.voortgang, true) ?? "",
-    arbeidsmarktorientatie: readOptionalText(payload.arbeidsmarktorientatie, true) ?? "",
+    doelstelling: readSummaryField(payload, ["doelstelling", "kernpunten"]),
+    belastbaarheid: readSummaryField(payload, ["belastbaarheid", "situatie"]),
+    belemmeringen: readSummaryField(payload, ["belemmeringen", "aandachtspunten"]),
+    voortgang: readSummaryField(payload, ["voortgang", "afspraken"]),
+    arbeidsmarktorientatie: readSummaryField(payload, ["arbeidsmarktorientatie", "arbeidsorientatie", "vervolg"]),
   }
 }
 

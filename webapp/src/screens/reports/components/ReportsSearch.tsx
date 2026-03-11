@@ -1,7 +1,7 @@
 import React from 'react'
 import { StyleSheet, View } from 'react-native'
 
-import { SearchField } from '../../../ui/inputs/SearchField'
+import { SearchBar } from '../../../ui/inputs/SearchBar'
 
 type Props = {
   value: string
@@ -11,7 +11,7 @@ type Props = {
 export function ReportsSearch({ value, onChange }: Props) {
   return (
     <View style={styles.wrap}>
-      <SearchField
+      <SearchBar
         value={value}
         onChangeText={onChange}
         placeholder="Zoek rapportages..."

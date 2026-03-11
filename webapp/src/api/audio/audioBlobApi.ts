@@ -1,4 +1,4 @@
-import { fetchSecureApi } from '../core/secureApi'
+import { fetchSecureApi } from '../secureApi'
 
 export async function createAudioBlobRemote(params: {
   audioBlob: Blob

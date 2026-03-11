@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
-import { saveCoacheeFromUpsert } from '../../hooks/clients/clientsScreenFunctionality'
+import { saveCoacheeFromUpsert } from './workflows/clientsScreenFunctionality'
 import { useLocalAppData } from '../../storage/LocalAppDataProvider'
 import { colors } from '../../design/theme/colors'
 import { Text } from '../../ui/Text'
@@ -79,6 +79,8 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+    marginHorizontal: -8,
+    ...( { paddingHorizontal: 8 } as any ),
   },
   scrollContent: {
     width: '100%',
@@ -119,6 +121,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 16,
     gap: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ),
   },
   formHeaderRow: {
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-import { callSecureApi } from '../core/secureApi'
+import { callSecureApi } from '../secureApi'
 
 export type TranscriptionMode = 'azure-fast-batch' | 'azure-realtime-live'
 export type TranscriptionProvider = 'azure' | 'speechmatics'

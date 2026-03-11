@@ -1,4 +1,4 @@
-import { callSecureApi } from '../core/secureApi'
+import { callSecureApi } from '../secureApi'
 import type { Snippet } from '../../storage/types'
 
 type SnippetExtractResponse = {
@@ -26,6 +26,24 @@ export async function extractSnippetsForItem(params: {
     itemDate: params.itemDate,
   })
   return Array.isArray(response?.snippets) ? response.snippets : []
+}
+
+export async function extractSnippets(params: {
+  inputId: string
+  trajectoryId: string
+  clientId?: string
+  sourceInputType?: string
+  transcript: string
+  itemDate: number
+}): Promise<Snippet[]> {
+  return extractSnippetsForItem({
+    itemId: params.inputId,
+    trajectoryId: params.trajectoryId,
+    clientId: params.clientId,
+    sourceInputType: params.sourceInputType,
+    transcript: params.transcript,
+    itemDate: params.itemDate,
+  })
 }
 
 export async function aiEditSnippetText(params: {

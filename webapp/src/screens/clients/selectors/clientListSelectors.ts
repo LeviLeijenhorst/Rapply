@@ -6,6 +6,7 @@ export type ClientListStatus = 'active' | 'closed'
 export type ClientListItem = {
   clientId: string
   clientName: string
+  profilePhotoUri: string | null
   trajectoryCount: number
   sessionCount: number
   reportCount: number
@@ -30,6 +31,45 @@ function toRelativeDateLabel(valueUnixMs: number | null): string {
   return `${Math.floor(diffDays / 30)} maanden geleden`
 }
 
+function parseJsonObject(value: string | null | undefined): Record<string, unknown> | null {
+  const raw = String(value ?? '').trim()
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return null
+    return parsed as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
+
+function readString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function pickProfilePhotoUri(clientDetails: string): string | null {
+  const parsed = parseJsonObject(clientDetails)
+  if (!parsed) return null
+
+  const candidateKeys = [
+    'profilePhotoDataUrl',
+    'photoDataUrl',
+    'avatarDataUrl',
+    'profilePhotoUrl',
+    'photoUrl',
+    'avatarUrl',
+    'imageUrl',
+    'image',
+  ] as const
+
+  for (const key of candidateKeys) {
+    const value = readString(parsed[key])
+    if (value) return value
+  }
+
+  return null
+}
+
 function toClientListItem(client: Coachee, data: LocalAppData): ClientListItem {
   const sessions = data.sessions.filter((session) => session.coacheeId === client.id)
   const trajectories = data.trajectories.filter((trajectory) => trajectory.coacheeId === client.id)
@@ -41,6 +81,7 @@ function toClientListItem(client: Coachee, data: LocalAppData): ClientListItem {
   return {
     clientId: client.id,
     clientName: client.name,
+    profilePhotoUri: pickProfilePhotoUri(client.clientDetails),
     trajectoryCount: trajectories.length,
     sessionCount: sessions.length,
     reportCount: reports.length,

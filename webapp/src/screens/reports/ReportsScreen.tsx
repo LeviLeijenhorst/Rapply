@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
 import { useLocalAppData } from '../../storage/LocalAppDataProvider'
 import { colors } from '../../design/theme/colors'
+import { typography } from '../../design/theme/typography'
 import { Text } from '../../ui/Text'
 import { ReportsSearch } from './components/ReportsSearch'
 import { ReportsList } from './components/ReportsList'
@@ -103,13 +104,15 @@ const styles = StyleSheet.create({
     minHeight: 58,
     borderBottomWidth: 1,
     borderBottomColor: '#DFE0E2',
-    paddingHorizontal: 16,
+    paddingLeft: 24,
+    paddingRight: 16,
     backgroundColor: '#F9FAFB',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
   headerText: {
+    fontFamily: typography.fontFamilySemibold,
     fontSize: 16,
     lineHeight: 20,
     color: 'rgba(44,17,31,0.5)',
@@ -123,13 +126,13 @@ const styles = StyleSheet.create({
     minWidth: 170,
   },
   createdColumn: {
-    width: 132,
+    width: 160,
   },
   statusColumn: {
-    width: 110,
+    width: 100,
   },
   updatedColumn: {
-    width: 140,
+    width: 160,
   },
   chevronColumn: {
     width: 24,
@@ -193,4 +196,3 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
-

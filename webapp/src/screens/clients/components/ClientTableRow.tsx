@@ -1,5 +1,5 @@
 import React from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
+import { Image, Pressable, StyleSheet, View } from 'react-native'
 
 import { colors } from '../../../design/theme/colors'
 import { ChevronRightIcon } from '../../../icons/ChevronRightIcon'
@@ -13,24 +13,35 @@ type Props = {
 }
 
 export function ClientTableRow({ item, onPress }: Props) {
+  const fallbackInitial = (item.clientName || 'C').trim().slice(0, 1).toUpperCase() || 'C'
+
   return (
     <Pressable onPress={() => onPress(item.clientId)} style={({ hovered }) => [styles.row, hovered ? styles.rowHovered : undefined]}>
       <View style={[styles.cell, styles.clientCell]}>
-        <Text isSemibold style={styles.clientName}>
-          {item.clientName}
-        </Text>
+        <View style={styles.clientIdentityRow}>
+          <View style={styles.avatarWrap}>
+            {item.profilePhotoUri ? (
+              <Image source={{ uri: item.profilePhotoUri }} style={styles.avatarImage} resizeMode="cover" />
+            ) : (
+              <Text isSemibold style={styles.avatarFallbackText}>{fallbackInitial}</Text>
+            )}
+          </View>
+          <Text numberOfLines={1} isSemibold style={styles.clientName}>
+            {item.clientName}
+          </Text>
+        </View>
       </View>
-      <View style={[styles.cell, styles.numberCell]}>
+      <View style={[styles.cell, styles.trajectoryCell]}>
         <Text isSemibold style={styles.numberText}>
           {item.trajectoryCount}
         </Text>
       </View>
-      <View style={[styles.cell, styles.numberCell]}>
+      <View style={[styles.cell, styles.sessionCell]}>
         <Text isSemibold style={styles.numberText}>
           {item.sessionCount}
         </Text>
       </View>
-      <View style={[styles.cell, styles.numberCell]}>
+      <View style={[styles.cell, styles.reportsCell]}>
         <Text isSemibold style={styles.numberText}>
           {item.reportCount}
         </Text>
@@ -53,9 +64,9 @@ const styles = StyleSheet.create({
     minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F1F1',
-    paddingHorizontal: 16,
+    borderBottomWidth: 0,
+    paddingLeft: 24,
+    paddingRight: 16,
     gap: 12,
   },
   rowHovered: {
@@ -68,15 +79,50 @@ const styles = StyleSheet.create({
     flex: 1.7,
     minWidth: 180,
   },
-  numberCell: {
-    width: 86,
+  clientIdentityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+    gap: 16,
+  },
+  avatarWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F6F6F6',
+    borderWidth: 1,
+    borderColor: '#DADBDD',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarFallbackText: {
+    fontSize: 16,
+    lineHeight: 20,
+    color: '#2C111F',
+  },
+  trajectoryCell: {
+    width: 150,
+    alignItems: 'flex-start',
+  },
+  sessionCell: {
+    width: 137,
+    alignItems: 'flex-start',
+  },
+  reportsCell: {
+    width: 168,
     alignItems: 'flex-start',
   },
   statusCell: {
-    width: 110,
+    width: 100,
   },
   lastSessionCell: {
-    width: 140,
+    width: 160,
   },
   chevronCell: {
     width: 24,
@@ -86,6 +132,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 20,
     color: colors.textStrong,
+    flexShrink: 1,
   },
   numberText: {
     fontSize: 16,

@@ -1,4 +1,4 @@
-import { callSecureApi } from '../core/secureApi'
+import { callSecureApi } from '../secureApi'
 
 export type E2eeRecoveryPolicy = 'self_service' | 'custodian_only' | 'hybrid'
 export type E2eeCustodyMode = 'server_managed' | 'user_managed'

@@ -1,11 +1,11 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 
 import { getServerChatPolicyPrompt } from '../../api/chat/getServerChatPolicyPrompt'
 import { previewClientChatCompletion } from '../../api/chat/previewClientChatCompletion'
 import type { LocalChatMessage } from '../../api/chat/types'
 import { setAdminTranscriptionMode } from '../../api/admin/adminApi'
-import { exportUwvTemplateWord } from '../../api/export/uwv/exportToUWVWordDocument'
+import { exportUwvTemplateWord } from '../../api/reports/exportToUWVWordDocument'
 import { previewSnippetExtraction } from '../../api/snippets/previewSnippetExtraction'
 import { generateReportFromSource } from '../../api/reports/generateReport'
 import { buildClientKnowledge } from '../../api/snippets/buildClientKnowledge'

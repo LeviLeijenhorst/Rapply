@@ -5,6 +5,5 @@ export function buildPath(route: RouteState): string {
   if (route.kind === 'client') return `/client/${route.clientId}`
   if (route.kind === 'session') return `/session/${route.sessionId}`
   if (route.kind === 'new-report') return '/new-report'
-  if (route.kind === 'report') return `/report/${route.reportId}`
   return '/organization'
 }

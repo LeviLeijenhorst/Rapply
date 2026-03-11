@@ -1,7 +1,5 @@
 import type { Express } from "express"
 import { requireAuthenticatedUser } from "../../auth"
-import { readManualPricingContextForUser } from "../../billing/manualPricing"
-import { isMollieConfigured, syncMollieSubscriptionForUser } from "../../billing/mollie"
 import { ensureBillingUser, readBillingStatus } from "../../billing/store"
 import { asyncHandler } from "../../http"
 import { randomBase64Url } from "../random"
@@ -9,9 +7,11 @@ import { createEncryptedUploadUrl } from "../storage"
 import { createUploadToken } from "../store"
 import { transcriptionUploadExpirationSeconds } from "../uploadExpiration"
 import { getProviderMaxAudioBytes, getProviderMaxAudioDurationSeconds } from "../actions/providerLimits"
+import { readTranscriptionChargeContext } from "../actions/readTranscriptionChargeContext"
 import { resolveTranscriptionProviderWithRuntimeMode } from "../actions/resolveTranscriptionProvider"
 import type { RegisterTranscriptionRoutesParams } from "./types"
 
+// Registers the route that prepares a batch upload and returns billing limits.
 export function registerTranscriptionPreflightRoutes(app: Express, params: RegisterTranscriptionRoutesParams): void {
   app.post(
     "/transcription/preflight",
@@ -20,25 +20,16 @@ export function registerTranscriptionPreflightRoutes(app: Express, params: Regis
       const user = await requireAuthenticatedUser(req)
       await ensureBillingUser(user.userId)
 
-      const useMollie = isMollieConfigured()
-      if (useMollie) {
-        await syncMollieSubscriptionForUser(user.userId)
-      }
-
-      const manualPricing = await readManualPricingContextForUser(user.userId)
-      const useManualCycle = useMollie || manualPricing.includedSecondsPerCycle > 0 || manualPricing.planId != null || manualPricing.customMonthlyPrice != null
-      const hasDashboardMinutesConfigured = manualPricing.planId != null || manualPricing.includedSecondsPerCycle > 0
-      const freeSecondsOverride = hasDashboardMinutesConfigured ? 0 : null
+      const chargeContext = await readTranscriptionChargeContext({ userId: user.userId })
       const status = await readBillingStatus({
         userId: user.userId,
         planKey: null,
-        cycleStartMs: useManualCycle ? manualPricing.cycleStartMs : null,
-        cycleEndMs: useManualCycle ? manualPricing.cycleEndMs : null,
-        includedSecondsOverride: useManualCycle ? manualPricing.includedSecondsPerCycle : null,
-        freeSecondsOverride,
+        cycleStartMs: chargeContext.cycleStartMs,
+        cycleEndMs: chargeContext.cycleEndMs,
+        includedSecondsOverride: chargeContext.includedSecondsOverride,
+        freeSecondsOverride: chargeContext.freeSecondsOverride,
       })
       const transcriptionProvider = await resolveTranscriptionProviderWithRuntimeMode()
-      const requiresWav = false
       const maxAudioBytes = getProviderMaxAudioBytes(transcriptionProvider)
       const maxAudioDurationSeconds = getProviderMaxAudioDurationSeconds(transcriptionProvider)
 
@@ -48,7 +39,6 @@ export function registerTranscriptionPreflightRoutes(app: Express, params: Regis
           remainingSeconds: status.remainingSeconds,
           planKey: status.planKey,
           transcriptionProvider,
-          requiresWav,
           maxAudioBytes,
           maxAudioDurationSeconds,
         })
@@ -74,7 +64,6 @@ export function registerTranscriptionPreflightRoutes(app: Express, params: Regis
         uploadHeaders: upload.uploadHeaders,
         uploadTokenExpiresAtMs: token.expiresAtMs,
         transcriptionProvider,
-        requiresWav,
         maxAudioBytes,
         maxAudioDurationSeconds,
       })

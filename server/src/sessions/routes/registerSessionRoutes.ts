@@ -2,7 +2,12 @@ import type { Express } from "express"
 import { requireAuthenticatedUser } from "../../auth"
 import { asyncHandler } from "../../http"
 import { readId, readOptionalId, readOptionalNumber, readOptionalText, readUnixMs } from "../../routes/parsers/scalars"
-import { readOptionalSessionInputType, readOptionalTranscriptionStatus, readSessionInput } from "../readSessionInput"
+import {
+  readOptionalStructuredSessionSummary,
+  readOptionalSessionInputType,
+  readOptionalTranscriptionStatus,
+  readSessionInput,
+} from "../readSessionInput"
 import { createSession, deleteSession, updateSession } from "../store"
 
 export function registerSessionRoutes(app: Express): void {
@@ -36,18 +41,7 @@ export function registerSessionRoutes(app: Express): void {
         uploadFileName: readOptionalText(payload.uploadFileName, true),
         transcriptText: readOptionalText(payload.transcriptText ?? payload.transcript, true),
         summaryText: readOptionalText(payload.summaryText ?? payload.summary, true),
-        summaryStructured:
-          payload.summaryStructured === null
-            ? null
-            : payload.summaryStructured && typeof payload.summaryStructured === "object"
-              ? {
-                  doelstelling: readOptionalText((payload.summaryStructured as any).doelstelling, true) ?? "",
-                  belastbaarheid: readOptionalText((payload.summaryStructured as any).belastbaarheid, true) ?? "",
-                  belemmeringen: readOptionalText((payload.summaryStructured as any).belemmeringen, true) ?? "",
-                  voortgang: readOptionalText((payload.summaryStructured as any).voortgang, true) ?? "",
-                  arbeidsmarktorientatie: readOptionalText((payload.summaryStructured as any).arbeidsmarktorientatie, true) ?? "",
-                }
-              : undefined,
+        summaryStructured: readOptionalStructuredSessionSummary(payload.summaryStructured),
         transcriptionStatus: readOptionalTranscriptionStatus(payload.transcriptionStatus),
         transcriptionError: readOptionalText(payload.transcriptionError, true),
       })

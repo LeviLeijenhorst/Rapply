@@ -524,6 +524,30 @@ export function updateSession(
     transcriptionError?: string | null
   }
 ): LocalAppData {
+  const currentSession = data.sessions.find((session) => session.id === sessionId)
+  if (!currentSession) return data
+
+  const hasChanges =
+    (values.coacheeId !== undefined && values.coacheeId !== currentSession.coacheeId) ||
+    (values.trajectoryId !== undefined && values.trajectoryId !== currentSession.trajectoryId) ||
+    (values.kind !== undefined && values.kind !== currentSession.kind) ||
+    (values.title !== undefined && values.title.trim() !== currentSession.title) ||
+    (values.createdAtUnixMs !== undefined && values.createdAtUnixMs !== currentSession.createdAtUnixMs) ||
+    (values.audioBlobId !== undefined && values.audioBlobId !== currentSession.audioBlobId) ||
+    (values.audioDurationSeconds !== undefined && values.audioDurationSeconds !== currentSession.audioDurationSeconds) ||
+    (values.uploadFileName !== undefined && values.uploadFileName !== currentSession.uploadFileName) ||
+    (values.transcript !== undefined && values.transcript !== currentSession.transcript) ||
+    (values.summary !== undefined && values.summary !== currentSession.summary) ||
+    (values.summaryStructured !== undefined &&
+      JSON.stringify(values.summaryStructured) !== JSON.stringify(currentSession.summaryStructured)) ||
+    (values.reportDate !== undefined && values.reportDate !== currentSession.reportDate) ||
+    (values.wvpWeekNumber !== undefined && values.wvpWeekNumber !== currentSession.wvpWeekNumber) ||
+    (values.reportFirstSickDay !== undefined && values.reportFirstSickDay !== currentSession.reportFirstSickDay) ||
+    (values.transcriptionStatus !== undefined && values.transcriptionStatus !== currentSession.transcriptionStatus) ||
+    (values.transcriptionError !== undefined && values.transcriptionError !== currentSession.transcriptionError)
+
+  if (!hasChanges) return data
+
   const now = Date.now()
   return {
     ...data,
@@ -606,6 +630,8 @@ export function getWrittenReport(data: LocalAppData, sessionId: string): Written
 export function setWrittenReport(data: LocalAppData, sessionId: string, text: string): LocalAppData {
   const now = Date.now()
   const trimmedText = text.trim()
+  const existing = data.writtenReports.find((report) => report.sessionId === sessionId)
+  if (existing && existing.text.trim() === trimmedText) return data
   const nextReport: WrittenReport = { sessionId, text: trimmedText, updatedAtUnixMs: now }
   const without = data.writtenReports.filter((r) => r.sessionId !== sessionId)
   return { ...data, writtenReports: [nextReport, ...without] }

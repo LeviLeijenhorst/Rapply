@@ -1,5 +1,6 @@
 import { execute } from "../../db"
 
+// Marks a charged transcription operation as completed.
 export async function markOperationCompleted(params: { operationId: string; userId: string }): Promise<void> {
   await execute(
     `

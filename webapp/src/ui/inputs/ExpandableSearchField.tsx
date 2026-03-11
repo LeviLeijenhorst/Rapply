@@ -1,37 +1,30 @@
-import React from "react";
-import {
-  Pressable,
-  StyleProp,
-  StyleSheet,
-  TextInput,
-  TextStyle,
-  ViewStyle,
-} from "react-native";
+import React, { useEffect, useMemo, useRef } from 'react'
+import { Animated, Easing, Pressable, StyleProp, StyleSheet, TextInput, TextStyle, ViewStyle } from 'react-native'
 
-import { AnimatedWidthContainer } from "../../ui/AnimatedWidthContainer";
-import { SearchIcon } from "../../icons/SearchIcon";
-import { Text } from "../../ui/Text";
-import { colors } from "../../design/theme/colors";
-import { brandColors } from "../../design/tokens/colors";
-import { fontSizes } from "../../design/tokens/fontSizes";
-import { radius } from "../../design/tokens/radius";
-import { spacing } from "../../design/tokens/spacing";
-import { SearchField } from "./SearchField";
+import { SearchIcon } from '../../icons/SearchIcon'
+import { Text } from '../Text'
+import { colors } from '../../design/theme/colors'
+import { brandColors } from '../../design/tokens/colors'
+import { fontSizes } from '../../design/tokens/fontSizes'
+import { radius } from '../../design/tokens/radius'
+import { spacing } from '../../design/tokens/spacing'
+import { useReducedMotion } from '../../hooks/useReducedMotion'
+import { SearchBar } from './SearchBar'
 
 type Props = {
-  isExpanded: boolean;
-  value: string;
-  onChangeText: (value: string) => void;
-  placeholder: string;
-  onExpand: () => void;
-  onBlur?: () => void;
-  inputRef?: React.RefObject<TextInput | null>;
-  collapsedLabel?: string;
-  expandedWidth?: number;
-  collapsedWidth?: number;
-  containerStyle?: StyleProp<ViewStyle>;
-  inputStyle?: StyleProp<TextStyle>;
-};
+  isExpanded: boolean
+  value: string
+  onChangeText: (value: string) => void
+  placeholder: string
+  onExpand: () => void
+  onBlur?: () => void
+  inputRef?: React.RefObject<TextInput | null>
+  collapsedLabel?: string
+  expandedWidth?: number
+  collapsedWidth?: number
+  containerStyle?: StyleProp<ViewStyle>
+  inputStyle?: StyleProp<TextStyle>
+}
 
 // Renders a compact search trigger that expands into a full search input when active.
 export function ExpandableSearchField({
@@ -42,19 +35,40 @@ export function ExpandableSearchField({
   onExpand,
   onBlur,
   inputRef,
-  collapsedLabel = "Zoeken",
+  collapsedLabel = 'Zoeken',
   expandedWidth = 315,
   collapsedWidth = 138,
   containerStyle,
   inputStyle,
 }: Props) {
+  const isReducedMotionEnabled = useReducedMotion()
+  const targetWidth = isExpanded ? expandedWidth : collapsedWidth
+  const animatedWidth = useRef(new Animated.Value(targetWidth)).current
+
+  const animationConfig = useMemo(() => {
+    if (isReducedMotionEnabled) return null
+    return { durationMs: 180, easing: Easing.out(Easing.cubic) }
+  }, [isReducedMotionEnabled])
+
+  useEffect(() => {
+    if (!animationConfig) {
+      animatedWidth.setValue(targetWidth)
+      return
+    }
+
+    Animated.timing(animatedWidth, {
+      toValue: targetWidth,
+      duration: animationConfig.durationMs,
+      easing: animationConfig.easing,
+      useNativeDriver: false,
+    }).start()
+  }, [animatedWidth, animationConfig, targetWidth])
+
   return (
-    <AnimatedWidthContainer
-      width={isExpanded ? expandedWidth : collapsedWidth}
-      style={containerStyle}
-    >
+    <Animated.View style={[containerStyle, { width: animatedWidth }]}>
+      {/* Search content */}
       {isExpanded ? (
-        <SearchField
+        <SearchBar
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -70,29 +84,30 @@ export function ExpandableSearchField({
             hovered ? styles.collapsedButtonHovered : undefined,
           ]}
         >
+          {/* Search trigger */}
           <SearchIcon color={brandColors.neutral700} size={18} />
           <Text isBold style={styles.collapsedButtonText}>
             {collapsedLabel}
           </Text>
         </Pressable>
       )}
-    </AnimatedWidthContainer>
-  );
+    </Animated.View>
+  )
 }
 
 const styles = StyleSheet.create({
   collapsedButton: {
-    width: "100%",
+    width: '100%',
     height: 40,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.sm,
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 10,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   collapsedButtonHovered: {
     backgroundColor: colors.hoverBackground,
@@ -102,7 +117,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: brandColors.neutral700,
   },
-});
-
+})
 
 

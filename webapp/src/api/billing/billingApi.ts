@@ -1,4 +1,4 @@
-import { callSecureApi } from '../core/secureApi'
+import { callSecureApi } from '../secureApi'
 
 export type BillingStatus = {
   includedSeconds: number

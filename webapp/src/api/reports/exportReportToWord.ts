@@ -1,4 +1,4 @@
-import { exportUwvTemplateWord } from '../export/uwv/exportToUWVWordDocument'
+import { exportUwvTemplateWord } from './exportToUWVWordDocument'
 
 export async function exportReportToWord(params: {
   templateName: string

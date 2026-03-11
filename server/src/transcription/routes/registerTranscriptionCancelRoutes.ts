@@ -1,9 +1,10 @@
 import type { Express } from "express"
 import { requireAuthenticatedUser } from "../../auth"
 import { asyncHandler, sendError } from "../../http"
-import { refundSecondsIdempotent } from "../store"
+import { refundChargedSeconds } from "../store"
 import type { RegisterTranscriptionRoutesParams } from "./types"
 
+// Registers the route that refunds a cancelled transcription operation.
 export function registerTranscriptionCancelRoutes(app: Express, params: RegisterTranscriptionRoutesParams): void {
   app.post(
     "/transcription/cancel",
@@ -16,7 +17,7 @@ export function registerTranscriptionCancelRoutes(app: Express, params: Register
         return
       }
 
-      await refundSecondsIdempotent({ userId: user.userId, operationId })
+      await refundChargedSeconds({ userId: user.userId, operationId })
       res.status(200).json({ cancelled: true })
     }),
   )

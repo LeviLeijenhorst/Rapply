@@ -1,9 +1,9 @@
-import { execute, queryMany } from "../db"
+import { execute, queryMany, queryOne } from "../db"
 import type { Note } from "../types/Note"
 
 type NoteRow = {
   id: string
-  session_id: string
+  input_id: string | null
   title: string | null
   text: string
   created_at_unix_ms: number
@@ -13,7 +13,7 @@ type NoteRow = {
 function mapNoteRow(row: NoteRow): Note {
   return {
     id: row.id,
-    sessionId: row.session_id,
+    sessionId: row.input_id ?? "",
     title: row.title ?? "",
     text: row.text,
     createdAtUnixMs: Number(row.created_at_unix_ms),
@@ -24,8 +24,8 @@ function mapNoteRow(row: NoteRow): Note {
 export async function listNotes(userId: string): Promise<Note[]> {
   const rows = await queryMany<NoteRow>(
     `
-    select id, session_id, coalesce(title, '') as title, text, created_at_unix_ms, updated_at_unix_ms
-    from public.session_notes
+    select id, input_id, coalesce(title, '') as title, text, created_at_unix_ms, updated_at_unix_ms
+    from public.notes
     where owner_user_id = $1
     order by updated_at_unix_ms desc
     `,
@@ -35,17 +35,29 @@ export async function listNotes(userId: string): Promise<Note[]> {
 }
 
 export async function createNote(userId: string, note: Note): Promise<void> {
+  const input = await queryOne<{ id: string; client_id: string }>(
+    `
+    select id, client_id
+    from public.inputs
+    where id = $1 and owner_user_id = $2
+    limit 1
+    `,
+    [note.sessionId, userId],
+  )
+
+  if (!input?.id) return
+
   await execute(
     `
-    insert into public.session_notes (id, owner_user_id, session_id, title, text, created_at_unix_ms, updated_at_unix_ms)
-    values ($1, $2, $3, $4, $5, $6, $7)
+    insert into public.notes (id, owner_user_id, client_id, input_id, title, text, created_at_unix_ms, updated_at_unix_ms)
+    values ($1, $2, $3, $4, $5, $6, $7, $8)
     on conflict (id) do update
       set title = excluded.title,
           text = excluded.text,
           updated_at_unix_ms = excluded.updated_at_unix_ms
-      where public.session_notes.owner_user_id = excluded.owner_user_id
+      where public.notes.owner_user_id = excluded.owner_user_id
     `,
-    [note.id, userId, note.sessionId, note.title ?? "", note.text, note.createdAtUnixMs, note.updatedAtUnixMs],
+    [note.id, userId, input.client_id, note.sessionId, note.title ?? "", note.text, note.createdAtUnixMs, note.updatedAtUnixMs],
   )
 }
 
@@ -56,7 +68,7 @@ export async function updateNote(
   const title = params.title ?? ""
   await execute(
     `
-    update public.session_notes
+    update public.notes
     set title = $1, text = $2, updated_at_unix_ms = $3
     where owner_user_id = $4 and id = $5
     `,
@@ -65,5 +77,5 @@ export async function updateNote(
 }
 
 export async function deleteNote(userId: string, id: string): Promise<void> {
-  await execute(`delete from public.session_notes where owner_user_id = $1 and id = $2`, [userId, id])
+  await execute(`delete from public.notes where owner_user_id = $1 and id = $2`, [userId, id])
 }

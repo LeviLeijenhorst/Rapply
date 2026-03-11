@@ -3,9 +3,9 @@ import { Pressable, ScrollView, View } from 'react-native'
 
 import { Text } from '../../../ui/Text'
 import { SendSquareIcon } from '../../../icons/SendSquareIcon'
-import { styles } from '../newInputModalStyles'
+import { styles } from '../styles'
 
-type Props = {
+type UploadAudioStepModel = {
   isUploadDragActive: boolean
   selectedAudioFile: File | null
   uploadDropAreaRef: React.RefObject<View | null>
@@ -19,7 +19,7 @@ export function UploadAudioStep({
   uploadDropAreaRef,
   uploadFileDurationWarning,
   onOpenFilePicker,
-}: Props) {
+}: UploadAudioStepModel) {
   return (
     <ScrollView style={styles.stepScroll} contentContainerStyle={styles.stepScrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.uploadBody}>

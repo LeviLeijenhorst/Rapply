@@ -2,7 +2,7 @@ import type { SnippetType } from '../../types/snippet'
 
 export function classifySnippetType(field: string): SnippetType {
   const normalized = String(field || '').toLowerCase()
-  const reportFields = [
+  const legacyReportFields = [
     'startsituatie_client',
     'uitgevoerde_activiteiten',
     'voortgang_klant',
@@ -15,7 +15,9 @@ export function classifySnippetType(field: string): SnippetType {
     'reden_beeindiging',
   ]
 
-  if (reportFields.includes(normalized)) return 'report'
+  if (legacyReportFields.includes(normalized)) return 'report'
+  if (normalized.startsWith('rp_werkfit_') || normalized.startsWith('er_werkfit_')) return 'report'
+  if (normalized === 'general') return 'knowledge'
   if (normalized.includes('uwv') || normalized.includes('report') || normalized.includes('rapport')) return 'report'
   return 'knowledge'
 }

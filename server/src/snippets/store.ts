@@ -4,24 +4,24 @@ import type { Snippet } from "../types/Snippet"
 type SnippetRow = {
   id: string
   client_id: string
-  trajectory_id: string
-  source_session_id: string
+  source_input_id: string | null
   snippet_type: string
-  text: string
+  snippet_text: string
   snippet_date: number
   approval_status: "pending" | "approved" | "rejected"
   created_at_unix_ms: number
   updated_at_unix_ms: number
 }
 
+// Maps a database snippet row to the application snippet model.
 function mapSnippetRow(row: SnippetRow): Snippet {
   return {
     id: row.id,
     clientId: row.client_id,
-    trajectoryId: row.trajectory_id,
-    sourceSessionId: row.source_session_id,
+    trajectoryId: "",
+    sourceSessionId: row.source_input_id ?? "",
     snippetType: row.snippet_type,
-    text: row.text,
+    text: row.snippet_text,
     snippetDate: Number(row.snippet_date),
     approvalStatus: row.approval_status,
     createdAtUnixMs: Number(row.created_at_unix_ms),
@@ -29,10 +29,11 @@ function mapSnippetRow(row: SnippetRow): Snippet {
   }
 }
 
+// Lists all snippets for one user ordered by snippet date and creation time.
 export async function listSnippets(userId: string): Promise<Snippet[]> {
   const rows = await queryMany<SnippetRow>(
     `
-    select id, client_id, trajectory_id, source_session_id, snippet_type, text, snippet_date, approval_status, created_at_unix_ms, updated_at_unix_ms
+    select id, client_id, source_input_id, snippet_type, snippet_text, snippet_date, approval_status, created_at_unix_ms, updated_at_unix_ms
     from public.snippets
     where owner_user_id = $1
     order by snippet_date desc, created_at_unix_ms desc
@@ -42,19 +43,19 @@ export async function listSnippets(userId: string): Promise<Snippet[]> {
   return rows.map(mapSnippetRow)
 }
 
+// Creates a snippet or updates it when the same snippet id already exists.
 export async function createSnippet(userId: string, snippet: Snippet): Promise<void> {
   await execute(
     `
     insert into public.snippets (
-      id, owner_user_id, client_id, trajectory_id, source_session_id, snippet_type, text, snippet_date, approval_status, created_at_unix_ms, updated_at_unix_ms
+      id, owner_user_id, client_id, source_input_id, snippet_type, snippet_text, snippet_date, approval_status, created_at_unix_ms, updated_at_unix_ms
     )
-    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     on conflict (id) do update
       set client_id = excluded.client_id,
-          trajectory_id = excluded.trajectory_id,
-          source_session_id = excluded.source_session_id,
+          source_input_id = excluded.source_input_id,
           snippet_type = excluded.snippet_type,
-          text = excluded.text,
+          snippet_text = excluded.snippet_text,
           snippet_date = excluded.snippet_date,
           approval_status = excluded.approval_status,
           updated_at_unix_ms = excluded.updated_at_unix_ms
@@ -64,8 +65,7 @@ export async function createSnippet(userId: string, snippet: Snippet): Promise<v
       snippet.id,
       userId,
       snippet.clientId,
-      snippet.trajectoryId,
-      snippet.sourceSessionId,
+      snippet.sourceSessionId || null,
       snippet.snippetType,
       snippet.text,
       snippet.snippetDate,
@@ -76,6 +76,7 @@ export async function createSnippet(userId: string, snippet: Snippet): Promise<v
   )
 }
 
+// Updates selected snippet fields and always writes an updated timestamp.
 export async function updateSnippet(
   userId: string,
   params: {
@@ -99,7 +100,7 @@ export async function updateSnippet(
   }
 
   if (typeof params.text === "string") {
-    updates.push(`text = $${index++}`)
+    updates.push(`snippet_text = $${index++}`)
     values.push(params.text)
   }
 
@@ -121,6 +122,7 @@ export async function updateSnippet(
   )
 }
 
+// Deletes a snippet owned by the given user.
 export async function deleteSnippet(userId: string, id: string): Promise<void> {
   await execute(`delete from public.snippets where owner_user_id = $1 and id = $2`, [userId, id])
 }

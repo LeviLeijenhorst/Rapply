@@ -1,7 +1,6 @@
 import crypto from "crypto"
 import { execute, queryOne } from "./db"
 import { normalizeEmail } from "./admin"
-import { ensureDefaultExampleDataForUser } from "./defaultExampleData"
 
 export type AppUser = {
   userId: string
@@ -108,6 +107,8 @@ export async function ensureUserFromEntra(params: { entraUserId: string; email: 
       update public.users
       set email = $1,
           display_name = coalesce($2, public.users.display_name),
+          full_name = coalesce($2, public.users.full_name),
+          role = case when coalesce(public.users.account_type, 'paid') = 'admin' then 'admin' else 'regular' end,
           updated_at = now()
       where id = $3
       returning id, entra_user_id, email, display_name, account_type
@@ -158,6 +159,8 @@ export async function ensureUserFromEntra(params: { entraUserId: string; email: 
         set entra_user_id = $1,
             email = $2,
             display_name = coalesce($3, public.users.display_name),
+            full_name = coalesce($3, public.users.full_name),
+            role = case when coalesce(public.users.account_type, 'paid') = 'admin' then 'admin' else 'regular' end,
             updated_at = now()
         where id = $4
         returning id, entra_user_id, email, display_name, account_type
@@ -168,8 +171,6 @@ export async function ensureUserFromEntra(params: { entraUserId: string; email: 
       if (!updatedUserByEmail?.id) {
         throw new Error("Failed to load user")
       }
-      await ensureDefaultExampleDataForUser(updatedUserByEmail.id)
-
       return {
         userId: updatedUserByEmail.id,
         entraUserId: updatedUserByEmail.entra_user_id,
@@ -190,11 +191,13 @@ export async function ensureUserFromEntra(params: { entraUserId: string; email: 
     account_type: "admin" | "paid" | "test"
   }>(
     `
-    insert into public.users (id, entra_user_id, email, display_name, created_at, updated_at)
-    values ($1, $2, $3, $4, now(), now())
+    insert into public.users (id, entra_user_id, email, display_name, full_name, role, created_at, updated_at)
+    values ($1, $2, $3, $4, $4, 'regular', now(), now())
     on conflict (entra_user_id) do update
       set email = excluded.email,
           display_name = coalesce(excluded.display_name, public.users.display_name),
+          full_name = coalesce(excluded.display_name, public.users.full_name),
+          role = case when coalesce(public.users.account_type, 'paid') = 'admin' then 'admin' else 'regular' end,
           updated_at = now()
     returning id, entra_user_id, email, display_name, account_type
     `,
@@ -204,8 +207,6 @@ export async function ensureUserFromEntra(params: { entraUserId: string; email: 
   if (!row?.id) {
     throw new Error("Failed to load user")
   }
-  await ensureDefaultExampleDataForUser(row.id)
-
   return {
     userId: row.id,
     entraUserId: row.entra_user_id,
@@ -223,6 +224,6 @@ export async function deleteUserById(userId: string): Promise<void> {
 // Intent: updateUserDisplayName
 export async function updateUserDisplayName(params: { userId: string; displayName: string | null }): Promise<void> {
   const displayName = typeof params.displayName === "string" && params.displayName.trim() ? params.displayName.trim() : null
-  await execute(`update public.users set display_name = $1, updated_at = now() where id = $2`, [displayName, params.userId])
+  await execute(`update public.users set display_name = $1, full_name = $1, updated_at = now() where id = $2`, [displayName, params.userId])
 }
 

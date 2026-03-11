@@ -5,6 +5,7 @@ export type SummaryTemplate = {
   sections: { title: string; description: string }[]
 }
 
+// Parses and validates an optional summary template payload.
 export function readSummaryTemplate(value: unknown): SummaryTemplate | undefined {
   if (!value) return undefined
   const payload = (value || {}) as Record<string, unknown>

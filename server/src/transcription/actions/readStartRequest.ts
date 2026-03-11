@@ -1,5 +1,6 @@
 import type { StartRequest } from "../routes/types"
 
+// Validates the batch transcription start payload.
 export function readStartRequest(body: any): StartRequest | null {
   const operationId = typeof body?.operationId === "string" ? body.operationId.trim() : ""
   const uploadToken = typeof body?.uploadToken === "string" ? body.uploadToken.trim() : ""
@@ -11,6 +12,5 @@ export function readStartRequest(body: any): StartRequest | null {
     keyBase64,
     languageCode: typeof body?.language_code === "string" ? body.language_code.trim() || "nl" : "nl",
     mimeType: typeof body?.mime_type === "string" ? body.mime_type.trim() || "audio/m4a" : "audio/m4a",
-    includeSummary: body?.include_summary !== false,
   }
 }

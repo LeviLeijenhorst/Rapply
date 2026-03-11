@@ -2,16 +2,16 @@
 import { Image, Pressable, ScrollView, View } from 'react-native'
 
 import { Text } from '../../../ui/Text'
-import { CoachscribeLogo } from '../../../ui/CoachscribeLogo'
+import { CoachscribeLogo } from '../../../components/brand/CoachscribeLogo'
 import { MonitorIcon } from '../../../icons/MonitorIcon'
 import { MicrophoneSmallIcon } from '../../../icons/MicrophoneSmallIcon'
 import { Mp3UploadIcon } from '../../../icons/Mp3UploadIcon'
 import { colors } from '../../../design/theme/colors'
 import { SessionOptionRow } from '../components/SessionOptionRow'
-import { styles } from '../newInputModalStyles'
-import type { OptionKey } from '../newInputModalUtils'
+import { styles } from '../styles'
+import type { OptionKey } from '../utils'
 
-type Props = {
+type SelectSessionTypeStepModel = {
   limitedMode: boolean
   gesprekOptionLabel: string
   gespreksverslagOptionLabel: string
@@ -27,7 +27,7 @@ export function SelectSessionTypeStep({
   onSelectOption,
   selectedOption,
   selectedOptionGroup,
-}: Props) {
+}: SelectSessionTypeStepModel) {
   if (limitedMode) {
     return (
       <View style={styles.mobileSelectBody}>
@@ -85,6 +85,12 @@ export function SelectSessionTypeStep({
           label={gespreksverslagOptionLabel}
           isSelected={selectedOptionGroup === 'gespreksverslag'}
           onPress={() => onSelectOption('gespreksverslag')}
+          leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
+        />
+        <SessionOptionRow
+          label="Gespreksverslag schrijven"
+          isSelected={selectedOption === 'schrijven'}
+          onPress={() => onSelectOption('schrijven')}
           leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
         />
         <SessionOptionRow

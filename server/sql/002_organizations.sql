@@ -1,0 +1,33 @@
+create table if not exists public.organizations (
+  id text primary key,
+  name text not null,
+  postal_street text not null default '',
+  postal_house_number text not null default '',
+  postal_city text not null default '',
+  postal_code text not null default '',
+  visit_street text not null default '',
+  visit_house_number text not null default '',
+  visit_city text not null default '',
+  visit_postal_code text not null default '',
+  contact_name text not null default '',
+  contact_role text not null default '',
+  contact_phone text not null default '',
+  contact_email text not null default '',
+  created_at_unix_ms bigint not null,
+  updated_at_unix_ms bigint not null,
+  constraint organizations_name_length check (char_length(name) > 0 and char_length(name) <= 200),
+  constraint organizations_postal_street_length check (char_length(postal_street) <= 4000),
+  constraint organizations_postal_house_number_length check (char_length(postal_house_number) <= 100),
+  constraint organizations_postal_city_length check (char_length(postal_city) <= 4000),
+  constraint organizations_postal_code_length check (char_length(postal_code) <= 100),
+  constraint organizations_visit_street_length check (char_length(visit_street) <= 4000),
+  constraint organizations_visit_house_number_length check (char_length(visit_house_number) <= 100),
+  constraint organizations_visit_city_length check (char_length(visit_city) <= 4000),
+  constraint organizations_visit_postal_code_length check (char_length(visit_postal_code) <= 100),
+  constraint organizations_contact_name_length check (char_length(contact_name) <= 4000),
+  constraint organizations_contact_role_length check (char_length(contact_role) <= 4000),
+  constraint organizations_contact_phone_length check (char_length(contact_phone) <= 4000),
+  constraint organizations_contact_email_length check (char_length(contact_email) <= 4000)
+);
+
+create unique index if not exists organizations_name_unique_idx on public.organizations (lower(name));

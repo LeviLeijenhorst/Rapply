@@ -1,6 +1,6 @@
 ## Local server (Postgres + session token auth)
 
-This folder contains a small server that replaces the old Firebase Functions.
+This folder contains the Coachscribe API server.
 
 ### Setup
 

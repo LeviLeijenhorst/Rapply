@@ -1,7 +1,3 @@
-import { ensureBillingUsersCompatibility } from "./billing/store"
-import { prepareAnalyticsRuntimeSchema } from "./analytics/registerAnalyticsRoutes"
-import { prepareFeedbackRuntimeSchema } from "./feedback/registerFeedbackRoutes"
-import { ensureTranscriptionRuntimeSettingsTable } from "./transcription/mode"
 import { ensureUsersSchemaCompatibility } from "./users"
 
 type RuntimeSchemaWarmupStep = {
@@ -12,10 +8,6 @@ type RuntimeSchemaWarmupStep = {
 function buildRuntimeSchemaWarmupSteps(): RuntimeSchemaWarmupStep[] {
   return [
     { name: "users", run: ensureUsersSchemaCompatibility },
-    { name: "billing_users", run: ensureBillingUsersCompatibility },
-    { name: "transcription_runtime_settings", run: ensureTranscriptionRuntimeSettingsTable },
-    { name: "analytics_events", run: prepareAnalyticsRuntimeSchema },
-    { name: "feedback_pricing_admin", run: prepareFeedbackRuntimeSchema },
   ]
 }
 

@@ -5,7 +5,7 @@ import crypto from "crypto"
 import { execute, queryOne } from "../db"
 import { transcriptionUploadExpirationSeconds } from "./uploadExpiration"
 
-// Creates a short-lived token that authorizes exactly one upload for an operation.
+// Creates a one-time upload token for one transcription operation.
 export async function createUploadToken(params: { userId: string; operationId: string; uploadPath: string }): Promise<{ uploadToken: string; expiresAtMs: number }> {
   const { userId, operationId, uploadPath } = params
 
@@ -33,13 +33,13 @@ export async function createUploadToken(params: { userId: string; operationId: s
   throw new Error("Failed to create upload token")
 }
 
-// Intent: cryptoRandomToken
+// Generates a URL-safe upload token value.
 function cryptoRandomToken(): string {
   const base64 = crypto.randomBytes(32).toString("base64")
   return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
 }
 
-// Marks an upload token as used and returns the associated blob path.
+// Consumes a one-time upload token and returns its blob path.
 export async function consumeUploadToken(params: { userId: string; uploadToken: string; operationId: string }): Promise<{ uploadPath: string }> {
   const { userId, uploadToken, operationId } = params
   const row = await queryOne<{ upload_blob_name: string }>(
@@ -70,8 +70,8 @@ export type ChargeResult = {
   remainingSecondsAfter: number
 }
 
-// Charges transcription seconds once per operation and returns the post-charge balance.
-export async function chargeSecondsIdempotent(params: {
+// Charges transcription seconds and reuses an existing charge for the same operation.
+export async function chargeSecondsOnce(params: {
   userId: string
   operationId: string
   secondsToCharge: number
@@ -89,16 +89,16 @@ export async function chargeSecondsIdempotent(params: {
     throw new Error("Invalid seconds to charge")
   }
 
-  const existingOp = await queryOne<any>(`select * from public.transcription_operations where operation_id = $1`, [operationId])
-  if (existingOp) {
-    if (String(existingOp.user_id) !== userId) {
+  const existingOperation = await queryOne<any>(`select * from public.transcription_operations where operation_id = $1`, [operationId])
+  if (existingOperation) {
+    if (String(existingOperation.user_id) !== userId) {
       throw new Error("Operation does not belong to user")
     }
-    const status = String(existingOp.status || "")
+    const status = String(existingOperation.status || "")
     if (status === "charged" || status === "completed") {
-      const chargedCycleSeconds = clampNonNegative(existingOp.charged_cycle_seconds ?? 0)
-      const chargedNonExpiringSeconds = clampNonNegative(existingOp.charged_non_expiring_seconds ?? 0)
-      const remainingSecondsAfter = clampNonNegative(existingOp.remaining_seconds_after ?? 0)
+      const chargedCycleSeconds = clampNonNegative(existingOperation.charged_cycle_seconds ?? 0)
+      const chargedNonExpiringSeconds = clampNonNegative(existingOperation.charged_non_expiring_seconds ?? 0)
+      const remainingSecondsAfter = clampNonNegative(existingOperation.remaining_seconds_after ?? 0)
       return { secondsCharged: chargedCycleSeconds + chargedNonExpiringSeconds, chargedCycleSeconds, chargedNonExpiringSeconds, remainingSecondsAfter }
     }
   }
@@ -198,8 +198,8 @@ export async function chargeSecondsIdempotent(params: {
   return { secondsCharged: seconds, chargedCycleSeconds, chargedNonExpiringSeconds, remainingSecondsAfter }
 }
 
-// Refunds previously charged seconds once per operation.
-export async function refundSecondsIdempotent(params: { userId: string; operationId: string }): Promise<void> {
+// Refunds a charged transcription operation once.
+export async function refundChargedSeconds(params: { userId: string; operationId: string }): Promise<void> {
   const { userId, operationId } = params
 
   const op = await queryOne<any>(`select * from public.transcription_operations where operation_id = $1`, [operationId])

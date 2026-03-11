@@ -1,5 +1,6 @@
 import { execute } from "../../db"
 
+// Marks a transcription operation as failed and stores the error message.
 export async function markOperationFailed(params: { operationId: string; userId: string; errorMessage: string }): Promise<void> {
   await execute(
     `

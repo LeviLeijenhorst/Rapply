@@ -1,5 +1,5 @@
 import type { LocalChatMessage } from '../api/chat/types'
-import { formatCoacheeDetailsForPrompt, formatEmployerDetailsForPrompt } from '../types/clientProfile'
+import { formatClientDetailsForPrompt, formatEmployerDetailsForPrompt } from '../types/clientProfile'
 
 function normalizeText(value: string | null | undefined) {
   return String(value || '').trim()
@@ -219,7 +219,7 @@ export function buildCoacheeStructuredSystemMessages(params: {
   const includeSessionReports = params.includeSessionReports !== false
   const sortedSessions = [...params.sessions].sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
   const basicInfoParts: string[] = []
-  const parsedClientDetails = formatCoacheeDetailsForPrompt(params.clientDetails)
+  const parsedClientDetails = formatClientDetailsForPrompt(params.clientDetails)
   const parsedEmployerDetails = formatEmployerDetailsForPrompt(params.employerDetails)
   const normalizedFirstSickDay = normalizeText(params.firstSickDay)
 
@@ -358,5 +358,43 @@ ${snippetKnowledgeText}
 Gebruik uitsluitend de basisgegevens in deze context om de vragen te beantwoorden.`
 
   return [{ role: 'system', text }]
+}
+
+export function buildClientStructuredSystemMessages(params: {
+  clientName: string
+  clientCreatedAtUnixMs?: number | null
+  clientDetails?: string | null
+  employerDetails?: string | null
+  firstSickDay?: string | null
+  includeSessionReports?: boolean
+  sessions: {
+    title: string
+    createdAtUnixMs: number
+    summary: string | null
+    reportText: string | null
+    reportDate?: string | null
+    wvpWeekNumber?: string | null
+    reportFirstSickDay?: string | null
+  }[]
+  snippets?: {
+    sessionId: string
+    field: string
+    text: string
+  }[]
+  maxTotalCharacters?: number
+  maxSessionCharacters?: number
+}): LocalChatMessage[] {
+  return buildCoacheeStructuredSystemMessages({
+    coacheeName: params.clientName,
+    coacheeCreatedAtUnixMs: params.clientCreatedAtUnixMs,
+    clientDetails: params.clientDetails,
+    employerDetails: params.employerDetails,
+    firstSickDay: params.firstSickDay,
+    includeSessionReports: params.includeSessionReports,
+    sessions: params.sessions,
+    snippets: params.snippets,
+    maxTotalCharacters: params.maxTotalCharacters,
+    maxSessionCharacters: params.maxSessionCharacters,
+  })
 }
 

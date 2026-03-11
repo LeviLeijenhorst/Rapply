@@ -286,16 +286,12 @@ export function getReintegrationDefaultTemplateSectionsByName(name: string): Arr
 
 // Intent: createLegacyDefaultTemplates
 export function createLegacyDefaultTemplates(): Template[] {
-  return materializeTemplateBlueprints(
-    legacyTemplateBlueprints.filter((blueprint) => normalizeTemplateName(blueprint.name) !== "eindrapportagewerkfitmaken"),
-  )
+  return materializeTemplateBlueprints(legacyTemplateBlueprints)
 }
 
 // Intent: createReintegrationDefaultTemplates
 export function createReintegrationDefaultTemplates(): Template[] {
-  return materializeTemplateBlueprints(
-    reintegrationTemplateBlueprints.filter((blueprint) => normalizeTemplateName(blueprint.name) !== "eindrapportagewerkfitmaken"),
-  )
+  return materializeTemplateBlueprints(reintegrationTemplateBlueprints)
 }
 
 // Intent: createDefaultTemplates

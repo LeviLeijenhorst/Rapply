@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, View } from 'react-native'
 import { colors } from '../../design/theme/colors'
 import { useLocalAppData } from '../../storage/LocalAppDataProvider'
 import { Text } from '../../ui/Text'
-import { ArchivedCoacheeCard as ArchivedClientCard } from '../../ui/ArchivedCoacheeCard'
+import { ArchivedClientCard } from './components/ArchivedClientCard'
 
 export function ArchiveScreen() {
   const { data, restoreCoachee, deleteCoachee } = useLocalAppData()

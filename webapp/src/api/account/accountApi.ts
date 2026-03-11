@@ -1,4 +1,4 @@
-import { callSecureApi } from '../core/secureApi'
+import { callSecureApi } from '../secureApi'
 
 export async function fetchSubscriptionAccessApi() {
   return callSecureApi<{ planId?: string | null; canSeePricingPage?: boolean }>('/pricing/me-visibility', {})

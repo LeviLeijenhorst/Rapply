@@ -17,5 +17,4 @@ export type StartRequest = {
   keyBase64: string
   languageCode: string
   mimeType: string
-  includeSummary: boolean
 }

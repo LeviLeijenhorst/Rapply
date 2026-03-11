@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { Text } from '../ui/Text'
+import { Text } from './Text'
 
 type Props = {
   text: string

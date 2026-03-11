@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
-import { BottomToast } from '../ui/BottomToast'
+import { Toast } from '../ui/Toast'
 import { sanitizeUserFacingErrorMessage } from '../utils/text/userFriendlyError'
 
 type ToastApi = {
@@ -47,7 +47,7 @@ export function ToastProvider({ children }: Props) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <BottomToast
+      <Toast
         visible={isToastVisible}
         message={toastMessage}
         onHoverStart={() => setIsToastHovered(true)}

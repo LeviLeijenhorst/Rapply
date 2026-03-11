@@ -6,6 +6,7 @@ const DEFAULT_FALLBACK_BITRATE_BPS = 128_000
 const WAV_FALLBACK_BITRATE_BPS = 256_000
 const WEBM_FALLBACK_BITRATE_BPS = 96_000
 
+// Normalizes a MIME type before duration heuristics run.
 function normalizeMimeType(mimeType: string): string {
   return String(mimeType || "")
     .toLowerCase()
@@ -13,6 +14,7 @@ function normalizeMimeType(mimeType: string): string {
     .trim()
 }
 
+// Returns the fallback bitrate used when metadata does not include one.
 function getFallbackBitrateBpsForMimeType(mimeType: string): number {
   const normalized = normalizeMimeType(mimeType)
   if (normalized === "audio/wav" || normalized === "audio/x-wav") return WAV_FALLBACK_BITRATE_BPS
@@ -20,8 +22,8 @@ function getFallbackBitrateBpsForMimeType(mimeType: string): number {
   return DEFAULT_FALLBACK_BITRATE_BPS
 }
 
-// Intent: readDurationSeconds
-function readDurationSeconds(metadata: any, decryptedSizeBytes?: number): number {
+// Reads duration from parsed metadata or derives it from bitrate and size.
+function readDurationSecondsFromMetadata(metadata: any, decryptedSizeBytes?: number): number {
   const value = typeof metadata?.format?.duration === "number" ? metadata.format.duration : 0
   if (Number.isFinite(value) && value > 0) return value
 
@@ -42,7 +44,7 @@ function readDurationSeconds(metadata: any, decryptedSizeBytes?: number): number
   return 0
 }
 
-// Intent: estimateDurationSecondsFromSizeOnly
+// Estimates duration from file size alone when metadata is incomplete.
 function estimateDurationSecondsFromSizeOnly(params: { decryptedSizeBytes?: number; mimeType: string }): number {
   const { decryptedSizeBytes, mimeType } = params
   if (typeof decryptedSizeBytes !== "number" || !Number.isFinite(decryptedSizeBytes) || decryptedSizeBytes <= 0) {
@@ -53,7 +55,7 @@ function estimateDurationSecondsFromSizeOnly(params: { decryptedSizeBytes?: numb
   return Number.isFinite(estimated) && estimated > 0 ? estimated : 0
 }
 
-// Intent: computeAudioDurationSecondsFromEncryptedUpload
+// Decrypts one upload and extracts its audio duration.
 export async function computeAudioDurationSecondsFromEncryptedUpload(params: {
   encryptedStream: NodeJS.ReadableStream
   keyBase64: string
@@ -88,7 +90,7 @@ export async function computeAudioDurationSecondsFromEncryptedUpload(params: {
     throw parseError
   }
 
-  const durationSeconds = readDurationSeconds(metadata, decryptedSizeBytes)
+  const durationSeconds = readDurationSecondsFromMetadata(metadata, decryptedSizeBytes)
   const rawDuration = typeof metadata?.format?.duration
   if (durationSeconds <= 0) {
     const assumedBitrateBps = getFallbackBitrateBpsForMimeType(mimeType)

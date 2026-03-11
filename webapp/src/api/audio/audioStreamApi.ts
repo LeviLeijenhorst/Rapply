@@ -1,4 +1,4 @@
-import { fetchSecureApi } from '../core/secureApi'
+import { fetchSecureApi } from '../secureApi'
 
 type AudioStreamManifestChunk = {
   index: number

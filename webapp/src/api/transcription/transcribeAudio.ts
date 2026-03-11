@@ -1,4 +1,4 @@
-import { callSecureApi } from '../core/secureApi'
+import { callSecureApi } from '../secureApi'
 
 const TRANSCRIPTION_PREFLIGHT_TIMEOUT_MS = 30_000
 const TRANSCRIPTION_UPLOAD_BLOCK_TIMEOUT_MS = 10 * 60_000
@@ -314,12 +314,6 @@ function mixToMono(audioBuffer: AudioBuffer): Float32Array {
     mixed[frameIndex] = sum / channelCount
   }
   return mixed
-}
-
-function encodeWav(audioBuffer: AudioBuffer): ArrayBuffer {
-  const sampleRate = audioBuffer.sampleRate
-  const mono = mixToMono(audioBuffer)
-  return encodeMonoPcm16Wav(mono, sampleRate)
 }
 
 function resampleMonoLinear(params: { source: Float32Array; sourceSampleRate: number; targetSampleRate: number }): Float32Array {

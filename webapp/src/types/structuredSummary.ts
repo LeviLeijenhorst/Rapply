@@ -12,11 +12,11 @@ export const structuredSummaryFieldOrder: Array<{
   key: keyof StructuredSessionSummary
   label: string
 }> = [
-  { key: 'doelstelling', label: 'Doelstelling' },
-  { key: 'belastbaarheid', label: 'Belastbaarheid' },
-  { key: 'belemmeringen', label: 'Belemmeringen' },
-  { key: 'voortgang', label: 'Voortgang' },
-  { key: 'arbeidsmarktorientatie', label: 'Arbeidsmarktori\u00ebntatie' },
+  { key: 'doelstelling', label: 'Kernpunten' },
+  { key: 'belastbaarheid', label: 'Situatie' },
+  { key: 'belemmeringen', label: 'Aandachtspunten' },
+  { key: 'voortgang', label: 'Afspraken' },
+  { key: 'arbeidsmarktorientatie', label: 'Vervolg' },
 ]
 
 export const legacySummaryFallbackTitle = 'Samenvatting (oud formaat)'
@@ -33,12 +33,17 @@ export function createEmptyStructuredSummary(): StructuredSessionSummary {
 
 export function normalizeStructuredSummary(value: Partial<StructuredSessionSummary> | null | undefined): StructuredSessionSummary {
   const input = value || {}
+  const doelstelling = String(input.doelstelling || (input as Record<string, unknown>).kernpunten || '').trim()
+  const belastbaarheid = String(input.belastbaarheid || (input as Record<string, unknown>).situatie || '').trim()
+  const belemmeringen = String(input.belemmeringen || (input as Record<string, unknown>).aandachtspunten || '').trim()
+  const voortgang = String(input.voortgang || (input as Record<string, unknown>).afspraken || '').trim()
+  const arbeidsmarktorientatie = String(input.arbeidsmarktorientatie || (input as Record<string, unknown>).vervolg || '').trim()
   return {
-    doelstelling: String(input.doelstelling || '').trim(),
-    belastbaarheid: String(input.belastbaarheid || '').trim(),
-    belemmeringen: String(input.belemmeringen || '').trim(),
-    voortgang: String(input.voortgang || '').trim(),
-    arbeidsmarktorientatie: String(input.arbeidsmarktorientatie || '').trim(),
+    doelstelling,
+    belastbaarheid,
+    belemmeringen,
+    voortgang,
+    arbeidsmarktorientatie,
   }
 }
 
@@ -155,27 +160,27 @@ export function mapReportMarkdownToStructuredSummary(markdown: string | null | u
     const title = normalizeTitle(section.title)
     const content = String(section.content || '').trim()
     if (!content) continue
-    if (title === 'doelstelling') {
+    if (title === 'doelstelling' || title === 'kernpunten') {
       next.doelstelling = content
       hasAny = true
       continue
     }
-    if (title === 'belastbaarheid') {
+    if (title === 'belastbaarheid' || title === 'situatie') {
       next.belastbaarheid = content
       hasAny = true
       continue
     }
-    if (title === 'belemmeringen') {
+    if (title === 'belemmeringen' || title === 'aandachtspunten') {
       next.belemmeringen = content
       hasAny = true
       continue
     }
-    if (title === 'voortgang') {
+    if (title === 'voortgang' || title === 'afspraken') {
       next.voortgang = content
       hasAny = true
       continue
     }
-    if (title === 'arbeidsmarktorientatie' || title === 'arbeidsorientatie') {
+    if (title === 'arbeidsmarktorientatie' || title === 'arbeidsorientatie' || title === 'vervolg') {
       next.arbeidsmarktorientatie = content
       hasAny = true
     }

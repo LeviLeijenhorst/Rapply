@@ -1,9 +1,7 @@
 import type { Express, RequestHandler } from "express"
-import { registerActivityAiRoutes } from "../activities/routes/registerActivityAiRoutes"
-import { registerActivityRoutes } from "../activities/routes/registerActivityRoutes"
-import { registerActivityTemplateRoutes } from "../activities/routes/registerActivityTemplateRoutes"
 import { registerAccountRoutes } from "../account/routes/registerAccountRoutes"
 import { authImplementationVersion } from "../auth"
+import { requireAuthenticatedUser } from "../auth"
 import { registerChatRoutes } from "../chat/routes/registerChatRoutes"
 import { registerClientRoutes } from "../clients/routes/registerClientRoutes"
 import { registerEncryptionRoutes } from "../encryption/routes/registerEncryptionRoutes"
@@ -12,21 +10,15 @@ import { registerNoteRoutes } from "../notes/routes/registerNoteRoutes"
 import { registerPracticeSettingsRoutes } from "../practiceSettings/routes/registerPracticeSettingsRoutes"
 import { registerReportRoutes } from "../reports/routes/registerReportRoutes"
 import { registerSessionRoutes } from "../sessions/routes/registerSessionRoutes"
-import { registerSnippetAiRoutes } from "../snippets/routes/registerSnippetAiRoutes"
 import { registerSnippetRoutes } from "../snippets/routes/registerSnippetRoutes"
 import { registerSummaryRoutes } from "../summaries/routes/registerSummaryRoutes"
 import { registerTemplateRoutes } from "../templates/routes/registerTemplateRoutes"
-import { registerTrajectoryRoutes } from "../trajectories/routes/registerTrajectoryRoutes"
-import { registerAnalyticsRoutes } from "../analytics/registerAnalyticsRoutes"
 import { registerBillingRoutes } from "../billing/routes/registerBillingRoutes"
-import { registerFeedbackRoutes } from "../feedback/registerFeedbackRoutes"
 import { registerAuthRoutes } from "../identity/routes/registerAuthRoutes"
 import { registerSystemRoutes } from "../system/registerSystemRoutes"
-import { registerAdminTranscriptionRoutes } from "../transcription/routes/registerAdminTranscriptionRoutes"
 import { registerTranscriptionRoutes } from "../transcription/routes/registerTranscriptionRoutes"
 import { registerWorkspaceRoutes } from "../workspace/routes/registerWorkspaceRoutes"
-import { registerMeetingRecordingRoutes } from "../meetingRecordings/routes/registerMeetingRecordingRoutes"
-import { registerPipedriveRoutes } from "../integrations/pipedrive/routes/registerPipedriveRoutes"
+import { asyncHandler } from "../http"
 
 type RegisterRoutesParams = {
   diagnosticLogVersion: string
@@ -78,15 +70,11 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
   })
 
   registerAuthRoutes(app)
-  registerAnalyticsRoutes(app, { rateLimitAccount: params.rateLimitAccount, rateLimitPublic: params.rateLimitPublic })
   registerEncryptionRoutes(app, { rateLimitAccount: params.rateLimitAccount })
   registerWorkspaceRoutes(app)
   registerClientRoutes(app)
-  registerTrajectoryRoutes(app)
   registerSessionRoutes(app)
-  registerActivityRoutes(app)
-  registerActivityTemplateRoutes(app)
-  registerSnippetRoutes(app)
+  registerSnippetRoutes(app, { rateLimitAi: params.rateLimitAi })
   registerNoteRoutes(app)
   registerTemplateRoutes(app)
   registerReportRoutes(app)
@@ -94,12 +82,90 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
   registerAccountRoutes(app)
   registerChatRoutes(app, { rateLimitAi: params.rateLimitAi })
   registerSummaryRoutes(app, { rateLimitAi: params.rateLimitAi })
-  registerSnippetAiRoutes(app, { rateLimitAi: params.rateLimitAi })
-  registerActivityAiRoutes(app, { rateLimitAi: params.rateLimitAi })
-  registerFeedbackRoutes(app, { rateLimitAccount: params.rateLimitAccount, rateLimitPublic: params.rateLimitPublic })
-  registerAdminTranscriptionRoutes(app, { rateLimitAccount: params.rateLimitAccount })
   registerBillingRoutes(app, { rateLimitBilling: params.rateLimitBilling })
   registerTranscriptionRoutes(app, { rateLimitTranscription: params.rateLimitTranscription })
-  registerMeetingRecordingRoutes(app, { rateLimitTranscription: params.rateLimitTranscription })
-  registerPipedriveRoutes(app, { rateLimitAccount: params.rateLimitAccount })
+
+  // Keep legacy endpoints stable while features are out of scope in the new schema.
+  app.post(
+    "/analytics/events",
+    asyncHandler(async (_req, res) => {
+      res.status(200).json({ ok: true })
+    }),
+  )
+  app.post(
+    "/pricing/plans/public",
+    asyncHandler(async (_req, res) => {
+      res.status(200).json({ items: [] })
+    }),
+  )
+  app.post(
+    "/pricing/me-visibility",
+    asyncHandler(async (req, res) => {
+      await requireAuthenticatedUser(req)
+      res.status(200).json({ canSeePricingPage: false, planId: null })
+    }),
+  )
+  app.post(
+    "/trajectories/create",
+    asyncHandler(async (req, res) => {
+      await requireAuthenticatedUser(req)
+      res.status(200).json({ ok: true, disabled: true })
+    }),
+  )
+  app.post(
+    "/trajectories/update",
+    asyncHandler(async (req, res) => {
+      await requireAuthenticatedUser(req)
+      res.status(200).json({ ok: true, disabled: true })
+    }),
+  )
+  app.post(
+    "/trajectories/delete",
+    asyncHandler(async (req, res) => {
+      await requireAuthenticatedUser(req)
+      res.status(200).json({ ok: true, disabled: true })
+    }),
+  )
+  app.post(
+    "/activities/create",
+    asyncHandler(async (req, res) => {
+      await requireAuthenticatedUser(req)
+      res.status(200).json({ ok: true, disabled: true })
+    }),
+  )
+  app.post(
+    "/activities/update",
+    asyncHandler(async (req, res) => {
+      await requireAuthenticatedUser(req)
+      res.status(200).json({ ok: true, disabled: true })
+    }),
+  )
+  app.post(
+    "/activities/delete",
+    asyncHandler(async (req, res) => {
+      await requireAuthenticatedUser(req)
+      res.status(200).json({ ok: true, disabled: true })
+    }),
+  )
+  app.post(
+    "/activity-templates/create",
+    asyncHandler(async (req, res) => {
+      await requireAuthenticatedUser(req)
+      res.status(200).json({ ok: true, disabled: true })
+    }),
+  )
+  app.post(
+    "/activity-templates/update",
+    asyncHandler(async (req, res) => {
+      await requireAuthenticatedUser(req)
+      res.status(200).json({ ok: true, disabled: true })
+    }),
+  )
+  app.post(
+    "/activity-templates/delete",
+    asyncHandler(async (req, res) => {
+      await requireAuthenticatedUser(req)
+      res.status(200).json({ ok: true, disabled: true })
+    }),
+  )
 }

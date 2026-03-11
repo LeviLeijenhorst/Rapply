@@ -1,12 +1,12 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Image, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
 
 import { CircleCloseIcon } from '../../icons/CircleCloseIcon'
-import { PracticeColorPicker } from '../../ui/PracticeColorPicker'
+import { OrganizationColorPicker } from './components/OrganizationColorPicker'
 import { PracticeExportIcon } from '../../icons/PracticeExportIcon'
 import { Text } from '../../ui/Text'
 import { TextInput } from '../../ui/inputs/TextInput'
-import { ConfirmDeleteDialog } from '../../ui/modals/ConfirmDeleteDialog'
+import { WarningModal } from '../../ui/modals/WarningModal'
 import { brandColors } from '../../design/tokens/colors'
 import { fontSizes } from '../../design/tokens/fontSizes'
 import { radius } from '../../design/tokens/radius'
@@ -418,7 +418,7 @@ export function OrganizationScreen() {
                 Kleur
               </Text>
               <View style={styles.colorPickerWrap}>
-                <PracticeColorPicker
+            <OrganizationColorPicker
                   value={tintColorDraft}
                   onPreviewChange={(nextColor) => setTintColorDraft(normalizeHexColor(nextColor))}
                   onCommit={(nextColor) => {
@@ -487,7 +487,7 @@ export function OrganizationScreen() {
         </View>
 
         {false ? (
-        <ConfirmDeleteDialog
+        <WarningModal
           visible={isRemoveLogoConfirmOpen}
           title="Logo verwijderen"
           description="Weet je zeker dat je het logo wilt verwijderen?"
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
     ...( { maxWidth: 'min(1280px, 100%)' } as any ),
     gap: 14,
   },
-  formCard: { borderRadius: 12, borderWidth: 1, borderColor: '#DFE0E2', backgroundColor: '#FFFFFF', padding: 16, gap: 12, ...( { boxShadow: '0px 2px 8px rgba(0,0,0,0.08)' } as any ) },
+  formCard: { borderRadius: 12, borderWidth: 1, borderColor: '#DFE0E2', backgroundColor: '#FFFFFF', padding: 16, gap: 12, ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ) },
   formCardTitle: { flex: 1, fontSize: 16, lineHeight: 20, color: '#2C111F' },
   fieldGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   fieldItem: { width: '48.5%', gap: 6 },

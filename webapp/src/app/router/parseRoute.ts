@@ -6,7 +6,6 @@ export function parseRoute(pathname: string): RouteState {
   if (parts[0] === 'client' && parts[1]) return { kind: 'client', clientId: parts[1] }
   if (parts[0] === 'session' && parts[1]) return { kind: 'session', sessionId: parts[1] }
   if (parts[0] === 'new-report') return { kind: 'new-report' }
-  if (parts[0] === 'report' && parts[1]) return { kind: 'report', reportId: parts[1] }
   if (parts[0] === 'organization') return { kind: 'organization' }
   return { kind: 'clients' }
 }

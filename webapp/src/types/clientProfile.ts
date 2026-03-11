@@ -1,6 +1,6 @@
-import type { Coachee } from '../storage/types'
+import type { Client as ClientRecord } from '../storage/types'
 
-export type CoacheeUpsertValues = {
+export type ClientUpsertValues = {
   firstName: string
   initials: string
   lastName: string
@@ -59,8 +59,8 @@ function splitName(name: string): { firstName: string; lastName: string } {
   return { firstName, lastName: rest.join(' ') }
 }
 
-export function getCoacheeUpsertValues(coachee: Coachee | null | undefined): CoacheeUpsertValues {
-  if (!coachee) {
+export function getClientUpsertValues(client: ClientRecord | null | undefined): ClientUpsertValues {
+  if (!client) {
     return {
       firstName: '',
       initials: '',
@@ -82,9 +82,9 @@ export function getCoacheeUpsertValues(coachee: Coachee | null | undefined): Coa
     }
   }
 
-  const split = splitName(coachee.name)
-  const clientDetails = parseJsonObject<ParsedClientDetails>(coachee.clientDetails)
-  const employerDetails = parseJsonObject<ParsedEmployerDetails>(coachee.employerDetails)
+  const split = splitName(client.name)
+  const clientDetails = parseJsonObject<ParsedClientDetails>(client.clientDetails)
+  const employerDetails = parseJsonObject<ParsedEmployerDetails>(client.employerDetails)
 
   return {
     firstName: String(clientDetails?.firstName ?? split.firstName ?? '').trim(),
@@ -103,11 +103,14 @@ export function getCoacheeUpsertValues(coachee: Coachee | null | undefined): Coa
     employerContactName: String(employerDetails?.contactName ?? '').trim(),
     employerEmail: String(employerDetails?.email ?? '').trim(),
     employerPhone: String(employerDetails?.phone ?? '').trim(),
-    firstSickDay: String(coachee.firstSickDay ?? '').trim(),
+    firstSickDay: String((client as any).firstSickDay ?? '').trim(),
   }
 }
 
-export function serializeCoacheeUpsertValues(values: CoacheeUpsertValues): {
+export const getCoacheeUpsertValues = getClientUpsertValues
+export type CoacheeUpsertValues = ClientUpsertValues
+
+export function serializeClientUpsertValues(values: ClientUpsertValues): {
   name: string
   clientDetails: string
   employerDetails: string
@@ -146,7 +149,9 @@ export function serializeCoacheeUpsertValues(values: CoacheeUpsertValues): {
   }
 }
 
-export function formatCoacheeDetailsForPrompt(clientDetailsRaw: string | null | undefined): string[] {
+export const serializeCoacheeUpsertValues = serializeClientUpsertValues
+
+export function formatClientDetailsForPrompt(clientDetailsRaw: string | null | undefined): string[] {
   const details = parseJsonObject<ParsedClientDetails>(clientDetailsRaw)
   if (!details) return []
   const lines: string[] = []
@@ -160,6 +165,7 @@ export function formatCoacheeDetailsForPrompt(clientDetailsRaw: string | null | 
   if (String(details.city ?? '').trim()) lines.push(`Woonplaats client: ${String(details.city ?? '').trim()}`)
   return lines
 }
+export const formatCoacheeDetailsForPrompt = formatClientDetailsForPrompt
 
 export function formatEmployerDetailsForPrompt(employerDetailsRaw: string | null | undefined): string[] {
   const details = parseJsonObject<ParsedEmployerDetails>(employerDetailsRaw)

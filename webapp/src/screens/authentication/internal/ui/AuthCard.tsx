@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
-    ...( { boxShadow: '0 20px 60px rgba(0,0,0,0.16)' } as any ),
+    ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ),
   },
 })
 

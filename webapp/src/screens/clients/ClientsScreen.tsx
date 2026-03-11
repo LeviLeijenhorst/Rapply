@@ -1,13 +1,15 @@
-ï»¿import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native'
 
 import { colors } from '../../design/theme/colors'
-import { PlusIcon } from '../../icons/PlusIcon'
+import { typography } from '../../design/theme/typography'
+import { ChevronDownIcon } from '../../icons/ChevronDownIcon'
+import { NewClientAddIcon } from '../../icons/NewClientAddIcon'
 import { useLocalAppData } from '../../storage/LocalAppDataProvider'
 import { Text } from '../../ui/Text'
-import { SearchField } from '../../ui/inputs/SearchField'
+import { SearchBar } from '../../ui/inputs/SearchBar'
 import { ClientTableRow } from './components/ClientTableRow'
-import { selectClientListItems } from './selectors/clientListSelectors'
+import { type ClientListStatus, selectClientListItems } from './selectors/clientListSelectors'
 import { filterClientListItems } from './viewModels/clientsViewModel'
 
 type Props = {
@@ -15,14 +17,28 @@ type Props = {
   onOpenNewClientPage?: () => void
 }
 
+type ClientFilter = 'all' | ClientListStatus
+
+const FILTER_OPTIONS: Array<{ key: ClientFilter; label: string }> = [
+  { key: 'all', label: 'Alle cliënten' },
+  { key: 'active', label: 'Actief' },
+  { key: 'closed', label: 'Afgesloten' },
+]
+
 export function ClientsScreen({ onSelectCoachee, onOpenNewClientPage }: Props) {
   const { width: windowWidth } = useWindowDimensions()
   const { data } = useLocalAppData()
   const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<ClientFilter>('all')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [page, setPage] = useState(1)
 
   const allItems = useMemo(() => selectClientListItems(data), [data])
-  const visibleItems = useMemo(() => filterClientListItems(allItems, query), [allItems, query])
+  const searchedItems = useMemo(() => filterClientListItems(allItems, query), [allItems, query])
+  const visibleItems = useMemo(() => {
+    if (filter === 'all') return searchedItems
+    return searchedItems.filter((item) => item.status === filter)
+  }, [filter, searchedItems])
 
   const pageSize = 11
   const totalPages = Math.max(1, Math.ceil(visibleItems.length / pageSize))
@@ -30,40 +46,76 @@ export function ClientsScreen({ onSelectCoachee, onOpenNewClientPage }: Props) {
   const paginatedItems = visibleItems.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const searchInputRef = React.useRef<TextInput | null>(null)
-  const isCompactHeader = windowWidth < 950
+  const isCompactHeader = windowWidth < 1320
 
   React.useEffect(() => {
     setPage(1)
-  }, [query])
+  }, [filter, query])
+
+  const currentFilterLabel = FILTER_OPTIONS.find((option) => option.key === filter)?.label || 'Alle cliënten'
 
   return (
     <View style={styles.container}>
       <View style={[styles.headerRow, isCompactHeader ? styles.headerRowCompact : undefined]}>
-        <SearchField
+        <SearchBar
           value={query}
           onChangeText={setQuery}
-          placeholder="Zoek cliÃ«nten..."
+          placeholder="Zoek cliënten..."
           inputRef={searchInputRef}
           containerStyle={styles.searchField}
         />
 
-        <Pressable
-          onPress={() => onOpenNewClientPage?.()}
-          style={({ hovered }) => [styles.newClientButton, hovered ? styles.newClientButtonHovered : undefined]}
-        >
-          <PlusIcon color={colors.selected} size={18} />
-          <Text isSemibold style={styles.newClientButtonText}>
-            Nieuwe cliÃ«nt
-          </Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <View style={styles.filterWrap}>
+            <Pressable
+              onPress={() => setIsFilterOpen((value) => !value)}
+              style={({ hovered }) => [styles.filterButton, hovered ? styles.filterButtonHovered : undefined]}
+            >
+              <Text style={styles.filterButtonText}>{currentFilterLabel}</Text>
+              <ChevronDownIcon color="#93858D" size={18} />
+            </Pressable>
+            {isFilterOpen ? (
+              <View style={styles.filterMenu}>
+                {FILTER_OPTIONS.map((option) => (
+                  <Pressable
+                    key={option.key}
+                    onPress={() => {
+                      setFilter(option.key)
+                      setIsFilterOpen(false)
+                    }}
+                    style={({ hovered }) => [
+                      styles.filterMenuItem,
+                      option.key === filter ? styles.filterMenuItemSelected : undefined,
+                      hovered ? styles.filterMenuItemHovered : undefined,
+                    ]}
+                  >
+                    <Text style={[styles.filterMenuText, option.key === filter ? styles.filterMenuTextSelected : undefined]}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </View>
+
+          <Pressable
+            onPress={() => onOpenNewClientPage?.()}
+            style={({ hovered }) => [styles.newClientButton, hovered ? styles.newClientButtonHovered : undefined]}
+          >
+            <NewClientAddIcon color={colors.selected} size={18} />
+            <Text style={styles.newClientButtonText}>
+              Nieuwe cliënt
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.tableCard}>
         <View style={styles.tableHeaderRow}>
-          <Text isSemibold style={[styles.headerText, styles.clientColumn]}>CliÃ«nt</Text>
-          <Text isSemibold style={[styles.headerText, styles.numberColumn]}>Trajecten</Text>
-          <Text isSemibold style={[styles.headerText, styles.numberColumn]}>Sessies</Text>
-          <Text isSemibold style={[styles.headerText, styles.numberColumn]}>Rapportages</Text>
+          <Text isSemibold style={[styles.headerText, styles.clientColumn]}>Cliënt</Text>
+          <Text isSemibold style={[styles.headerText, styles.trajectoryColumn]}>Trajecten</Text>
+          <Text isSemibold style={[styles.headerText, styles.sessionColumn]}>Sessies</Text>
+          <Text isSemibold style={[styles.headerText, styles.reportsColumn]}>Rapportages</Text>
           <Text isSemibold style={[styles.headerText, styles.statusColumn]}>Status</Text>
           <Text isSemibold style={[styles.headerText, styles.lastSessionColumn]}>Laatste sessie</Text>
           <View style={styles.chevronColumn} />
@@ -75,7 +127,7 @@ export function ClientsScreen({ onSelectCoachee, onOpenNewClientPage }: Props) {
           ))}
           {paginatedItems.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>Geen cliÃ«nten gevonden.</Text>
+              <Text style={styles.emptyStateText}>Geen cliënten gevonden.</Text>
             </View>
           ) : null}
         </ScrollView>
@@ -84,7 +136,7 @@ export function ClientsScreen({ onSelectCoachee, onOpenNewClientPage }: Props) {
       <View style={styles.footerRow}>
         <Text style={styles.footerInfo}>
           Toont {paginatedItems.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}-
-          {(currentPage - 1) * pageSize + paginatedItems.length} van {visibleItems.length} cliÃ«nten
+          {(currentPage - 1) * pageSize + paginatedItems.length} van {visibleItems.length} cliënten
         </Text>
         {totalPages > 1 ? (
           <View style={styles.paginationRow}>
@@ -129,7 +181,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 16,
   },
   headerRowCompact: {
     flexWrap: 'wrap',
@@ -138,12 +190,80 @@ const styles = StyleSheet.create({
     width: 296,
     maxWidth: '100%',
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  filterWrap: {
+    position: 'relative',
+    zIndex: 2,
+  },
+  filterButton: {
+    width: 147,
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#DFE0E2',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  filterButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  filterButtonText: {
+    fontFamily: typography.fontFamilyRegular,
+    fontSize: 16,
+    lineHeight: 20,
+    color: '#2C111F',
+  },
+  filterMenu: {
+    position: 'absolute',
+    top: 44,
+    right: 0,
+    width: 147,
+    borderWidth: 1,
+    borderColor: '#DFE0E2',
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+    ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.08)' } as any ),
+    overflow: 'hidden',
+  },
+  filterMenuItem: {
+    minHeight: 36,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  filterMenuItemHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  filterMenuItemSelected: {
+    backgroundColor: '#FFF7FB',
+  },
+  filterMenuText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#2C111F',
+  },
+  filterMenuTextSelected: {
+    color: colors.selected,
+  },
   newClientButton: {
+    width: 168,
     height: 40,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.selected,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -154,6 +274,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF7FB',
   },
   newClientButtonText: {
+    fontFamily: typography.fontFamilyRegular,
     fontSize: 16,
     lineHeight: 20,
     color: colors.selected,
@@ -164,13 +285,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DFE0E2',
     backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 3,
+    ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ),
     overflow: 'hidden',
   },
   tableHeaderRow: {
     minHeight: 58,
     borderBottomWidth: 1,
     borderBottomColor: '#DFE0E2',
-    paddingHorizontal: 16,
+    paddingLeft: 24,
+    paddingRight: 16,
     backgroundColor: '#F9FAFB',
     flexDirection: 'row',
     alignItems: 'center',
@@ -180,6 +308,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerText: {
+    fontFamily: typography.fontFamilySemibold,
     fontSize: 16,
     lineHeight: 20,
     color: 'rgba(44,17,31,0.5)',
@@ -188,14 +317,20 @@ const styles = StyleSheet.create({
     flex: 1.7,
     minWidth: 180,
   },
-  numberColumn: {
-    width: 86,
+  trajectoryColumn: {
+    width: 150,
+  },
+  sessionColumn: {
+    width: 137,
+  },
+  reportsColumn: {
+    width: 168,
   },
   statusColumn: {
-    width: 110,
+    width: 100,
   },
   lastSessionColumn: {
-    width: 140,
+    width: 160,
   },
   chevronColumn: {
     width: 24,

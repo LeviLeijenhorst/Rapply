@@ -2,13 +2,13 @@
 import { Image, Pressable, ScrollView, View } from 'react-native'
 
 import { Text } from '../../../ui/Text'
-import { CoachscribeLogo } from '../../../ui/CoachscribeLogo'
+import { CoachscribeLogo } from '../../../components/brand/CoachscribeLogo'
 import { CheckmarkIcon } from '../../../icons/CheckmarkIcon'
 import { MicrophoneSmallIcon } from '../../../icons/MicrophoneSmallIcon'
 import { colors } from '../../../design/theme/colors'
-import { styles } from '../newInputModalStyles'
+import { styles } from '../styles'
 
-type Props = {
+type ConsentStepModel = {
   hasRecordingConsent: boolean
   isCompactConsent: boolean
   limitedMode: boolean
@@ -22,7 +22,7 @@ export function ConsentStep({
   limitedMode,
   onOpenConsentHelpPage,
   onToggleConsent,
-}: Props) {
+}: ConsentStepModel) {
   if (limitedMode) {
     return (
       <View style={styles.mobileConsentBody}>
@@ -56,10 +56,10 @@ export function ConsentStep({
           <MicrophoneSmallIcon color={colors.textStrong} size={28} />
         </View>
         <Text isBold style={[styles.consentTitle, isCompactConsent ? styles.consentTitleCompact : undefined]}>
-          Ik heb expliciete toestemming van mijn cliënt
+          Ik heb expliciete toestemming van mijn cli�nt
         </Text>
         <Text style={[styles.consentDescription, isCompactConsent ? styles.consentDescriptionCompact : undefined]}>
-          Door verder te gaan bevestig je dat alle deelnemers vooraf zijn geïnformeerd over de opname en vrijwillig toestemming hebben gegeven.
+          Door verder te gaan bevestig je dat alle deelnemers vooraf zijn ge�nformeerd over de opname en vrijwillig toestemming hebben gegeven.
         </Text>
         <Pressable
           onPress={onToggleConsent}

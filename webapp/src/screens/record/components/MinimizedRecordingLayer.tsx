@@ -1,16 +1,16 @@
-﻿import React from 'react'
+import React from 'react'
 import { Pressable, View } from 'react-native'
 
-import { AnimatedOverlayModal } from '../../../ui/AnimatedOverlayModal'
+import { Modal } from '../../../ui/animated/Modal'
 import { Text } from '../../../ui/Text'
 import { ModalCloseIcon } from '../../../icons/ModalCloseIcon'
 import { PauseIcon } from '../../../icons/PauseIcon'
 import { PlaySmallIcon } from '../../../icons/PlaySmallIcon'
 import { StopSquareIcon } from '../../../icons/StopSquareIcon'
-import { formatTimeLabel } from '../newInputModalUtils'
-import { styles } from '../newInputModalStyles'
+import { formatTimeLabel } from '../utils'
+import { styles } from '../styles'
 
-type Props = {
+type MinimizedRecordingLayerModel = {
   bars: number[]
   displayedRecordingElapsedSeconds: number
   isMinimizedCloseWarningVisible: boolean
@@ -40,7 +40,7 @@ export function MinimizedRecordingLayer({
   onStopRecording,
   onRestore,
   recorderStatus,
-}: Props) {
+}: MinimizedRecordingLayerModel) {
   return (
     <>
       <View style={styles.minimizedOverlay} pointerEvents="box-none">
@@ -113,7 +113,7 @@ export function MinimizedRecordingLayer({
         </Pressable>
       </View>
 
-      <AnimatedOverlayModal
+      <Modal
         visible={isMinimizedCloseWarningVisible}
         onClose={onCloseWarningCancel}
         contentContainerStyle={styles.closeWarningContainer}
@@ -152,7 +152,7 @@ export function MinimizedRecordingLayer({
             </Pressable>
           </View>
         </View>
-      </AnimatedOverlayModal>
+      </Modal>
     </>
   )
 }

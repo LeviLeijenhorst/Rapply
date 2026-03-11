@@ -4,7 +4,6 @@ import { env } from "./env"
 import { sendError } from "./http"
 import { prewarmRuntimeSchemaCompatibility } from "./runtimeSchema"
 import { registerAudioRoutes } from "./audio/routes/registerAudioRoutes"
-import { startPipedriveImportWorker } from "./integrations/pipedrive/startPipedriveImportWorker"
 import { registerRoutes } from "./routes/registerRoutes"
 import { createCorsMiddleware, createRateLimitMiddleware, parseCorsAllowedOriginsFromEnv } from "./security"
 
@@ -137,7 +136,6 @@ async function startServer(): Promise<void> {
   }
 
   app.listen(env.port, () => {
-    startPipedriveImportWorker()
     logRuntimeConfiguration()
   })
 }

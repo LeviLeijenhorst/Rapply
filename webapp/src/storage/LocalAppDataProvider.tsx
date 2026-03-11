@@ -48,35 +48,22 @@ import {
   WrittenReport,
 } from './types'
 import {
-  createActivityRemote,
-  createActivityTemplateRemote,
-  createSnippetRemote,
-  createCoacheeRemote,
-  createNoteRemote,
-  createSessionRemote,
-  createTemplateRemote,
-  createTrajectoryRemote,
-  deleteActivityRemote,
-  deleteActivityTemplateRemote,
-  deleteSnippetRemote,
-  deleteCoacheeRemote,
-  deleteNoteRemote,
-  deleteSessionRemote,
-  deleteTemplateRemote,
-  deleteTrajectoryRemote,
   readAppData,
-  readDefaultTemplates,
-  setWrittenReportRemote,
-  updateActivityRemote,
-  updateActivityTemplateRemote,
-  updateSnippetRemote,
-  updateCoacheeRemote,
-  updateNoteRemote,
-  updateSessionRemote,
-  updateTemplateRemote,
-  updatePracticeSettingsRemote,
-  updateTrajectoryRemote,
 } from '../api/appData/appDataApi'
+import { createActivityRemote, deleteActivityRemote, updateActivityRemote } from '../api/activities/activityApi'
+import {
+  createActivityTemplateRemote,
+  deleteActivityTemplateRemote,
+  updateActivityTemplateRemote,
+} from '../api/activities/activityTemplateApi'
+import { createCoacheeRemote, deleteCoacheeRemote, updateCoacheeRemote } from '../api/clients/clientApi'
+import { createNoteRemote, deleteNoteRemote, updateNoteRemote } from '../api/notes/noteApi'
+import { updatePracticeSettingsRemote } from '../api/practice/practiceSettingsApi'
+import { setWrittenReportRemote } from '../api/reports/reportApi'
+import { createSessionRemote, deleteSessionRemote, updateSessionRemote } from '../api/sessions/sessionApi'
+import { createSnippetRemote, deleteSnippetRemote, updateSnippetRemote } from '../api/snippets/snippetApi'
+import { createTemplateRemote, deleteTemplateRemote, readDefaultTemplates, updateTemplateRemote } from '../api/templates/templateApi'
+import { createTrajectoryRemote, deleteTrajectoryRemote, updateTrajectoryRemote } from '../api/trajectories/trajectoryApi'
 import { useOptionalE2ee } from '../security/providers/E2eeProvider'
 
 type ContextValue = {
@@ -652,13 +639,6 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
     try {
       const remoteRaw = await readAppData()
       const remote = await decryptRemoteData(remoteRaw)
-      console.log('[APPDATA_READ_RESPONSE]', {
-        sessionsWithSummaryStructuredCount: remote.sessions.filter((session) => {
-          const value = (session as any).summaryStructured
-          if (!value || typeof value !== 'object') return false
-          return Object.values(value as Record<string, unknown>).some((field) => String(field || '').trim().length > 0)
-        }).length,
-      })
       setData((previous) => {
         const remoteBySessionId = new Map(remote.writtenReports.map((report) => [report.sessionId, report]))
         const mergedWrittenReports = [...remote.writtenReports]
@@ -697,6 +677,28 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
       next.notes.length === 0 &&
       next.writtenReports.length === 0 &&
       next.templates.length === 0
+    )
+  }
+
+  function hasSessionChanges(session: Session, values: Parameters<ContextValue['updateSession']>[1]) {
+    return (
+      (values.coacheeId !== undefined && values.coacheeId !== session.coacheeId) ||
+      (values.trajectoryId !== undefined && values.trajectoryId !== session.trajectoryId) ||
+      (values.kind !== undefined && values.kind !== session.kind) ||
+      (values.title !== undefined && values.title.trim() !== session.title) ||
+      (values.createdAtUnixMs !== undefined && values.createdAtUnixMs !== session.createdAtUnixMs) ||
+      (values.audioBlobId !== undefined && values.audioBlobId !== session.audioBlobId) ||
+      (values.audioDurationSeconds !== undefined && values.audioDurationSeconds !== session.audioDurationSeconds) ||
+      (values.uploadFileName !== undefined && values.uploadFileName !== session.uploadFileName) ||
+      (values.transcript !== undefined && values.transcript !== session.transcript) ||
+      (values.summary !== undefined && values.summary !== session.summary) ||
+      (values.summaryStructured !== undefined &&
+        JSON.stringify(values.summaryStructured) !== JSON.stringify(session.summaryStructured)) ||
+      (values.reportDate !== undefined && values.reportDate !== session.reportDate) ||
+      (values.wvpWeekNumber !== undefined && values.wvpWeekNumber !== session.wvpWeekNumber) ||
+      (values.reportFirstSickDay !== undefined && values.reportFirstSickDay !== session.reportFirstSickDay) ||
+      (values.transcriptionStatus !== undefined && values.transcriptionStatus !== session.transcriptionStatus) ||
+      (values.transcriptionError !== undefined && values.transcriptionError !== session.transcriptionError)
     )
   }
 
@@ -824,22 +826,11 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         return session.id
       },
       updateSession: (sessionId, values) => {
-        console.log('[SESSION_UPDATE_CALLED]', {
-          sessionId,
-          summaryStructured: (values as any).summaryStructured,
-          values,
-        })
+        const currentSession = data.sessions.find((session) => session.id === sessionId)
+        if (!currentSession || !hasSessionChanges(currentSession, values)) return
         const updatedAtUnixMs = Date.now()
         setData((previous) => updateSession(previous, sessionId, values))
-        if (!e2ee) {
-          console.log('[MUTATION_PAYLOAD]', {
-            sessionId,
-            summaryStructured: (values as any).summaryStructured,
-            payload: null,
-            reason: 'Skipped remote update because e2ee is disabled in LocalAppDataProvider.updateSession',
-          })
-          return
-        }
+        if (!e2ee) return
         void (async () => {
           const hasSummaryStructuredField = Object.prototype.hasOwnProperty.call(values, 'summaryStructured')
           const encryptedTitle = typeof values.title === 'string' ? await e2ee.encryptText(values.title) : undefined
@@ -900,11 +891,6 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
             transcriptionStatus: values.transcriptionStatus,
             transcriptionError: encryptedError,
           }
-          console.log('[MUTATION_PAYLOAD]', {
-            sessionId,
-            summaryStructured: payload.summaryStructured,
-            payload,
-          })
           await updateSessionRemote(payload)
         })()
           .then(refreshFromServer)
@@ -1192,10 +1178,12 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
       },
 
       setWrittenReport: (sessionId, text) => {
-        const updatedAtUnixMs = Date.now()
-        setData((previous) => setWrittenReport(previous, sessionId, text))
         const trimmedText = text.trim()
         if (!trimmedText) return
+        const currentReport = data.writtenReports.find((report) => report.sessionId === sessionId)
+        if (currentReport && currentReport.text.trim() === trimmedText) return
+        const updatedAtUnixMs = Date.now()
+        setData((previous) => setWrittenReport(previous, sessionId, text))
         const report: WrittenReport = { sessionId, text: trimmedText, updatedAtUnixMs }
         if (e2ee) {
           void (async () => {

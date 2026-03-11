@@ -1,6 +1,7 @@
 import { computeAudioDurationSecondsFromEncryptedUpload } from "../duration"
 import { fetchEncryptedUploadStream } from "../storage"
 
+// Reads the upload twice if needed to recover audio duration from weak metadata.
 export async function readDurationSeconds(params: {
   uploadPath: string
   keyBase64: string

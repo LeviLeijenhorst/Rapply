@@ -27,7 +27,7 @@ export function ReportCard({ item, onPress }: Props) {
         </Text>
       </View>
       <View style={[styles.cell, styles.dateColumn]}>
-        <Text style={styles.dateText}>{item.createdAtLabel}</Text>
+        <Text isSemibold style={styles.dateText}>{item.createdAtLabel}</Text>
       </View>
       <View style={[styles.cell, styles.statusColumn]}>
         <View style={[styles.statusPill, isDone ? styles.donePill : styles.reviewPill]}>
@@ -53,7 +53,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#F1F1F1',
-    paddingHorizontal: 16,
+    paddingLeft: 24,
+    paddingRight: 16,
     gap: 12,
   },
   rowHovered: {
@@ -71,13 +72,13 @@ const styles = StyleSheet.create({
     minWidth: 170,
   },
   dateColumn: {
-    width: 132,
+    width: 160,
   },
   statusColumn: {
-    width: 110,
+    width: 100,
   },
   lastEditedColumn: {
-    width: 140,
+    width: 160,
   },
   chevronColumn: {
     width: 24,

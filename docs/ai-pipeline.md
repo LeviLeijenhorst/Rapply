@@ -21,8 +21,8 @@ This document covers:
 The system should support these input types:
 
 - spoken recap
-- recorded conversation
-- uploaded conversation audio
+- recorded conversation (session)
+- uploaded conversation audio (session)
 - written recap
 - uploaded document (future)
 

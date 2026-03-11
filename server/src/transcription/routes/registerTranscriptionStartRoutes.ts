@@ -2,19 +2,19 @@ import type { Express } from "express"
 import { requireAuthenticatedUser } from "../../auth"
 import { readBillingStatus } from "../../billing/store"
 import { asyncHandler, sendError } from "../../http"
-import { generateSessionSummary } from "../../summaries/generateSessionSummary"
 import { deleteEncryptedUpload, getEncryptedUploadSize } from "../storage"
-import { chargeSecondsIdempotent, consumeUploadToken, refundSecondsIdempotent } from "../store"
+import { chargeSecondsOnce, consumeUploadToken, refundChargedSeconds } from "../store"
 import { markOperationCompleted } from "../actions/markOperationCompleted"
 import { markOperationFailed } from "../actions/markOperationFailed"
 import { getProviderMaxAudioDurationSeconds } from "../actions/providerLimits"
+import { runBatchTranscription } from "../actions/runBatchTranscription"
 import { readDurationSeconds } from "../actions/readDurationSeconds"
 import { readStartRequest } from "../actions/readStartRequest"
 import { readTranscriptionChargeContext } from "../actions/readTranscriptionChargeContext"
 import { resolveTranscriptionProviderWithRuntimeMode } from "../actions/resolveTranscriptionProvider"
-import { runTranscription } from "../actions/runTranscription"
 import type { RegisterTranscriptionRoutesParams, TranscriptionProvider } from "./types"
 
+// Registers the route that runs batch transcription for an uploaded file.
 export function registerTranscriptionStartRoutes(app: Express, params: RegisterTranscriptionRoutesParams): void {
   app.post(
     "/transcription/start",
@@ -27,7 +27,7 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
         return
       }
 
-      const { operationId, uploadToken, keyBase64, languageCode, mimeType, includeSummary } = startRequest
+      const { operationId, uploadToken, keyBase64, languageCode, mimeType } = startRequest
       let uploadPath = ""
       let selectedProvider: TranscriptionProvider = "none"
 
@@ -58,7 +58,7 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
 
         let charge: { secondsCharged: number; remainingSecondsAfter: number }
         try {
-          charge = await chargeSecondsIdempotent({
+          charge = await chargeSecondsOnce({
             userId: user.userId,
             operationId,
             secondsToCharge,
@@ -86,7 +86,7 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
           return
         }
 
-        const transcript = await runTranscription({
+        const transcript = await runBatchTranscription({
           provider: selectedProvider,
           uploadPath,
           keyBase64,
@@ -94,13 +94,12 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
           languageCode,
         })
 
-        const summary = includeSummary ? await generateSessionSummary({ transcript }) : ""
         await markOperationCompleted({ operationId, userId: user.userId })
 
         res.status(200).json({
           transcript,
           text: transcript,
-          summary,
+          summary: "",
           secondsCharged: charge.secondsCharged,
           remainingSecondsAfter: charge.remainingSecondsAfter,
           planKey: null,
@@ -108,7 +107,7 @@ export function registerTranscriptionStartRoutes(app: Express, params: RegisterT
       } catch (error: any) {
         const errorMessage = String(error?.message || error)
         try {
-          await refundSecondsIdempotent({ userId: user.userId, operationId })
+          await refundChargedSeconds({ userId: user.userId, operationId })
           await markOperationFailed({ operationId, userId: user.userId, errorMessage })
         } catch {
           // Ignore cleanup failures to avoid masking root errors.

@@ -1,5 +1,5 @@
 import { trackWebappEvent } from '../analytics/webappAnalytics'
-import { callSecureApi } from '../core/secureApi'
+import { callSecureApi } from '../secureApi'
 import type { LocalChatMessage } from './types'
 
 type ChatResponse = {

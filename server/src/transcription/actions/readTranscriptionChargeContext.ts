@@ -8,6 +8,7 @@ export type TranscriptionChargeContext = {
   freeSecondsOverride: number | null
 }
 
+// Reads the billing context used for charging transcription seconds.
 export async function readTranscriptionChargeContext(params: { userId: string }): Promise<TranscriptionChargeContext> {
   const useMollie = isMollieConfigured()
   if (useMollie) {

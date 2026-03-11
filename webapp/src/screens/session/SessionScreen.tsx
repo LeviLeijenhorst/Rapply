@@ -1,68 +1,72 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import { StyleSheet, View } from 'react-native'
 
-import { useLocalAppData } from '../../storage/LocalAppDataProvider'
-import { EmptyPageMessage } from '../../ui/EmptyPageMessage'
-import { sessionViewModel } from './viewModels/sessionViewModel'
-import { selectSessionNotes } from './selectors/sessionNoteSelectors'
-import { SessionHeader } from './components/SessionHeader'
-import { SessionSummaryCard } from './components/SessionSummaryCard'
-import { SnippetApprovalSection } from './components/SnippetApprovalSection'
-import { SessionNotesCard } from './components/SessionNotesCard'
+import { semanticColorTokens } from '@/design/tokens/colors'
+import { spacing } from '@/design/tokens/spacing'
+import { Header } from '@/screens/session/components/Header'
+import { RightPanel } from '@/screens/session/components/RightPanel'
+import { SnippetSection } from '@/screens/session/components/SnippetSection'
+import { SummaryCard } from '@/screens/session/components/SummaryCard'
+import type { SessionScreenProps } from '@/screens/session/sessionScreen.types'
+import { useSessionScreen } from '@/screens/session/sessionScreen.logic'
+import { EmptyPageMessage } from '@/ui/EmptyPageMessage'
 
-type Props = {
-  sessionId: string
-  title: string
-  coacheeName: string
-  dateLabel: string
-  forceRapportageOnly?: boolean
-  initialOpenTemplatePicker?: boolean
-  onInitialTemplatePickerHandled?: () => void
-  onBack: () => void
-  onOpenNewCoachee: () => void
-  onOpenMySubscription: () => void
-  onChangeCoachee: (coacheeId: string | null) => void
-  newlyCreatedCoacheeName?: string | null
-  onNewlyCreatedCoacheeHandled?: () => void
-}
+export function SessionScreen(props: SessionScreenProps) {
+  const { title, clientName, date, onBack } = props
 
-export function SessionScreen({ sessionId, title, coacheeName, dateLabel, onBack }: Props) {
-  const { data, createNote, updateSnippet } = useLocalAppData()
-  const { session, snippets } = useMemo(() => sessionViewModel(data.sessions, data.snippets, sessionId), [data.sessions, data.snippets, sessionId])
-  const notes = useMemo(() => selectSessionNotes(data.notes, sessionId), [data.notes, sessionId])
+  const {
+    isSessionMissing,
+    resolvedInputId,
+    summary,
+    transcriptionStatus,
+    transcript,
+    canRegenerateSnippets,
+    sessionNotes,
+    sessionSnippets,
+    isRegeneratingSnippets,
+    handleRegenerateSessionSnippets,
+    handleUpdateSnippetStatus,
+    handleDeleteSnippet,
+    createNote,
+    updateNote,
+    deleteNote,
+  } = useSessionScreen(props)
 
-  if (!session) {
+  if (isSessionMissing) {
     return <EmptyPageMessage message="Deze sessie bestaat niet meer." onGoHome={onBack} />
   }
 
   return (
     <View style={styles.page}>
-      <SessionHeader title={title} clientName={coacheeName} dateLabel={dateLabel} onBack={onBack} />
+      {/* Page header */}
+      <Header title={title} clientName={clientName} date={date} />
 
       <View style={styles.layoutRow}>
+        {/* Left column: summary + snippets */}
         <View style={styles.leftColumn}>
-          <SessionSummaryCard
-            summary={session.summary}
-            summaryStructured={session.summaryStructured}
-            transcript={session.transcript}
-            transcriptionStatus={session.transcriptionStatus}
-          />
-          <SnippetApprovalSection
-            snippets={snippets}
-            onUpdateSnippetStatus={(snippetId, status) => {
-              updateSnippet(snippetId, { status })
-            }}
+          <SummaryCard summary={summary} transcriptionStatus={transcriptionStatus} />
+
+          <SnippetSection
+            snippets={sessionSnippets}
+            canRegenerate={canRegenerateSnippets}
+            isRegenerating={isRegeneratingSnippets}
+            onRegenerate={handleRegenerateSessionSnippets}
+            onUpdateSnippetStatus={handleUpdateSnippetStatus}
+            onDeleteSnippet={handleDeleteSnippet}
           />
         </View>
 
+        {/* Right column: chatbot + notes */}
         <View style={styles.rightColumn}>
-          <SessionNotesCard
-            sessionId={sessionId}
-            notes={notes}
-            snippets={snippets}
-            summary={session.summary}
-            transcript={session.transcript}
+          <RightPanel
+            inputId={resolvedInputId}
+            notes={sessionNotes}
+            snippets={sessionSnippets}
+            summary={summary}
+            transcript={transcript}
             onCreateNote={createNote}
+            onUpdateNote={updateNote}
+            onDeleteNote={deleteNote}
           />
         </View>
       </View>
@@ -73,27 +77,28 @@ export function SessionScreen({ sessionId, title, coacheeName, dateLabel, onBack
 const styles = StyleSheet.create({
   page: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 24,
-    gap: 20,
-    backgroundColor: '#F7F5F8',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+    gap: spacing.lg - 4,
+    backgroundColor: semanticColorTokens.light.pageBackground,
   },
   layoutRow: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 24,
+    gap: spacing.lg,
   },
   leftColumn: {
     flex: 1,
-    gap: 24,
+    gap: spacing.lg,
     minWidth: 0,
   },
   rightColumn: {
     width: 437,
     minWidth: 437,
     maxWidth: 437,
-    paddingBottom: 8,
+    minHeight: 0,
+    alignSelf: 'stretch',
   },
 })

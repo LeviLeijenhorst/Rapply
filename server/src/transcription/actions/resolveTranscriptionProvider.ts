@@ -2,12 +2,14 @@ import { env } from "../../env"
 import { readTranscriptionRuntimeSettings } from "../mode"
 import type { TranscriptionProvider } from "../routes/types"
 
+// Resolves the batch provider directly from env availability.
 export function resolveTranscriptionProvider(): TranscriptionProvider {
-  if (env.azureSpeechKey && env.azureSpeechRegion) return "azure-speech-fast"
   if (env.speechmaticsApiKey) return "speechmatics-batch"
+  if (env.azureSpeechKey && env.azureSpeechRegion) return "azure-speech-fast"
   return "none"
 }
 
+// Resolves the active provider and mode from configuration plus env availability.
 export async function resolveTranscriptionProviderWithRuntimeMode(): Promise<TranscriptionProvider> {
   const settings = await readTranscriptionRuntimeSettings()
 
