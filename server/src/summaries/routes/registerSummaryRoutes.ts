@@ -2,7 +2,7 @@ import type { Express, RequestHandler } from "express"
 import { requireAuthenticatedUser } from "../../identity/auth"
 import { asyncHandler, sendError } from "../../http"
 import { generateSummary } from "../generateSummary"
-import { readSummaryTemplate } from "../readSummaryTemplate"
+import { generateStructuredItemSummary } from "../generateStructuredItemSummary"
 
 type RegisterSummaryRoutesParams = {
   rateLimitAi: RequestHandler
@@ -17,14 +17,20 @@ export function registerSummaryRoutes(app: Express, params: RegisterSummaryRoute
       await requireAuthenticatedUser(req)
 
       const transcript = typeof req.body?.transcript === "string" ? req.body.transcript : ""
-      const template = readSummaryTemplate(req.body?.template)
+      const responseMode = String(req.body?.responseMode || "markdown").trim().toLowerCase()
 
       if (!String(transcript || "").trim()) {
         sendError(res, 400, "Missing transcript")
         return
       }
 
-      const summary = await generateSummary({ transcript, template })
+      if (responseMode === "structured_item_summary") {
+        const structuredSummary = await generateStructuredItemSummary({ transcript })
+        res.status(200).json({ summary: JSON.stringify(structuredSummary) })
+        return
+      }
+
+      const summary = await generateSummary({ transcript })
       res.status(200).json({ summary })
     }),
   )

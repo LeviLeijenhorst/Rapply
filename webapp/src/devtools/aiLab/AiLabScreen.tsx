@@ -274,7 +274,7 @@ function buildRealisticClientChatContextMessages(): LocalChatMessage[] {
         title: 'Intake',
         createdAtUnixMs: Date.parse('2026-01-10T09:00:00Z'),
         summary: 'Client ervaart stress bij terugkeer naar werk. Er is behoefte aan ritmeopbouw en een helder opbouwplan.',
-        reportText: 'Tijdens de intake is afgesproken om belastbaarheid rustig op te bouwen en arbeidsmarktoriÃ«ntatie pas later te starten.',
+        reportText: 'Tijdens de intake is afgesproken om belastbaarheid rustig op te bouwen en arbeidsmarktorientatie pas later te starten.',
         reportDate: '2026-01-10',
       },
       {
@@ -306,7 +306,7 @@ function buildRealisticInputChatContextMessages(): LocalChatMessage[] {
         '[01:26] client: Ik raak nog gespannen als ik denk aan terugkeer bij mijn oude werkgever.',
       ].join('\n'),
       writtenReportText:
-        'Korte rapportage: voortgang zichtbaar in ritme en arbeidsmarktoriÃ«ntatie. Spanning rond terugkeer bij oude werkgever blijft een belemmering.',
+        'Korte rapportage: voortgang zichtbaar in ritme en arbeidsmarktorientatie. Spanning rond terugkeer bij oude werkgever blijft een belemmering.',
     }),
     {
       role: 'system',
@@ -351,7 +351,7 @@ function buildSnippetSystemMessage(params: { snippets: Snippet[]; scope: ChatSni
   return [
     {
       role: 'system',
-      text: ['Snippets binnen deze cliÃ«nt:', '', ...dateBlocks].join('\n\n'),
+      text: ['Snippets binnen deze client:', '', ...dateBlocks].join('\n\n'),
     },
   ]
 }
@@ -1147,7 +1147,7 @@ export function AiLabScreen() {
     setChatContextMessagesJson(JSON.stringify(contextMessages, null, 2))
     setIncludeKnowledgeInChat('no')
     setChatSnippetScope('session')
-    setChatDraft('Welke concrete voortgang noemt de cliÃ«nt en welke belemmering blijft bestaan?')
+    setChatDraft('Welke concrete voortgang noemt de client en welke belemmering blijft bestaan?')
     setOk('Realistic session chat scenario loaded.')
   }
 

@@ -73,6 +73,27 @@ export function structuredSummaryToMarkdown(value: StructuredInputSummary | null
   return sections.join('\n\n').trim()
 }
 
+export function structuredSummaryToPlainText(value: StructuredInputSummary | null | undefined): string {
+  const normalized = normalizeStructuredSummary(value)
+
+  const normalizeSentence = (input: string): string => {
+    const trimmed = String(input || '').trim()
+    if (!trimmed) return ''
+    if (/[.!?]$/.test(trimmed)) return trimmed
+    return `${trimmed}.`
+  }
+
+  const orderedParts = [
+    normalizeSentence(normalized.doelstelling),
+    normalizeSentence(normalized.belastbaarheid),
+    normalizeSentence(normalized.belemmeringen),
+    normalizeSentence(normalized.voortgang),
+    normalizeSentence(normalized.arbeidsmarktorientatie),
+  ].filter((content): content is string => content.length > 0)
+
+  return orderedParts.join(' ').trim()
+}
+
 function stripJsonCodeFences(value: string): string {
   const trimmed = String(value || '').trim()
   const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)

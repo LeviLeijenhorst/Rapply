@@ -18,8 +18,6 @@ type ClientOption = {
 }
 
 type RecordedStepModel = {
-  audioDurationSeconds: number | null
-  audioPreviewUrl: string | null
   clientDropdownMaxHeight: number | null
   clientOptions: ClientOption[]
   defaultDropdownMaxHeight: number
@@ -29,19 +27,13 @@ type RecordedStepModel = {
   selectedOption: OptionKey | null
   sessionTitle: string
   sessionTitleInputRef: React.RefObject<TextInput | null>
-  shouldSaveAudio: boolean
   clientTriggerRef: React.RefObject<any>
-  onAddClient: () => void
   onSelectClient: (clientId: string | null) => void
   onInputTitleChange: (title: string) => void
-  onToggleAudioSave: () => void
   onToggleClientDropdown: () => void
-  onUpdateAudioDuration: (seconds: number | null) => void
 }
 
 export function RecordedStep({
-  audioDurationSeconds,
-  audioPreviewUrl,
   clientDropdownMaxHeight,
   clientOptions,
   defaultDropdownMaxHeight,
@@ -51,14 +43,10 @@ export function RecordedStep({
   selectedOption,
   sessionTitle,
   sessionTitleInputRef,
-  shouldSaveAudio,
   clientTriggerRef,
-  onAddClient,
   onSelectClient,
   onInputTitleChange,
-  onToggleAudioSave,
   onToggleClientDropdown,
-  onUpdateAudioDuration: _onUpdateAudioDuration,
 }: RecordedStepModel) {
   return (
     <View style={styles.recordedBody}>
@@ -68,20 +56,6 @@ export function RecordedStep({
           <Text isSemibold style={styles.mobileRecordedStatusText}>
             {selectedOption === 'gespreksverslag' ? 'Verslag opgenomen...' : selectedOption === 'intake' ? 'Intake opgenomen...' : 'Gesprek opgenomen...'}
           </Text>
-        </View>
-      ) : null}
-      {audioPreviewUrl && !limitedMode ? (
-        <View style={styles.audioPreviewCard}>          <Pressable
-            onPress={onToggleAudioSave}
-            style={({ hovered }) => [styles.audioSaveToggleRow, hovered ? styles.audioSaveToggleRowHovered : undefined]}
-          >
-            <Text isSemibold style={styles.audioSaveToggleLabel}>
-              Audio opslaan
-            </Text>
-            <View style={[styles.audioSaveToggleTrack, shouldSaveAudio ? styles.audioSaveToggleTrackOn : styles.audioSaveToggleTrackOff]}>
-              <View style={[styles.audioSaveToggleThumb, shouldSaveAudio ? styles.audioSaveToggleThumbOn : styles.audioSaveToggleThumbOff]} />
-            </View>
-          </Pressable>
         </View>
       ) : null}
       <Pressable onPress={() => sessionTitleInputRef.current?.focus()} style={styles.infoRow}>
@@ -140,19 +114,6 @@ export function RecordedStep({
                 )
               })}
             </ScrollView>
-            <Pressable
-              onPress={onAddClient}
-              style={({ hovered }) => [
-                styles.clientItem,
-                styles.clientItemAdd,
-                clientOptions.length === 0 ? styles.clientItemTop : undefined,
-                styles.clientItemBottom,
-                hovered ? styles.clientItemAddHovered : undefined,
-              ]}
-            >
-              <ProfileCircleIcon />
-              <Text style={styles.clientItemAddText}>+ Nieuwe cli?nt</Text>
-            </Pressable>
           </Dropdown>
         </View>
       </View>

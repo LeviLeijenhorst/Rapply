@@ -1,7 +1,9 @@
 import crypto from "crypto"
 import { execute, queryMany, queryOne } from "../db"
 import { env } from "../env"
+import { requireUserDefaultOrganizationId } from "../access/clientAccess"
 import { extraTranscriptionSecondsPerPurchase } from "./constants"
+import { ensureManualPricingSchema } from "./manualPricing"
 
 type MollieAmount = {
   currency: string
@@ -78,11 +80,13 @@ async function mollieApiRequest<T>(path: string, init?: RequestInit): Promise<T>
 }
 
 async function ensureMollieSchema(): Promise<void> {
+  await ensureManualPricingSchema()
+
   if (!ensureMollieSchemaPromise) {
     ensureMollieSchemaPromise = execute(
       `
       create table if not exists public.mollie_customers (
-        user_id uuid primary key references public.users (id) on delete cascade,
+        user_id text primary key,
         mollie_customer_id text not null unique,
         created_at timestamptz not null default now(),
         updated_at timestamptz not null default now(),
@@ -90,10 +94,10 @@ async function ensureMollieSchema(): Promise<void> {
       );
 
       create table if not exists public.mollie_subscriptions (
-        user_id uuid primary key references public.users (id) on delete cascade,
+        user_id text primary key,
         mollie_customer_id text not null,
         mollie_subscription_id text not null,
-        plan_id uuid references public.plans (id) on delete set null,
+        plan_id uuid,
         status text not null,
         next_payment_date date,
         canceled_at timestamptz,
@@ -109,8 +113,8 @@ async function ensureMollieSchema(): Promise<void> {
 
       create table if not exists public.mollie_payments (
         id uuid primary key,
-        user_id uuid references public.users (id) on delete set null,
-        plan_id uuid references public.plans (id) on delete set null,
+        user_id text,
+        plan_id uuid,
         mollie_payment_id text not null unique,
         status text not null,
         sequence_type text,
@@ -125,6 +129,60 @@ async function ensureMollieSchema(): Promise<void> {
         constraint mollie_payments_status_length check (char_length(status) > 0 and char_length(status) <= 50),
         constraint mollie_payments_amount_non_negative check (amount_value is null or amount_value >= 0)
       );
+
+      alter table public.mollie_customers drop constraint if exists mollie_customers_user_id_fkey;
+      alter table public.mollie_subscriptions drop constraint if exists mollie_subscriptions_user_id_fkey;
+      alter table public.mollie_subscriptions drop constraint if exists mollie_subscriptions_plan_id_fkey;
+      alter table public.mollie_payments drop constraint if exists mollie_payments_user_id_fkey;
+      alter table public.mollie_payments drop constraint if exists mollie_payments_plan_id_fkey;
+
+      do $$
+      begin
+        if exists (
+          select 1
+          from information_schema.columns
+          where table_schema = 'public'
+            and table_name = 'mollie_customers'
+            and column_name = 'user_id'
+            and data_type = 'uuid'
+        ) then
+          alter table public.mollie_customers
+            alter column user_id type text using user_id::text;
+        end if;
+      end
+      $$;
+
+      do $$
+      begin
+        if exists (
+          select 1
+          from information_schema.columns
+          where table_schema = 'public'
+            and table_name = 'mollie_subscriptions'
+            and column_name = 'user_id'
+            and data_type = 'uuid'
+        ) then
+          alter table public.mollie_subscriptions
+            alter column user_id type text using user_id::text;
+        end if;
+      end
+      $$;
+
+      do $$
+      begin
+        if exists (
+          select 1
+          from information_schema.columns
+          where table_schema = 'public'
+            and table_name = 'mollie_payments'
+            and column_name = 'user_id'
+            and data_type = 'uuid'
+        ) then
+          alter table public.mollie_payments
+            alter column user_id type text using user_id::text;
+        end if;
+      end
+      $$;
       `,
       [],
     ).catch((error) => {
@@ -574,7 +632,7 @@ async function applyPlanForUser(params: { userId: string; planId: string | null 
     `
     update public.users
     set plan_id = $1,
-        custom_monthly_price = case when $1::uuid is null then custom_monthly_price else null end,
+        custom_monthly_price = case when $1 is null then custom_monthly_price else null end,
         updated_at = now()
     where id = $2
     `,
@@ -800,15 +858,16 @@ export async function processMolliePaymentWebhook(paymentId: string): Promise<vo
         ? Math.floor(requestedGrantSeconds)
         : extraTranscriptionSecondsPerPurchase
 
+      const organizationId = await requireUserDefaultOrganizationId(userId)
       await execute(
         `
-        insert into public.billing_users (user_id, purchased_seconds, updated_at)
+        insert into public.billing_organizations (organization_id, purchased_seconds, updated_at)
         values ($1, $2, now())
-        on conflict (user_id) do update
-          set purchased_seconds = public.billing_users.purchased_seconds + excluded.purchased_seconds,
+        on conflict (organization_id) do update
+          set purchased_seconds = public.billing_organizations.purchased_seconds + excluded.purchased_seconds,
               updated_at = now()
         `,
-        [userId, grantSeconds],
+        [organizationId, grantSeconds],
       )
     }
     return

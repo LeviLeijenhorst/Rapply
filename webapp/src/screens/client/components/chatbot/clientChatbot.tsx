@@ -103,8 +103,6 @@ export function ClientChatbot({
           compact={isModal}
           showDisclaimer={false}
           sendIconVariant="arrow"
-          preferCenteredSingleLine
-          forceSingleLine
           isSendDisabled={
             isChatSending || isCheckingChatMinutes || isChatMinutesBlocked || composerText.trim().length === 0
           }
@@ -152,7 +150,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   chatTopTextAction: { height: 28, justifyContent: 'center', alignItems: 'center' },
-  chatTopTextActionModal: { marginTop: -3 },
+  chatTopTextActionModal: { marginTop: -5 },
   chatTopTextActionHovered: { opacity: 0.7 },
   chatTopTextActionText: { fontSize: 14, lineHeight: 16, color: '#2C111F' },
   chatTopIconAction: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
@@ -190,3 +188,4 @@ const styles = StyleSheet.create({
   noMinutesCtaCloseButtonHovered: { backgroundColor: colors.hoverBackground },
   noMinutesCtaText: { fontSize: 13, lineHeight: 18, color: colors.textSecondary },
 })
+

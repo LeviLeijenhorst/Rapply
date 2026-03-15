@@ -1,6 +1,7 @@
 export type Trajectory = {
   id: string
   clientId: string
+  isActive: boolean
   name: string
   serviceType: string
   uwvContactName: string | null

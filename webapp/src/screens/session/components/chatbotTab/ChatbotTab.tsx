@@ -6,7 +6,6 @@ import { fontSizes } from '@/design/tokens/fontSizes'
 import { radius } from '@/design/tokens/radius'
 import { spacing } from '@/design/tokens/spacing'
 import { FullScreenOpenIcon } from '@/icons/FullScreenOpenIcon'
-import { TrashIcon } from '@/icons/TrashIcon'
 import type { ChatbotTabProps } from '@/screens/session/sessionScreen.types'
 import { ChatComposer } from '@/screens/shared/components/chat/ChatComposer'
 import { ChatMessage } from '@/screens/shared/components/chat/ChatMessage'
@@ -20,18 +19,24 @@ export function ChatbotTab({
   isSending,
   onChangeComposerValue,
   onSendMessage,
-  onDeleteMessage,
   onClearChat,
   onOpenExpanded,
 }: ChatbotTabProps) {
   const isModalVariant = variant === 'modal'
+  const shouldShiftClearAction = isModalVariant && composerValue.trim().length > 0
 
   return (
     <View style={[styles.container, isModalVariant ? styles.containerModal : undefined]}>
-      {/* Top actions */}
-      <View style={styles.actionsRow}>
+      <View style={[styles.actionsRow, isModalVariant ? styles.actionsRowModal : undefined]}>
         {messages.length > 0 ? (
-          <Pressable onPress={onClearChat} style={({ hovered }) => [styles.secondaryAction, hovered ? styles.secondaryActionHover : undefined]}>
+          <Pressable
+            onPress={onClearChat}
+            style={({ hovered }) => [
+              styles.secondaryAction,
+              shouldShiftClearAction ? styles.secondaryActionShifted : undefined,
+              hovered ? styles.secondaryActionHover : undefined,
+            ]}
+          >
             <Text isSemibold style={styles.secondaryActionText}>Wissen</Text>
           </Pressable>
         ) : null}
@@ -42,26 +47,19 @@ export function ChatbotTab({
         ) : null}
       </View>
 
-      {/* Chat feed */}
       <ScrollView style={styles.feed} contentContainerStyle={messages.length === 0 ? styles.feedContentCentered : styles.feedContent} showsVerticalScrollIndicator={false}>
         {messages.length === 0 ? (
           <Text style={styles.emptyText}>Stel een vraag over deze sessie om AI-chat te starten.</Text>
         ) : (
           <>
             {messages.map((message) => (
-              <View key={message.id} style={styles.messageRow}>
-                <ChatMessage role={message.role} text={message.text} />
-                <Pressable onPress={() => onDeleteMessage(message.id)} style={({ hovered }) => [styles.deleteButton, hovered ? styles.deleteButtonHover : undefined]}>
-                  <TrashIcon size={14} color={semanticColorTokens.light.textSecondary} />
-                </Pressable>
-              </View>
+              <ChatMessage key={message.id} role={message.role} text={message.text} />
             ))}
             {isSending ? <ChatMessage role="assistant" text="" isLoading /> : null}
           </>
         )}
       </ScrollView>
 
-      {/* Composer */}
       <View style={[styles.composerWrap, isModalVariant ? styles.composerWrapModal : undefined]}>
         <ChatComposer
           value={composerValue}
@@ -70,8 +68,6 @@ export function ChatbotTab({
           compact={isModalVariant}
           showDisclaimer={false}
           sendIconVariant="arrow"
-          preferCenteredSingleLine
-          forceSingleLine
           isSendDisabled={isSending || composerValue.trim().length === 0}
           shouldAutoFocus={isModalVariant}
           autoFocusKey={`session-chat-${inputId}-${isModalVariant ? 'modal' : 'panel'}`}
@@ -101,10 +97,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxs,
     minHeight: 28,
   },
+  actionsRowModal: {
+    paddingRight: spacing.md,
+    marginTop: -2,
+  },
   secondaryAction: {
     height: 28,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  secondaryActionShifted: {
+    marginRight: spacing.xs,
+    marginTop: -2,
   },
   secondaryActionHover: {
     opacity: 0.7,
@@ -144,20 +148,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     lineHeight: 21,
     textAlign: 'center',
-  },
-  messageRow: {
-    gap: spacing.xxs + 2,
-  },
-  deleteButton: {
-    alignSelf: 'flex-end',
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteButtonHover: {
-    backgroundColor: semanticColorTokens.light.hoverNeutral,
   },
   composerWrap: {
     marginHorizontal: 0,

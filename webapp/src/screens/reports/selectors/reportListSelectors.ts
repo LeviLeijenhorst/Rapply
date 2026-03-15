@@ -1,11 +1,11 @@
 import { getClientDisplayName } from '../../../types/client'
-import { isInputReportArtifact } from '../../../types/sessionArtifacts'
 import type { LocalAppData } from '../../../storage/types'
 
 export type ReportListStatus = 'done' | 'review'
 
 export type ReportListItem = {
-  sessionId: string
+  reportId: string
+  sourceInputId: string | null
   title: string
   clientName: string
   createdAtLabel: string
@@ -29,19 +29,17 @@ function toRelativeDateLabel(valueUnixMs: number): string {
 }
 
 export function selectReportListItems(data: LocalAppData): ReportListItem[] {
-  return data.inputs
-    .filter((session) => isInputReportArtifact(session))
+  return data.reports
     .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
-    .map((session) => {
-      const reportText = data.inputSummaries.find((item) => item.sessionId === session.id)?.text ?? ''
-      const hasContent = reportText.trim().length > 0
-      const status: ReportListStatus = hasContent ? 'done' : 'review'
+    .map((report) => {
+      const status: ReportListStatus = report.state === 'complete' ? 'done' : 'review'
       return {
-        sessionId: session.id,
-        title: String(session.title || '').trim() || 'Rapport',
-        clientName: getClientDisplayName(data.clients, session.clientId),
-        createdAtLabel: new Date(session.createdAtUnixMs).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }),
-        updatedRelativeLabel: toRelativeDateLabel(session.updatedAtUnixMs),
+        reportId: report.id,
+        sourceInputId: report.sourceInputId ?? null,
+        title: String(report.title || '').trim() || 'Rapport',
+        clientName: getClientDisplayName(data.clients, report.clientId),
+        createdAtLabel: new Date(report.createdAtUnixMs).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }),
+        updatedRelativeLabel: toRelativeDateLabel(report.updatedAtUnixMs),
         status,
         statusLabel: status === 'done' ? 'Afgerond' : 'Controleren',
       }

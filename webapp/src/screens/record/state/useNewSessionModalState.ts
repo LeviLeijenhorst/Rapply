@@ -55,6 +55,7 @@ export function useNewInputModalState(visible: boolean) {
   const modalScale = useRef(new Animated.Value(0.98)).current
   const modalTranslateY = useRef(new Animated.Value(10)).current
   const recordingExpandProgress = useRef(new Animated.Value(0)).current
+  const recordingShiftProgress = useRef(new Animated.Value(0)).current
   const recordingNotesRevealProgress = useRef(new Animated.Value(0)).current
   const minimizeProgress = useRef(new Animated.Value(0)).current
   const [isMinimizeAnimating, setIsMinimizeAnimating] = useState(false)
@@ -93,6 +94,7 @@ export function useNewInputModalState(visible: boolean) {
     modalTranslateY,
     realtimeOperationIdRef,
     recordingExpandProgress,
+    recordingShiftProgress,
     recordingNoteDraft,
     recordingNotes,
     recordingNotesRevealProgress,

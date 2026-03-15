@@ -1,4 +1,4 @@
-import { isInputNotesArtifact, isInputReportArtifact } from '@/types/sessionArtifacts'
+import { isInputNotesArtifact } from '@/types/sessionArtifacts'
 import type {
   ClientDataShape,
   ClientInput,
@@ -50,14 +50,13 @@ function readTrajectoryClientId(trajectory: ClientTrajectory): string {
 }
 
 export function getClientInputListItems(data: ClientDataShape, clientId: string): {
-  allInputItems: InputListItem[]
   sessionItems: InputListItem[]
   noteItems: InputListItem[]
   reportItems: InputListItem[]
-  notesInput: ClientInput | null
 } {
-  const allInputItems = data.inputs
+  const sessionItems = data.inputs
     .filter((item) => readInputClientId(item) === clientId)
+    .filter((item) => !isInputNotesArtifact(item))
     .map<InputListItem>((item) => ({
       id: item.id,
       targetInputId: item.id,
@@ -67,65 +66,72 @@ export function getClientInputListItems(data: ClientDataShape, clientId: string)
       dateLabel: new Date(item.createdAtUnixMs).toLocaleDateString('nl-NL', { month: 'short', day: 'numeric', year: 'numeric' }),
       timeLabel: new Date(item.createdAtUnixMs).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
       durationLabel: formatDurationLabel(item.audioDurationSeconds ?? null),
-      isReport: isInputReportArtifact(item),
+      isReport: false,
       searchText: `${item.title} ${item.trajectoryId ? data.trajectories.find((t) => t.id === item.trajectoryId)?.name || 'Traject' : 'Geen traject'}`.toLowerCase(),
       createdAtUnixMs: item.createdAtUnixMs,
       transcriptionStatus: item.transcriptionStatus,
-      rowType: isInputReportArtifact(item) ? 'report' : 'session',
+      rowType: 'session',
     }))
     .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
 
-  const sessionItems = allInputItems.filter(
-    (item) =>
-      !isInputNotesArtifact(item) &&
-      !isInputReportArtifact(data.inputs.find((session) => session.id === item.id) ?? { kind: 'notes' }),
-  )
+  const noteItems: InputListItem[] = data.notes
+    .filter((note) => String(note.clientId || '') === clientId)
+    .map<InputListItem>((note) => {
+      const sourceInputId = String(note.sourceInputId || '').trim()
+      const linkedInput = sourceInputId ? data.inputs.find((session) => session.id === sourceInputId) ?? null : null
+      const linkedTrajectoryLabel = linkedInput?.trajectoryId
+        ? data.trajectories.find((trajectory) => trajectory.id === linkedInput.trajectoryId)?.name || 'Traject'
+        : 'Geen traject'
+      const fallbackTitle = String(note.text || '').trim().split('\n')[0] || 'Notitie'
+      const noteTitle = String(note.title || '').trim() || fallbackTitle
+      return {
+        id: note.id,
+        targetInputId: sourceInputId || note.id,
+        title: noteTitle,
+        trajectoryLabel: linkedTrajectoryLabel,
+        kind: 'note-item',
+        dateLabel: new Date(note.updatedAtUnixMs).toLocaleDateString('nl-NL', { month: 'short', day: 'numeric', year: 'numeric' }),
+        timeLabel: new Date(note.updatedAtUnixMs).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
+        durationLabel: '',
+        isReport: false,
+        searchText: `${noteTitle} ${note.text || ''} ${linkedTrajectoryLabel}`.toLowerCase(),
+        createdAtUnixMs: note.updatedAtUnixMs,
+        transcriptionStatus: 'done',
+        rowType: 'note',
+      }
+    })
+    .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
 
-  const notesInputIds = new Set(
-    data.inputs.filter((session) => readInputClientId(session) === clientId && isInputNotesArtifact(session)).map((session) => session.id),
-  )
-
-  const noteItems: InputListItem[] = notesInputIds.size
-    ? data.notes
-        .filter((note) => notesInputIds.has(note.sessionId))
-        .map<InputListItem>((note) => {
-          const linkedInput = data.inputs.find((session) => session.id === note.sessionId) ?? null
-          const linkedTrajectoryLabel = linkedInput?.trajectoryId
-            ? data.trajectories.find((trajectory) => trajectory.id === linkedInput.trajectoryId)?.name || 'Traject'
-            : 'Geen traject'
-          const fallbackTitle = String(note.text || '').trim().split('\n')[0] || 'Notitie'
-          const noteTitle = String(note.title || '').trim() || fallbackTitle
-          return {
-            id: note.id,
-            targetInputId: note.sessionId,
-            title: noteTitle,
-            trajectoryLabel: linkedTrajectoryLabel,
-            kind: 'note-item',
-            dateLabel: new Date(note.updatedAtUnixMs).toLocaleDateString('nl-NL', { month: 'short', day: 'numeric', year: 'numeric' }),
-            timeLabel: new Date(note.updatedAtUnixMs).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
-            durationLabel: '',
-            isReport: false,
-            searchText: `${noteTitle} ${note.text || ''} ${linkedTrajectoryLabel}`.toLowerCase(),
-            createdAtUnixMs: note.updatedAtUnixMs,
-            transcriptionStatus: 'done',
-            rowType: 'note',
-          }
-        })
-        .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
-    : []
-
-  const reportItems = allInputItems.filter((item) => item.rowType === 'report')
-  const notesInput =
-    data.inputs
-      .filter((session) => readInputClientId(session) === clientId && isInputNotesArtifact(session))
-      .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)[0] ?? null
+  const reportItems: InputListItem[] = data.reports
+    .filter((report) => String(report.clientId || '') === clientId)
+    .map<InputListItem>((report) => {
+      const sourceInputId = String(report.sourceInputId || '').trim()
+      const linkedInput = sourceInputId ? data.inputs.find((input) => input.id === sourceInputId) ?? null : null
+      const linkedTrajectoryLabel = linkedInput?.trajectoryId
+        ? data.trajectories.find((trajectory) => trajectory.id === linkedInput.trajectoryId)?.name || 'Traject'
+        : 'Geen traject'
+      return {
+        id: report.id,
+        targetInputId: report.id,
+        title: String(report.title || '').trim() || 'Rapportage',
+        trajectoryLabel: linkedTrajectoryLabel,
+        kind: 'report-item',
+        dateLabel: new Date(report.createdAtUnixMs).toLocaleDateString('nl-NL', { month: 'short', day: 'numeric', year: 'numeric' }),
+        timeLabel: new Date(report.createdAtUnixMs).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
+        durationLabel: '',
+        isReport: true,
+        searchText: `${report.title || ''} ${linkedTrajectoryLabel}`.toLowerCase(),
+        createdAtUnixMs: report.createdAtUnixMs,
+        transcriptionStatus: 'done',
+        rowType: 'report',
+      }
+    })
+    .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
 
   return {
-    allInputItems,
     sessionItems,
     noteItems,
     reportItems,
-    notesInput,
   }
 }
 

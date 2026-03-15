@@ -14,19 +14,27 @@ function readReportPayload(value: unknown): ReportInputPayload {
 // Preserves older payloads that still send sessionId instead of sourceSessionId.
 function readSourceSessionId(payload: ReportInputPayload): string | null {
   if (payload.sourceSessionId === null) return null
-  return readOptionalId(payload.sourceSessionId ?? payload.sessionId) ?? null
+  return readOptionalId(payload.sourceSessionId ?? payload.sourceInputId ?? payload.sessionId) ?? null
 }
 
 // Reuses an explicit report id when present and otherwise derives one from the source session.
 function readReportId(payload: ReportInputPayload): string {
   const explicitId = readOptionalText(payload.id, true)
   if (explicitId) return explicitId
-  return `report-${readId(payload.sourceSessionId ?? payload.sessionId, "report.sourceSessionId")}`
+  return `report-${readId(payload.sourceSessionId ?? payload.sourceInputId ?? payload.sessionId, "report.sourceSessionId")}`
 }
 
 // Accepts both the current reportText field and the older text field.
 function readReportText(payload: ReportInputPayload): string {
   return readOptionalText(payload.reportText ?? payload.text, true) ?? ""
+}
+
+function readReportCoachUserIds(payload: ReportInputPayload): string[] | undefined {
+  const value = payload.reportCoachUserIds ?? payload.coachUserIds
+  if (!Array.isArray(value)) return undefined
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean)
 }
 
 // Falls back to updatedAt when older payloads omit createdAt.
@@ -44,16 +52,23 @@ export function readOptionalReportState(value: unknown): ReportState | undefined
 // Parses a request payload into the stored report shape.
 export function readReport(value: unknown): Report {
   const payload = readReportPayload(value)
+  const structuredRaw = payload.reportStructuredJson
+  const reportStructuredJson =
+    structuredRaw && typeof structuredRaw === "object" ? (structuredRaw as Report["reportStructuredJson"]) : null
 
   return {
     id: readReportId(payload),
     clientId: payload.clientId === null ? null : readOptionalId(payload.clientId) ?? null,
     trajectoryId: payload.trajectoryId === null ? null : readOptionalId(payload.trajectoryId) ?? null,
     sourceSessionId: readSourceSessionId(payload),
+    createdByUserId: readOptionalId(payload.createdByUserId) ?? null,
+    primaryAuthorUserId: readOptionalId(payload.primaryAuthorUserId) ?? null,
+    reportCoachUserIds: readReportCoachUserIds(payload),
     title: readOptionalText(payload.title, true) ?? "",
     reportType: readOptionalText(payload.reportType, true) ?? "session_report",
     state: readOptionalReportState(payload.state) ?? "needs_review",
     reportText: readReportText(payload),
+    reportStructuredJson,
     reportDate: readOptionalText(payload.reportDate, true) ?? null,
     createdAtUnixMs: readCreatedAtUnixMs(payload),
     updatedAtUnixMs: readUnixMs(payload.updatedAtUnixMs, "report.updatedAtUnixMs"),

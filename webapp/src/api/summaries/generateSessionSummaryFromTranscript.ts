@@ -1,7 +1,5 @@
 import { generateInputSummary as requestSummary, type SummaryResponseMode } from './generateInputSummary'
 import { parseStructuredSummaryJson, type StructuredInputSummary } from '../../types/structuredSummary'
-import { buildInputSummaryPrompt } from './buildInputSummaryPrompt'
-import { resolveSummaryTemplateSections } from './resolveSummaryTemplateSections'
 import type { SummaryTemplate } from './summaryTemplate'
 
 export async function generateInputSummary(params: {
@@ -10,10 +8,8 @@ export async function generateInputSummary(params: {
   signal?: AbortSignal
 }): Promise<string> {
   return requestSummary({
-    prompt: buildInputSummaryPrompt({
-      transcript: params.transcript,
-      template: params.template ? resolveSummaryTemplateSections(params.template) : undefined,
-    }),
+    transcript: params.transcript,
+    template: params.template ?? undefined,
     signal: params.signal,
   })
 }
@@ -24,10 +20,8 @@ export async function generateStructuredInputSummary(params: {
   signal?: AbortSignal
 }): Promise<StructuredInputSummary> {
   const raw = await requestSummary({
-    prompt: buildInputSummaryPrompt({
-      transcript: params.transcript,
-      template: params.template ? resolveSummaryTemplateSections(params.template) : undefined,
-    }),
+    transcript: params.transcript,
+    template: params.template ?? undefined,
     signal: params.signal,
     responseMode: 'structured_item_summary' satisfies SummaryResponseMode,
   })

@@ -8,7 +8,7 @@ export async function markOperationCompleted(params: { operationId: string; user
     set status = 'completed',
         completed_at = now()
     where operation_id = $1
-      and user_id = $2
+      and owner_user_id = $2
     `,
     [params.operationId, params.userId],
   )

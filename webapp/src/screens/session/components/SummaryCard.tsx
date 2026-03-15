@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleSheet, View } from 'react-native'
+import { LayoutAnimation, Platform, Pressable, StyleSheet, UIManager, View } from 'react-native'
 
 import { semanticColorTokens } from '@/design/tokens/colors'
 import { borderWidths } from '@/design/tokens/borderWidths'
@@ -7,29 +7,51 @@ import { fontSizes } from '@/design/tokens/fontSizes'
 import { radius } from '@/design/tokens/radius'
 import { rnShadows } from '@/design/tokens/shadows'
 import { spacing } from '@/design/tokens/spacing'
+import { InputEditIcon } from '@/icons/InputPageIcons'
 import type { SummaryCardProps } from '@/screens/session/sessionScreen.types'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { Text } from '@/ui/Text'
 
-export function SummaryCard({ summary, transcriptionStatus }: SummaryCardProps) {
-  const summaryText = String(summary || '').trim()
-  const isSummaryLoading = transcriptionStatus === 'generating' && summaryText.length === 0
+const summaryBodyMinHeight = 192
+
+if (Platform.OS === 'android' && (UIManager as any).setLayoutAnimationEnabledExperimental) {
+  ;(UIManager as any).setLayoutAnimationEnabledExperimental(true)
+}
+
+export function SummaryCard({ summary, title = 'Samenvatting', emptyText, transcriptionStatus, onPressEdit = null }: SummaryCardProps) {
+  const summaryText = String(summary || '')
+    .replace(/\r/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+  const isSummaryLoading = (transcriptionStatus === 'transcribing' || transcriptionStatus === 'generating') && summaryText.length === 0
+
+  React.useEffect(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+  }, [isSummaryLoading, summaryText])
 
   return (
     <View style={styles.card}>
-      {/* Card title */}
-      <Text isSemibold style={styles.title}>Sessie Samenvatting</Text>
+      <View style={styles.headerRow}>
+        <Text isBold style={styles.title}>{title}</Text>
+        {onPressEdit ? (
+          <Pressable onPress={onPressEdit} style={({ hovered }) => [styles.editButton, hovered ? styles.editButtonHover : undefined]}>
+            <InputEditIcon size={18} />
+          </Pressable>
+        ) : null}
+      </View>
 
-      {isSummaryLoading ? (
-        <View style={styles.loadingState}>
-          <LoadingSpinner size="small" />
-          <Text style={styles.emptyText}>Samenvatting wordt gegenereerd...</Text>
-        </View>
-      ) : summaryText.length === 0 ? (
-        <Text style={styles.emptyText}>Er is nog geen samenvatting beschikbaar voor deze sessie.</Text>
-      ) : (
-        <Text style={styles.summaryText}>{summaryText}</Text>
-      )}
+      <View style={styles.bodyContainer}>
+        {isSummaryLoading ? (
+          <View style={styles.loadingState}>
+            <LoadingSpinner size="small" />
+            <Text style={styles.emptyText}>Samenvatting wordt gegenereerd...</Text>
+          </View>
+        ) : summaryText.length === 0 ? (
+          <Text style={styles.emptyText}>{emptyText || 'Er is nog geen samenvatting beschikbaar voor deze sessie.'}</Text>
+        ) : (
+          <Text style={styles.summaryText}>{summaryText}</Text>
+        )}
+      </View>
     </View>
   )
 }
@@ -50,6 +72,27 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.lg,
     lineHeight: 24,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  editButton: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: semanticColorTokens.light.hoverAccent,
+  },
+  editButtonHover: {
+    backgroundColor: semanticColorTokens.light.badgeBackground,
+  },
+  bodyContainer: {
+    minHeight: summaryBodyMinHeight,
+    justifyContent: 'flex-start',
+  },
   summaryText: {
     color: semanticColorTokens.light.text,
     fontSize: fontSizes.sm,
@@ -61,10 +104,9 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   loadingState: {
-    minHeight: 160,
+    minHeight: summaryBodyMinHeight,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs + 2,
   },
 })
-

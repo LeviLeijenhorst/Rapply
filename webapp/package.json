@@ -6,7 +6,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web --https --host localhost"
+    "web": "expo start --web --https --host localhost",
+    "test": "tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@expo-google-fonts/catamaran": "^0.4.1",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@types/html2canvas": "^0.5.35",
     "@types/react": "~19.1.0",
+    "tsx": "^4.20.3",
     "typescript": "~5.9.2"
   },
   "private": true

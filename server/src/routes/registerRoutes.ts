@@ -18,6 +18,8 @@ import { registerTranscriptionRoutes } from "../transcription/routes/registerTra
 import { registerOrganizationSettingsRoutes } from "../organizationSettings/routes/registerOrganizationSettingsRoutes"
 import { registerUserSettingsRoutes } from "../userSettings/routes/registerUserSettingsRoutes"
 import { registerWorkspaceRoutes } from "../workspace/routes/registerWorkspaceRoutes"
+import { registerTrajectoryRoutes } from "../trajectories/routes/registerTrajectoryRoutes"
+import { registerPipelineRoutes } from "../pipeline/routes/registerPipelineRoutes"
 import { asyncHandler } from "../http"
 
 type RegisterRoutesParams = {
@@ -73,10 +75,12 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
   registerEncryptionRoutes(app, { rateLimitAccount: params.rateLimitAccount })
   registerWorkspaceRoutes(app)
   registerClientRoutes(app)
+  registerTrajectoryRoutes(app)
   registerSessionRoutes(app)
   registerSnippetRoutes(app, { rateLimitAi: params.rateLimitAi })
   registerNoteRoutes(app)
   registerReportRoutes(app)
+  registerPipelineRoutes(app, { rateLimitAi: params.rateLimitAi })
   registerOrganizationSettingsRoutes(app)
   registerUserSettingsRoutes(app)
   registerAccountRoutes(app)
@@ -103,27 +107,6 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
     asyncHandler(async (req, res) => {
       await requireAuthenticatedUser(req)
       res.status(200).json({ canSeePricingPage: false, planId: null })
-    }),
-  )
-  app.post(
-    "/trajectories/create",
-    asyncHandler(async (req, res) => {
-      await requireAuthenticatedUser(req)
-      res.status(200).json({ ok: true, disabled: true })
-    }),
-  )
-  app.post(
-    "/trajectories/update",
-    asyncHandler(async (req, res) => {
-      await requireAuthenticatedUser(req)
-      res.status(200).json({ ok: true, disabled: true })
-    }),
-  )
-  app.post(
-    "/trajectories/delete",
-    asyncHandler(async (req, res) => {
-      await requireAuthenticatedUser(req)
-      res.status(200).json({ ok: true, disabled: true })
     }),
   )
   app.post(

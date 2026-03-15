@@ -74,7 +74,6 @@ export function RightPanel({
               isSending={chatbotState.isChatSending}
               onChangeComposerValue={chatbotState.setChatComposerValue}
               onSendMessage={chatbotState.handleSendChatMessage}
-              onDeleteMessage={chatbotState.handleDeleteChatMessage}
               onClearChat={() => chatbotState.setIsClearChatModalVisible(true)}
               onOpenExpanded={() => chatbotState.setIsExpandedChatOpen(true)}
             />
@@ -89,8 +88,6 @@ export function RightPanel({
               onSend={handleCreateNoteFromComposer}
               showDisclaimer={false}
               sendIconVariant="arrow"
-              preferCenteredSingleLine
-              forceSingleLine
               isSendDisabled={noteComposerValue.trim().length === 0}
             />
           </View>
@@ -107,7 +104,6 @@ export function RightPanel({
           isSending={chatbotState.isChatSending}
           onChangeComposerValue={chatbotState.setChatComposerValue}
           onSendMessage={chatbotState.handleSendChatMessage}
-          onDeleteMessage={chatbotState.handleDeleteChatMessage}
           onClearChat={() => chatbotState.setIsClearChatModalVisible(true)}
           onOpenExpanded={() => undefined}
         />

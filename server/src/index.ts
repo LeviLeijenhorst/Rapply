@@ -44,10 +44,14 @@ function logDatabaseConnectionStatus(): void {
 function logRuntimeConfiguration(): void {
   const hasAzureOpenAiEndpoint = !!String(env.azureOpenAiEndpoint || "").trim()
   const hasAzureOpenAiKey = !!String(env.azureOpenAiKey || "").trim()
+  const hasAzureOpenAiReasoningDeployment = !!String(env.azureOpenAiReasoningDeployment || "").trim()
+  const hasAzureOpenAiReportDeployment = !!String(env.azureOpenAiReportDeployment || "").trim()
   const hasAzureOpenAiChatDeployment = !!String(env.azureOpenAiChatDeployment || "").trim()
   const hasAzureOpenAiSummaryDeployment = !!String(env.azureOpenAiSummaryDeployment || "").trim()
   console.log(`[server] listening on http://127.0.0.1:${env.port}`)
   console.log(`[server] azure openai configured: ${hasAzureOpenAiEndpoint && hasAzureOpenAiKey ? "yes" : "no"}`)
+  console.log(`[server] azure openai reasoning deployment: ${hasAzureOpenAiReasoningDeployment ? "yes" : "no"}`)
+  console.log(`[server] azure openai report deployment: ${hasAzureOpenAiReportDeployment ? "yes" : "no"}`)
   console.log(`[server] azure openai chat deployment: ${hasAzureOpenAiChatDeployment ? "yes" : "no"}`)
   console.log(`[server] azure openai summary deployment: ${hasAzureOpenAiSummaryDeployment ? "yes" : "no"}`)
 }
@@ -71,7 +75,7 @@ app.use((req, res, next) => {
 
 // Keep raw upload routes before JSON body parsing middleware.
 registerAudioRoutes(app)
-app.use(express.json({ limit: "2mb" }))
+app.use(express.json({ limit: "20mb" }))
 
 const rateLimitWindowMs = Number.isFinite(env.rateLimitWindowMs) ? env.rateLimitWindowMs : 60_000
 const rateLimitMaxRequests = Number.isFinite(env.rateLimitMaxRequests) ? env.rateLimitMaxRequests : 120

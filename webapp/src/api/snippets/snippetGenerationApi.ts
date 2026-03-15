@@ -33,7 +33,7 @@ function normalizeExtractedSnippet(value: unknown): Snippet | null {
   const trajectoryId = String(source.trajectoryId ?? '').trim()
   const inputId = String(source.sourceSessionId ?? source.sourceInputId ?? source.itemId ?? '').trim()
   const field = String(source.snippetType ?? source.field ?? '').trim()
-  if (!id || !trajectoryId || !inputId || !field) return null
+  if (!id || !inputId || !field) return null
 
   const now = Date.now()
   const statusRaw = String(source.approvalStatus ?? source.status ?? '').trim()
@@ -41,7 +41,7 @@ function normalizeExtractedSnippet(value: unknown): Snippet | null {
 
   return {
     id,
-    trajectoryId,
+    trajectoryId: trajectoryId || null,
     inputId,
     itemId: inputId,
     field,
@@ -55,15 +55,16 @@ function normalizeExtractedSnippet(value: unknown): Snippet | null {
 
 export async function extractSnippetsForItem(params: {
   itemId: string
-  trajectoryId: string
+  trajectoryId?: string | null
   clientId?: string
   sourceInputType?: string
   transcript: string
   itemDate: number
 }): Promise<Snippet[]> {
+  const trajectoryId = String(params.trajectoryId ?? '').trim()
   const response = await callSecureApi<SnippetExtractResponse>('/ai/snippet-extract', {
     sourceSessionId: params.itemId,
-    trajectoryId: params.trajectoryId,
+    ...(trajectoryId ? { trajectoryId } : {}),
     ...(params.clientId ? { clientId: params.clientId } : {}),
     ...(params.sourceInputType ? { sourceInputType: params.sourceInputType } : {}),
     transcript: params.transcript,
@@ -77,7 +78,7 @@ export async function extractSnippetsForItem(params: {
 
 export async function extractSnippets(params: {
   inputId: string
-  trajectoryId: string
+  trajectoryId?: string | null
   clientId?: string
   sourceInputType?: string
   transcript: string

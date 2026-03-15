@@ -1,5 +1,5 @@
 import React from 'react'
-import { Animated, Pressable, TextInput, View } from 'react-native'
+import { Animated, Pressable, View } from 'react-native'
 
 import { Text } from '../../../ui/Text'
 import { CoachscribeLogo } from '../../../components/brand/CoachscribeLogo'
@@ -7,9 +7,8 @@ import { ModalCloseIcon } from '../../../icons/ModalCloseIcon'
 import { PauseIcon } from '../../../icons/PauseIcon'
 import { PlaySmallIcon } from '../../../icons/PlaySmallIcon'
 import { StopSquareIcon } from '../../../icons/StopSquareIcon'
-import { MoreOptionsIcon } from '../../../icons/MoreOptionsIcon'
-import { SendIcon } from '../../../icons/SendIcon'
 import { webTransitionSmooth } from '../../../design/theme/transitions'
+import { ChatComposer } from '../../shared/components/chat/ChatComposer'
 import { formatTimeLabel } from '../utils'
 import { styles } from '../styles'
 
@@ -30,14 +29,20 @@ type RecordStepModel = {
   shouldRenderNotesPanel: boolean
   selectedClientName: string | null
   recordingNotes: Array<{ id: string; seconds: number; text: string }>
+  editingRecordingNoteId: string | null
   recordingNoteDraft: string
   recorder: RecorderState
   waveBarCount: number
+  isTransitioning: boolean
   onCancelRecording: () => void
   onRecordingNoteDraftChange: (value: string) => void
+  onEditRecordingNote: (noteId: string) => void
+  onDeleteRecordingNote: (noteId: string) => void
   onRetryRecordingAfterError: () => void
   onSaveRecordingNote: () => void
+  onCancelEditingRecordingNote: () => void
   onSetWaveBarCount: (count: number) => void
+  onStopRecording: () => void
 }
 
 export function RecordStep({
@@ -50,14 +55,20 @@ export function RecordStep({
   shouldRenderNotesPanel,
   selectedClientName,
   recordingNotes,
+  editingRecordingNoteId,
   recordingNoteDraft,
   recorder,
   waveBarCount,
+  isTransitioning,
   onCancelRecording,
   onRecordingNoteDraftChange,
+  onEditRecordingNote,
+  onDeleteRecordingNote,
   onRetryRecordingAfterError,
   onSaveRecordingNote,
+  onCancelEditingRecordingNote,
   onSetWaveBarCount,
+  onStopRecording,
 }: RecordStepModel) {
   const recorderNode = (
     <View style={styles.recordingMainCard}>
@@ -68,9 +79,6 @@ export function RecordStep({
             <Text isSemibold style={styles.recordingCardName}>{selectedClientName || 'Naamloze opname'}</Text>
             <Text style={styles.recordingCardInputLabel}>Sessie #9</Text>
           </View>
-        </View>
-        <View style={styles.recordingCardMoreButton}>
-          <MoreOptionsIcon color="#2C111F" size={18} />
         </View>
       </View>
 
@@ -100,10 +108,12 @@ export function RecordStep({
 
         <View style={[styles.recordingControls, limitedMode ? styles.recordingControlsLimited : undefined]}>
           <Pressable
+            disabled={isTransitioning}
             onPress={onCancelRecording}
             style={({ hovered }) => [
               styles.softCircle,
               limitedMode ? styles.softCircleLimited : undefined,
+              isTransitioning ? styles.recordingControlDisabled : undefined,
               hovered ? styles.softCircleHovered : undefined,
             ]}
           >
@@ -111,16 +121,19 @@ export function RecordStep({
           </Pressable>
 
           <Pressable
+            disabled={isTransitioning}
             onPress={() => {
+              if (isTransitioning) return
               if (recorder.status === 'error') {
                 onRetryRecordingAfterError()
                 return
               }
-              recorder.stop()
+              onStopRecording()
             }}
             style={({ hovered }) => [
               styles.primaryCircle,
               limitedMode ? styles.primaryCircleLimited : undefined,
+              isTransitioning ? styles.recordingControlDisabled : undefined,
               webTransitionSmooth,
               hovered ? styles.primaryCircleHovered : undefined,
             ]}
@@ -129,7 +142,9 @@ export function RecordStep({
           </Pressable>
 
           <Pressable
+            disabled={isTransitioning}
             onPress={() => {
+              if (isTransitioning) return
               if (recorder.status === 'recording') {
                 recorder.pause()
                 return
@@ -141,6 +156,7 @@ export function RecordStep({
             style={({ hovered }) => [
               styles.softCircle,
               limitedMode ? styles.softCircleLimited : undefined,
+              isTransitioning ? styles.recordingControlDisabled : undefined,
               hovered ? styles.softCircleHovered : undefined,
             ]}
           >
@@ -188,36 +204,49 @@ export function RecordStep({
               <View style={styles.recordingNotesList}>
                 {recordingNotes.map((note) => (
                   <View key={note.id} style={styles.recordingNoteItem}>
-                    <View style={styles.recordingNoteTimestampPill}>
-                      <Text isSemibold style={styles.recordingNoteTimestamp}>{formatTimeLabel(note.seconds)}</Text>
+                    <View style={styles.recordingNoteHeaderRow}>
+                      <View style={styles.recordingNoteTimestampPill}>
+                        <Text isSemibold style={styles.recordingNoteTimestamp}>{formatTimeLabel(note.seconds)}</Text>
+                      </View>
+                      <View style={styles.recordingNoteActions}>
+                        <Pressable
+                          disabled={isTransitioning}
+                          onPress={() => onEditRecordingNote(note.id)}
+                          style={({ hovered }) => [styles.recordingNoteActionButton, hovered ? styles.recordingNoteActionButtonHovered : undefined]}
+                        >
+                          <Text style={styles.recordingNoteActionText}>Bewerken</Text>
+                        </Pressable>
+                        <Pressable
+                          disabled={isTransitioning}
+                          onPress={() => onDeleteRecordingNote(note.id)}
+                          style={({ hovered }) => [styles.recordingNoteActionButton, hovered ? styles.recordingNoteActionButtonHovered : undefined]}
+                        >
+                          <Text style={styles.recordingNoteActionText}>Verwijderen</Text>
+                        </Pressable>
+                      </View>
                     </View>
                     <Text style={styles.recordingNoteText}>{note.text}</Text>
                   </View>
                 ))}
               </View>
               <View style={styles.recordingNoteComposer}>
-                <View style={styles.recordingNoteInputWrap}>
-                  <TextInput
+                {editingRecordingNoteId ? (
+                  <View style={styles.recordingEditIndicatorRow}>
+                    <Text style={styles.recordingEditIndicatorText}>Notitie bewerken</Text>
+                    <Pressable onPress={onCancelEditingRecordingNote} style={({ hovered }) => [styles.recordingNoteActionButton, hovered ? styles.recordingNoteActionButtonHovered : undefined]}>
+                      <Text style={styles.recordingNoteActionText}>Annuleer</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+                <View style={styles.recordingNoteComposerInner}>
+                  <ChatComposer
                     value={recordingNoteDraft}
-                    onChangeText={onRecordingNoteDraftChange}
-                    onKeyPress={(event: any) => {
-                      if (event?.nativeEvent?.key !== 'Enter' || !event?.nativeEvent?.shiftKey) return
-                      event?.preventDefault?.()
-                      onSaveRecordingNote()
-                    }}
-                    blurOnSubmit={false}
-                    multiline
-                    textAlignVertical="top"
-                    placeholder=""
-                    placeholderTextColor="#95888F"
-                    style={[styles.recordingNoteInput, ({ outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any)]}
+                    onChangeValue={onRecordingNoteDraftChange}
+                    onSend={onSaveRecordingNote}
+                    showDisclaimer={false}
+                    sendIconVariant="arrow"
+                    isSendDisabled={isTransitioning || recordingNoteDraft.trim().length === 0}
                   />
-                  <Pressable
-                    onPress={onSaveRecordingNote}
-                    style={({ hovered }) => [styles.recordingNoteSendButton, hovered ? styles.recordingNoteSendButtonHovered : undefined]}
-                  >
-                    <SendIcon size={14} />
-                  </Pressable>
                 </View>
               </View>
             </Animated.View>

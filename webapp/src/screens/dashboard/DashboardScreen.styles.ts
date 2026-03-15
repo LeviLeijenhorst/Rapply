@@ -6,16 +6,16 @@ import { typography } from '@/design/theme/typography'
 export const styles = StyleSheet.create({
   scroll: {
     flex: 1,
-    marginHorizontal: -8,
-    ...( { paddingHorizontal: 8 } as any ),
+    minHeight: 0,
   },
   content: {
-    paddingBottom: 24,
+    paddingTop: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 32,
     gap: 24,
   },
   heroCard: {
-    width: 1208,
-    maxWidth: '100%',
+    width: '100%',
     height: 128,
     borderRadius: 16,
     borderWidth: 1,

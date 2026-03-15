@@ -26,7 +26,7 @@ export function SelectInputTypeStep({
   gespreksverslagOptionLabel,
   onSelectOption,
   selectedOption,
-  selectedOptionGroup,
+  selectedOptionGroup: _selectedOptionGroup,
 }: SelectInputTypeStepModel) {
   if (limitedMode) {
     return (
@@ -77,13 +77,13 @@ export function SelectInputTypeStep({
       <View style={styles.selectList}>
         <InputOptionRow
           label={gesprekOptionLabel}
-          isSelected={selectedOptionGroup === 'gesprek'}
+          isSelected={selectedOption === 'gesprek'}
           onPress={() => onSelectOption('gesprek')}
           leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
         />
         <InputOptionRow
           label={gespreksverslagOptionLabel}
-          isSelected={selectedOptionGroup === 'gespreksverslag'}
+          isSelected={selectedOption === 'gespreksverslag'}
           onPress={() => onSelectOption('gespreksverslag')}
           leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
         />
@@ -94,9 +94,15 @@ export function SelectInputTypeStep({
           leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
         />
         <InputOptionRow
-          label="Bestand uploaden"
-          isSelected={selectedOption === 'upload'}
-          onPress={() => onSelectOption('upload')}
+          label="Audio bestanden uploaden"
+          isSelected={selectedOption === 'upload_audio'}
+          onPress={() => onSelectOption('upload_audio')}
+          leftIcon={<Mp3UploadIcon />}
+        />
+        <InputOptionRow
+          label="Andere bestanden uploaden"
+          isSelected={selectedOption === 'upload_document'}
+          onPress={() => onSelectOption('upload_document')}
           leftIcon={<Mp3UploadIcon />}
         />
       </View>

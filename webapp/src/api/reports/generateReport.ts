@@ -6,7 +6,7 @@ import type { SummaryTemplate } from '../summaries/summaryTemplate'
 
 export async function generateReport(input: ReportGenerationInput): Promise<string> {
   return generateInputSummary({
-    prompt: buildReportPrompt(input),
+    transcript: buildReportPrompt(input),
   })
 }
 

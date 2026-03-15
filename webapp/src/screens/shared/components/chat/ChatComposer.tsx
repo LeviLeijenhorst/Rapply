@@ -1,5 +1,5 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Pressable, StyleSheet, TextInput, View } from 'react-native'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Animated, Easing, Pressable, StyleSheet, TextInput, View } from 'react-native'
 
 import { colors } from '../../../../design/theme/colors'
 import { ArrowUpIcon } from '../../../../icons/ArrowUpIcon'
@@ -17,8 +17,6 @@ type Props = {
   onPressEscape?: () => void
   showDisclaimer?: boolean
   sendIconVariant?: 'send' | 'arrow'
-  preferCenteredSingleLine?: boolean
-  forceSingleLine?: boolean
 }
 
 const tabAutocompleteSuggestions = [
@@ -48,47 +46,60 @@ export function ChatComposer({
   onPressEscape,
   showDisclaimer = true,
   sendIconVariant = 'send',
-  preferCenteredSingleLine = false,
-  forceSingleLine = false,
 }: Props) {
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
-  const composerMinHeight = compact ? 40 : 44
-  const [inputHeight, setInputHeight] = useState(composerMinHeight)
   const [isScrollable, setIsScrollable] = useState(false)
-  const inputHeightRef = useRef(inputHeight)
+  const inputHeightRef = useRef(0)
   const isScrollableRef = useRef(isScrollable)
+  const visibleLineCountRef = useRef(1)
+  const inputWidthRef = useRef(0)
+  const canvasContextRef = useRef<CanvasRenderingContext2D | null>(null)
   const inputRef = useRef<TextInput | null>(null)
+  const animatedHeight = useRef(new Animated.Value(0)).current
 
-  const { minHeight, maxHeight } = useMemo(() => {
-    const baseHeight = composerMinHeight
+  const { minHeight, lineHeight, maxLines, verticalPadding, inputPaddingTop, inputPaddingBottom } = useMemo(() => {
     const maxLines = 7
-    const lineHeight = compact ? 18 : 20
-    const maxExtra = (maxLines - 1) * lineHeight
-    return { minHeight: baseHeight, maxHeight: baseHeight + maxExtra }
-  }, [compact, composerMinHeight])
+    const nextLineHeight = compact ? 18 : 20
+    const verticalPadding = compact ? 12 : 12
+    const minHeight = verticalPadding + nextLineHeight
+    const inputPaddingTop = 6
+    const inputPaddingBottom = 6
+    return { minHeight, lineHeight: nextLineHeight, maxLines, verticalPadding, inputPaddingTop, inputPaddingBottom }
+  }, [compact])
 
-  const inputScrollStyle = { overflowY: isScrollable ? 'auto' : 'hidden' } as any
-  const isSingleLine = forceSingleLine
-  const inputTextAlignVertical =
-    isSingleLine
-      ? 'center'
-      : preferCenteredSingleLine && inputHeight <= minHeight + 4
-      ? 'center'
-      : inputHeight > minHeight
-        ? 'top'
-        : 'center'
+  useEffect(() => {
+    inputHeightRef.current = minHeight
+    animatedHeight.setValue(minHeight)
+    visibleLineCountRef.current = 1
+  }, [animatedHeight, minHeight])
+
+  const inputScrollStyle = {
+    overflowY: isScrollable ? 'auto' : 'hidden',
+    backgroundColor: 'transparent',
+    scrollbarColor: isScrollable ? '#C7C9CE transparent' : undefined,
+  } as any
+
+  function animateToHeight(nextHeight: number) {
+    if (Math.abs(nextHeight - inputHeightRef.current) < 1) return
+    inputHeightRef.current = nextHeight
+    animatedHeight.stopAnimation()
+    Animated.timing(animatedHeight, {
+      toValue: nextHeight,
+      duration: 140,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start()
+  }
 
   useEffect(() => {
     if (value.trim().length > 0) return
-    if (inputHeightRef.current !== minHeight) {
-      inputHeightRef.current = minHeight
-      setInputHeight(minHeight)
-    }
+    visibleLineCountRef.current = 1
+    animateToHeight(minHeight)
     if (isScrollableRef.current !== false) {
       isScrollableRef.current = false
       setIsScrollable(false)
     }
-  }, [minHeight, value])
+  }, [minHeight, value, animatedHeight])
 
   useEffect(() => {
     if (!shouldAutoFocus) return
@@ -96,31 +107,115 @@ export function ChatComposer({
     return () => clearTimeout(id)
   }, [autoFocusKey, shouldAutoFocus])
 
+  function getExplicitLineCount(rawValue: string): number {
+    return Math.max(1, String(rawValue || '').split('\n').length)
+  }
+
+  function updateLineState(lineCount: number) {
+    const normalizedLineCount = Math.max(1, lineCount)
+    const visibleLineCount = Math.min(maxLines, normalizedLineCount)
+    if (visibleLineCount !== visibleLineCountRef.current) {
+      visibleLineCountRef.current = visibleLineCount
+      animateToHeight(verticalPadding + visibleLineCount * lineHeight)
+    }
+    const nextIsScrollable = normalizedLineCount > maxLines
+    if (nextIsScrollable !== isScrollableRef.current) {
+      isScrollableRef.current = nextIsScrollable
+      setIsScrollable(nextIsScrollable)
+    }
+  }
+
+  function getCanvasContext(): CanvasRenderingContext2D | null {
+    if (typeof document === 'undefined') return null
+    if (canvasContextRef.current) return canvasContextRef.current
+    const canvas = document.createElement('canvas')
+    const context = canvas.getContext('2d')
+    if (!context) return null
+    canvasContextRef.current = context
+    return context
+  }
+
+  function estimateWrappedLineCount(nextValue: string): number {
+    const explicitLines = getExplicitLineCount(nextValue)
+    const availableWidth = Math.floor(inputWidthRef.current)
+    if (!availableWidth || availableWidth <= 0) return explicitLines
+    const context = getCanvasContext()
+    if (!context) return explicitLines
+
+    const fontSize = compact ? 15 : 16
+    context.font = `${fontSize}px sans-serif`
+    const paragraphs = String(nextValue || '').split('\n')
+    let totalLines = 0
+
+    for (const paragraph of paragraphs) {
+      if (!paragraph) {
+        totalLines += 1
+        continue
+      }
+
+      let currentLineWidth = 0
+      let paragraphLines = 1
+      const tokens = paragraph.split(/(\s+)/).filter((token) => token.length > 0)
+
+      for (const token of tokens) {
+        const tokenWidth = context.measureText(token).width
+        if (currentLineWidth + tokenWidth <= availableWidth) {
+          currentLineWidth += tokenWidth
+          continue
+        }
+
+        if (currentLineWidth > 0) {
+          paragraphLines += 1
+          currentLineWidth = tokenWidth
+          continue
+        }
+
+        const estimatedTokenLines = Math.max(1, Math.ceil(tokenWidth / availableWidth))
+        paragraphLines += estimatedTokenLines - 1
+        const remainderWidth = tokenWidth % availableWidth
+        currentLineWidth = remainderWidth === 0 ? availableWidth : remainderWidth
+      }
+
+      totalLines += paragraphLines
+    }
+
+    return Math.max(explicitLines, totalLines)
+  }
+
+  function handleChangeText(nextValue: string) {
+    updateLineState(estimateWrappedLineCount(nextValue))
+    onChangeValue(nextValue)
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        <View
+        <Animated.View
           style={[
             styles.inputContainer,
             compact ? styles.inputContainerCompact : undefined,
-            isSingleLine ? styles.inputContainerSingleLine : undefined,
-            { height: inputHeight },
+            { height: animatedHeight },
           ]}
+          onLayout={(event) => {
+            const measuredWidth = Math.floor(event.nativeEvent.layout.width ?? 0)
+            if (!measuredWidth) return
+            inputWidthRef.current = measuredWidth
+          }}
         >
           <TextInput
             ref={(nextValue) => {
               inputRef.current = nextValue
             }}
             value={value}
-            onChangeText={onChangeValue}
+            onChangeText={handleChangeText}
             placeholder=""
             placeholderTextColor="#8E8480"
-            multiline={!isSingleLine}
-            scrollEnabled={!isSingleLine && isScrollable}
-            textAlignVertical={inputTextAlignVertical}
+            multiline
+            scrollEnabled={isScrollable}
+            textAlignVertical="top"
             onKeyPress={(event: any) => {
               const key = event?.nativeEvent?.key
-              const isShift = Boolean(event?.nativeEvent?.shiftKey)
+              const isShift = Boolean(event?.nativeEvent?.shiftKey ?? event?.shiftKey)
               if (key === 'Tab') {
                 if (typeof event?.preventDefault === 'function') event.preventDefault()
                 const suggestion = applyTabAutocomplete(value)
@@ -138,36 +233,15 @@ export function ChatComposer({
                 onSend()
               }
             }}
-            onContentSizeChange={(event) => {
-              if (isSingleLine) return
-              const contentHeight = Math.ceil((event.nativeEvent.contentSize?.height ?? 0) + 24)
-              const nextHeight = Math.max(minHeight, Math.min(maxHeight, contentHeight))
-
-              const heightDelta = Math.abs(nextHeight - inputHeightRef.current)
-              if (heightDelta >= 1) {
-                inputHeightRef.current = nextHeight
-                setInputHeight(nextHeight)
-              }
-
-              const scrollThreshold = 2
-              const shouldEnableScroll = contentHeight > maxHeight + scrollThreshold
-              const shouldDisableScroll = contentHeight < maxHeight - scrollThreshold
-              const nextIsScrollable = shouldEnableScroll ? true : shouldDisableScroll ? false : isScrollableRef.current
-
-              if (nextIsScrollable !== isScrollableRef.current) {
-                isScrollableRef.current = nextIsScrollable
-                setIsScrollable(nextIsScrollable)
-              }
-            }}
             style={[
               styles.input,
               compact ? styles.inputCompact : undefined,
-              isSingleLine ? styles.inputSingleLine : undefined,
+              { lineHeight, paddingTop: inputPaddingTop, paddingBottom: inputPaddingBottom },
               inputWebStyle,
               inputScrollStyle,
             ]}
           />
-        </View>
+        </Animated.View>
 
         <Pressable
           onPress={() => {
@@ -200,48 +274,38 @@ const styles = StyleSheet.create({
   },
   row: {
     width: '100%',
-    minHeight: 48,
+    minHeight: 40,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#DFE0E2',
     backgroundColor: '#F3F4F6',
-    paddingLeft: 16,
+    paddingLeft: 12,
     paddingRight: 8,
-    paddingVertical: 0,
+    paddingTop: 8,
+    paddingBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    overflow: 'hidden',
   },
   inputContainer: {
     flex: 1,
-    minHeight: 44,
     backgroundColor: 'transparent',
     paddingHorizontal: 0,
     paddingVertical: 0,
-    justifyContent: 'flex-start',
+    overflow: 'hidden',
   },
   inputContainerCompact: {
-    minHeight: 36,
-  },
-  inputContainerSingleLine: {
-    justifyContent: 'center',
+    minHeight: 0,
   },
   input: {
-    padding: 0,
     fontSize: 16,
-    lineHeight: 22,
-    paddingBottom: 0,
     color: colors.text,
     flex: 1,
+    backgroundColor: 'transparent',
   },
   inputCompact: {
-    lineHeight: 22,
-  },
-  inputSingleLine: {
-    height: 22,
-    lineHeight: 22,
-    paddingTop: 0,
-    paddingBottom: 0,
+    fontSize: 15,
   },
   sendButton: {
     backgroundColor: colors.selected,

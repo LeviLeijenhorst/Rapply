@@ -1,8 +1,20 @@
 export type Client = {
   id: string
+  organizationId?: string
   name: string
   clientDetails: string
   employerDetails: string
+  trajectoryStartDate?: string | null
+  trajectoryEndDate?: string | null
+  createdByUserId?: string | null
+  primaryCoachUserId?: string | null
+  assignedCoachUserIds?: string[]
+  assignedCoaches?: Array<{
+    userId: string
+    displayName: string | null
+    email: string | null
+    role: string
+  }>
   createdAtUnixMs: number
   updatedAtUnixMs: number
   isArchived: boolean
@@ -34,10 +46,17 @@ export type Input = {
 export type Trajectory = {
   id: string
   clientId: string
+  isActive?: boolean
   name: string
+  serviceType?: string | null
   uwvContactName: string | null
+  uwvContactPhone?: string | null
+  uwvContactEmail?: string | null
   orderNumber: string | null
   startDate: string | null
+  planOfAction?: { documentId: string } | null
+  maxHours?: number
+  maxAdminHours?: number
   dienstType?: string
   createdAtUnixMs: number
   updatedAtUnixMs: number
@@ -47,10 +66,14 @@ export type SnippetStatus = 'pending' | 'approved' | 'rejected'
 
 export type Snippet = {
   id: string
-  trajectoryId: string
+  clientId?: string | null
+  trajectoryId: string | null
   inputId: string
+  sourceInputId?: string | null
+  sourceSessionId?: string | null
   itemId?: string
   field: string
+  fieldId?: string
   text: string
   date: number
   status: SnippetStatus
@@ -60,9 +83,69 @@ export type Snippet = {
 
 export type Note = {
   id: string
+  clientId?: string | null
+  sourceInputId?: string | null
   sessionId: string
   title: string
   text: string
+  createdAtUnixMs: number
+  updatedAtUnixMs: number
+}
+
+export type ReportFieldType = 'programmatic' | 'ai' | 'manual'
+
+export type ReportFieldVersion = {
+  id: string
+  source: 'ai_generation' | 'ai_regeneration' | 'manual_edit' | 'chat_update'
+  answer: string
+  factualBasis: string
+  reasoning: string
+  confidence: number | null
+  prompt: string | null
+  createdAtUnixMs: number
+}
+
+export type StructuredReportField = {
+  fieldId: string
+  label: string
+  fieldType: ReportFieldType
+  answer: string
+  factualBasis: string
+  reasoning: string
+  confidence: number | null
+  updatedAtUnixMs: number
+  versions: ReportFieldVersion[]
+}
+
+export type StructuredReport = {
+  templateId: string
+  templateName: string
+  createdAtUnixMs: number
+  updatedAtUnixMs: number
+  fields: Record<string, StructuredReportField>
+}
+
+export type ReportState = 'incomplete' | 'needs_review' | 'complete'
+
+export type Report = {
+  id: string
+  clientId: string | null
+  trajectoryId: string | null
+  sourceInputId: string | null
+  createdByUserId?: string | null
+  primaryAuthorUserId?: string | null
+  reportCoachUserIds?: string[]
+  reportCoaches?: Array<{
+    userId: string
+    displayName: string | null
+    email: string | null
+  }>
+  title: string
+  reportType: string
+  state: ReportState
+  reportText: string
+  reportStructuredJson: StructuredReport | null
+  reportDate: string | null
   createdAtUnixMs: number
   updatedAtUnixMs: number
 }
@@ -107,6 +190,7 @@ export type OrganizationSettings = {
   visitAddress: string
   postalAddress: string
   postalCodeCity: string
+  visitPostalCodeCity?: string
   tintColor?: string
   logoDataUrl?: string | null
   contactName?: string
@@ -128,6 +212,7 @@ export type LocalAppData = {
   clients: Client[]
   trajectories: Trajectory[]
   inputs: Input[]
+  reports: Report[]
   snippets: Snippet[]
   notes: Note[]
   templates: Template[]

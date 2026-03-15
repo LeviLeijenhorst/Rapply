@@ -19,7 +19,11 @@ npm install
 - **AZURE_STORAGE_TRANSCRIPTION_UPLOADS_CONTAINER**: container name (default: `transcription-uploads`)
 - **REVENUECAT_SECRET_KEY**: optional for local dev (billing plan detection)
 - **AZURE_SPEECH_KEY** and **AZURE_SPEECH_REGION**: required for transcription
-- **AZURE_OPENAI_ENDPOINT**, **AZURE_OPENAI_KEY**, and **AZURE_OPENAI_SUMMARY_DEPLOYMENT**: required for summary generation
+- **AZURE_OPENAI_ENDPOINT** and **AZURE_OPENAI_KEY**: required for all Azure OpenAI calls
+- **AZURE_OPENAI_REASONING_DEPLOYMENT**: optional but recommended; used for the report reasoning step (target model: `o3`)
+- **AZURE_OPENAI_REPORT_DEPLOYMENT**: optional but recommended; used for report writing, field regeneration, and pipeline chat (target model: `gpt-5` or `gpt-5-chat`)
+- **AZURE_OPENAI_CHAT_DEPLOYMENT**: fallback deployment for chat-style completions when no report deployment is configured
+- **AZURE_OPENAI_SUMMARY_DEPLOYMENT**: deployment for summaries/snippet extraction; if empty, the server falls back to the chat/report deployment
 - **CORS_ALLOWED_ORIGINS**: optional for local dev; required for production (comma-separated list)
 - **RATE_LIMIT_WINDOW_MS** and **RATE_LIMIT_MAX_REQUESTS**: optional
 - **ADMIN_FEEDBACK_EMAILS**: optional comma-separated email allowlist for `/admin/feedback/list` (default: `ltleijenhorst@gmail.com`)

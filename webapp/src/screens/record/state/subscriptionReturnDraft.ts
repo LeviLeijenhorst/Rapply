@@ -1,6 +1,5 @@
 import { readJsonFromLocalStorage, writeJsonToLocalStorage } from '../../../storage/localStorageJson'
-
-type DraftOptionKey = 'gesprek' | 'gespreksverslag' | 'spraakGespreksverslag' | 'spraakAnderVerslag' | 'verslag' | 'upload'
+import type { DraftOptionKey } from '../utils'
 
 type StoredSubscriptionReturnDraft = {
   id: string

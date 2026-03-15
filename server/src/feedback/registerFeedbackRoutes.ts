@@ -5,6 +5,7 @@ import { readManualPricingContextForUser } from "../billing/manualPricing"
 import { buildCycleKey } from "../billing/cycleMath"
 import { cancelMollieSubscriptionForUser, isMollieConfigured, syncMollieSubscriptionForUser, syncRecentMolliePaymentsForUser } from "../billing/mollie"
 import { ensureBillingUser, readBillingStatus } from "../billing/store"
+import { requireUserDefaultOrganizationId } from "../access/clientAccess"
 import { isAdminEmail, normalizeEmail } from "../identity/admin"
 import { execute, queryMany } from "../db"
 import { deleteEntraUserById } from "../identity/entraGraph"
@@ -1476,6 +1477,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
       }
 
       await ensureBillingUser(resolvedUser.id)
+      const targetOrganizationId = await requireUserDefaultOrganizationId(resolvedUser.id)
       const manualPricing = await readManualPricingContextForUser(resolvedUser.id)
       const cycleKey = buildCycleKey(manualPricing.cycleStartMs, manualPricing.cycleEndMs)
       if (!cycleKey) {
@@ -1485,7 +1487,7 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
 
       await execute(
         `
-        update public.billing_users
+        update public.billing_organizations
         set cycle_granted_seconds_by_key = jsonb_set(
               coalesce(cycle_granted_seconds_by_key, '{}'::jsonb),
               array[$2::text],
@@ -1493,9 +1495,9 @@ export function registerFeedbackRoutes(app: Express, params: RegisterFeedbackRou
               true
             ),
             updated_at = now()
-        where user_id = $3
+        where organization_id = $3
         `,
-        [grantedSeconds, cycleKey, resolvedUser.id],
+        [grantedSeconds, cycleKey, targetOrganizationId],
       )
       await execute(
         `

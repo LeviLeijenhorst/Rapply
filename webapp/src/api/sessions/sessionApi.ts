@@ -24,8 +24,11 @@ export async function updateInputRemote(params: {
   audioBlobId?: string | null
   audioDurationSeconds?: number | null
   uploadFileName?: string | null
+  sourceText?: string | null
+  sourceMimeType?: string | null
   transcript?: string | null
   summary?: string | null
+  summaryStructured?: unknown
   reportDate?: string | null
   transcriptionStatus?: Input['transcriptionStatus']
   transcriptionError?: string | null
@@ -34,8 +37,11 @@ export async function updateInputRemote(params: {
     ...params,
     inputType: params.type,
     audioUploadId: params.audioBlobId,
+    sourceText: params.sourceText,
+    sourceMimeType: params.sourceMimeType,
     transcriptText: params.transcript,
     summaryText: params.summary,
+    summaryStructured: params.summaryStructured,
   })
 }
 

@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { extractSnippets } from '@/api/snippets/snippetGenerationApi'
 import type { InputDataItem, InputNoteItem, InputScreenProps, InputSnippetItem } from '@/screens/session/sessionScreen.types'
+import { resolveInputSummaryText } from '@/screens/session/sessionSummary'
 import { useLocalAppData } from '@/storage/LocalAppDataProvider'
 import { useToast } from '@/toast/ToastProvider'
 
@@ -11,11 +12,17 @@ function selectSnippetsForInput(snippets: InputSnippetItem[], inputId: string): 
   return snippets.filter((snippet) => String(snippet.inputId || '').trim() === normalizedInputId)
 }
 
+function isWrittenInputType(value: unknown): boolean {
+  const normalizedType = String(value || '').trim()
+  return normalizedType === 'written' || normalizedType === 'written-recap'
+}
+
 export function useInputScreen(props: InputScreenProps) {
   const { id } = props
   const { data, createNote, createSnippet, updateNote, deleteNote, updateInput, updateSnippet, deleteSnippet } = useLocalAppData()
   const { showErrorToast, showToast } = useToast()
   const [isRegeneratingSnippets, setIsRegeneratingSnippets] = useState(false)
+  const [isSnippetStateSettling, setIsSnippetStateSettling] = useState(false)
 
   const appData = data as any
 
@@ -47,37 +54,70 @@ export function useInputScreen(props: InputScreenProps) {
   )
 
   const isInputMissing = !session
-  const summary = session?.summary || null
-  const transcriptionStatus = session?.transcriptionStatus || 'idle'
-  const transcript = session?.transcript || null
-  const canRegenerateSnippets = sessionSnippets.length === 0 && Boolean(String(transcript || '').trim())
+  const isWrittenInput = isWrittenInputType(session?.type)
+  const isUploadedDocument = session?.type === 'uploaded-document'
+  const summary = useMemo(() => {
+    if (isWrittenInput) return null
+    if (session?.type === 'uploaded-document') {
+      return String(session.transcript || '').trim() || null
+    }
+    return resolveInputSummaryText(session)
+  }, [isWrittenInput, session?.summary, session?.summaryStructured, session?.transcript, session?.type])
+  const transcriptionStatus = isWrittenInput ? 'idle' : (session?.transcriptionStatus || 'idle')
+  const transcript = isWrittenInput ? null : (session?.transcript || null)
+  const hasTranscript = Boolean(String(transcript || '').trim())
+  const visibleSessionSnippets = isWrittenInput ? [] : sessionSnippets
+
+  useEffect(() => {
+    if (isWrittenInput) {
+      setIsSnippetStateSettling(false)
+      return undefined
+    }
+    const isGeneratingPipeline = transcriptionStatus === 'transcribing' || transcriptionStatus === 'generating'
+    if (isGeneratingPipeline && sessionSnippets.length === 0 && hasTranscript) {
+      setIsSnippetStateSettling(true)
+      return
+    }
+    if (transcriptionStatus === 'done' && sessionSnippets.length === 0 && hasTranscript) {
+      const timerId = setTimeout(() => {
+        setIsSnippetStateSettling(false)
+      }, 900)
+      return () => clearTimeout(timerId)
+    }
+    setIsSnippetStateSettling(false)
+    return undefined
+  }, [hasTranscript, isWrittenInput, transcriptionStatus, sessionSnippets.length])
+
+  const canRegenerateSnippets = !isWrittenInput && hasTranscript && !isSnippetStateSettling
 
   async function handleRegenerateInputSnippets() {
     if (!session) return
+    if (isWrittenInput) return
 
     const sessionTranscript = String(session.transcript || '').trim()
     if (!sessionTranscript || isRegeneratingSnippets) return
-
-    const trajectoryId = String(session.trajectoryId || '').trim()
-    if (!trajectoryId) {
-      showErrorToast('Koppel deze sessie eerst aan een traject om snippets te genereren.')
-      return
-    }
 
     setIsRegeneratingSnippets(true)
     try {
       const generatedSnippets = await extractSnippets({
         inputId: resolvedInputId,
         clientId: String(session.clientId || '').trim() || undefined,
-        trajectoryId,
-        sourceInputType: session.type === 'written' ? 'written_recap' : 'recording',
+        trajectoryId: session.trajectoryId ?? null,
+        sourceInputType:
+          isWrittenInputType(session.type)
+            ? 'written_recap'
+            : session.type === 'uploaded-document'
+              ? 'uploaded_document'
+              : 'recording',
         transcript: sessionTranscript,
         itemDate: Number(session.createdAtUnixMs) || Date.now(),
       })
 
-      const existingSnippetIds = new Set((Array.isArray(appData.snippets) ? appData.snippets : []).map((snippet: InputSnippetItem) => snippet.id))
+      for (const existingSnippet of sessionSnippets) {
+        deleteSnippet(existingSnippet.id)
+      }
+
       for (const snippet of generatedSnippets) {
-        if (existingSnippetIds.has(snippet.id)) continue
         createSnippet({
           id: snippet.id,
           trajectoryId: snippet.trajectoryId,
@@ -108,27 +148,42 @@ export function useInputScreen(props: InputScreenProps) {
   }
 
   function handleUpdateSnippetStatus(snippetId: string, status: 'pending' | 'approved' | 'rejected') {
-    updateSnippet(snippetId, { status })
+    const currentSnippet = sessionSnippets.find((snippet) => snippet.id === snippetId) || null
+    if (!currentSnippet) return
+    const nextStatus = currentSnippet.status === status ? 'pending' : status
+    updateSnippet(snippetId, { status: nextStatus })
   }
 
   function handleDeleteSnippet(snippetId: string) {
     deleteSnippet(snippetId)
   }
 
+  function handleSaveSummary(nextSummary: string) {
+    if (!session) return
+    updateInput(session.id, {
+      summary: String(nextSummary || ''),
+      summaryStructured: null,
+    })
+  }
+
   return {
     session,
     resolvedInputId,
     isInputMissing,
+    isWrittenInput,
+    isUploadedDocument,
     summary,
     transcriptionStatus,
     transcript,
     canRegenerateSnippets,
     sessionNotes,
-    sessionSnippets,
+    sessionSnippets: visibleSessionSnippets,
+    isSnippetStateSettling,
     isRegeneratingSnippets,
     handleRegenerateInputSnippets,
     handleUpdateSnippetStatus,
     handleDeleteSnippet,
+    handleSaveSummary,
     createNote,
     updateNote,
     deleteNote,

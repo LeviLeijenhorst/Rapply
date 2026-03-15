@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleSheet, View } from 'react-native'
+import { ScrollView, StyleSheet, View } from 'react-native'
 
 import { semanticColorTokens } from '@/design/tokens/colors'
 import { spacing } from '@/design/tokens/spacing'
@@ -7,26 +7,32 @@ import { Header } from '@/screens/session/components/Header'
 import { RightPanel } from '@/screens/session/components/RightPanel'
 import { SnippetSection } from '@/screens/session/components/SnippetSection'
 import { SummaryCard } from '@/screens/session/components/SummaryCard'
+import { SummaryEditModal } from '@/screens/session/components/modals/SummaryEditModal'
 import type { InputScreenProps } from '@/screens/session/sessionScreen.types'
 import { useInputScreen } from '@/screens/session/sessionScreen.logic'
 import { EmptyPageMessage } from '@/ui/EmptyPageMessage'
 
 export function InputScreen(props: InputScreenProps) {
   const { title, clientName, date, onBack } = props
+  const [isSummaryEditModalOpen, setIsSummaryEditModalOpen] = React.useState(false)
 
   const {
     isInputMissing,
     resolvedInputId,
+    isWrittenInput,
+    isUploadedDocument,
     summary,
     transcriptionStatus,
     transcript,
     canRegenerateSnippets,
     sessionNotes,
     sessionSnippets,
+    isSnippetStateSettling,
     isRegeneratingSnippets,
     handleRegenerateInputSnippets,
     handleUpdateSnippetStatus,
     handleDeleteSnippet,
+    handleSaveSummary,
     createNote,
     updateNote,
     deleteNote,
@@ -38,25 +44,31 @@ export function InputScreen(props: InputScreenProps) {
 
   return (
     <View style={styles.page}>
-      {/* Page header */}
-      <Header title={title} clientName={clientName} date={date} />
+      <Header title={title} clientName={clientName} date={date} onBack={onBack} />
 
       <View style={styles.layoutRow}>
-        {/* Left column: summary + snippets */}
-        <View style={styles.leftColumn}>
-          <SummaryCard summary={summary} transcriptionStatus={transcriptionStatus} />
-
-          <SnippetSection
-            snippets={sessionSnippets}
-            canRegenerate={canRegenerateSnippets}
-            isRegenerating={isRegeneratingSnippets}
-            onRegenerate={handleRegenerateInputSnippets}
-            onUpdateSnippetStatus={handleUpdateSnippetStatus}
-            onDeleteSnippet={handleDeleteSnippet}
+        <ScrollView style={styles.leftColumnScroll} contentContainerStyle={styles.leftColumnContent} showsVerticalScrollIndicator>
+          <SummaryCard
+            summary={summary}
+            transcriptionStatus={transcriptionStatus}
+            title={isUploadedDocument ? 'Document' : 'Samenvatting'}
+            emptyText={isUploadedDocument ? 'Geen leesbare documenttekst beschikbaar.' : undefined}
+            onPressEdit={!isUploadedDocument ? () => setIsSummaryEditModalOpen(true) : null}
           />
-        </View>
 
-        {/* Right column: chatbot + notes */}
+          {!isWrittenInput ? (
+            <SnippetSection
+              snippets={sessionSnippets}
+              isLoading={((transcriptionStatus === 'transcribing' || transcriptionStatus === 'generating') && sessionSnippets.length === 0) || isSnippetStateSettling}
+              canRegenerate={canRegenerateSnippets}
+              isRegenerating={isRegeneratingSnippets}
+              onRegenerate={handleRegenerateInputSnippets}
+              onUpdateSnippetStatus={handleUpdateSnippetStatus}
+              onDeleteSnippet={handleDeleteSnippet}
+            />
+          ) : null}
+        </ScrollView>
+
         <View style={styles.rightColumn}>
           <RightPanel
             inputId={resolvedInputId}
@@ -70,6 +82,13 @@ export function InputScreen(props: InputScreenProps) {
           />
         </View>
       </View>
+
+      <SummaryEditModal
+        visible={isSummaryEditModalOpen}
+        initialSummary={String(summary || '')}
+        onClose={() => setIsSummaryEditModalOpen(false)}
+        onSave={handleSaveSummary}
+      />
     </View>
   )
 }
@@ -89,10 +108,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.lg,
   },
-  leftColumn: {
+  leftColumnScroll: {
     flex: 1,
-    gap: spacing.lg,
     minWidth: 0,
+  },
+  leftColumnContent: {
+    gap: spacing.lg,
+    paddingBottom: spacing.lg,
   },
   rightColumn: {
     width: 437,
@@ -102,4 +124,3 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
 })
-

@@ -20,7 +20,7 @@ type Props = {
 type ClientFilter = 'all' | ClientListStatus
 
 const FILTER_OPTIONS: Array<{ key: ClientFilter; label: string }> = [
-  { key: 'all', label: 'Alle cliënten' },
+  { key: 'all', label: 'Alle clienten' },
   { key: 'active', label: 'Actief' },
   { key: 'closed', label: 'Afgesloten' },
 ]
@@ -52,7 +52,7 @@ export function ClientsScreen({ onSelectClient, onOpenNewClientPage }: Props) {
     setPage(1)
   }, [filter, query])
 
-  const currentFilterLabel = FILTER_OPTIONS.find((option) => option.key === filter)?.label || 'Alle cliënten'
+  const currentFilterLabel = FILTER_OPTIONS.find((option) => option.key === filter)?.label || 'Alle clienten'
 
   return (
     <View style={styles.container}>
@@ -60,7 +60,7 @@ export function ClientsScreen({ onSelectClient, onOpenNewClientPage }: Props) {
         <SearchBar
           value={query}
           onChangeText={setQuery}
-          placeholder="Zoek cliënten..."
+          placeholder="Zoek clienten..."
           inputRef={searchInputRef}
           containerStyle={styles.searchField}
         />
@@ -104,7 +104,7 @@ export function ClientsScreen({ onSelectClient, onOpenNewClientPage }: Props) {
           >
             <NewClientAddIcon color={colors.selected} size={18} />
             <Text style={styles.newClientButtonText}>
-              Nieuwe cliënt
+              Nieuwe client
             </Text>
           </Pressable>
         </View>
@@ -112,7 +112,7 @@ export function ClientsScreen({ onSelectClient, onOpenNewClientPage }: Props) {
 
       <View style={styles.tableCard}>
         <View style={styles.tableHeaderRow}>
-          <Text isSemibold style={[styles.headerText, styles.clientColumn]}>Cliënt</Text>
+          <Text isSemibold style={[styles.headerText, styles.clientColumn]}>Client</Text>
           <Text isSemibold style={[styles.headerText, styles.trajectoryColumn]}>Trajecten</Text>
           <Text isSemibold style={[styles.headerText, styles.sessionColumn]}>Sessies</Text>
           <Text isSemibold style={[styles.headerText, styles.reportsColumn]}>Rapportages</Text>
@@ -127,7 +127,7 @@ export function ClientsScreen({ onSelectClient, onOpenNewClientPage }: Props) {
           ))}
           {paginatedItems.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>Geen cliënten gevonden.</Text>
+              <Text style={styles.emptyStateText}>Geen clienten gevonden.</Text>
             </View>
           ) : null}
         </ScrollView>
@@ -136,7 +136,7 @@ export function ClientsScreen({ onSelectClient, onOpenNewClientPage }: Props) {
       <View style={styles.footerRow}>
         <Text style={styles.footerInfo}>
           Toont {paginatedItems.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}-
-          {(currentPage - 1) * pageSize + paginatedItems.length} van {visibleItems.length} cliënten
+          {(currentPage - 1) * pageSize + paginatedItems.length} van {visibleItems.length} clienten
         </Text>
         {totalPages > 1 ? (
           <View style={styles.paginationRow}>
@@ -178,6 +178,8 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   headerRow: {
+    position: 'relative',
+    zIndex: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -197,7 +199,7 @@ const styles = StyleSheet.create({
   },
   filterWrap: {
     position: 'relative',
-    zIndex: 2,
+    zIndex: 30,
   },
   filterButton: {
     width: 147,
@@ -280,6 +282,8 @@ const styles = StyleSheet.create({
     color: colors.selected,
   },
   tableCard: {
+    position: 'relative',
+    zIndex: 1,
     flex: 1,
     borderRadius: 12,
     borderWidth: 1,

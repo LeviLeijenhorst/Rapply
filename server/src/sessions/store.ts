@@ -1,13 +1,17 @@
+import { assertUserCanAccessClient } from "../access/clientAccess"
 import { execute, queryMany, queryOne } from "../db"
 import type { Session, SessionInputType } from "../types/Session"
 
 type SessionRow = {
   id: string
   client_id: string | null
+  trajectory_id: string | null
   title: string
   input_type: string
+  source_text: string | null
   source_upload_id: string | null
   source_file_name: string | null
+  source_mime_type: string | null
   transcript_text: string | null
   summary_text: string | null
   summary_structured_json: unknown | null
@@ -39,13 +43,17 @@ function mapSummaryStructured(value: unknown): Session["summaryStructured"] {
 function mapDbInputTypeToApiInputType(value: string): SessionInputType {
   if (value === "uploaded_audio") return "uploaded_audio"
   if (value === "written_recap") return "written_recap"
-  if (value === "spoken_recap_recording") return "intake"
+  if (value === "spoken_recap_recording") return "spoken_recap"
+  if (value === "uploaded_document") return "uploaded_document"
+  if (value === "intake") return "intake"
   return "recording"
 }
 
 function mapApiInputTypeToDbInputType(value: SessionInputType): string {
   if (value === "uploaded_audio") return "uploaded_audio"
   if (value === "written_recap") return "written_recap"
+  if (value === "spoken_recap") return "spoken_recap_recording"
+  if (value === "uploaded_document") return "uploaded_document"
   if (value === "intake") return "spoken_recap_recording"
   return "full_audio_recording"
 }
@@ -68,9 +76,11 @@ function mapSessionRow(row: SessionRow): Session {
   return {
     id: row.id,
     clientId: row.client_id,
-    trajectoryId: null,
+    trajectoryId: row.trajectory_id,
     title: row.title,
     inputType: mapDbInputTypeToApiInputType(row.input_type),
+    sourceText: row.source_text,
+    sourceMimeType: row.source_mime_type,
     audioUploadId: row.source_upload_id,
     audioDurationSeconds: null,
     uploadFileName: row.source_file_name,
@@ -99,16 +109,32 @@ async function resolveValidSourceUploadId(params: { userId: string; sourceUpload
   return row?.id ?? null
 }
 
+async function readSessionClientId(sessionId: string): Promise<string | null> {
+  const row = await queryOne<{ client_id: string | null }>(
+    `
+    select client_id
+    from public.inputs
+    where id = $1
+    limit 1
+    `,
+    [sessionId],
+  )
+  return row?.client_id ?? null
+}
+
 export async function listSessions(userId: string): Promise<Session[]> {
   const rows = await queryMany<SessionRow>(
     `
     select
       i.id,
       i.client_id,
+      i.trajectory_id,
       i.title,
       i.input_type,
+      i.source_text,
       i.source_upload_id,
       i.source_file_name,
+      i.source_mime_type,
       t.transcript_text,
       s.summary_text,
       s.summary_structured_json,
@@ -119,7 +145,14 @@ export async function listSessions(userId: string): Promise<Session[]> {
     from public.inputs i
     left join public.input_transcripts t on t.input_id = i.id
     left join public.input_summaries s on s.input_id = i.id
-    where i.owner_user_id = $1
+    left join public.organization_users ou
+      on ou.organization_id = i.organization_id
+     and ou.user_id = $1
+    left join public.client_assignments ca
+      on ca.client_id = i.client_id
+     and ca.user_id = $1
+    where ou.role = 'admin'
+       or ca.user_id is not null
     order by i.created_at_unix_ms desc
     `,
     [userId],
@@ -128,34 +161,62 @@ export async function listSessions(userId: string): Promise<Session[]> {
 }
 
 export async function createSession(userId: string, session: Session): Promise<void> {
+  if (!session.clientId) {
+    const error: any = new Error("Session must include clientId")
+    error.status = 400
+    throw error as Error
+  }
+  await assertUserCanAccessClient(userId, session.clientId)
   const sourceUploadId = await resolveValidSourceUploadId({ userId, sourceUploadId: session.audioUploadId })
 
   await execute(
     `
     insert into public.inputs (
-      id, client_id, owner_user_id, input_type, title, source_upload_id, source_file_name, processing_status, processing_error, created_at_unix_ms, updated_at_unix_ms
+      id, client_id, organization_id, trajectory_id, created_by_user_id, input_type, title, source_text, source_upload_id, source_file_name, source_mime_type, processing_status, processing_error, created_at_unix_ms, updated_at_unix_ms
     )
-    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    values (
+      $1,
+      $2,
+      (select organization_id from public.clients where id = $2),
+      $3,
+      $4,
+      $5,
+      $6,
+      $7,
+      $8,
+      $9,
+      $10,
+      $11,
+      $12,
+      $13,
+      $14
+    )
     on conflict (id) do update
       set client_id = excluded.client_id,
-          title = excluded.title,
+          organization_id = excluded.organization_id,
+          trajectory_id = excluded.trajectory_id,
           input_type = excluded.input_type,
+          title = excluded.title,
+          source_text = excluded.source_text,
           source_upload_id = excluded.source_upload_id,
           source_file_name = excluded.source_file_name,
+          source_mime_type = excluded.source_mime_type,
           processing_status = excluded.processing_status,
           processing_error = excluded.processing_error,
           updated_at_unix_ms = excluded.updated_at_unix_ms
-      where public.inputs.owner_user_id = excluded.owner_user_id
-        and excluded.updated_at_unix_ms >= public.inputs.updated_at_unix_ms
+      where excluded.updated_at_unix_ms >= public.inputs.updated_at_unix_ms
     `,
     [
       session.id,
       session.clientId,
+      session.trajectoryId,
       userId,
       mapApiInputTypeToDbInputType(session.inputType),
       session.title,
+      session.sourceText,
       sourceUploadId,
       session.uploadFileName,
+      session.sourceMimeType,
       mapApiStatusToProcessingStatus(session.transcriptionStatus),
       session.transcriptionError,
       session.createdAtUnixMs,
@@ -209,6 +270,8 @@ export async function updateSession(
     audioUploadId?: string | null
     audioDurationSeconds?: number | null
     uploadFileName?: string | null
+    sourceText?: string | null
+    sourceMimeType?: string | null
     transcriptText?: string | null
     summaryText?: string | null
     summaryStructured?: Session["summaryStructured"]
@@ -217,6 +280,13 @@ export async function updateSession(
     updatedAtUnixMs: number
   },
 ): Promise<void> {
+  const existingClientId = await readSessionClientId(params.id)
+  if (!existingClientId) return
+  await assertUserCanAccessClient(userId, existingClientId)
+  if (params.clientId) {
+    await assertUserCanAccessClient(userId, params.clientId)
+  }
+
   const updates: string[] = []
   const values: unknown[] = []
   let index = 1
@@ -227,14 +297,23 @@ export async function updateSession(
   if (params.clientId !== undefined) {
     updates.push(`client_id = $${index++}`)
     values.push(params.clientId)
+    updates.push(`organization_id = (select organization_id from public.clients where id = $${index - 1})`)
   }
   if (typeof params.title === "string") {
     updates.push(`title = $${index++}`)
     values.push(params.title)
   }
+  if (params.trajectoryId !== undefined) {
+    updates.push(`trajectory_id = $${index++}`)
+    values.push(params.trajectoryId)
+  }
   if (params.inputType !== undefined) {
     updates.push(`input_type = $${index++}`)
     values.push(mapApiInputTypeToDbInputType(params.inputType))
+  }
+  if (params.sourceText !== undefined) {
+    updates.push(`source_text = $${index++}`)
+    values.push(params.sourceText)
   }
   if (params.audioUploadId !== undefined) {
     const resolvedSourceUploadId = await resolveValidSourceUploadId({ userId, sourceUploadId: params.audioUploadId })
@@ -245,6 +324,10 @@ export async function updateSession(
     updates.push(`source_file_name = $${index++}`)
     values.push(params.uploadFileName)
   }
+  if (params.sourceMimeType !== undefined) {
+    updates.push(`source_mime_type = $${index++}`)
+    values.push(params.sourceMimeType)
+  }
   if (params.transcriptionStatus !== undefined) {
     updates.push(`processing_status = $${index++}`)
     values.push(mapApiStatusToProcessingStatus(params.transcriptionStatus))
@@ -254,14 +337,12 @@ export async function updateSession(
     values.push(params.transcriptionError)
   }
 
-  values.push(userId)
   values.push(params.id)
-
   await execute(
     `
     update public.inputs
     set ${updates.join(", ")}
-    where owner_user_id = $${index++} and id = $${index}
+    where id = $${index}
     `,
     values,
   )
@@ -295,5 +376,9 @@ export async function updateSession(
 }
 
 export async function deleteSession(userId: string, id: string): Promise<void> {
-  await execute(`delete from public.inputs where owner_user_id = $1 and id = $2`, [userId, id])
+  const clientId = await readSessionClientId(id)
+  if (!clientId) return
+  await assertUserCanAccessClient(userId, clientId)
+  await execute(`delete from public.inputs where id = $1`, [id])
 }
+

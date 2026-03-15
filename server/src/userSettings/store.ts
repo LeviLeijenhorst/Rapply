@@ -1,5 +1,6 @@
 import { execute, queryOne } from "../db"
-import { ensurePrimaryOrganizationForUser, findPrimaryOrganizationIdForUser } from "../organizationSettings/store"
+import { findPrimaryOrganizationIdForUser } from "../organizationSettings/store"
+import { requireUserDefaultOrganizationId } from "../access/clientAccess"
 import type { UserSettings } from "../types/UserSettings"
 
 type OrganizationContactRow = {
@@ -50,7 +51,7 @@ export async function updateUserSettings(
     updatedAtUnixMs: number
   },
 ): Promise<void> {
-  const organizationId = await ensurePrimaryOrganizationForUser(userId, params.updatedAtUnixMs)
+  const organizationId = await requireUserDefaultOrganizationId(userId)
   const current = await readOrganizationContactRow(organizationId)
 
   await execute(

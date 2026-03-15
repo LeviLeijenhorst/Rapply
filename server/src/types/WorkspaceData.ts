@@ -10,10 +10,17 @@ import type { UserSettings } from "./UserSettings"
 export type WorkspaceData = {
   clients: Client[]
   trajectories: Trajectory[]
+  inputs: Session[]
   sessions: Session[]
   reports: Report[]
   snippets: Snippet[]
   notes: Note[]
+  templates: Array<{
+    id: string
+    name: string
+    description: string
+  }>
   organizationSettings: OrganizationSettings
   userSettings: UserSettings
+  organizationMemberships?: Array<{ organizationId: string; role: "admin" | "regular" }>
 }

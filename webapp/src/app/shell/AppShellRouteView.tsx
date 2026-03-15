@@ -14,6 +14,7 @@ import { NewClientScreen } from '../../screens/newClient/NewClientScreen'
 import { DashboardScreen } from '../../screens/dashboard/DashboardScreen'
 import { getClientDisplayName } from '../../types/client'
 import type { ClientLeftTabKey } from '../../screens/client/clientScreen.types'
+import type { NewInputQuickAction } from '../../screens/record/types'
 import type { RouteState } from './routeHelpers'
 
 type Props = {
@@ -46,7 +47,7 @@ type Props = {
   newlyCreatedClientName: string | null
   onClearNewlyCreatedClient: () => void
   onOpenNewClient: () => void
-  onOpenNewInputModal: (clientId: string | null, trajectoryId?: string | null, initialOption?: 'gesprek' | 'gespreksverslag' | null) => void
+  onOpenNewInputModal: (clientId: string | null, trajectoryId?: string | null, initialOption?: 'gesprek' | 'gespreksverslag' | null, initialQuickAction?: NewInputQuickAction | null) => void
   onSetClientTabById: (clientId: string, tabKey: ClientLeftTabKey) => void
   onSetRapportageEditInputId: (sessionId: string | null) => void
   onSetRapportageOnlyInputId: (sessionId: string | null) => void
@@ -64,6 +65,8 @@ type Props = {
   selectedSessieId: string | null
   selectedTrajectoryId: string | null
   sessionIdPendingTemplatePicker: string | null
+  currentUserGivenName: string | null
+  currentUserName: string | null
 }
 
 export function AppShellRouteView(props: Props) {
@@ -138,11 +141,11 @@ export function AppShellRouteView(props: Props) {
   if (props.selectedSidebarItemKey === 'reports') {
     return (
       <ReportsScreen
-        onOpenReport={(sessionId) => {
+        onOpenReport={(reportId) => {
           props.onSetInputOriginRoute({ kind: 'reports' })
           props.onSetRapportageOnlyInputId(null)
           props.onSetRapportageScreenMode('bewerken')
-          props.onSetRapportageEditInputId(sessionId)
+          props.onSetRapportageEditInputId(reportId)
           props.navigateTo({ kind: 'nieuwe-rapportage' })
         }}
       />
@@ -216,10 +219,14 @@ export function AppShellRouteView(props: Props) {
       <DashboardScreen
         onSelectClient={(clientId) => props.navigateTo({ kind: 'client', clientId: clientId })}
         onOpenNewClientPage={() => props.navigateTo({ kind: 'new-client' })}
-        onOpenRecord={() => props.navigateTo({ kind: 'record' })}
+        onOpenRecord={(action) => {
+          if (action === 'record-video') return
+          props.onOpenNewInputModal(null, null, null, action)
+        }}
         onOpenClientsPage={() => props.navigateTo({ kind: 'clients' })}
         onOpenReportsPage={() => props.navigateTo({ kind: 'reports' })}
         onOpenInput={(sessionId) => props.navigateTo({ kind: 'sessie', sessieId: sessionId })}
+        welcomeName={props.currentUserGivenName || props.currentUserName}
       />
     )
   }
@@ -230,5 +237,6 @@ export function AppShellRouteView(props: Props) {
 
   return <Text style={props.mainContentTextStyle}>{props.selectedSidebarItemKey}</Text>
 }
+
 
 

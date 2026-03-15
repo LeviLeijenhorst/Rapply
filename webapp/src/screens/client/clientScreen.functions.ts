@@ -24,16 +24,11 @@ type ClientEditApi = {
 }
 
 type NoteApi = {
-  createInput: (values: {
-    clientId: string | null
-    trajectoryId?: string | null
-    title: string
-    kind: ClientInput['kind']
-    audioBlobId: string | null
-    audioDurationSeconds: number | null
-    uploadFileName: string | null
-  }) => string
-  createNote: (sessionId: string, values: { title: string; text: string }) => void
+  createNote: (
+    inputId: string | null,
+    values: { title: string; text: string },
+    options?: { clientId?: string | null; sourceInputId?: string | null },
+  ) => void
 }
 
 function readTrajectoryClientId(trajectory: ClientTrajectory): string {
@@ -79,26 +74,14 @@ export function saveNewClientNote(
   params: {
     clientId: string
     activeTrajectoryId: string | null
-    notesInputId: string | null
     values: { title: string; text: string }
   },
 ): { didSave: boolean } {
-  let targetInputId = params.notesInputId
-  if (!targetInputId) {
-    targetInputId = api.createInput({
-      clientId: params.clientId,
-      trajectoryId: params.activeTrajectoryId,
-      title: 'Notities',
-      kind: 'notes',
-      audioBlobId: null,
-      audioDurationSeconds: null,
-      uploadFileName: null,
-    })
-  }
-
-  if (!targetInputId) return { didSave: false }
-
-  api.createNote(targetInputId, params.values)
+  void params.activeTrajectoryId
+  api.createNote(null, params.values, {
+    clientId: params.clientId,
+    sourceInputId: null,
+  })
   return { didSave: true }
 }
 

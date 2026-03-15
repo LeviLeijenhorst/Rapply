@@ -27,6 +27,7 @@ export function registerTrajectoryRoutes(app: Express): void {
         id,
         updatedAtUnixMs,
         clientId: readOptionalId(payload.clientId ?? payload.coacheeId),
+        isActive: typeof payload.isActive === "boolean" ? payload.isActive : undefined,
         name: readOptionalText(payload.name),
         serviceType: readOptionalText(payload.serviceType ?? payload.dienstType, true),
         uwvContactName: readOptionalText(payload.uwvContactName, true),

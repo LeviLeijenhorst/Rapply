@@ -5,9 +5,11 @@ import { FullScreenCloseIcon } from '@/icons/FullScreenCloseIcon'
 import { TrashIcon } from '@/icons/TrashIcon'
 import { colors } from '@/design/theme/colors'
 import { useLocalAppData } from '@/storage/LocalAppDataProvider'
+import { clientApi, type AssignedCoach, type OrganizationCoach } from '@/api/clients/clientApi'
 import { getClientUpsertValues } from '@/types/clientProfile'
 import { Modal } from '@/ui/animated/Modal'
 import { ActionMenu } from '@/ui/overlays/ActionMenu'
+import { Text } from '@/ui/Text'
 import { ConfirmChatClearModal } from '@/screens/shared/modals/ConfirmChatClearModal'
 import { ConfirmInputDeleteModal } from '@/screens/shared/modals/ConfirmInputDeleteModal'
 import { ClientUpsertModal } from '@/screens/shared/modals/ClientUpsertModal'
@@ -15,7 +17,6 @@ import { ConfirmNoteDeleteModal } from '@/screens/shared/modals/ConfirmNoteDelet
 import { NoteEditModal } from '@/screens/shared/modals/NoteEditModal'
 import { saveClientProfileChanges, saveNewClientNote } from '@/screens/client/clientScreen.functions'
 import {
-  formatTrajectoryDurationLabel,
   getActiveTrajectory,
   getClientInputListItems,
   getClientTrajectories,
@@ -47,7 +48,8 @@ export function ClientScreen({
 
   const { height: windowHeight } = useWindowDimensions()
   const localAppData = useLocalAppData()
-  const { data, createInput, createNote, updateNote, deleteNote, deleteInput, createTrajectory, updateTrajectory } = localAppData as any
+  const { data, createInput, createNote, updateNote, deleteNote, deleteInput, deleteReport: deleteReportFromStore, createTrajectory, updateTrajectory } = localAppData as any
+  const deleteReport = (deleteReportFromStore ?? deleteInput) as (reportId: string) => void
   const legacyUpdateClientKey = ['update', 'Coa', 'chee'].join('')
   const updateClient = ((localAppData as any).updateClient ?? (localAppData as any)[legacyUpdateClientKey]) as (
     clientId: string,
@@ -56,7 +58,7 @@ export function ClientScreen({
 
   const clients = ((data as any).clients ?? []) as Array<any>
   const client = clients.find((item) => item.id === clientId) ?? null
-  const clientName = client?.name ?? 'Cliënt'
+  const clientName = client?.name ?? 'Client'
   const clientProfileValues = useMemo(() => getClientUpsertValues(client), [client])
   const clientTrajectories = useMemo(() => getClientTrajectories(data, clientId), [clientId, data])
   const clientTrajectoryOptions = useMemo(
@@ -72,7 +74,7 @@ export function ClientScreen({
     () => getActiveTrajectory(clientTrajectories, selectedTrajectoryId),
     [clientTrajectories, selectedTrajectoryId],
   )
-  const { sessionItems, noteItems, reportItems, notesInput } = useMemo(
+  const { sessionItems, noteItems, reportItems } = useMemo(
     () => getClientInputListItems(data, clientId),
     [clientId, data],
   )
@@ -85,27 +87,35 @@ export function ClientScreen({
   const [searchQuery, setSearchQuery] = useState('')
   const [isCreateNoteModalOpen, setIsCreateNoteModalOpen] = useState(false)
   const [menuInputId, setMenuInputId] = useState<string | null>(null)
-  const [menuItemType, setMenuItemType] = useState<'session' | 'note' | null>(null)
+  const [menuItemType, setMenuItemType] = useState<'session' | 'note' | 'report' | null>(null)
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null)
   const [hoveredMenuItemId, setHoveredMenuItemId] = useState<string | null>(null)
   const [menuAnchorPoint, setMenuAnchorPoint] = useState<{ x: number; y: number } | null>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [pendingDeleteInputId, setPendingDeleteInputId] = useState<string | null>(null)
+  const [pendingDeleteItemType, setPendingDeleteItemType] = useState<'session' | 'report' | null>(null)
   const [isDeleteNoteModalOpen, setIsDeleteNoteModalOpen] = useState(false)
   const [pendingDeleteNoteId, setPendingDeleteNoteId] = useState<string | null>(null)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [isClearChatModalVisible, setIsClearChatModalVisible] = useState(false)
   const [isAssistantFullscreen, setIsAssistantFullscreen] = useState(false)
   const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false)
+  const [assignedCoaches, setAssignedCoaches] = useState<AssignedCoach[]>([])
+  const [organizationCoaches, setOrganizationCoaches] = useState<OrganizationCoach[]>([])
+  const [selectedCoachUserId, setSelectedCoachUserId] = useState<string>('')
+  const [isUpdatingAssignments, setIsUpdatingAssignments] = useState(false)
+  const [isCoachDropdownOpen, setIsCoachDropdownOpen] = useState(false)
   const chatAnchorFrameRef = useRef<number | null>(null)
   const lastAnchoredAssistantPanelHeightRef = useRef<number | null>(null)
+  const onLeftActiveTabChangeRef = useRef(onLeftActiveTabChange)
+  const lastNotifiedLeftTabRef = useRef<ClientLeftTabKey | null>(null)
 
   const searchInputRef = useRef<TextInput | null>(null)
   const chatScrollRef = useRef<ScrollView | null>(null)
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const isSearchExpanded = isSearchOpen || normalizedQuery.length > 0
   const isDocumentsTab = leftActiveTabKey === 'documenten'
-  const showsDurationColumn = leftActiveTabKey === 'sessies'
+  const showsDurationColumn = false
   const visibleItems = isDocumentsTab ? [] : leftActiveTabKey === 'notities' ? noteItems : leftActiveTabKey === 'rapportages' ? reportItems : sessionItems
   const filteredInputs = visibleItems.filter((item) => item.searchText.includes(normalizedQuery))
   const chatContextInputIds = useMemo(() => {
@@ -165,7 +175,11 @@ export function ClientScreen({
   const shouldShowSearch = !isDocumentsTab && visibleItems.length > 1
 
   const isMenuVisible = !!menuInputId && !!menuAnchorPoint
-  const pendingDeleteInputTitle = pendingDeleteInputId ? data.inputs.find((item: any) => item.id === pendingDeleteInputId)?.title : null
+  const pendingDeleteInputTitle = pendingDeleteInputId
+    ? pendingDeleteItemType === 'report'
+      ? data.reports.find((item: any) => item.id === pendingDeleteInputId)?.title
+      : data.inputs.find((item: any) => item.id === pendingDeleteInputId)?.title
+    : null
   const pendingDeleteNoteTitle = pendingDeleteNoteId ? data.notes.find((item: any) => item.id === pendingDeleteNoteId)?.title : null
   const editingNote = editingNoteId ? data.notes.find((item: any) => item.id === editingNoteId) ?? null : null
   const leftPanelTitle =
@@ -214,6 +228,34 @@ export function ClientScreen({
   }, [clientId, initialLeftActiveTabKey, initialRightActiveTabKey])
 
   useEffect(() => {
+    let cancelled = false
+    if (!clientId) return
+    void (async () => {
+      try {
+        const [assigned, available] = await Promise.all([
+          clientApi.listAssignedCoaches(clientId),
+          clientApi.listOrganizationCoaches(clientId),
+        ])
+        if (cancelled) return
+        setAssignedCoaches(assigned)
+        setOrganizationCoaches(available)
+        setSelectedCoachUserId((previous) => previous || available[0]?.userId || '')
+      } catch {
+        if (cancelled) return
+        setAssignedCoaches([])
+        setOrganizationCoaches([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [clientId])
+
+  useEffect(() => {
+    onLeftActiveTabChangeRef.current = onLeftActiveTabChange
+  }, [onLeftActiveTabChange])
+
+  useEffect(() => {
     if (!isSearchOpen) return
     const id = setTimeout(() => searchInputRef.current?.focus(), 120)
     return () => clearTimeout(id)
@@ -235,8 +277,10 @@ export function ClientScreen({
   }, [isSearchExpanded, searchQuery])
 
   useEffect(() => {
-    onLeftActiveTabChange?.(leftActiveTabKey)
-  }, [leftActiveTabKey, onLeftActiveTabChange])
+    if (lastNotifiedLeftTabRef.current === leftActiveTabKey) return
+    lastNotifiedLeftTabRef.current = leftActiveTabKey
+    onLeftActiveTabChangeRef.current?.(leftActiveTabKey)
+  }, [leftActiveTabKey])
 
   useEffect(() => {
     if (rightActiveTabKey !== 'chatbot' || isAssistantFullscreen || chatMessages.length === 0) {
@@ -302,19 +346,9 @@ export function ClientScreen({
   function handleSaveNewNote(values: { title: string; text: string }) {
     const result = saveNewClientNote(
       {
-        createInput: (values) =>
-          createInput({
-            clientId: values.clientId,
-            trajectoryId: values.trajectoryId,
-            title: values.title,
-            kind: values.kind,
-            audioBlobId: values.audioBlobId,
-            audioDurationSeconds: values.audioDurationSeconds,
-            uploadFileName: values.uploadFileName,
-          } as any),
         createNote,
       },
-      { clientId, activeTrajectoryId: activeTrajectory?.id ?? null, notesInputId: notesInput?.id ?? null, values },
+      { clientId, activeTrajectoryId: activeTrajectory?.id ?? null, values },
     )
     if (result.didSave) setIsCreateNoteModalOpen(false)
   }
@@ -333,11 +367,12 @@ export function ClientScreen({
   }
 
   function openRowMenu(item: InputListItem, event?: any) {
+    const rowMenuWidth = 220
     const rect = event?.currentTarget?.getBoundingClientRect?.() ?? event?.nativeEvent?.target?.getBoundingClientRect?.()
     if (!rect) return
     setMenuInputId(item.id)
-    setMenuItemType(item.rowType === 'note' ? 'note' : 'session')
-    setMenuAnchorPoint({ x: rect.left + rect.width, y: rect.top + rect.height })
+    setMenuItemType(item.rowType === 'note' ? 'note' : item.rowType === 'report' ? 'report' : 'session')
+    setMenuAnchorPoint({ x: rect.right - rowMenuWidth, y: rect.top + rect.height })
   }
 
   function handlePressRow(item: InputListItem) {
@@ -348,21 +383,140 @@ export function ClientScreen({
     onSelectInput(item.targetInputId, leftActiveTabKey)
   }
 
+  const primaryCoachUserId = String((client as any)?.primaryCoachUserId || '').trim() || null
+  const assignedCoachUserIds = new Set(assignedCoaches.map((coach) => coach.userId))
+  const availableToAssign = organizationCoaches.filter((coach) => !assignedCoachUserIds.has(coach.userId))
+  const shouldShowAssignedCoachesCard = false
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <ClientHeaderCard
-        clientEmail={clientProfileValues.clientEmail || '-'}
         clientName={clientName}
-        clientPhone={clientProfileValues.clientPhone || '-'}
-        durationLabel={formatTrajectoryDurationLabel(activeTrajectory?.startDate)}
         isCreateInputDisabled={isCreateInputDisabled}
-        reportCount={reportCount}
         sessionCount={sessionCount}
-        trajectoryName={activeTrajectory?.name || '-'}
         onOpenEditClient={() => setIsEditClientModalOpen(true)}
         onPressCreateReports={() => onPressCreateReports(activeTrajectory?.id ?? null)}
         onPressCreateInput={() => onPressCreateInput(activeTrajectory?.id ?? null)}
       />
+      {shouldShowAssignedCoachesCard ? <View style={styles.assignmentCard}>
+        <Text isSemibold style={styles.assignmentTitle}>Toegewezen coaches</Text>
+        <View style={styles.assignmentList}>
+          {assignedCoaches.length === 0 ? (
+            <Text style={styles.assignmentEmptyText}>Nog geen toegewezen coaches.</Text>
+          ) : (
+            assignedCoaches.map((coach) => {
+              const isPrimary = primaryCoachUserId === coach.userId
+              return (
+                <View key={coach.userId} style={styles.assignmentRow}>
+                  <View style={styles.assignmentIdentity}>
+                    <Text style={styles.assignmentName}>
+                      {String(coach.displayName || coach.email || coach.userId)}
+                      {isPrimary ? ' (primaire coach)' : ''}
+                    </Text>
+                    {coach.email ? <Text style={styles.assignmentEmail}>{coach.email}</Text> : null}
+                  </View>
+                  <View style={styles.assignmentActions}>
+                    {!isPrimary ? (
+                      <Pressable
+                        disabled={isUpdatingAssignments}
+                        onPress={() => {
+                          setIsUpdatingAssignments(true)
+                          void clientApi
+                            .updatePrimaryCoach(clientId, coach.userId)
+                            .then(() => Promise.all([clientApi.listAssignedCoaches(clientId), clientApi.listOrganizationCoaches(clientId)]))
+                            .then(([assigned, available]) => {
+                              setAssignedCoaches(assigned)
+                              setOrganizationCoaches(available)
+                            })
+                            .finally(() => setIsUpdatingAssignments(false))
+                        }}
+                        style={({ hovered }) => [styles.assignmentButton, hovered ? styles.assignmentButtonHover : undefined]}
+                      >
+                        <Text style={styles.assignmentButtonText}>Maak primair</Text>
+                      </Pressable>
+                    ) : null}
+                    <Pressable
+                      disabled={isUpdatingAssignments || isPrimary}
+                      onPress={() => {
+                        setIsUpdatingAssignments(true)
+                        void clientApi
+                          .unassignCoach(clientId, coach.userId)
+                          .then(() => Promise.all([clientApi.listAssignedCoaches(clientId), clientApi.listOrganizationCoaches(clientId)]))
+                          .then(([assigned, available]) => {
+                            setAssignedCoaches(assigned)
+                            setOrganizationCoaches(available)
+                          })
+                          .finally(() => setIsUpdatingAssignments(false))
+                      }}
+                      style={({ hovered }) => [styles.assignmentDangerButton, hovered ? styles.assignmentDangerButtonHover : undefined]}
+                    >
+                      <Text style={styles.assignmentDangerButtonText}>Verwijder</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )
+            })
+          )}
+        </View>
+        <View style={styles.assignmentCreateRow}>
+          <View style={styles.assignmentSelectWrap}>
+            <Pressable
+              onPress={() => setIsCoachDropdownOpen((value) => !value)}
+              style={({ hovered }) => [styles.assignmentSelectButton, hovered ? styles.assignmentButtonHover : undefined]}
+            >
+              <Text style={styles.assignmentSelectButtonText}>
+                {availableToAssign.find((coach) => coach.userId === selectedCoachUserId)?.displayName ||
+                  availableToAssign.find((coach) => coach.userId === selectedCoachUserId)?.email ||
+                  'Selecteer coach'}
+              </Text>
+            </Pressable>
+            {isCoachDropdownOpen ? (
+              <View style={styles.assignmentDropdown}>
+                {availableToAssign.length === 0 ? (
+                  <Text style={styles.assignmentEmptyText}>Geen extra coaches beschikbaar.</Text>
+                ) : (
+                  availableToAssign.map((coach) => (
+                    <Pressable
+                      key={coach.userId}
+                      onPress={() => {
+                        setSelectedCoachUserId(coach.userId)
+                        setIsCoachDropdownOpen(false)
+                      }}
+                      style={({ hovered }) => [styles.assignmentDropdownOption, hovered ? styles.assignmentButtonHover : undefined]}
+                    >
+                      <Text style={styles.assignmentName}>{coach.displayName || coach.email || coach.userId}</Text>
+                      {coach.email ? <Text style={styles.assignmentEmail}>{coach.email}</Text> : null}
+                    </Pressable>
+                  ))
+                )}
+              </View>
+            ) : null}
+          </View>
+          <Pressable
+            disabled={isUpdatingAssignments || !selectedCoachUserId.trim()}
+            onPress={() => {
+              const coachUserId = selectedCoachUserId.trim()
+              if (!coachUserId) return
+              setIsUpdatingAssignments(true)
+              void clientApi
+                .assignCoach(clientId, coachUserId)
+                .then(() => Promise.all([clientApi.listAssignedCoaches(clientId), clientApi.listOrganizationCoaches(clientId)]))
+                .then(([assigned, available]) => {
+                  setAssignedCoaches(assigned)
+                  setOrganizationCoaches(available)
+                  setSelectedCoachUserId(available.find((coach) => coach.userId !== coachUserId)?.userId || '')
+                })
+                .finally(() => setIsUpdatingAssignments(false))
+            }}
+            style={({ hovered }) => [styles.assignmentAddButton, hovered ? styles.assignmentAddButtonHover : undefined]}
+          >
+            <Text style={styles.assignmentAddButtonText}>Coach toewijzen</Text>
+          </Pressable>
+        </View>
+        {availableToAssign.length > 0 ? (
+          <Text style={styles.assignmentHint}>Selecteer een coach uit de lijst om toe te wijzen.</Text>
+        ) : null}
+      </View> : null}
 
       <View style={styles.mainRow}>
         <ClientLeftTabs
@@ -432,6 +586,7 @@ export function ClientScreen({
                 setIsDeleteNoteModalOpen(true)
               } else {
                 setPendingDeleteInputId(menuInputId)
+                setPendingDeleteItemType(menuItemType === 'report' ? 'report' : 'session')
                 setIsDeleteModalOpen(true)
               }
               setMenuInputId(null)
@@ -453,12 +608,15 @@ export function ClientScreen({
         onClose={() => {
           setIsDeleteModalOpen(false)
           setPendingDeleteInputId(null)
+          setPendingDeleteItemType(null)
         }}
         onConfirm={() => {
           if (!pendingDeleteInputId) return
-          deleteInput(pendingDeleteInputId)
+          if (pendingDeleteItemType === 'report') deleteReport(pendingDeleteInputId)
+          else deleteInput(pendingDeleteInputId)
           setIsDeleteModalOpen(false)
           setPendingDeleteInputId(null)
+          setPendingDeleteItemType(null)
         }}
       />
 
@@ -551,6 +709,82 @@ export function ClientScreen({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F7F5F8' },
   content: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24, gap: 24 },
+  assignmentCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DFE0E2',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    gap: 10,
+  },
+  assignmentTitle: { fontSize: 16, lineHeight: 22, color: '#2C111F' },
+  assignmentList: { gap: 8 },
+  assignmentEmptyText: { fontSize: 14, lineHeight: 20, color: '#7C6E76' },
+  assignmentRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  assignmentIdentity: { flex: 1, minWidth: 0 },
+  assignmentName: { fontSize: 14, lineHeight: 20, color: '#2C111F' },
+  assignmentEmail: { fontSize: 12, lineHeight: 16, color: '#7C6E76' },
+  assignmentActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  assignmentButton: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D2D2D2',
+    backgroundColor: '#F9FAFB',
+    minHeight: 32,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assignmentButtonHover: { backgroundColor: '#EEF2F7' },
+  assignmentButtonText: { fontSize: 12, lineHeight: 16, color: '#2C111F' },
+  assignmentDangerButton: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F1B5B5',
+    backgroundColor: '#FFF6F6',
+    minHeight: 32,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assignmentDangerButtonHover: { backgroundColor: '#FDECEC' },
+  assignmentDangerButtonText: { fontSize: 12, lineHeight: 16, color: '#B42318' },
+  assignmentCreateRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
+  assignmentSelectWrap: { flex: 1 },
+  assignmentSelectButton: {
+    minHeight: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#DFE0E2',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  assignmentSelectButtonText: { fontSize: 13, lineHeight: 18, color: '#2C111F' },
+  assignmentDropdown: {
+    marginTop: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#DFE0E2',
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  assignmentDropdownOption: { paddingHorizontal: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F1F2F4' },
+  assignmentAddButton: {
+    minHeight: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BE0165',
+    backgroundColor: '#BE0165',
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assignmentAddButtonHover: { backgroundColor: '#A50058', borderColor: '#A50058' },
+  assignmentAddButtonText: { fontSize: 12, lineHeight: 16, color: '#FFFFFF' },
+  assignmentHint: { fontSize: 12, lineHeight: 16, color: '#7C6E76' },
   mainRow: { flexDirection: 'row', gap: 24, minHeight: 640, alignItems: 'flex-start' },
   fullscreenModalOverlay: { width: '100%', maxWidth: 1080 },
   fullscreenModalCard: {
@@ -582,4 +816,6 @@ const styles = StyleSheet.create({
   },
   fullscreenModalCloseButtonHovered: { backgroundColor: '#F3F4F6' },
 })
+
+
 

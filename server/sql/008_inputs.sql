@@ -1,8 +1,8 @@
 create table if not exists public.inputs (
   id text primary key,
   client_id text not null references public.clients (id) on delete cascade,
-  organization_id text references public.organizations (id) on delete set null,
-  owner_user_id text references public.users (id) on delete set null,
+  organization_id text not null references public.organizations (id) on delete cascade,
+  created_by_user_id text references public.users (id) on delete set null,
   input_type text not null,
   title text not null default '',
   source_text text,
@@ -26,6 +26,6 @@ create table if not exists public.inputs (
 
 create index if not exists inputs_client_id_idx on public.inputs (client_id);
 create index if not exists inputs_organization_id_idx on public.inputs (organization_id);
-create index if not exists inputs_owner_user_id_idx on public.inputs (owner_user_id);
+create index if not exists inputs_created_by_user_id_idx on public.inputs (created_by_user_id);
 create index if not exists inputs_input_type_idx on public.inputs (input_type);
 create index if not exists inputs_processing_status_idx on public.inputs (processing_status);

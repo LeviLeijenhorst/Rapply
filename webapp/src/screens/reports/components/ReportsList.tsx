@@ -7,7 +7,7 @@ import { ReportCard } from './ReportCard'
 
 type Props = {
   items: ReportListItem[]
-  onSelect: (sessionId: string) => void
+  onSelect: (reportId: string) => void
 }
 
 export function ReportsList({ items, onSelect }: Props) {
@@ -20,11 +20,11 @@ export function ReportsList({ items, onSelect }: Props) {
   }
 
   return (
-    <View style={styles.list}>
-      {items.map((item) => (
-        <ReportCard key={item.sessionId} item={item} onPress={onSelect} />
-      ))}
-    </View>
+      <View style={styles.list}>
+        {items.map((item) => (
+        <ReportCard key={item.reportId} item={item} onPress={onSelect} />
+        ))}
+      </View>
   )
 }
 

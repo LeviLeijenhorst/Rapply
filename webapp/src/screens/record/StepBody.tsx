@@ -3,7 +3,7 @@ import { Animated, TextInput, View } from 'react-native'
 
 import type { OptionKey } from './utils'
 import type { NewInputStep } from './types'
-import { SelectInputTypeStep } from './steps/SelectInputTypeStep'
+import { SelectInputTypeStep } from './steps/SelectSessionTypeStep'
 import { UploadAudioStep } from './steps/UploadAudioStep'
 import { RecordStep } from './steps/RecordStep'
 import { RecordedStep } from './steps/RecordedStep'
@@ -17,8 +17,6 @@ type RecorderState = {
 }
 
 type StepBodyModel = {
-  audioDurationSeconds: number | null
-  audioPreviewUrl: string | null
   bars: number[]
   clientDropdownMaxHeight: number | null
   clientOptions: Array<{ id: string | null; name: string }>
@@ -32,7 +30,9 @@ type StepBodyModel = {
   isRecordingPaused: boolean
   isUploadDragActive: boolean
   recordingNotes: Array<{ id: string; seconds: number; text: string }>
+  editingRecordingNoteId: string | null
   recordingNoteDraft: string
+  isRecordingTransitioning: boolean
   limitedMode: boolean
   liveWaveHeights: number[]
   recorder: RecorderState
@@ -44,13 +44,11 @@ type StepBodyModel = {
   selectedOptionGroup: 'gesprek' | 'gespreksverslag' | null
   sessionTitle: string
   sessionTitleInputRef: React.RefObject<TextInput | null>
-  shouldSaveAudio: boolean
   step: NewInputStep
   uploadDropAreaRef: React.RefObject<View | null>
   uploadFileDurationWarning: string | null
   waveBarCount: number
   clientTriggerRef: React.RefObject<any>
-  onAddClient: () => void
   onCancelRecording: () => void
   onOpenConsentHelpPage: () => void
   onOpenFilePicker: () => void
@@ -59,17 +57,17 @@ type StepBodyModel = {
   onSelectOption: (option: OptionKey) => void
   onInputTitleChange: (title: string) => void
   onSetWaveBarCount: (count: number) => void
-  onToggleAudioSave: () => void
   onToggleClientDropdown: () => void
   onToggleConsent: () => void
-  onUpdateAudioDuration: (seconds: number | null) => void
   onRecordingNoteDraftChange: (value: string) => void
+  onEditRecordingNote: (noteId: string) => void
+  onDeleteRecordingNote: (noteId: string) => void
   onSaveRecordingNote: () => void
+  onCancelEditingRecordingNote: () => void
+  onStopRecording: () => void
 }
 
 export function StepBody({
-  audioDurationSeconds,
-  audioPreviewUrl,
   bars,
   clientDropdownMaxHeight,
   clientOptions,
@@ -83,7 +81,9 @@ export function StepBody({
   isRecordingPaused,
   isUploadDragActive,
   recordingNotes,
+  editingRecordingNoteId,
   recordingNoteDraft,
+  isRecordingTransitioning,
   limitedMode,
   liveWaveHeights,
   recorder,
@@ -95,13 +95,11 @@ export function StepBody({
   selectedOptionGroup,
   sessionTitle,
   sessionTitleInputRef,
-  shouldSaveAudio,
   step,
   uploadDropAreaRef,
   uploadFileDurationWarning,
   waveBarCount,
   clientTriggerRef,
-  onAddClient,
   onCancelRecording,
   onOpenConsentHelpPage,
   onOpenFilePicker,
@@ -110,12 +108,14 @@ export function StepBody({
   onSelectOption,
   onInputTitleChange,
   onSetWaveBarCount,
-  onToggleAudioSave,
   onToggleClientDropdown,
   onToggleConsent,
-  onUpdateAudioDuration,
   onRecordingNoteDraftChange,
+  onEditRecordingNote,
+  onDeleteRecordingNote,
   onSaveRecordingNote,
+  onCancelEditingRecordingNote,
+  onStopRecording,
 }: StepBodyModel) {
   switch (step) {
     case 'select':
@@ -140,14 +140,18 @@ export function StepBody({
         />
       )
     case 'recording':
+    case 'recording_finishing':
+    case 'recording_canceling':
       return (
         <RecordStep
           bars={bars}
           displayedRecordingElapsedSeconds={displayedRecordingElapsedSeconds}
+          isTransitioning={isRecordingTransitioning}
           isRecordingPaused={isRecordingPaused}
           limitedMode={limitedMode}
           liveWaveHeights={liveWaveHeights}
           recordingNoteDraft={recordingNoteDraft}
+          editingRecordingNoteId={editingRecordingNoteId}
           recordingNotes={recordingNotes}
           recordingNotesRevealProgress={recordingNotesRevealProgress}
           shouldRenderNotesPanel={shouldRenderRecordingNotesPanel}
@@ -156,16 +160,18 @@ export function StepBody({
           waveBarCount={waveBarCount}
           onCancelRecording={onCancelRecording}
           onRecordingNoteDraftChange={onRecordingNoteDraftChange}
+          onEditRecordingNote={onEditRecordingNote}
+          onDeleteRecordingNote={onDeleteRecordingNote}
           onRetryRecordingAfterError={onRetryRecordingAfterError}
           onSaveRecordingNote={onSaveRecordingNote}
+          onCancelEditingRecordingNote={onCancelEditingRecordingNote}
           onSetWaveBarCount={onSetWaveBarCount}
+          onStopRecording={onStopRecording}
         />
       )
     case 'recorded':
       return (
         <RecordedStep
-          audioDurationSeconds={audioDurationSeconds}
-          audioPreviewUrl={audioPreviewUrl}
           clientDropdownMaxHeight={clientDropdownMaxHeight}
           clientOptions={clientOptions}
           defaultDropdownMaxHeight={defaultDropdownMaxHeight}
@@ -175,14 +181,10 @@ export function StepBody({
           selectedOption={selectedOption}
           sessionTitle={sessionTitle}
           sessionTitleInputRef={sessionTitleInputRef}
-          shouldSaveAudio={shouldSaveAudio}
           clientTriggerRef={clientTriggerRef}
-          onAddClient={onAddClient}
           onSelectClient={onSelectClient}
           onInputTitleChange={onInputTitleChange}
-          onToggleAudioSave={onToggleAudioSave}
           onToggleClientDropdown={onToggleClientDropdown}
-          onUpdateAudioDuration={onUpdateAudioDuration}
         />
       )
     case 'consent':

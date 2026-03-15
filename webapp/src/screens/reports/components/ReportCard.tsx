@@ -8,14 +8,14 @@ import type { ReportListItem } from '../selectors/reportListSelectors'
 
 type Props = {
   item: ReportListItem
-  onPress: (sessionId: string) => void
+  onPress: (reportId: string) => void
 }
 
 export function ReportCard({ item, onPress }: Props) {
   const isDone = item.status === 'done'
 
   return (
-    <Pressable onPress={() => onPress(item.sessionId)} style={({ hovered }) => [styles.row, hovered ? styles.rowHovered : undefined]}>
+    <Pressable onPress={() => onPress(item.reportId)} style={({ hovered }) => [styles.row, hovered ? styles.rowHovered : undefined]}>
       <View style={[styles.cell, styles.reportColumn]}>
         <Text isSemibold style={styles.reportTitle}>
           {item.title}

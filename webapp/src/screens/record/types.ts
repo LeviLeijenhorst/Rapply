@@ -1,4 +1,11 @@
-export type NewInputStep = 'select' | 'consent' | 'upload' | 'recording' | 'recorded'
+export type NewInputStep = 'select' | 'consent' | 'upload' | 'recording' | 'recording_finishing' | 'recording_canceling' | 'recorded'
+
+export type NewInputQuickAction =
+  | 'record-session'
+  | 'record-summary'
+  | 'record-video'
+  | 'import-audio'
+  | 'import-document'
 
 export type NewInputModalArgs = {
   visible: boolean
@@ -16,5 +23,5 @@ export type NewInputModalArgs = {
   onNewlyCreatedClientHandled: () => void
   limitedMode?: boolean
   initialOption?: 'gesprek' | 'gespreksverslag' | null
+  initialQuickAction?: NewInputQuickAction | null
 }
-

@@ -38,21 +38,21 @@ export function buildBreadcrumbItems(params: Params): BreadcrumbItem[] {
   } = params
 
   if (isRecordPageOpen) return [{ label: 'Opnemen', onPress: () => navigateTo({ kind: 'record' }) }]
-  if (isNewClientPageOpen) return [{ label: 'Nieuwe cliënt', onPress: () => navigateTo({ kind: 'new-client' }) }]
+  if (isNewClientPageOpen) return [{ label: 'Nieuwe client', onPress: () => navigateTo({ kind: 'new-client' }) }]
 
   if (isNieuweRapportageOpen) {
     const rapportageLabel = rapportageScreenMode === 'bewerken' ? 'Rapportage bewerken' : 'Rapportage controleren'
     const activeClientId = selectedClientId
     if (activeClientId) {
-      const clientName = clients.find((item) => item.id === activeClientId)?.name ?? 'Cliënt'
+      const clientName = clients.find((item) => item.id === activeClientId)?.name ?? 'Client'
       return [
-        { label: 'Cliënten', onPress: () => navigateTo({ kind: 'clients' }) },
+        { label: 'Clienten', onPress: () => navigateTo({ kind: 'clients' }) },
         { label: clientName, onPress: () => navigateTo({ kind: 'client', clientId: activeClientId }) },
         { label: rapportageLabel, onPress: () => navigateTo({ kind: 'nieuwe-rapportage' }) },
       ]
     }
     return [
-      { label: 'Cliënten', onPress: () => navigateTo({ kind: 'clients' }) },
+      { label: 'Clienten', onPress: () => navigateTo({ kind: 'clients' }) },
       { label: rapportageLabel, onPress: () => navigateTo({ kind: 'nieuwe-rapportage' }) },
     ]
   }
@@ -63,48 +63,39 @@ export function buildBreadcrumbItems(params: Params): BreadcrumbItem[] {
     const sessionTitle = session.title ?? 'Sessie'
     const trajectory = session.trajectoryId ? trajectories.find((item) => item.id === session.trajectoryId) ?? null : null
     const clientId = trajectory?.clientId ?? session.clientId
-    if (clientId && trajectory) {
-      const clientName = getClientDisplayName(clients, clientId)
-      return [
-        { label: 'Cliënten', onPress: () => navigateTo({ kind: 'clients' }) },
-        { label: clientName, onPress: () => navigateTo({ kind: 'client', clientId }) },
-        { label: trajectory.name || 'Traject', onPress: () => navigateTo({ kind: 'trajectory', clientId, trajectoryId: trajectory.id }) },
-        { label: sessionTitle, onPress: () => navigateTo({ kind: 'item', clientId, trajectoryId: trajectory.id, itemId: selectedSessieId }) },
-      ]
-    }
     if (clientId) {
       const clientName = getClientDisplayName(clients, clientId)
       return [
-        { label: 'Cliënten', onPress: () => navigateTo({ kind: 'clients' }) },
+        { label: 'CliÃ«nten', onPress: () => navigateTo({ kind: 'clients' }) },
         { label: clientName, onPress: () => navigateTo({ kind: 'client', clientId }) },
         { label: sessionTitle, onPress: () => navigateTo({ kind: 'sessie', sessieId: selectedSessieId }) },
       ]
     }
     return [
-      { label: 'Cliënten', onPress: () => navigateTo({ kind: 'clients' }) },
+      { label: 'CliÃ«nten', onPress: () => navigateTo({ kind: 'clients' }) },
       { label: sessionTitle, onPress: () => navigateTo({ kind: 'sessie', sessieId: selectedSessieId }) },
     ]
   }
 
   if (selectedSidebarItemKey === 'clients' && selectedClientId && selectedTrajectoryId) {
-    const clientName = clients.find((item) => item.id === selectedClientId)?.name ?? 'Cliënt'
+    const clientName = clients.find((item) => item.id === selectedClientId)?.name ?? 'Client'
     const trajectoryName = trajectories.find((item) => item.id === selectedTrajectoryId)?.name ?? 'Traject'
     return [
-      { label: 'Cliënten', onPress: () => navigateTo({ kind: 'clients' }) },
+      { label: 'Clienten', onPress: () => navigateTo({ kind: 'clients' }) },
       { label: clientName, onPress: () => navigateTo({ kind: 'client', clientId: selectedClientId }) },
       { label: trajectoryName, onPress: () => navigateTo({ kind: 'trajectory', clientId: selectedClientId, trajectoryId: selectedTrajectoryId }) },
     ]
   }
 
   if (selectedSidebarItemKey === 'clients' && selectedClientId) {
-    const clientName = clients.find((item) => item.id === selectedClientId)?.name ?? 'Cliënt'
+    const clientName = clients.find((item) => item.id === selectedClientId)?.name ?? 'Client'
     return [
-      { label: 'Cliënten', onPress: () => navigateTo({ kind: 'clients' }) },
+      { label: 'Clienten', onPress: () => navigateTo({ kind: 'clients' }) },
       { label: clientName, onPress: () => navigateTo({ kind: 'client', clientId: selectedClientId }) },
     ]
   }
 
-  if (selectedSidebarItemKey === 'clients') return [{ label: 'Cliënten', onPress: () => navigateTo({ kind: 'clients' }) }]
+  if (selectedSidebarItemKey === 'clients') return [{ label: 'Clienten', onPress: () => navigateTo({ kind: 'clients' }) }]
   if (selectedSidebarItemKey === 'dashboard') return [{ label: 'Dashboard', onPress: () => navigateTo({ kind: 'dashboard' }) }]
   if (selectedSidebarItemKey === 'reports') return [{ label: 'Rapportages', onPress: () => navigateTo({ kind: 'reports' }) }]
   if (selectedSidebarItemKey === 'mijnPraktijk') return [{ label: 'Mijn organisatie', onPress: () => navigateTo({ kind: 'mijn-praktijk' }) }]

@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleProp, StyleSheet, TextInput, TextStyle, View, ViewStyle } from 'react-native'
+import { Platform, StyleProp, StyleSheet, TextInput, TextStyle, View, ViewStyle } from 'react-native'
 
 import { SearchIcon } from '../../icons/SearchIcon'
 import { colors } from '../../design/theme/colors'
@@ -70,6 +70,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamilyMedium,
     color: brandColors.neutral700,
     padding: 0,
+    ...(Platform.OS === 'web' ? ({ outlineWidth: 0, outlineStyle: 'none', outlineColor: 'transparent' } as any) : null),
   },
 })
 

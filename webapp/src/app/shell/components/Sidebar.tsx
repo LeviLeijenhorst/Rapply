@@ -74,7 +74,7 @@ export function Sidebar({
             isCompact
           />
           <SidebarItem
-            label="Cliënten"
+            label="Clienten"
             isSelected={selectedSidebarItemKey === 'clients'}
             onPress={() => onSelectSidebarItem('clients')}
             icon={<PeopleIcon color={selectedSidebarItemKey === 'clients' ? '#BE0165' : '#2C111F'} />}
@@ -117,7 +117,7 @@ export function Sidebar({
             icon={<HomeIcon color={selectedSidebarItemKey === 'dashboard' ? '#BE0165' : '#2C111F'} />}
           />
           <SidebarItem
-            label="Cliënten"
+            label="Clienten"
             isSelected={selectedSidebarItemKey === 'clients'}
             onPress={() => onSelectSidebarItem('clients')}
             icon={<PeopleIcon color={selectedSidebarItemKey === 'clients' ? '#BE0165' : '#2C111F'} />}

@@ -21,12 +21,12 @@ export function ArchiveScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text isSemibold style={styles.title}>Archief</Text>
-        <Text style={styles.subtitle}>Beheer gearchiveerde cliënten.</Text>
+        <Text style={styles.subtitle}>Beheer gearchiveerde clienten.</Text>
       </View>
       <ScrollView style={styles.list} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
         {archivedClients.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>Er staan nog geen cliënten in het archief.</Text>
+            <Text style={styles.emptyStateText}>Er staan nog geen clienten in het archief.</Text>
           </View>
         ) : (
           archivedClients.map((client) => (

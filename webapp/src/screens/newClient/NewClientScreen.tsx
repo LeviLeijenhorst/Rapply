@@ -48,7 +48,7 @@ export function NewClientScreen({ onBack, onSaved }: Props) {
           <View style={styles.privacyTextWrap}>
             <Text isSemibold style={styles.privacyTitle}>Privacy & AVG</Text>
             <Text style={styles.privacyBody}>
-              Alle cliëntgegevens worden versleuteld opgeslagen conform AVG-richtlijnen en uitsluitend gebruikt voor re-integratiedoeleinden.
+              Alle clientgegevens worden versleuteld opgeslagen conform AVG-richtlijnen en uitsluitend gebruikt voor re-integratiedoeleinden.
             </Text>
           </View>
         </View>
@@ -61,7 +61,7 @@ export function NewClientScreen({ onBack, onSaved }: Props) {
               disabled={!canSave}
               style={({ hovered }) => [styles.primaryButton, !canSave ? styles.primaryButtonDisabled : undefined, hovered && canSave ? styles.primaryButtonHovered : undefined]}
             >
-              <Text isSemibold style={styles.primaryButtonText}>Cliënt opslaan</Text>
+              <Text isSemibold style={styles.primaryButtonText}>Client opslaan</Text>
             </Pressable>
           </View>
           <NewClientForm values={values} trajectoryLabel={trajectoryLabel} onChange={setValue} />

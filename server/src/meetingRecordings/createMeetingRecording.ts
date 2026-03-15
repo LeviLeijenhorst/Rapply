@@ -28,6 +28,8 @@ function buildDefaultSession(nowUnixMs: number, params: CreateMeetingRecordingPa
     trajectoryId: params.trajectoryId,
     title: params.title || "Recording session",
     inputType: "recording",
+    sourceText: null,
+    sourceMimeType: params.mimeType || null,
     audioUploadId: null,
     audioDurationSeconds: null,
     uploadFileName: null,

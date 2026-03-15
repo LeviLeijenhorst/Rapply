@@ -44,7 +44,7 @@ export function DeleteAccountConfirmModal({ visible, isBusy = false, onClose, on
 
       <View style={styles.body}>
         <Text style={styles.descriptionText}>
-          Weet je zeker dat je je account wilt verwijderen? Dit verwijdert al je cliëntdata en verslagen definitief.
+          Weet je zeker dat je je account wilt verwijderen? Dit verwijdert al je clientdata en verslagen definitief.
         </Text>
         <Text style={styles.descriptionText}>
           Typ <Text isSemibold>{REQUIRED_CONFIRMATION_TEXT}</Text> om te bevestigen.

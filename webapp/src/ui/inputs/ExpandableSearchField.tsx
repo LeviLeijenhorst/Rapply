@@ -86,7 +86,7 @@ export function ExpandableSearchField({
         >
           {/* Search trigger */}
           <SearchIcon color={brandColors.neutral700} size={18} />
-          <Text isBold style={styles.collapsedButtonText}>
+          <Text style={styles.collapsedButtonText}>
             {collapsedLabel}
           </Text>
         </Pressable>

@@ -40,11 +40,51 @@ type E2eeAudio = {
 const activeProcessingInputIds = new Set<string>()
 const AUDIO_BLOB_SAVE_TIMEOUT_MS = 2 * 60 * 60_000
 
+function normalizeWhitespace(value: string): string {
+  return String(value || '').replace(/\s+/g, ' ').trim()
+}
+
+function readTranscriptLeadSentence(transcript: string): string {
+  const normalized = normalizeWhitespace(transcript)
+  if (!normalized) return ''
+  const match = normalized.match(/^(.{40,280}?[.!?])(?:\s|$)/)
+  return normalizeWhitespace(match?.[1] || normalized.slice(0, 220))
+}
+
+function buildFallbackStructuredSummary(transcript: string): NonNullable<Input['summaryStructured']> {
+  const lead = readTranscriptLeadSentence(transcript)
+  return {
+    doelstelling: lead || 'Kernpunten besproken in deze sessie.',
+    belastbaarheid: lead || '',
+    belemmeringen: '',
+    voortgang: lead || '',
+    arbeidsmarktorientatie: '',
+  }
+}
+
+function buildFallbackSnippet(params: { sessionId: string; trajectoryId: string | null | undefined; transcript: string; itemDate: number }): Snippet | null {
+  const text = readTranscriptLeadSentence(params.transcript)
+  if (!text) return null
+  const now = Date.now()
+  return {
+    id: `snippet-${crypto.randomUUID()}`,
+    trajectoryId: params.trajectoryId ?? null,
+    inputId: params.sessionId,
+    itemId: params.sessionId,
+    field: 'algemeen',
+    text,
+    date: Number.isFinite(params.itemDate) ? params.itemDate : now,
+    status: 'pending',
+    createdAtUnixMs: now,
+    updatedAtUnixMs: now,
+  }
+}
+
 async function maybeExtractSnippets(params: {
   enabled: boolean
   sessionId: string
-  clientId: string
-  trajectoryId: string
+  clientId?: string | null
+  trajectoryId?: string | null
   transcript: string
   itemDate: number
   onCreatedSnippets?: (snippets: Snippet[]) => void
@@ -52,13 +92,13 @@ async function maybeExtractSnippets(params: {
   if (!params.enabled) return
   const transcript = String(params.transcript || '').trim()
   if (!transcript) return
-  if (!params.clientId || !params.trajectoryId) return
+  const clientId = String(params.clientId || '').trim()
 
   try {
     const snippets = await extractSnippetsForItem({
       itemId: params.sessionId,
-      clientId: params.clientId,
-      trajectoryId: params.trajectoryId,
+      clientId: clientId || undefined,
+      trajectoryId: params.trajectoryId ?? null,
       sourceInputType: 'recording',
       transcript,
       itemDate: params.itemDate,
@@ -68,6 +108,15 @@ async function maybeExtractSnippets(params: {
     }
   } catch (error) {
     console.warn('[processRecordedInput] snippet extraction failed', error)
+    const fallback = buildFallbackSnippet({
+      sessionId: params.sessionId,
+      trajectoryId: params.trajectoryId,
+      transcript,
+      itemDate: params.itemDate,
+    })
+    if (fallback) {
+      params.onCreatedSnippets?.([fallback])
+    }
   }
 }
 
@@ -119,6 +168,7 @@ export async function processRecordedInput(params: {
 
   let ensuredAudioBlobId = initialAudioBlobId
   let hasTranscriptResult = false
+  let latestTranscriptForSnippetExtraction: string | null = null
   try {
     if (shouldSaveAudio && !ensuredAudioBlobId) {
       await setPendingPreviewProcessingState({ sessionId, processingState: 'encrypting', errorMessage: null })
@@ -151,6 +201,7 @@ export async function processRecordedInput(params: {
 
     const presetTranscript = String(transcriptOverride || '').trim()
     if (presetTranscript) {
+      latestTranscriptForSnippetExtraction = presetTranscript
       if (realtimeCharge?.operationId && Number.isFinite(realtimeCharge.durationSeconds) && realtimeCharge.durationSeconds > 0) {
         await chargeRealtimeTranscription({
           operationId: realtimeCharge.operationId,
@@ -189,8 +240,8 @@ export async function processRecordedInput(params: {
       await maybeExtractSnippets({
         enabled: Boolean(snippetExtraction?.enabled),
         sessionId,
-        clientId: String(snippetExtraction?.clientId || '').trim(),
-        trajectoryId: String(snippetExtraction?.trajectoryId || '').trim(),
+        clientId: snippetExtraction?.clientId ?? null,
+        trajectoryId: snippetExtraction?.trajectoryId ?? null,
         transcript: presetTranscript,
         itemDate: Number(snippetExtraction?.itemDate) || Date.now(),
         onCreatedSnippets: snippetExtraction?.onCreatedSnippets,
@@ -217,6 +268,7 @@ export async function processRecordedInput(params: {
     })
     if (!isTranscriptionRunActive(sessionId, runId)) return
     setTranscriptionAbortController(sessionId, runId, null)
+    latestTranscriptForSnippetExtraction = transcript
 
     const cleanedSummary = String(summary || '').trim()
     if (cleanedSummary) {
@@ -231,8 +283,8 @@ export async function processRecordedInput(params: {
       await maybeExtractSnippets({
         enabled: Boolean(snippetExtraction?.enabled),
         sessionId,
-        clientId: String(snippetExtraction?.clientId || '').trim(),
-        trajectoryId: String(snippetExtraction?.trajectoryId || '').trim(),
+        clientId: snippetExtraction?.clientId ?? null,
+        trajectoryId: snippetExtraction?.trajectoryId ?? null,
         transcript,
         itemDate: Number(snippetExtraction?.itemDate) || Date.now(),
         onCreatedSnippets: snippetExtraction?.onCreatedSnippets,
@@ -274,8 +326,8 @@ export async function processRecordedInput(params: {
     await maybeExtractSnippets({
       enabled: Boolean(snippetExtraction?.enabled),
       sessionId,
-      clientId: String(snippetExtraction?.clientId || '').trim(),
-      trajectoryId: String(snippetExtraction?.trajectoryId || '').trim(),
+      clientId: snippetExtraction?.clientId ?? null,
+      trajectoryId: snippetExtraction?.trajectoryId ?? null,
       transcript,
       itemDate: Number(snippetExtraction?.itemDate) || Date.now(),
       onCreatedSnippets: snippetExtraction?.onCreatedSnippets,
@@ -295,10 +347,31 @@ export async function processRecordedInput(params: {
     }
 
     if (hasTranscriptResult) {
+      const fallbackSummary = latestTranscriptForSnippetExtraction
+        ? buildFallbackStructuredSummary(latestTranscriptForSnippetExtraction)
+        : null
+      if (latestTranscriptForSnippetExtraction) {
+        await maybeExtractSnippets({
+          enabled: Boolean(snippetExtraction?.enabled),
+          sessionId,
+          clientId: snippetExtraction?.clientId ?? null,
+          trajectoryId: snippetExtraction?.trajectoryId ?? null,
+          transcript: latestTranscriptForSnippetExtraction,
+          itemDate: Number(snippetExtraction?.itemDate) || Date.now(),
+          onCreatedSnippets: snippetExtraction?.onCreatedSnippets,
+        })
+      }
       updateInput(sessionId, {
+        ...(fallbackSummary ? { summaryStructured: fallbackSummary, summary: null } : null),
         transcriptionStatus: 'done',
         transcriptionError: errorMessage,
       })
+      try {
+        await markPendingPreviewTranscriptionSucceeded(sessionId)
+        await clearPendingPreviewAudioIfEligible(sessionId)
+      } catch (pendingStateError) {
+        console.warn('[processRecordedInput] failed to update pending preview state after summary error', pendingStateError)
+      }
       if (!shouldSaveAudio) {
         await clearPendingPreviewAudio(sessionId)
       }

@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ScrollView } from 'react-native'
 
-import { sendClientChatMessage } from '@/api/chat/sendClientChatPromptMessage'
-import type { LocalChatMessage } from '@/api/chat/types'
 import { fetchBillingStatus } from '@/api/billing/billingApi'
-import { buildClientStructuredSystemMessages } from '@/content/assistantContext'
+import { sendClientPipelineChatMessage } from '@/api/pipeline/pipelineApi'
 import { clearChatBotForClient, loadChatBotForClient, saveChatBotForClient } from '@/storage/chatBotStore'
 import { createChatMessageId, type ChatStateMessage } from '@/types/chatState'
 import type {
@@ -89,13 +87,35 @@ export function useClientChatbot({
   const [isChatMinutesBlocked, setIsChatMinutesBlocked] = useState(false)
   const [isCheckingChatMinutes, setIsCheckingChatMinutes] = useState(false)
   const [isNoMinutesCtaDismissed, setIsNoMinutesCtaDismissed] = useState(false)
-  const [statusSummaryAi, setStatusSummaryAi] = useState<string>('Status wordt gegenereerd...')
+  const [statusSummaryAi, setStatusSummaryAi] = useState<string>('')
   const [isStatusSummaryLoading, setIsStatusSummaryLoading] = useState(false)
 
   const previousMessageCountRef = useRef(0)
   const shouldSkipChatSaveRef = useRef(false)
+  const lastStatusSignatureRef = useRef<string | null>(null)
 
-  const writtenReportByInputId = useMemo(() => new Map(inputSummaries.map((item) => [item.sessionId, item])), [inputSummaries])
+  const statusKnowledgeSignature = useMemo(() => {
+    const clientInputs = inputs.filter((session) => readInputClientId(session) === clientId)
+    const inputPart = clientInputs
+      .map((session) => `${session.id}:${session.createdAtUnixMs}:${String(session.title || '')}`)
+      .sort()
+      .join('|')
+    const snippetPart = snippets
+      .filter((snippet) => snippet.status === 'approved')
+      .filter((snippet) => {
+        const itemId = String((snippet as any).itemId || '')
+        return itemId.length > 0 && clientInputs.some((session) => session.id === itemId)
+      })
+      .map((snippet) => `${snippet.itemId}:${snippet.date}:${snippet.field}:${snippet.text}:${snippet.status}`)
+      .sort()
+      .join('|')
+    const summaryPart = inputSummaries
+      .filter((summary) => clientInputs.some((session) => session.id === summary.sessionId))
+      .map((summary) => `${summary.sessionId}:${summary.updatedAtUnixMs}`)
+      .sort()
+      .join('|')
+    return `${clientId}::${inputPart}::${snippetPart}::${summaryPart}`
+  }, [clientId, inputs, inputSummaries, snippets])
 
   useEffect(() => {
     shouldSkipChatSaveRef.current = true
@@ -104,6 +124,9 @@ export function useClientChatbot({
     previousMessageCountRef.current = loadedMessages.length
     setComposerText('')
     setIsChatSending(false)
+    setStatusSummaryAi('')
+    setIsStatusSummaryLoading(false)
+    lastStatusSignatureRef.current = null
   }, [clientId])
 
   useEffect(() => {
@@ -128,6 +151,7 @@ export function useClientChatbot({
 
   useEffect(() => {
     if (rightActiveTabKey !== 'status') return
+    if (lastStatusSignatureRef.current === statusKnowledgeSignature) return
 
     let isCancelled = false
     async function generateStatus() {
@@ -214,26 +238,30 @@ export function useClientChatbot({
 
       setIsStatusSummaryLoading(true)
       try {
-        const response = await sendClientChatMessage([
-          {
-            role: 'system',
-            text:
-              'Je bent een statusgenerator in een softwareproduct voor re-integratiecoaches. Schrijf een korte statusupdate in het Nederlands (max 90 woorden): hoe gaat het met deze client en waar zijn we gebleven. Wees concreet, professioneel en zonder opsommingen.',
-          },
-          {
-            role: 'user',
-            text:
-              `Client: ${clientName}\n` +
-              `Traject: ${activeTrajectoryName || 'Geen traject'}\n` +
-              `Sessies: ${sessionCount}\n` +
-              `Rapportages: ${reportCount}\n\n` +
-              `Snippets gegroepeerd per inputdatum (chronologisch):\n${groupedSnippetsByInputDate || 'Geen snippets beschikbaar.'}\n\n` +
-              `Laatste 5 items (nieuw naar oud):\n${lastFiveTimeline || 'Geen items beschikbaar.'}`,
-          },
-        ])
-        if (!isCancelled) setStatusSummaryAi(response.trim() || onStatusFallbackText)
+        const response = await sendClientPipelineChatMessage({
+          clientId,
+          messages: [
+            {
+              role: 'user',
+              text:
+                `Schrijf een korte, menselijk klinkende statusupdate over deze client in 2-3 volledige zinnen (max 90 woorden, zonder opsomming).\n` +
+                `Vermijd droge telegramstijl; maak er een vloeiend mini-verhaal van op basis van de feiten.\n` +
+                `Client: ${clientName}\n` +
+                `Traject: ${activeTrajectoryName || 'Geen traject'}\n` +
+                `Sessies: ${sessionCount}\n` +
+                `Rapportages: ${reportCount}\n\n` +
+                `Snippets gegroepeerd per inputdatum:\n${groupedSnippetsByInputDate || 'Geen snippets beschikbaar.'}\n\n` +
+                `Laatste 5 items:\n${lastFiveTimeline || 'Geen items beschikbaar.'}`,
+            },
+          ],
+        })
+        if (!isCancelled) setStatusSummaryAi(response.answer.trim() || onStatusFallbackText)
+        lastStatusSignatureRef.current = statusKnowledgeSignature
       } catch {
-        if (!isCancelled) setStatusSummaryAi(onStatusFallbackText)
+        if (!isCancelled) {
+          setStatusSummaryAi(onStatusFallbackText)
+          lastStatusSignatureRef.current = statusKnowledgeSignature
+        }
       } finally {
         if (!isCancelled) setIsStatusSummaryLoading(false)
       }
@@ -243,7 +271,20 @@ export function useClientChatbot({
     return () => {
       isCancelled = true
     }
-  }, [activeTrajectoryName, rightActiveTabKey, clientId, clientName, onStatusFallbackText, reportCount, sessionCount, inputs, snippets, inputSummaries, sessionItemsForStatus])
+  }, [
+    activeTrajectoryName,
+    rightActiveTabKey,
+    clientId,
+    clientName,
+    onStatusFallbackText,
+    reportCount,
+    sessionCount,
+    inputs,
+    snippets,
+    inputSummaries,
+    sessionItemsForStatus,
+    statusKnowledgeSignature,
+  ])
 
   function appendNoMinutesAssistantMessage() {
     const noMinutesText = 'U heeft geen minuten meer. Ga naar Mijn abonnement om extra minuten toe te voegen.'
@@ -288,41 +329,15 @@ export function useClientChatbot({
         return
       }
 
-      const contextMessages = buildClientStructuredSystemMessages({
-        clientName,
-        clientCreatedAtUnixMs: client?.createdAtUnixMs ?? null,
-        clientDetails: client?.clientDetails ?? '',
-        employerDetails: client?.employerDetails ?? '',
-        includeInputReports: true,
-        inputs: inputs
-          .filter((session) => readInputClientId(session) === clientId && chatContextInputIds.has(session.id))
-          .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
-          .slice(0, 25)
-          .map((session) => ({
-            title: session.title,
-            createdAtUnixMs: session.createdAtUnixMs,
-            summary: session.summary ?? null,
-            reportText: writtenReportByInputId.get(session.id)?.text ?? null,
-            reportDate: session.reportDate,
-          })),
-        snippets: snippets
-          .filter((snippet) => snippet.status === 'approved')
-          .filter((snippet) => chatContextInputIds.has(snippet.itemId))
-          .map((snippet) => ({
-            sessionId: snippet.itemId,
-            field: snippet.field,
-            text: snippet.text,
-          })),
-        maxTotalCharacters: 18000,
-        maxInputCharacters: 3500,
+      const response = await sendClientPipelineChatMessage({
+        clientId,
+        messages: nextChatMessages.map((message) => ({ role: message.role, text: message.text })),
       })
 
-      const responseText = await sendClientChatMessage(
-        nextChatMessages.map<LocalChatMessage>((message) => ({ role: message.role, text: message.text })),
-        contextMessages,
-      )
-
-      setChatMessages((previous) => [...previous, { id: createChatMessageId(), role: 'assistant', text: responseText }])
+      setChatMessages((previous) => [
+        ...previous,
+        { id: createChatMessageId(), role: 'assistant', text: response.answer.trim() || 'Ik kon hier geen antwoord op geven.' },
+      ])
     } catch {
       setChatMessages((previous) => [
         ...previous,

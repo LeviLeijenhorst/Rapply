@@ -1,5 +1,5 @@
 import React from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
 
 import { ClientPageAiChatIcon, ClientPageStatusIcon } from '@/icons/ClientPageSvgIcons'
 import { colors } from '@/design/theme/colors'
@@ -37,7 +37,13 @@ export function ClientRightTabs({
         <MainContainer contentKey={`client-assistant-${activeTabKey}`} style={styles.assistantCardContent}>
           {activeTabKey === 'status' ? (
             <View style={styles.statusPanel}>
-              <Text style={styles.statusText}>{isStatusSummaryLoading ? 'Status wordt gegenereerd...' : statusSummary}</Text>
+              {isStatusSummaryLoading ? (
+                <View style={styles.statusLoadingState}>
+                  <ActivityIndicator size="small" color={colors.selected} />
+                </View>
+              ) : (
+                <Text style={styles.statusText}>{statusSummary}</Text>
+              )}
             </View>
           ) : (
             chatContent
@@ -62,6 +68,7 @@ function RightTabButton({ label, isSelected, icon, onPress }: RightTabButtonProp
       style={({ hovered }) => [
         styles.tabButton,
         isSelected ? styles.tabButtonSelected : styles.tabButtonUnselected,
+        isSelected ? styles.tabButtonConnected : undefined,
         hovered && !isSelected ? styles.tabButtonHovered : undefined,
       ]}
     >
@@ -71,7 +78,6 @@ function RightTabButton({ label, isSelected, icon, onPress }: RightTabButtonProp
           {label}
         </Text>
       </View>
-      {isSelected ? <View pointerEvents="none" style={styles.selectedTabBridge} /> : null}
     </Pressable>
   )
 }
@@ -81,14 +87,13 @@ const styles = StyleSheet.create({
   tabsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
     paddingHorizontal: 0,
     paddingTop: 0,
     paddingBottom: 0,
-    zIndex: 50,
-    marginBottom: 0,
-    position: 'relative',
-    ...({ overflow: 'visible' } as any),
+    marginTop: 0,
+    zIndex: 2,
+    marginBottom: -2,
   },
   tabButton: {
     height: 48,
@@ -99,44 +104,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderWidth: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: 'transparent',
+    borderBottomWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    top: 0,
     position: 'relative',
   },
   tabButtonSelected: {
     backgroundColor: '#FFFFFF',
     borderColor: '#DFE0E2',
-    borderBottomWidth: 1,
-    borderBottomColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 3,
-    ...({ boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any),
-    zIndex: 1000,
-    top: 1,
   },
-  tabButtonUnselected: { backgroundColor: '#FFFFFF', borderColor: '#DFE0E2' },
+  tabButtonConnected: {
+    zIndex: 3,
+  },
+  tabButtonUnselected: { backgroundColor: '#F9FAFB', borderColor: '#DFE0E2', borderBottomWidth: 1 },
   tabButtonHovered: { backgroundColor: colors.hoverBackground },
   tabButtonContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   statusIconWrap: { width: 18, height: 18, alignItems: 'center', justifyContent: 'center' },
   tabText: { fontSize: 16, lineHeight: 20, color: '#2C111F', fontFamily: typography.fontFamilySemibold },
   tabTextActive: { color: colors.selected },
-  selectedTabBridge: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: -8,
-    height: 10,
-    backgroundColor: '#FFFFFF',
-    zIndex: 1001,
-  },
   card: {
     flex: 1,
     borderRadius: 12,
@@ -156,5 +143,12 @@ const styles = StyleSheet.create({
   bottomCardConnected: { marginTop: 0, borderTopLeftRadius: 0, borderTopRightRadius: 12 },
   assistantCardContent: { flex: 1, minHeight: 0 },
   statusPanel: { flex: 1, margin: 12, padding: 14 },
+  statusLoadingState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   statusText: { fontSize: 14, lineHeight: 20, color: '#2C111F' },
 })
+
+

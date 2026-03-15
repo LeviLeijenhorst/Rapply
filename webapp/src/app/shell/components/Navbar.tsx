@@ -31,7 +31,7 @@ const NEW_REPORT_BREADCRUMB_LABEL = 'Nieuwe rapportage'
 function getDisplayBreadcrumbLabel(label: string): string {
   if (label === 'Rapportage controleren') return NEW_REPORT_BREADCRUMB_LABEL
   const normalized = String(label || '').trim().toLowerCase()
-  if (normalized === 'clienten' || normalized === 'cli\u00ebnten') return 'Cli\u00ebnten'
+  if (normalized === 'clienten' || normalized === 'cli\u00ebnten') return 'Clienten'
   return label
 }
 

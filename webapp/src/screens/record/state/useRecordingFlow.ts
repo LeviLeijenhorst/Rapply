@@ -38,6 +38,7 @@ type Params = {
   setLiveTranscriptError: (value: string | null) => void
   setLiveTranscriptText: (value: string | ((previous: string) => string)) => void
   setStep: (step: NewInputStep) => void
+  onRecordingReady?: () => void
   step: NewInputStep
   visible: boolean
 }
@@ -57,9 +58,11 @@ export function useRecordingFlow({
   setLiveTranscriptError,
   setLiveTranscriptText,
   setStep,
+  onRecordingReady,
   step,
   visible,
 }: Params) {
+  const isRecordingLikeStep = step === 'recording' || step === 'recording_finishing' || step === 'recording_canceling'
   const stopLiveTranscriber = useCallback(async () => {
     const activeTranscriber = liveTranscriberRef.current
     if (!activeTranscriber) return
@@ -75,11 +78,11 @@ export function useRecordingFlow({
   }, [stopLiveTranscriber])
 
   useEffect(() => {
-    if (step !== 'recording') {
+    if (!isRecordingLikeStep) {
       hasAutoStartedRecordingRef.current = false
       hasAutoSubmittedRecordingRef.current = false
     }
-  }, [hasAutoStartedRecordingRef, hasAutoSubmittedRecordingRef, step])
+  }, [hasAutoStartedRecordingRef, hasAutoSubmittedRecordingRef, isRecordingLikeStep])
 
   useEffect(() => {
     if (!visible) return
@@ -177,9 +180,11 @@ export function useRecordingFlow({
   ])
 
   useEffect(() => {
-    if (step !== 'recording') return
+    if (!isRecordingLikeStep) return
     if (recorder.status !== 'ready') return
     if (!recorder.recordedBlob || !recorder.recordedMimeType) return
+    if (hasAutoSubmittedRecordingRef.current) return
+    hasAutoSubmittedRecordingRef.current = true
 
     const blob = recorder.recordedBlob as Blob
     const mimeType = recorder.recordedMimeType as string
@@ -197,16 +202,20 @@ export function useRecordingFlow({
         setAudioDurationSeconds((previousDurationSeconds) => maxDuration([previousDurationSeconds, detectedDurationSeconds]))
       })
       .catch(() => undefined)
-    hasAutoSubmittedRecordingRef.current = false
+    if (onRecordingReady) {
+      onRecordingReady()
+      return
+    }
     setStep('recorded')
   }, [
     hasAutoSubmittedRecordingRef,
+    isRecordingLikeStep,
+    onRecordingReady,
     recorder,
     setAudioDurationSeconds,
     setAudioForTranscription,
     setAudioPreviewUrl,
     setStep,
-    step,
   ])
 
   const retryRecordingAfterError = useCallback(() => {

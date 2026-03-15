@@ -7,7 +7,8 @@ import { Navbar } from './components/Navbar'
 import { Sidebar, SidebarItemKey } from './components/Sidebar'
 import { Text } from '../../ui/Text'
 import type { ClientLeftTabKey } from '../../screens/client/clientScreen.types'
-import { NewInputModal } from '../../screens/record/NewInputModal'
+import { NewInputModal } from '../../screens/record/NewSessionModal'
+import type { NewInputQuickAction } from '../../screens/record/types'
 import { FeedbackModal } from './modals/FeedbackModal'
 import { SettingsMenu } from './menus/SettingsMenu'
 import { MyAccountModal } from './modals/MyAccountModal'
@@ -28,7 +29,8 @@ import { useAudioUploadQueue } from '../../audio/upload/useAudioUploadQueue'
 import { useE2ee } from '../../security/providers/E2eeProvider'
 import { toUserFriendlyErrorMessage } from '../../utils/text/userFriendlyError'
 import { useToast } from '../../toast/ToastProvider'
-import { consumeSubscriptionReturnResumeRequest } from '../../screens/record/state/subscriptionReturnDraft'
+import { consumeSubscriptionReturnResumeRequest, requestSubscriptionReturnResumeIfDraftAvailable } from '../../screens/record/state/subscriptionReturnDraft'
+import { createMollieExtraMinutesCheckout } from '../../api/billing/billingApi'
 import { CoachscribeLogo } from '../../components/brand/CoachscribeLogo'
 import { MonitorIcon } from '../../icons/MonitorIcon'
 import { AppShellRouteView } from './AppShellRouteView'
@@ -81,6 +83,7 @@ export function AppShell({ onLogout }: Props) {
   const [clientTabById, setClientTabById] = useState<Record<string, ClientLeftTabKey>>({})
   const [isNewInputModalOpen, setIsNewInputModalOpen] = useState(false)
   const [mobileInputInitialOption, setMobileInputInitialOption] = useState<'gesprek' | 'gespreksverslag' | null>(null)
+  const [newInputInitialQuickAction, setNewInputInitialQuickAction] = useState<NewInputQuickAction | null>(null)
   const [newInputClientId, setNewInputClientId] = useState<string | null>(null)
   const [newInputTrajectoryId, setNewInputTrajectoryId] = useState<string | null>(null)
   const [isNieuweRapportageOpen, setIsNieuweRapportageOpen] = useState(false)
@@ -113,6 +116,8 @@ export function AppShell({ onLogout }: Props) {
   const [isRecordingBusy, setIsRecordingBusy] = useState(false)
   const { showToast, showErrorToast } = useToast()
   const isCurrentUserAdmin = currentUserAccountType === 'admin'
+  const sidebarUserName = String(data.userSettings.name || '').trim() || currentUserName
+  const sidebarUserRole = String(data.userSettings.role || '').trim() || 'Re-integratiecoach'
 
   const refreshSubscriptionAccess = useCallback(async () => {
     try {
@@ -125,6 +130,57 @@ export function AppShell({ onLogout }: Props) {
       setCurrentPlanId(null)
     }
   }, [])
+
+  const navigateToCheckoutInNewTab = useCallback((checkoutUrl: string, checkoutTab: Window | null) => {
+    if (typeof window !== 'undefined') {
+      if (checkoutTab && !checkoutTab.closed) {
+        checkoutTab.location.href = checkoutUrl
+        return
+      }
+      const openedTab = window.open(checkoutUrl, '_blank')
+      if (openedTab) {
+        try {
+          openedTab.opener = null
+        } catch {}
+        return
+      }
+      window.location.href = checkoutUrl
+      return
+    }
+
+    void Linking.openURL(checkoutUrl)
+  }, [])
+
+  const startExtraMinutesCheckout = useCallback(async () => {
+    const checkoutTab = typeof window !== 'undefined' ? window.open('about:blank', '_blank') : null
+    if (checkoutTab) {
+      try {
+        checkoutTab.opener = null
+      } catch {}
+    }
+
+    try {
+      const response = await createMollieExtraMinutesCheckout()
+      if (response.requiresRedirect === false || !response.ok) {
+        if (checkoutTab && !checkoutTab.closed) checkoutTab.close()
+        setIsMySubscriptionModalOpen(true)
+        return
+      }
+      const checkoutUrl = String(response.checkoutUrl || '').trim()
+      if (!checkoutUrl) {
+        if (checkoutTab && !checkoutTab.closed) checkoutTab.close()
+        throw new Error('Geen checkout URL ontvangen')
+      }
+      requestSubscriptionReturnResumeIfDraftAvailable()
+      navigateToCheckoutInNewTab(checkoutUrl, checkoutTab)
+    } catch (error) {
+      if (checkoutTab && !checkoutTab.closed) checkoutTab.close()
+      showErrorToast(
+        toUserFriendlyErrorMessage(error, { fallback: 'Betalen starten lukt nu niet. Probeer het opnieuw.' }),
+        'Betalen starten lukt nu niet. Probeer het opnieuw.',
+      )
+    }
+  }, [navigateToCheckoutInNewTab, showErrorToast])
 
   useEffect(() => {
     let isCancelled = false
@@ -372,11 +428,12 @@ export function AppShell({ onLogout }: Props) {
   }, [navigateTo])
 
   const openNewInputModal = useCallback(
-    (clientId: string | null, trajectoryId: string | null = null, initialOption: 'gesprek' | 'gespreksverslag' | null = null) => {
+    (clientId: string | null, trajectoryId: string | null = null, initialOption: 'gesprek' | 'gespreksverslag' | null = null, initialQuickAction: NewInputQuickAction | null = null) => {
       if (isRecordingBusy) return
       setMobileInputInitialOption(initialOption)
       setNewInputClientId(clientId)
       setNewInputTrajectoryId(trajectoryId)
+      setNewInputInitialQuickAction(initialQuickAction)
       setIsNewInputModalOpen(true)
     },
     [isRecordingBusy],
@@ -387,6 +444,7 @@ export function AppShell({ onLogout }: Props) {
     setMobileInputInitialOption(option)
     setNewInputClientId(null)
     setNewInputTrajectoryId(null)
+    setNewInputInitialQuickAction(null)
     setIsNewInputModalOpen(true)
   }, [isRecordingBusy])
 
@@ -486,6 +544,7 @@ export function AppShell({ onLogout }: Props) {
           visible={isNewInputModalOpen}
           limitedMode
           initialOption={mobileInputInitialOption}
+          initialQuickAction={null}
           onRecordingBusyChange={setIsRecordingBusy}
           initialClientId={null}
           initialTrajectoryId={null}
@@ -499,16 +558,17 @@ export function AppShell({ onLogout }: Props) {
             setNewlyCreatedClientId(null)
             setNewInputClientId(null)
             setNewInputTrajectoryId(null)
-          }}
+              setNewInputInitialQuickAction(null)
+            }}
           onOpenMySubscription={() => {
-            if (!canOpenSubscription) return
-            setIsMySubscriptionModalOpen(true)
+            void startExtraMinutesCheckout()
           }}
           onOpenNewClient={() => {
               setIsNewInputModalOpen(false)
               setMobileInputInitialOption(null)
               setNewInputClientId(null)
               setNewInputTrajectoryId(null)
+              setNewInputInitialQuickAction(null)
               openNewClientModal()
             }}
           newlyCreatedClientId={newlyCreatedClientId}
@@ -522,6 +582,7 @@ export function AppShell({ onLogout }: Props) {
             setIsNewInputModalOpen(false)
             setMobileInputInitialOption(null)
             setNewInputTrajectoryId(null)
+            setNewInputInitialQuickAction(null)
             setInputOriginRoute(null)
             navigateTo(nextRoute)
           }}
@@ -566,8 +627,8 @@ export function AppShell({ onLogout }: Props) {
               isAdminUser={isCurrentUserAdmin}
               usedMinutes={usedMinutes}
               totalMinutes={totalMinutes}
-              userName={currentUserName}
-              userRole="Re-integratiecoach"
+              userName={sidebarUserName}
+              userRole={sidebarUserRole}
               onSelectSidebarItem={(sidebarItemKey) => {
                 navigateTo(routeFromSidebarItemKey(sidebarItemKey))
                 setIsSettingsMenuOpen(false)
@@ -582,6 +643,7 @@ export function AppShell({ onLogout }: Props) {
               style={[
                 styles.mainContent,
                 isClientDetailPage || isNieuweRapportageOpen || isRecordPageOpen || isNewClientPageOpen || !!selectedSessieId || selectedSidebarItemKey === 'mijnPraktijk'
+                  || selectedSidebarItemKey === 'dashboard'
                   ? styles.mainContentNoFrame
                   : undefined,
                 hasBreadcrumbs && !isClientOverviewPage && !isNieuweRapportageOpen && !isRecordPageOpen && !isNewClientPageOpen && !selectedSessieId ? styles.mainContentWithBreadcrumbs : undefined,
@@ -617,6 +679,7 @@ export function AppShell({ onLogout }: Props) {
               setMobileInputInitialOption(null)
               setNewInputClientId(null)
               setNewInputTrajectoryId(null)
+              setNewInputInitialQuickAction(null)
               openNewClientModal()
             }}
                   onOpenNewInputModal={openNewInputModal}
@@ -642,6 +705,8 @@ export function AppShell({ onLogout }: Props) {
                   selectedSessieId={selectedSessieId}
                   selectedTrajectoryId={selectedTrajectoryId}
                   sessionIdPendingTemplatePicker={sessionIdPendingTemplatePicker}
+                  currentUserGivenName={currentUserGivenName}
+                  currentUserName={currentUserName}
                 />
               </MainContainer>
             </View>
@@ -702,11 +767,13 @@ export function AppShell({ onLogout }: Props) {
             onRecordingBusyChange={setIsRecordingBusy}
             initialClientId={newInputClientId}
             initialTrajectoryId={newInputTrajectoryId}
+            initialQuickAction={newInputInitialQuickAction}
             onOpenGeschrevenGespreksverslag={(clientId: string | null) => {
               setIsNewInputModalOpen(false)
               setMobileInputInitialOption(null)
               setNewInputClientId(null)
               setNewInputTrajectoryId(null)
+              setNewInputInitialQuickAction(null)
               setRapportageOnlyInputId(null)
               setSelectedClientId(clientId)
               setRapportageScreenMode('controleren')
@@ -722,16 +789,17 @@ export function AppShell({ onLogout }: Props) {
               setNewlyCreatedClientId(null)
               setNewInputClientId(null)
               setNewInputTrajectoryId(null)
+              setNewInputInitialQuickAction(null)
             }}
             onOpenMySubscription={() => {
-              if (!canOpenSubscription) return
-              setIsMySubscriptionModalOpen(true)
+              void startExtraMinutesCheckout()
             }}
             onOpenNewClient={() => {
               setIsNewInputModalOpen(false)
               setMobileInputInitialOption(null)
               setNewInputClientId(null)
               setNewInputTrajectoryId(null)
+              setNewInputInitialQuickAction(null)
               openNewClientModal()
             }}
             newlyCreatedClientId={newlyCreatedClientId}
@@ -746,6 +814,7 @@ export function AppShell({ onLogout }: Props) {
               setMobileInputInitialOption(null)
               setNewInputClientId(null)
               setNewInputTrajectoryId(null)
+              setNewInputInitialQuickAction(null)
               setRapportageOnlyInputId(null)
               setInputOriginRoute(null)
               navigateTo(nextRoute)
@@ -810,7 +879,7 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
     backgroundColor: colors.pageBackground,
-    ...( { height: '100vh', overflow: 'visible' } as any ),
+    ...( { minHeight: '100vh', overflow: 'hidden' } as any ),
   },
   breadcrumbContainer: {
     height: 40,
@@ -882,10 +951,12 @@ const styles = StyleSheet.create({
   contentRow: {
     flex: 1,
     flexDirection: 'row',
+    minHeight: 0,
     ...( { overflow: 'visible' } as any ),
   },
   mainContent: {
     flex: 1,
+    minHeight: 0,
     backgroundColor: colors.pageBackground,
     padding: 24,
     ...( { overflow: 'visible' } as any ),
@@ -962,6 +1033,8 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 })
+
+
 
 
 

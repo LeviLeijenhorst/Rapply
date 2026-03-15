@@ -5,8 +5,6 @@ import { removeSpeakerLabelsFromOutput } from "../ai/shared/textSanitization"
 import { env } from "../env"
 import { SummaryGenerationError } from "../errors/SummaryGenerationError"
 
-type SummaryTemplate = { name: string; sections: { title: string; description: string }[] }
-
 const chunkTokenBudget = 6_500
 const mergeTokenBudget = 8_000
 
@@ -17,26 +15,19 @@ function readRequiredTranscript(transcript: string): string {
   return normalizedTranscript
 }
 
-// Builds the markdown heading structure.
-function buildSummaryStructure(template?: SummaryTemplate): string {
-  if (Array.isArray(template?.sections) && template.sections.length > 0) {
-    return template.sections.map((section) => `### ${normalizeText(section.title) || "Samenvatting"}\n...`).join("\n")
-  }
-  return "### Samenvatting\n...\n### Kerninzichten\n...\n### Vervolg\n...\n"
-}
-
 // Builds the system prompt used for summary generation.
-function buildSummarySystemPrompt(template?: SummaryTemplate): string {
-  const templateName = normalizeText(template?.name) || "Standaard"
+function buildSummarySystemPrompt(): string {
   return [
     "Je bent een assistent voor Coachscribe.",
     "Schrijf een heldere sessiesamenvatting in het Nederlands.",
+    "Geef exact 2 alinea's (geen markdown, geen kopjes, geen bullets).",
+    "Alinea 1: een korte, snelle samenvatting van de sessie.",
+    "Alinea 2: de actiepunten uit de sessie.",
+    "Als er geen actiepunten zijn, vermeld dat expliciet in alinea 2.",
     "Gebruik alleen informatie uit het transcript.",
     "Noem geen details die niet in het transcript staan.",
     "Gebruik geen sprekerlabels.",
-    "Gebruik alleen Markdown met kopjes die beginnen met '### '.",
-    "Schrijf onder elk kopje doorlopende tekst zonder bullets of nummering.",
-    `Template: ${templateName}.`,
+    "Houd de toon feitelijk en professioneel.",
   ].join("\n")
 }
 
@@ -68,7 +59,6 @@ function splitTextRecursively(value: string, maxAllowedTokens: number): string[]
 async function summarizeChunk(params: {
   deployment: string
   systemPrompt: string
-  structure: string
   chunkText: string
   chunkIndex: number
   totalChunks: number
@@ -76,8 +66,6 @@ async function summarizeChunk(params: {
   const userPrompt = [
     `Dit is deel ${params.chunkIndex} van ${params.totalChunks}.`,
     "Gebruik alleen feiten uit dit deel.",
-    "Volg deze structuur:",
-    params.structure,
     "",
     "Transcriptdeel:",
     params.chunkText,
@@ -98,7 +86,6 @@ async function summarizeChunk(params: {
 async function mergeChunkSummaries(params: {
   deployment: string
   systemPrompt: string
-  structure: string
   partialSummaries: string[]
 }): Promise<string> {
   let current = params.partialSummaries.slice()
@@ -122,7 +109,7 @@ async function mergeChunkSummaries(params: {
         { role: "system", content: params.systemPrompt },
         {
           role: "user",
-          content: ["Voeg deze deelsamenvattingen samen zonder nieuwe feiten.", "Volg dezelfde structuur:", params.structure, "", input].join("\n"),
+          content: ["Voeg deze deelsamenvattingen samen tot 1 tekst met exact 2 alinea's, zonder nieuwe feiten.", input].join("\n\n"),
         },
       ]
       const mergedGroup = await completeAzureOpenAiChat({
@@ -140,31 +127,39 @@ async function mergeChunkSummaries(params: {
   return normalizeText(current[0] || "")
 }
 
-// Cleans speaker labels and whitespace from summary text.
-function cleanSummaryText(summary: string): string {
-  return removeSpeakerLabelsFromOutput(normalizeText(summary)).trim()
+// Normalizes generated summary text for display/storage.
+function normalizeGeneratedSummaryText(summary: string): string {
+  return removeSpeakerLabelsFromOutput(normalizeText(summary))
+    .replace(/\[\d{1,2}:\d{2}(?:\.\d+)?\]\s*/g, "")
+    .replace(/(?:^|\n)\s*\d{1,2}:\d{2}(?:\.\d+)?\s*[-:]\s*/g, "\n")
+    .replace(/(?:^|\n)\s*(?:coach|client|cliënt|spreker\s*\d+)\s*:\s*/gi, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
 }
 
-// Generates a markdown summary from transcript text.
-export async function generateSummary(params: { transcript: string; template?: SummaryTemplate }): Promise<string> {
-  const deployment = normalizeText(env.azureOpenAiSummaryDeployment)
+// Resolves the summary deployment from environment settings.
+export function readSummaryDeployment(): string {
+  return normalizeText(env.azureOpenAiSummaryDeployment || env.azureOpenAiChatDeployment)
+}
+
+// Generates a plain-text summary from transcript text.
+export async function generateSummary(params: { transcript: string }): Promise<string> {
+  const deployment = readSummaryDeployment()
   if (!deployment) throw new SummaryGenerationError("Azure OpenAI summary deployment is not configured")
 
   const transcript = readRequiredTranscript(params.transcript)
-  const systemPrompt = buildSummarySystemPrompt(params.template)
-  const structure = buildSummaryStructure(params.template)
+  const systemPrompt = buildSummarySystemPrompt()
   const chunks = splitTextRecursively(transcript, chunkTokenBudget)
 
   if (chunks.length <= 1) {
     const summary = await summarizeChunk({
       deployment,
       systemPrompt,
-      structure,
       chunkText: chunks[0] || transcript,
       chunkIndex: 1,
       totalChunks: 1,
     })
-    const cleanedSummary = cleanSummaryText(summary)
+    const cleanedSummary = normalizeGeneratedSummaryText(summary)
     if (!cleanedSummary) throw new SummaryGenerationError("Summary generation failed")
     return cleanedSummary
   }
@@ -174,7 +169,6 @@ export async function generateSummary(params: { transcript: string; template?: S
     const partialSummary = await summarizeChunk({
       deployment,
       systemPrompt,
-      structure,
       chunkText: chunks[chunkIndex],
       chunkIndex: chunkIndex + 1,
       totalChunks: chunks.length,
@@ -187,10 +181,9 @@ export async function generateSummary(params: { transcript: string; template?: S
   const mergedSummary = await mergeChunkSummaries({
     deployment,
     systemPrompt,
-    structure,
     partialSummaries,
   })
-  const cleanedSummary = cleanSummaryText(mergedSummary)
+  const cleanedSummary = normalizeGeneratedSummaryText(mergedSummary)
   if (!cleanedSummary) throw new SummaryGenerationError("Summary generation failed")
   return cleanedSummary
 }

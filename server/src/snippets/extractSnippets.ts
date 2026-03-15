@@ -1,9 +1,10 @@
 import { completeAzureOpenAiChat } from "../ai/azureOpenAi"
 import { normalizeText } from "../ai/shared/normalize"
 import { estimateTokenCount } from "../ai/shared/textChunking"
-import { stripJsonCodeFences } from "../ai/shared/textSanitization"
+import { removeSpeakerLabelsFromOutput, stripJsonCodeFences } from "../ai/shared/textSanitization"
 import { env } from "../env"
 import { SnippetExtractionError } from "../errors/SnippetExtractionError"
+import { sanitizeMedicalContent } from "./sanitizeMedicalContent"
 
 export type SnippetInputType = "transcript" | "spoken_recap" | "written_recap"
 
@@ -22,6 +23,44 @@ export type SnippetExtractionDebugChunk = {
   promptUsed: string
   rawModelResponse: string
   parsedSnippets: SnippetExtractionResult[]
+}
+
+function ensureSentenceEnding(value: string): string {
+  const trimmed = normalizeText(value)
+  if (!trimmed) return ""
+  if (/[.!?]$/.test(trimmed)) return trimmed
+  return `${trimmed}.`
+}
+
+function sanitizeSnippetText(value: string): string {
+  const withoutSpeakerLabels = removeSpeakerLabelsFromOutput(String(value || ""))
+  const withoutTimestampPrefix = withoutSpeakerLabels
+    .replace(/^\s*\[\d{1,2}:\d{2}(?:\.\d+)?\]\s*/g, "")
+    .replace(/^\s*\d{1,2}:\d{2}(?:\.\d+)?\s*[-:]\s*/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+  return sanitizeMedicalContent(withoutTimestampPrefix)
+}
+
+function toLowercaseFirst(value: string): string {
+  const input = String(value || "").trim()
+  if (!input) return ""
+  return `${input.slice(0, 1).toLowerCase()}${input.slice(1)}`
+}
+
+export function buildFallbackGeneralSnippet(transcript: string): SnippetExtractionResult | null {
+  const normalizedTranscript = normalizeText(transcript)
+  if (!normalizedTranscript) return null
+  const firstSentence = normalizedTranscript.split(/(?<=[.!?])\s+/).find((line) => normalizeText(line).length > 0) || normalizedTranscript
+  const clipped = normalizeText(firstSentence).slice(0, 280)
+  const sanitized = sanitizeSnippetText(ensureSentenceEnding(clipped))
+  if (!sanitized) return null
+  const fallbackBody = sanitized.replace(/[.!?]+$/g, "").trim()
+  const paraphrased = ensureSentenceEnding(`Coach geeft aan dat ${toLowercaseFirst(fallbackBody)}`)
+  return {
+    field: "general",
+    text: paraphrased,
+  }
 }
 
 // Cleans up a snippet field name from input.
@@ -129,6 +168,8 @@ function buildSnippetPrompt(params: { inputType: SnippetInputType; transcript: s
     "Regels:",
     "- Gebruik alleen informatie uit de input (zie onderaan deze prompt).",
     "- Schrijf feitelijk, neutraal en concreet.",
+    "- Herschrijf informatie in eigen woorden; citeer geen letterlijke transcriptzinnen.",
+    "- Gebruik geen timestamps, speakerlabels of ruwe transcriptnotatie in snippets.",
     "- Als er geen relevante informatie is: geef een lege lijst terug.",
     "- Er mag geen medische informatie in de snippets staan.",
     "- Gebruik uitsluitend fields uit de mapping hieronder.",
@@ -250,7 +291,7 @@ function parseSnippetExtraction(rawText: string): SnippetExtractionResult[] {
 
   for (const rawSnippet of rawSnippets) {
     const field = normalizeSnippetField(rawSnippet?.field)
-    const text = normalizeText(rawSnippet?.text)
+    const text = sanitizeSnippetText(String(rawSnippet?.text || ""))
     if (!snippetFieldSet.has(field) || !text) continue
     const dedupeKey = `${field.toLowerCase()}::${text.toLowerCase()}`
     if (seen.has(dedupeKey)) continue
@@ -261,26 +302,55 @@ function parseSnippetExtraction(rawText: string): SnippetExtractionResult[] {
   return snippets
 }
 
+function readSnippetExtractionDeployments(): string[] {
+  const candidates = [
+    normalizeText(env.azureOpenAiSummaryDeployment),
+    normalizeText(env.azureOpenAiReportDeployment),
+    normalizeText(env.azureOpenAiReasoningDeployment),
+    normalizeText(env.azureOpenAiChatDeployment),
+  ].filter(Boolean)
+  return Array.from(new Set(candidates))
+}
+
+function isMissingAzureDeploymentError(error: unknown): boolean {
+  const message = String(error instanceof Error ? error.message : error || "").toLowerCase()
+  return message.includes("resource not found") || message.includes("deploymentnotfound")
+}
+
 // Runs extraction for one chunk.
 async function extractSnippetsForChunk(params: { prompt: string }): Promise<{ rawModelResponse: string; snippets: SnippetExtractionResult[] }> {
-  const deployment = normalizeText(env.azureOpenAiSummaryDeployment) || normalizeText(env.azureOpenAiChatDeployment)
-  if (!deployment) {
+  const deployments = readSnippetExtractionDeployments()
+  if (deployments.length === 0) {
     throw new SnippetExtractionError("Azure OpenAI snippet extraction deployment is not configured")
   }
 
-  const rawModelResponse = await completeAzureOpenAiChat({
-    deployment,
-    temperature: 0,
-    messages: [
-      { role: "system", content: "Geef uitsluitend geldige JSON terug. Geen markdown. Geen extra toelichting." },
-      { role: "user", content: params.prompt },
-    ],
-  })
-
-  return {
-    rawModelResponse,
-    snippets: parseSnippetExtraction(rawModelResponse),
+  let lastError: unknown = null
+  for (const deployment of deployments) {
+    try {
+      const rawModelResponse = await completeAzureOpenAiChat({
+        deployment,
+        temperature: 0,
+        messages: [
+          { role: "system", content: "Geef uitsluitend geldige JSON terug. Geen markdown. Geen extra toelichting." },
+          { role: "user", content: params.prompt },
+        ],
+      })
+      return {
+        rawModelResponse,
+        snippets: parseSnippetExtraction(rawModelResponse),
+      }
+    } catch (error) {
+      lastError = error
+      if (!isMissingAzureDeploymentError(error)) throw error
+    }
   }
+
+  throw (lastError as Error) || new SnippetExtractionError("Azure OpenAI snippet extraction failed")
+}
+
+// Uses multiple deployment fallbacks to tolerate stale environment values.
+export function readSnippetExtractionDeploymentCandidates(): string[] {
+  return readSnippetExtractionDeployments()
 }
 
 // Extracts snippets from a full transcript.
@@ -320,6 +390,13 @@ export async function extractSnippets(params: {
         rawModelResponse: extracted.rawModelResponse,
         parsedSnippets: extracted.snippets,
       })
+    }
+  }
+
+  if (merged.length === 0) {
+    const fallbackSnippet = buildFallbackGeneralSnippet(transcript)
+    if (fallbackSnippet) {
+      merged.push(fallbackSnippet)
     }
   }
 

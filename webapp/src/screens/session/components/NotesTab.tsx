@@ -1,5 +1,5 @@
 import React from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
+import { LayoutAnimation, Platform, Pressable, StyleSheet, UIManager, View } from 'react-native'
 
 import { semanticColorTokens } from '@/design/tokens/colors'
 import { borderWidths } from '@/design/tokens/borderWidths'
@@ -11,11 +11,19 @@ import { TrashIcon } from '@/icons/TrashIcon'
 import type { NotesTabProps } from '@/screens/session/sessionScreen.types'
 import { Text } from '@/ui/Text'
 
+if (Platform.OS === 'android' && (UIManager as any).setLayoutAnimationEnabledExperimental) {
+  ;(UIManager as any).setLayoutAnimationEnabledExperimental(true)
+}
+
 function formatTimeLabel(timestamp: number): string {
   return new Date(timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
 }
 
 export function NotesTab({ notes, onEditNote, onDeleteNote }: NotesTabProps) {
+  React.useEffect(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+  }, [notes.length])
+
   if (notes.length === 0) {
     return (
       <View style={styles.emptyWrap}>

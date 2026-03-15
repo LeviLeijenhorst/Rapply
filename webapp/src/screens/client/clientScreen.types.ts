@@ -60,10 +60,23 @@ export type ClientInput = {
 
 export type ClientNote = {
   id: string
+  clientId?: string | null
+  sourceInputId?: string | null
   sessionId: string
   title: string
   text: string
   updatedAtUnixMs: number
+}
+
+export type ClientReport = {
+  id: string
+  clientId?: string | null
+  sourceInputId?: string | null
+  title: string
+  reportText: string
+  createdAtUnixMs: number
+  updatedAtUnixMs: number
+  state: 'incomplete' | 'needs_review' | 'complete'
 }
 
 export type ClientSnippet = {
@@ -89,6 +102,7 @@ export type ClientDataShape = {
   clients: ClientRecord[]
   trajectories: ClientTrajectory[]
   inputs: ClientInput[]
+  reports: ClientReport[]
   notes: ClientNote[]
   snippets: ClientSnippet[]
   inputSummaries: ClientWrittenReport[]

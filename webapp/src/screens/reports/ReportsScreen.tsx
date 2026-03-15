@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
 import { useLocalAppData } from '../../storage/LocalAppDataProvider'
@@ -11,7 +11,7 @@ import { selectReportListItems } from './selectors/reportListSelectors'
 import { filterReportItems } from './viewModels/reportsViewModel'
 
 type Props = {
-  onOpenReport: (sessionId: string) => void
+  onOpenReport: (reportId: string) => void
 }
 
 export function ReportsScreen({ onOpenReport }: Props) {
@@ -37,7 +37,7 @@ export function ReportsScreen({ onOpenReport }: Props) {
       <View style={styles.tableCard}>
         <View style={styles.tableHeaderRow}>
           <Text isSemibold style={[styles.headerText, styles.reportColumn]}>Rapportage</Text>
-          <Text isSemibold style={[styles.headerText, styles.clientColumn]}>Cliënt</Text>
+          <Text isSemibold style={[styles.headerText, styles.clientColumn]}>Client</Text>
           <Text isSemibold style={[styles.headerText, styles.createdColumn]}>Aangemaakt</Text>
           <Text isSemibold style={[styles.headerText, styles.statusColumn]}>Status</Text>
           <Text isSemibold style={[styles.headerText, styles.updatedColumn]}>Laatst bewerkt</Text>

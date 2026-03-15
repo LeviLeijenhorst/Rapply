@@ -1,6 +1,7 @@
 import { freeSeconds, getIncludedSecondsForPlanKey, type PlanKey } from "./constants"
 import { buildCycleKey, clampNonNegative } from "./cycleMath"
 import { queryOne, execute } from "../db"
+import { requireUserDefaultOrganizationId } from "../access/clientAccess"
 
 export type BillingStatus = {
   planKey: PlanKey | null
@@ -17,64 +18,61 @@ export type BillingStatus = {
   remainingSeconds: number
 }
 
-let ensureBillingUsersCompatibilityPromise: Promise<void> | null = null
+let ensureBillingOrganizationsCompatibilityPromise: Promise<void> | null = null
 
 export async function ensureBillingUsersCompatibility(): Promise<void> {
-  if (!ensureBillingUsersCompatibilityPromise) {
-    ensureBillingUsersCompatibilityPromise = execute(
+  if (!ensureBillingOrganizationsCompatibilityPromise) {
+    ensureBillingOrganizationsCompatibilityPromise = execute(
       `
-      alter table public.billing_users
-      add column if not exists admin_granted_seconds integer not null default 0,
-      add column if not exists cycle_granted_seconds_by_key jsonb not null default '{}'::jsonb;
-
-      do $$
-      begin
-        if not exists (
-          select 1
-          from pg_constraint
-          where conname = 'billing_users_non_negative_admin_granted'
-        ) then
-          alter table public.billing_users
-          add constraint billing_users_non_negative_admin_granted
-          check (admin_granted_seconds >= 0);
-        end if;
-      end
-      $$;
+      create table if not exists public.billing_organizations (
+        organization_id text primary key references public.organizations (id) on delete cascade,
+        purchased_seconds integer not null default 0,
+        admin_granted_seconds integer not null default 0,
+        non_expiring_used_seconds integer not null default 0,
+        cycle_used_seconds_by_key jsonb not null default '{}'::jsonb,
+        cycle_granted_seconds_by_key jsonb not null default '{}'::jsonb,
+        updated_at timestamptz not null default now(),
+        constraint billing_organizations_non_negative_purchased check (purchased_seconds >= 0),
+        constraint billing_organizations_non_negative_admin_granted check (admin_granted_seconds >= 0),
+        constraint billing_organizations_non_negative_non_expiring_used check (non_expiring_used_seconds >= 0)
+      );
       `,
       [],
     ).catch((error) => {
-      ensureBillingUsersCompatibilityPromise = null
+      ensureBillingOrganizationsCompatibilityPromise = null
       throw error
     })
   }
-  await ensureBillingUsersCompatibilityPromise
+  await ensureBillingOrganizationsCompatibilityPromise
 }
 
-// Intent: ensureBillingUser
 export async function ensureBillingUser(userId: string): Promise<void> {
+  const organizationId = await requireUserDefaultOrganizationId(userId)
+  await ensureBillingOrganization(organizationId)
+}
+
+export async function ensureBillingOrganization(organizationId: string): Promise<void> {
   await ensureBillingUsersCompatibility()
   await execute(
     `
-    insert into public.billing_users (user_id)
+    insert into public.billing_organizations (organization_id)
     values ($1)
-    on conflict (user_id) do nothing
+    on conflict (organization_id) do nothing
     `,
-    [userId],
+    [organizationId],
   )
 }
 
-// Intent: readBillingStatus
-export async function readBillingStatus(params: {
-  userId: string
+async function readBillingStatusForOrganization(params: {
+  organizationId: string
   planKey: PlanKey | null
   cycleStartMs: number | null
   cycleEndMs: number | null
   includedSecondsOverride?: number | null
   freeSecondsOverride?: number | null
 }): Promise<BillingStatus> {
-  const { userId, planKey, cycleStartMs, cycleEndMs, includedSecondsOverride, freeSecondsOverride } = params
-
-  await ensureBillingUsersCompatibility()
+  const { organizationId, planKey, cycleStartMs, cycleEndMs, includedSecondsOverride, freeSecondsOverride } = params
+  await ensureBillingOrganization(organizationId)
 
   const includedSeconds = Number.isFinite(includedSecondsOverride) && Number(includedSecondsOverride) >= 0
     ? Math.floor(Number(includedSecondsOverride))
@@ -93,10 +91,10 @@ export async function readBillingStatus(params: {
   }>(
     `
     select purchased_seconds, admin_granted_seconds, non_expiring_used_seconds, cycle_used_seconds_by_key, cycle_granted_seconds_by_key
-    from public.billing_users
-    where user_id = $1
+    from public.billing_organizations
+    where organization_id = $1
     `,
-    [userId],
+    [organizationId],
   )
 
   const purchasedSeconds = clampNonNegative(row?.purchased_seconds ?? 0)
@@ -128,5 +126,35 @@ export async function readBillingStatus(params: {
     nonExpiringRemainingSeconds,
     remainingSeconds,
   }
+}
+
+export async function readBillingStatus(params: {
+  userId: string
+  planKey: PlanKey | null
+  cycleStartMs: number | null
+  cycleEndMs: number | null
+  includedSecondsOverride?: number | null
+  freeSecondsOverride?: number | null
+}): Promise<BillingStatus> {
+  const organizationId = await requireUserDefaultOrganizationId(params.userId)
+  return readBillingStatusForOrganization({
+    organizationId,
+    planKey: params.planKey,
+    cycleStartMs: params.cycleStartMs,
+    cycleEndMs: params.cycleEndMs,
+    includedSecondsOverride: params.includedSecondsOverride,
+    freeSecondsOverride: params.freeSecondsOverride,
+  })
+}
+
+export async function readBillingStatusByOrganization(params: {
+  organizationId: string
+  planKey: PlanKey | null
+  cycleStartMs: number | null
+  cycleEndMs: number | null
+  includedSecondsOverride?: number | null
+  freeSecondsOverride?: number | null
+}): Promise<BillingStatus> {
+  return readBillingStatusForOrganization(params)
 }
 

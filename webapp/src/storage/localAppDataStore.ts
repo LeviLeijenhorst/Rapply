@@ -7,6 +7,7 @@ import type {
   LocalAppData,
   Note,
   OrganizationSettings,
+  Report,
   Snippet,
   SnippetStatus,
   Template,
@@ -41,15 +42,31 @@ export function saveLocalAppData(data: LocalAppData) {
 function normalizeLocalAppData(raw: unknown): LocalAppData {
   const fallback = createDefaultLocalAppData()
   const source = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const clients = normalizeClients(source.clients ?? source.coachees, fallback.clients)
+  const trajectories = normalizeTrajectories(source.trajectories, clients, fallback.trajectories)
+  const inputs = normalizeInputs(source.inputs ?? source.sessions, fallback.inputs)
+  const reports = normalizeReports(source.reports, fallback.reports)
+  const inputSummaries =
+    source.inputSummaries !== undefined || source.writtenReports !== undefined
+      ? normalizeInputSummaries(source.inputSummaries ?? source.writtenReports, fallback.inputSummaries)
+      : reports
+          .filter((report) => Boolean(report.sourceInputId))
+          .map((report) => ({
+            inputId: String(report.sourceInputId || ''),
+            sessionId: String(report.sourceInputId || ''),
+            text: report.reportText,
+            updatedAtUnixMs: report.updatedAtUnixMs,
+          }))
 
   return {
-    clients: normalizeClients(source.clients ?? source.coachees, fallback.clients),
-    trajectories: normalizeTrajectories(source.trajectories, normalizeClients(source.clients ?? source.coachees, fallback.clients), fallback.trajectories),
-    inputs: normalizeInputs(source.inputs ?? source.sessions, fallback.inputs),
+    clients,
+    trajectories,
+    inputs,
+    reports,
     snippets: normalizeSnippets(source.snippets, fallback.snippets),
     notes: normalizeNotes(source.notes, fallback.notes),
     templates: normalizeTemplates(source.templates, fallback.templates),
-    inputSummaries: normalizeInputSummaries(source.inputSummaries ?? source.writtenReports, fallback.inputSummaries),
+    inputSummaries,
     organizationSettings: normalizeOrganizationSettings(source.organizationSettings ?? source.practiceSettings, fallback.organizationSettings),
     userSettings: normalizeUserSettings(source.userSettings ?? source.practiceSettings, fallback.userSettings),
   }
@@ -74,7 +91,7 @@ function normalizeClients(raw: unknown, fallback: Client[]): Client[] {
         isArchived: Boolean(candidate.isArchived),
       } satisfies Client
     })
-    .filter((client): client is Client => Boolean(client))
+    .filter(Boolean) as Client[]
 }
 
 function normalizeTrajectories(raw: unknown, clients: Client[], fallback: Trajectory[]): Trajectory[] {
@@ -88,15 +105,30 @@ function normalizeTrajectories(raw: unknown, clients: Client[], fallback: Trajec
       return {
         id,
         clientId,
+        isActive: typeof candidate.isActive === 'boolean' ? candidate.isActive : true,
         name: String(candidate.name ?? '').trim() || 'Traject',
+        serviceType:
+          typeof candidate.serviceType === 'string'
+            ? candidate.serviceType
+            : typeof candidate.dienstType === 'string'
+              ? candidate.dienstType
+              : null,
         uwvContactName: typeof candidate.uwvContactName === 'string' ? candidate.uwvContactName : null,
+        uwvContactPhone: typeof candidate.uwvContactPhone === 'string' ? candidate.uwvContactPhone : null,
+        uwvContactEmail: typeof candidate.uwvContactEmail === 'string' ? candidate.uwvContactEmail : null,
         orderNumber: typeof candidate.orderNumber === 'string' ? candidate.orderNumber : null,
         startDate: typeof candidate.startDate === 'string' ? candidate.startDate : null,
+        planOfAction:
+          candidate.planOfAction && typeof candidate.planOfAction === 'object' && typeof (candidate.planOfAction as any).documentId === 'string'
+            ? { documentId: String((candidate.planOfAction as any).documentId || '').trim() }
+            : null,
+        maxHours: Number.isFinite(candidate.maxHours) ? Number(candidate.maxHours) : 0,
+        maxAdminHours: Number.isFinite(candidate.maxAdminHours) ? Number(candidate.maxAdminHours) : 0,
         createdAtUnixMs: Number.isFinite(candidate.createdAtUnixMs) ? Number(candidate.createdAtUnixMs) : now,
         updatedAtUnixMs: Number.isFinite(candidate.updatedAtUnixMs) ? Number(candidate.updatedAtUnixMs) : now,
       } satisfies Trajectory
     })
-    .filter((trajectory): trajectory is Trajectory => Boolean(trajectory))
+    .filter(Boolean) as Trajectory[]
 
   if (normalized.length > 0) return normalized
   if (clients.length === 0) return fallback
@@ -104,10 +136,17 @@ function normalizeTrajectories(raw: unknown, clients: Client[], fallback: Trajec
   return clients.map((client) => ({
     id: defaultTrajectoryIdForClient(client.id),
     clientId: client.id,
+    isActive: true,
     name: 'Traject',
+    serviceType: 'werkfit',
     uwvContactName: null,
+    uwvContactPhone: null,
+    uwvContactEmail: null,
     orderNumber: null,
     startDate: null,
+    planOfAction: null,
+    maxHours: 0,
+    maxAdminHours: 0,
     createdAtUnixMs: client.createdAtUnixMs,
     updatedAtUnixMs: client.updatedAtUnixMs,
   }))
@@ -136,6 +175,10 @@ function normalizeInputs(raw: unknown, fallback: Input[]): Input[] {
         uploadFileName: nullableText(candidate.uploadFileName),
         transcript: nullableText(candidate.transcript),
         summary: nullableText(candidate.summary),
+        summaryStructured:
+          candidate.summaryStructured && typeof candidate.summaryStructured === 'object'
+            ? candidate.summaryStructured
+            : null,
         reportDate: nullableText(candidate.reportDate),
         transcriptionStatus: normalizeTranscriptionStatus(candidate.transcriptionStatus),
         transcriptionError: nullableText(candidate.transcriptionError),
@@ -144,23 +187,60 @@ function normalizeInputs(raw: unknown, fallback: Input[]): Input[] {
     .filter(Boolean) as Input[]
 }
 
-function normalizeSnippets(raw: unknown, fallback: Snippet[]): Snippet[] {
+function normalizeReports(raw: unknown, fallback: Report[]): Report[] {
   if (!Array.isArray(raw)) return fallback
   return raw
     .map((item) => {
       const now = Date.now()
       const candidate = item as Record<string, unknown>
       const id = String(candidate.id ?? '').trim()
-      const trajectoryId = String(candidate.trajectoryId ?? '').trim()
-      const inputId = String(candidate.inputId ?? candidate.itemId ?? '').trim()
-      const field = String(candidate.field ?? '').trim()
-      if (!id || !trajectoryId || !inputId || !field) return null
+      if (!id) return null
+      const stateRaw = String(candidate.state ?? '').trim()
+      const state: Report['state'] = stateRaw === 'incomplete' || stateRaw === 'complete' ? stateRaw : 'needs_review'
       return {
         id,
+        clientId: nullableText(candidate.clientId),
+        trajectoryId: nullableText(candidate.trajectoryId),
+        sourceInputId: nullableText(candidate.sourceInputId ?? candidate.sourceSessionId ?? candidate.inputId),
+        title: String(candidate.title ?? '').trim() || 'Rapportage',
+        reportType: String(candidate.reportType ?? '').trim() || 'uwv',
+        state,
+        reportText: String(candidate.reportText ?? candidate.text ?? ''),
+        reportStructuredJson:
+          candidate.reportStructuredJson && typeof candidate.reportStructuredJson === 'object'
+            ? (candidate.reportStructuredJson as Report['reportStructuredJson'])
+            : null,
+        reportDate: nullableText(candidate.reportDate),
+        createdAtUnixMs: Number.isFinite(candidate.createdAtUnixMs) ? Number(candidate.createdAtUnixMs) : now,
+        updatedAtUnixMs: Number.isFinite(candidate.updatedAtUnixMs) ? Number(candidate.updatedAtUnixMs) : now,
+      } satisfies Report
+    })
+    .filter(Boolean) as Report[]
+}
+
+function normalizeSnippets(raw: unknown, fallback: Snippet[]): Snippet[] {
+  if (!Array.isArray(raw)) return fallback
+  const byId = new Set<string>()
+  const bySemanticKey = new Set<string>()
+  const normalized = raw
+    .map((item) => {
+      const now = Date.now()
+      const candidate = item as Record<string, unknown>
+      const id = String(candidate.id ?? '').trim()
+      const trajectoryId = nullableText(candidate.trajectoryId)
+      const inputId = String(candidate.inputId ?? candidate.itemId ?? candidate.sourceInputId ?? candidate.sourceSessionId ?? '').trim()
+      const field = String(candidate.field ?? candidate.fieldId ?? '').trim()
+      if (!id || !inputId || !field) return null
+      return {
+        id,
+        clientId: nullableText(candidate.clientId),
         trajectoryId,
         inputId,
+        sourceInputId: nullableText(candidate.sourceInputId ?? inputId),
+        sourceSessionId: nullableText(candidate.sourceSessionId ?? inputId),
         itemId: inputId,
         field,
+        fieldId: field,
         text: String(candidate.text ?? ''),
         date: Number.isFinite(candidate.date) ? Number(candidate.date) : now,
         status: normalizeSnippetStatus(candidate.status),
@@ -168,7 +248,32 @@ function normalizeSnippets(raw: unknown, fallback: Snippet[]): Snippet[] {
         updatedAtUnixMs: Number.isFinite(candidate.updatedAtUnixMs) ? Number(candidate.updatedAtUnixMs) : now,
       } satisfies Snippet
     })
-    .filter(Boolean) as Snippet[]
+    .filter((snippet) => snippet !== null)
+
+  return normalized.filter((snippet) => {
+    if (byId.has(snippet.id)) return false
+    byId.add(snippet.id)
+    const key = createSnippetSemanticKey(snippet)
+    if (!key) return true
+    if (bySemanticKey.has(key)) return false
+    bySemanticKey.add(key)
+    return true
+  })
+}
+
+function normalizeSnippetValue(value: unknown): string {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+}
+
+function createSnippetSemanticKey(snippet: Pick<Snippet, 'inputId' | 'field' | 'text'>): string {
+  const inputId = normalizeSnippetValue(snippet.inputId)
+  const field = normalizeSnippetValue(snippet.field)
+  const text = normalizeSnippetValue(snippet.text)
+  if (!inputId || !field || !text) return ''
+  return `${inputId}::${field}::${text}`
 }
 
 function normalizeNotes(raw: unknown, fallback: Note[]): Note[] {
@@ -177,19 +282,21 @@ function normalizeNotes(raw: unknown, fallback: Note[]): Note[] {
     .map((item) => {
       const candidate = item as Record<string, unknown>
       const id = String(candidate.id ?? '').trim()
-      const sessionId = String(candidate.sessionId ?? candidate.inputId ?? '').trim()
-      if (!id || !sessionId) return null
+      const sourceInputId = nullableText(candidate.sourceInputId ?? candidate.sessionId ?? candidate.inputId)
+      if (!id) return null
       const now = Date.now()
       return {
         id,
-        sessionId,
+        clientId: nullableText(candidate.clientId),
+        sourceInputId,
+        sessionId: sourceInputId ?? '',
         title: String(candidate.title ?? ''),
         text: String(candidate.text ?? ''),
         createdAtUnixMs: Number.isFinite(candidate.createdAtUnixMs) ? Number(candidate.createdAtUnixMs) : now,
         updatedAtUnixMs: Number.isFinite(candidate.updatedAtUnixMs) ? Number(candidate.updatedAtUnixMs) : now,
       } satisfies Note
     })
-    .filter((note): note is Note => Boolean(note))
+    .filter(Boolean) as Note[]
 }
 
 function normalizeTemplates(raw: unknown, fallback: Template[]): Template[] {
@@ -225,7 +332,7 @@ function normalizeInputSummaries(raw: unknown, fallback: InputSummary[]): InputS
         updatedAtUnixMs: Number.isFinite(candidate.updatedAtUnixMs) ? Number(candidate.updatedAtUnixMs) : Date.now(),
       } satisfies InputSummary
     })
-    .filter((summary): summary is InputSummary => Boolean(summary))
+    .filter(Boolean) as InputSummary[]
 }
 
 function normalizeOrganizationSettings(raw: unknown, fallback: OrganizationSettings): OrganizationSettings {
@@ -237,6 +344,7 @@ function normalizeOrganizationSettings(raw: unknown, fallback: OrganizationSetti
     visitAddress: String(candidate.visitAddress ?? fallback.visitAddress),
     postalAddress: String(candidate.postalAddress ?? fallback.postalAddress),
     postalCodeCity: String(candidate.postalCodeCity ?? fallback.postalCodeCity),
+    visitPostalCodeCity: String(candidate.visitPostalCodeCity ?? fallback.visitPostalCodeCity ?? ''),
     tintColor: String(candidate.tintColor ?? fallback.tintColor ?? '#BE0165'),
     logoDataUrl: typeof candidate.logoDataUrl === 'string' ? candidate.logoDataUrl : null,
     contactName: String(candidate.contactName ?? ''),
@@ -267,16 +375,26 @@ function normalizeInputType(value: unknown): Input['type'] {
     case 'uploaded-document':
       return value
     case 'recording':
+    case 'full_audio_recording':
       return 'recorded-session'
+    case 'uploaded_audio':
+      return 'uploaded-session'
+    case 'spoken_recap':
+    case 'spoken_recap_recording':
+    case 'intake':
+      return 'spoken-recap'
+    case 'written_recap':
+      return 'written-recap'
+    case 'uploaded_document':
+      return 'uploaded-document'
     case 'upload':
       return 'uploaded-session'
     case 'written':
       return 'written-recap'
     case 'notes':
-    case 'intake':
       return 'spoken-recap'
     default:
-      return 'written-recap'
+      return 'spoken-recap'
   }
 }
 
@@ -285,6 +403,7 @@ function mapTypeToKind(type: Input['type']): Input['kind'] {
     case 'recorded-session':
       return 'recording'
     case 'uploaded-session':
+    case 'uploaded-document':
       return 'upload'
     case 'written-recap':
       return 'written'
@@ -373,8 +492,11 @@ export function deleteClient(data: LocalAppData, clientId: string): LocalAppData
     clients: data.clients.filter((client) => client.id !== clientId),
     trajectories: remainingTrajectories,
     inputs: data.inputs.filter((input) => !removedInputIds.has(input.id)),
-    snippets: data.snippets.filter((snippet) => !removedTrajectoryIds.has(snippet.trajectoryId) && !removedInputIds.has(snippet.inputId)),
-    notes: data.notes.filter((note) => !removedInputIds.has(note.sessionId)),
+    reports: data.reports.filter((report) => !removedInputIds.has(String(report.sourceInputId || '')) && report.clientId !== clientId),
+    snippets: data.snippets.filter(
+      (snippet) => !removedTrajectoryIds.has(String(snippet.trajectoryId || '')) && !removedInputIds.has(snippet.inputId),
+    ),
+    notes: data.notes.filter((note) => !removedInputIds.has(String(note.sourceInputId ?? note.sessionId ?? '')) && note.clientId !== clientId),
     inputSummaries: data.inputSummaries.filter((summary) => !removedInputIds.has(summary.inputId)),
   }
 }
@@ -411,8 +533,9 @@ export function deleteTrajectory(data: LocalAppData, trajectoryId: string): Loca
     ...data,
     trajectories: data.trajectories.filter((trajectory) => trajectory.id !== trajectoryId),
     inputs: data.inputs.filter((input) => input.trajectoryId !== trajectoryId),
+    reports: data.reports.filter((report) => report.trajectoryId !== trajectoryId),
     snippets: data.snippets.filter((snippet) => snippet.trajectoryId !== trajectoryId && !removedInputIds.has(snippet.inputId)),
-    notes: data.notes.filter((note) => !removedInputIds.has(note.sessionId)),
+    notes: data.notes.filter((note) => !removedInputIds.has(String(note.sourceInputId ?? note.sessionId ?? ''))),
     inputSummaries: data.inputSummaries.filter((summary) => !removedInputIds.has(summary.inputId)),
   }
 }
@@ -439,13 +562,50 @@ export function deleteInput(data: LocalAppData, inputId: string): LocalAppData {
   return {
     ...data,
     inputs: data.inputs.filter((input) => input.id !== inputId),
+    reports: data.reports.filter((report) => report.sourceInputId !== inputId),
     snippets: data.snippets.filter((snippet) => snippet.inputId !== inputId),
-    notes: data.notes.filter((note) => note.sessionId !== inputId),
+    notes: data.notes.filter((note) => note.sourceInputId !== inputId && note.sessionId !== inputId),
     inputSummaries: data.inputSummaries.filter((summary) => summary.inputId !== inputId),
   }
 }
 
+export function deleteReport(data: LocalAppData, reportId: string): LocalAppData {
+  return {
+    ...data,
+    reports: data.reports.filter((report) => report.id !== reportId),
+  }
+}
+
 export function createSnippet(data: LocalAppData, snippet: Snippet): LocalAppData {
+  const existingByIdIndex = data.snippets.findIndex((existingSnippet) => existingSnippet.id === snippet.id)
+  if (existingByIdIndex >= 0) {
+    return {
+      ...data,
+      snippets: data.snippets.map((existingSnippet, index) => (index === existingByIdIndex ? snippet : existingSnippet)),
+    }
+  }
+
+  const semanticKey = createSnippetSemanticKey(snippet)
+  if (semanticKey) {
+    const existingSemanticIndex = data.snippets.findIndex(
+      (existingSnippet) => createSnippetSemanticKey(existingSnippet) === semanticKey,
+    )
+    if (existingSemanticIndex >= 0) {
+      return {
+        ...data,
+        snippets: data.snippets.map((existingSnippet, index) =>
+          index === existingSemanticIndex
+            ? {
+                ...existingSnippet,
+                ...snippet,
+                id: existingSnippet.id,
+              }
+            : existingSnippet,
+        ),
+      }
+    }
+  }
+
   return { ...data, snippets: [snippet, ...data.snippets] }
 }
 
@@ -460,7 +620,7 @@ export function updateSnippet(
       if (snippet.id !== snippetId) return snippet
       return {
         ...snippet,
-        ...(values.field !== undefined ? { field: values.field } : null),
+        ...(values.field !== undefined ? { field: values.field, fieldId: values.field } : null),
         ...(values.text !== undefined ? { text: values.text } : null),
         ...(values.status !== undefined ? { status: values.status } : null),
         updatedAtUnixMs: Date.now(),
@@ -543,6 +703,17 @@ export function setInputSummary(data: LocalAppData, inputId: string, text: strin
   return {
     ...data,
     inputSummaries: [{ inputId, text, updatedAtUnixMs: Date.now() }, ...data.inputSummaries],
+  }
+}
+
+export function upsertReport(data: LocalAppData, report: Report): LocalAppData {
+  const existingIndex = data.reports.findIndex((item) => item.id === report.id)
+  if (existingIndex < 0) {
+    return { ...data, reports: [report, ...data.reports] }
+  }
+  return {
+    ...data,
+    reports: data.reports.map((item) => (item.id === report.id ? report : item)),
   }
 }
 

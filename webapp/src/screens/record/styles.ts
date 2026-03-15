@@ -682,6 +682,31 @@ export const styles = StyleSheet.create({
     padding: 12,
     gap: 8,
   },
+  recordingNoteHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  recordingNoteActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  recordingNoteActionButton: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#EEF0F3',
+  },
+  recordingNoteActionButtonHovered: {
+    backgroundColor: '#E2E6EC',
+  },
+  recordingNoteActionText: {
+    fontSize: 12,
+    lineHeight: 14,
+    color: colors.textStrong,
+  },
   recordingNoteTimestamp: {
     fontSize: 14,
     lineHeight: 16,
@@ -707,6 +732,21 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 16,
+  },
+  recordingNoteComposerInner: {
+    width: '100%',
+  },
+  recordingEditIndicatorRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  recordingEditIndicatorText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
   },
   recordingNoteInputWrap: {
     width: '100%',
@@ -780,6 +820,9 @@ export const styles = StyleSheet.create({
     fontSize: 48,
     lineHeight: 56,
     color: colors.textStrong,
+    width: 240,
+    textAlign: 'center',
+    ...( { fontVariant: ['tabular-nums'], fontFeatureSettings: '"tnum" 1', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace' } as any ),
   },
   timerTextLimited: {
     marginBottom: 4,
@@ -789,6 +832,9 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 24,
+  },
+  recordingControlDisabled: {
+    opacity: 0.45,
   },
   recordingControlsLimited: {
     marginTop: 'auto',

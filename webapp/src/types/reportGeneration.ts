@@ -36,7 +36,7 @@ export function buildStructuredReportMarkdown(params: {
   const lines: string[] = []
   const clientName = String(params.client?.name || '').trim()
 
-  lines.push('### Cliëntmetadata')
+  lines.push('### Clientmetadata')
   lines.push(clientName ? `Naam: ${clientName}` : '')
   const clientLines = formatClientDetailsForPrompt(params.client?.clientDetails)
   const employerLines = formatEmployerDetailsForPrompt(params.client?.employerDetails)

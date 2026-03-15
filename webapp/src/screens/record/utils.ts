@@ -1,6 +1,7 @@
 import { buildUntitledInputTitle, type UntitledInputKind } from '../../utils/text/buildUntitledTitle'
 
-export type OptionKey = 'gesprek' | 'gespreksverslag' | 'upload' | 'schrijven' | 'intake'
+export type OptionKey = 'gesprek' | 'gespreksverslag' | 'upload_audio' | 'upload_document' | 'schrijven' | 'intake'
+export type DraftOptionKey = 'spoken_recap' | 'written_recap' | 'uploaded_audio' | 'recorded_session'
 
 export const maxRecordingSeconds = 1 * 60 * 60 + 54 * 60 + 59
 export const recordingWarningLeadSeconds = 5 * 60
@@ -26,6 +27,11 @@ const knownAudioMimeByExtension: Record<string, string> = {
   flac: 'audio/flac',
 }
 
+const knownDocumentMimeByExtension: Record<string, string> = {
+  pdf: 'application/pdf',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+}
+
 export function formatTimeLabel(totalSeconds: number): string {
   const normalizedSeconds = Math.max(0, Math.floor(totalSeconds))
   const hours = Math.floor(normalizedSeconds / 3600)
@@ -35,7 +41,7 @@ export function formatTimeLabel(totalSeconds: number): string {
 }
 
 function getUntitledInputKindForOption(option: OptionKey | null): UntitledInputKind {
-  if (option === 'gesprek' || option === 'upload') return 'gesprek'
+  if (option === 'gesprek' || option === 'upload_audio' || option === 'upload_document') return 'gesprek'
   return 'verslag'
 }
 
@@ -44,12 +50,24 @@ export function buildDefaultInputTitle(option: OptionKey | null): string {
   return buildUntitledInputTitle(getUntitledInputKindForOption(option))
 }
 
-export function normalizeDraftOption(option: string | null | undefined): OptionKey {
-  if (option === 'gesprek') return 'gesprek'
-  if (option === 'upload') return 'upload'
-  if (option === 'schrijven') return 'gespreksverslag'
-  if (option === 'gespreksverslag') return 'gespreksverslag'
-  if (option === 'spraakGespreksverslag' || option === 'spraakAnderVerslag' || option === 'verslag') return 'gespreksverslag'
+export function normalizeDraftOption(option: string | null | undefined): DraftOptionKey {
+  if (option === 'spoken_recap') return 'spoken_recap'
+  if (option === 'written_recap') return 'written_recap'
+  if (option === 'uploaded_audio') return 'uploaded_audio'
+  if (option === 'recorded_session') return 'recorded_session'
+
+  // Legacy option keys from previous app versions.
+  if (option === 'gespreksverslag' || option === 'spraakGespreksverslag' || option === 'spraakAnderVerslag' || option === 'verslag') {
+    return 'spoken_recap'
+  }
+  if (option === 'schrijven') return 'written_recap'
+  if (option === 'upload' || option === 'upload_audio' || option === 'upload_document') return 'uploaded_audio'
+  return 'recorded_session'
+}
+
+export function draftOptionToOptionKey(option: DraftOptionKey): OptionKey {
+  if (option === 'uploaded_audio') return 'upload_audio'
+  if (option === 'spoken_recap' || option === 'written_recap') return 'gespreksverslag'
   return 'gesprek'
 }
 
@@ -162,5 +180,20 @@ export function isAudioFile(file: File | null): boolean {
   if (file.type && file.type.toLowerCase().startsWith('audio/')) return true
   const extension = getFileExtension(file.name)
   return Boolean(knownAudioMimeByExtension[extension])
+}
+
+export function isSupportedDocumentFile(file: File | null): boolean {
+  if (!file) return false
+  const normalizedMimeType = String(file.type || '').toLowerCase()
+  if (normalizedMimeType === knownDocumentMimeByExtension.pdf) return true
+  if (normalizedMimeType === knownDocumentMimeByExtension.docx) return true
+  const extension = getFileExtension(file.name)
+  return extension === 'pdf' || extension === 'docx'
+}
+
+export function getDocumentMimeTypeFromFile(file: File): string {
+  if (isSupportedDocumentFile(file) && file.type) return file.type
+  const extension = getFileExtension(file.name)
+  return knownDocumentMimeByExtension[extension] ?? 'application/octet-stream'
 }
 

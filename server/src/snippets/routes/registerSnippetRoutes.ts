@@ -4,12 +4,18 @@ import { normalizeNumber, normalizeText } from "../../ai/shared/normalize"
 import { stripJsonCodeFences } from "../../ai/shared/textSanitization"
 import { requireAuthenticatedUser } from "../../identity/auth"
 import { queryOne } from "../../db"
-import { env } from "../../env"
 import { asyncHandler, sendError } from "../../http"
 import { readId, readOptionalText, readUnixMs } from "../../routes/parsers/scalars"
-import { extractSnippets, getSnippetQuestionForField, isSupportedSnippetField, normalizeSnippetFieldName } from "../extractSnippets"
+import {
+  extractSnippets,
+  getSnippetQuestionForField,
+  isSupportedSnippetField,
+  normalizeSnippetFieldName,
+  readSnippetExtractionDeploymentCandidates,
+} from "../extractSnippets"
 import { readOptionalSnippetStatus, readSnippet } from "../readSnippets"
 import { createSnippet, deleteSnippet, updateSnippet } from "../store"
+import { canUserAccessClient } from "../../access/clientAccess"
 
 type RegisterSnippetRoutesParams = {
   rateLimitAi: RequestHandler
@@ -38,6 +44,31 @@ function readSnippetTextFromModelResponse(rawText: string): string {
   return ""
 }
 
+function isMissingAzureDeploymentError(error: unknown): boolean {
+  const message = String(error instanceof Error ? error.message : error || "").toLowerCase()
+  return message.includes("resource not found") || message.includes("deploymentnotfound")
+}
+
+async function completeSnippetModelWithFallback(messages: Array<{ role: "system" | "user"; content: string }>): Promise<string> {
+  const deployments = readSnippetExtractionDeploymentCandidates()
+  if (deployments.length === 0) throw new Error("Azure OpenAI snippet extraction deployment is not configured")
+
+  let lastError: unknown = null
+  for (const deployment of deployments) {
+    try {
+      return await completeAzureOpenAiChat({
+        deployment,
+        temperature: 0,
+        messages,
+      })
+    } catch (error) {
+      lastError = error
+      if (!isMissingAzureDeploymentError(error)) throw error
+    }
+  }
+  throw (lastError as Error) || new Error("Azure OpenAI snippet extraction failed")
+}
+
 // Registers snippet CRUD and AI routes.
 export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoutesParams): void {
   app.post(
@@ -61,6 +92,7 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
         id,
         updatedAtUnixMs,
         snippetType: readOptionalText(payload.snippetType ?? payload.field),
+        fieldId: readOptionalText(payload.fieldId ?? payload.field),
         text: readOptionalText(payload.text),
         approvalStatus: readOptionalSnippetStatus(payload.approvalStatus ?? payload.status),
       })
@@ -93,16 +125,26 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
       if (itemDate === null) return sendError(res, 400, "Missing itemDate")
 
       let clientId = normalizeText(req.body?.clientId)
-      if (!clientId) {
-        const sessionRow = await queryOne<{ client_id: string | null }>(
+      let resolvedTrajectoryId = trajectoryId
+      if (!clientId || !resolvedTrajectoryId) {
+        const sessionRow = await queryOne<{ client_id: string | null; trajectory_id: string | null }>(
           `
-          select client_id
+          select client_id, trajectory_id
           from public.inputs
-          where id = $1 and owner_user_id = $2
+          where id = $1
           `,
-          [sourceSessionId, user.userId],
+          [sourceSessionId],
         )
-        clientId = normalizeText(sessionRow?.client_id)
+        if (sessionRow?.client_id) {
+          const allowed = await canUserAccessClient(user.userId, sessionRow.client_id)
+          if (!allowed) return sendError(res, 403, "Forbidden")
+        }
+        if (!clientId) {
+          clientId = normalizeText(sessionRow?.client_id)
+        }
+        if (!resolvedTrajectoryId) {
+          resolvedTrajectoryId = normalizeText(sessionRow?.trajectory_id)
+        }
       }
       if (!clientId) return sendError(res, 400, "Missing clientId")
 
@@ -111,9 +153,11 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
       const created: Array<{
         id: string
         clientId: string
-        trajectoryId: string
+        trajectoryId: string | null
         sourceSessionId: string
+        sourceInputId: string
         snippetType: string
+        fieldId: string
         text: string
         snippetDate: number
         approvalStatus: "pending"
@@ -125,9 +169,11 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
         const snippetRow = {
           id: `snippet-${crypto.randomUUID()}`,
           clientId,
-          trajectoryId: trajectoryId || "",
+          trajectoryId: resolvedTrajectoryId || null,
           sourceSessionId,
+          sourceInputId: sourceSessionId,
           snippetType: snippet.field,
+          fieldId: snippet.field,
           text: snippet.text,
           snippetDate: itemDate,
           approvalStatus: "pending" as const,
@@ -154,9 +200,6 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
       if (!snippetText) return sendError(res, 400, "Missing snippetText")
       if (!transcript) return sendError(res, 400, "Missing transcript")
 
-      const deployment = normalizeText(env.azureOpenAiSummaryDeployment) || normalizeText(env.azureOpenAiChatDeployment)
-      if (!deployment) throw new Error("Azure OpenAI snippet extraction deployment is not configured")
-
       const prompt = [
         "Herschrijf het snippet zodat het een korte feitelijke zin is voor re-integratie rapportage.",
         "Behoud alleen informatie die uit het transcript volgt.",
@@ -171,14 +214,10 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
         'Return strict JSON only: {"text":"string"}',
       ].join("\n")
 
-      const rawModelText = await completeAzureOpenAiChat({
-        deployment,
-        temperature: 0,
-        messages: [
-          { role: "system", content: "You output strict JSON only. No markdown. No prose." },
-          { role: "user", content: prompt },
-        ],
-      })
+      const rawModelText = await completeSnippetModelWithFallback([
+        { role: "system", content: "You output strict JSON only. No markdown. No prose." },
+        { role: "user", content: prompt },
+      ])
       const text = readSnippetTextFromModelResponse(rawModelText)
       if (!text) return sendError(res, 502, "No snippet text returned")
       res.status(200).json({ text })
@@ -195,9 +234,6 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
       if (!fieldContext) return sendError(res, 400, "Invalid field")
       if (!transcript) return sendError(res, 400, "Missing transcript")
 
-      const deployment = normalizeText(env.azureOpenAiSummaryDeployment) || normalizeText(env.azureOpenAiChatDeployment)
-      if (!deployment) throw new Error("Azure OpenAI snippet extraction deployment is not configured")
-
       const prompt = [
         "Genereer precies een sterk evidence-snippet voor de categorie-vraag hieronder.",
         "Als er geen sterk feitelijk bewijs is in het transcript, geef lege text terug.",
@@ -210,14 +246,10 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
         `Return strict JSON only: {"snippet":{"field":"${fieldContext.field}","text":"string"}}`,
       ].join("\n")
 
-      const rawModelText = await completeAzureOpenAiChat({
-        deployment,
-        temperature: 0,
-        messages: [
-          { role: "system", content: "You output strict JSON only. No markdown. No prose." },
-          { role: "user", content: prompt },
-        ],
-      })
+      const rawModelText = await completeSnippetModelWithFallback([
+        { role: "system", content: "You output strict JSON only. No markdown. No prose." },
+        { role: "user", content: prompt },
+      ])
       const text = readSnippetTextFromModelResponse(rawModelText)
       if (!text) return sendError(res, 502, "No snippet text returned")
       res.status(200).json({ text })

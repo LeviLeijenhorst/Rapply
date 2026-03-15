@@ -19,6 +19,7 @@ export type InputDataItem = {
   createdAtUnixMs?: number
   transcript?: string | null
   summary?: string | null
+  summaryStructured?: unknown
   transcriptionStatus?: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
 }
 
@@ -60,6 +61,7 @@ export type NotesTabProps = {
 
 export type SnippetSectionProps = {
   snippets: InputSnippetItem[]
+  isLoading?: boolean
   canRegenerate?: boolean
   isRegenerating?: boolean
   onRegenerate?: () => void
@@ -71,11 +73,15 @@ export type HeaderProps = {
   title: string
   clientName: string
   date: string
+  onBack: () => void
 }
 
 export type SummaryCardProps = {
   summary: string | null
+  title?: string
+  emptyText?: string
   transcriptionStatus: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
+  onPressEdit?: (() => void) | null
 }
 
 export type ChatbotMessage = {
@@ -93,7 +99,6 @@ export type ChatbotTabProps = {
   isSending: boolean
   onChangeComposerValue: (value: string) => void
   onSendMessage: () => void
-  onDeleteMessage: (messageId: string) => void
   onClearChat: () => void
   onOpenExpanded: () => void
 }
@@ -111,4 +116,3 @@ export type ExpandedChatModalProps = {
   onClose: () => void
   children: ReactNode
 }
-

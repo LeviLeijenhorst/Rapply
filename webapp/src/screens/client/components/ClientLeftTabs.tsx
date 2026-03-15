@@ -113,7 +113,9 @@ export function ClientLeftTabs({
               }
               style={({ hovered }) => [styles.quickAddButton, hovered ? styles.quickAddButtonHovered : undefined]}
             >
-              <PlusIcon color="#FFFFFF" size={18} />
+              <View style={styles.quickAddIconWrap}>
+                <PlusIcon color="#FFFFFF" size={18} />
+              </View>
             </Pressable>
           </View>
         </View>
@@ -209,8 +211,7 @@ type LeftTabButtonProps = {
 }
 
 function LeftTabButton({ label, isSelected, icon, onPress }: LeftTabButtonProps) {
-  const iconColor = isSelected ? colors.selected : colors.text
-  const textColor = isSelected ? colors.selected : colors.text
+  const iconColor = isSelected ? colors.selected : '#2C111F'
 
   return (
     <Pressable
@@ -218,16 +219,16 @@ function LeftTabButton({ label, isSelected, icon, onPress }: LeftTabButtonProps)
       style={({ hovered }) => [
         styles.leftTabButton,
         isSelected ? styles.leftTabButtonSelected : styles.leftTabButtonUnselected,
+        isSelected ? styles.leftTabButtonConnected : undefined,
         hovered && !isSelected ? styles.leftTabButtonHovered : undefined,
       ]}
     >
       <View style={styles.leftTabButtonContent}>
-        {icon(iconColor)}
-        <Text isSemibold style={[styles.leftTabLabel, { color: textColor }]}>
+        <View style={styles.leftTabIconWrap}>{icon(iconColor)}</View>
+        <Text isSemibold style={[styles.leftTabLabel, isSelected ? styles.leftTabLabelActive : undefined]}>
           {label}
         </Text>
       </View>
-      {isSelected ? <View pointerEvents="none" style={styles.leftTabSelectedBridge} /> : null}
     </Pressable>
   )
 }
@@ -238,24 +239,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 8,
     paddingLeft: 0,
-    zIndex: 50,
-    marginBottom: 0,
-    position: 'relative',
-    overflow: 'visible',
+    marginTop: 0,
+    zIndex: 2,
+    marginBottom: -2,
   },
   leftTabsList: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
     paddingHorizontal: 0,
     paddingVertical: 0,
-    position: 'relative',
-    zIndex: 30,
   },
   leftTabsListWeb: {
-    ...({ overflow: 'visible' } as any),
     ...({ scrollbarWidth: 'none' } as any),
     ...({ msOverflowStyle: 'none' } as any),
   },
@@ -268,43 +265,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderWidth: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: 'transparent',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    top: 0,
     position: 'relative',
-    ...({ overflow: 'visible' } as any),
   },
   leftTabButtonSelected: {
     backgroundColor: '#FFFFFF',
     borderColor: '#DFE0E2',
-    borderBottomWidth: 1,
-    borderBottomColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 3,
-    ...({ boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any),
-    zIndex: 100,
-    top: 1,
+    borderBottomWidth: 0,
   },
-  leftTabButtonUnselected: { backgroundColor: '#FFFFFF', borderColor: '#DFE0E2' },
+  leftTabButtonConnected: {
+    zIndex: 3,
+  },
+  leftTabButtonUnselected: { backgroundColor: '#F9FAFB', borderColor: '#DFE0E2', borderBottomWidth: 1 },
   leftTabButtonHovered: { backgroundColor: colors.hoverBackground },
   leftTabButtonContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  leftTabLabel: { fontSize: 16, lineHeight: 20 },
-  leftTabSelectedBridge: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: -10,
-    height: 12,
-    backgroundColor: '#FFFFFF',
-    zIndex: 200,
-  },
+  leftTabIconWrap: { width: 18, height: 18, alignItems: 'center', justifyContent: 'center' },
+  leftTabLabel: { fontSize: 16, lineHeight: 20, color: '#2C111F', fontFamily: typography.fontFamilySemibold },
+  leftTabLabelActive: { color: colors.selected },
   card: {
     flex: 1,
     borderRadius: 12,
@@ -322,13 +302,21 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   bottomCardConnected: { marginTop: 0, borderTopLeftRadius: 0, borderTopRightRadius: 12 },
-  inputsHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingHorizontal: 24, paddingVertical: 20 },
-  inputsHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 0 },
+  inputsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    minHeight: 80,
+  },
+  inputsHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 0, minHeight: 40 },
   inputsHeaderTitleWrap: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   inputsHeaderTitle: { fontSize: 24, lineHeight: 34, color: '#2C111F' },
   inputsHeaderCount: { fontSize: 24, lineHeight: 34, color: 'rgba(44,17,31,0.5)', fontFamily: typography.fontFamilyRegular },
-  searchField: { backgroundColor: '#F9FAFB', borderColor: '#DFE0E2' },
-  searchFieldInput: { fontFamily: typography.fontFamilyMedium, color: '#656565' },
+  searchField: { backgroundColor: '#F9FAFB', borderColor: '#DFE0E2', borderRadius: 8, overflow: 'hidden' },
+  searchFieldInput: { fontFamily: typography.fontFamilyRegular, color: '#656565' },
   quickAddButton: {
     width: 32,
     height: 32,
@@ -341,6 +329,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   quickAddButtonHovered: { backgroundColor: '#A50058', borderColor: '#A50058' },
+  quickAddIconWrap: { width: 18, height: 18, alignItems: 'center', justifyContent: 'center', marginTop: 0, marginLeft: -1 },
   tableHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -391,4 +380,10 @@ const styles = StyleSheet.create({
   documentsPlaceholder: { borderTopWidth: 1, borderTopColor: '#DFE0E2', paddingHorizontal: 24, paddingVertical: 28 },
   documentsPlaceholderText: { fontSize: 15, lineHeight: 22, color: 'rgba(44,17,31,0.6)' },
 })
+
+
+
+
+
+
 

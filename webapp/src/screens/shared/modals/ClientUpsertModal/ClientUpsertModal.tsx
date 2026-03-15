@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, ScrollView, TextInput, View } from 'react-native'
 
 import { Modal } from '../../../../ui/animated/Modal'
@@ -39,7 +39,7 @@ export function ClientUpsertModal({ visible, mode, initialValues, trajectoryOpti
   if (!visible) return null
 
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
-  const title = mode === 'create' ? 'Cliënt toevoegen' : 'Cliënt bewerken'
+  const title = mode === 'create' ? 'Client toevoegen' : 'Client bewerken'
   const primaryLabel = mode === 'create' ? 'Toevoegen' : 'Opslaan'
   const trimmedBsn = values.bsn.trim()
   const isBsnValid = trimmedBsn.length === 0 || /^\d{8,9}$/.test(trimmedBsn)

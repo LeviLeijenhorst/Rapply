@@ -35,11 +35,20 @@ export function readOptionalTranscriptionStatus(value: unknown): Session["transc
 export function readOptionalSessionInputType(value: unknown): Session["inputType"] | undefined {
   if (typeof value !== "string") return undefined
   const trimmed = value.trim()
-  if (trimmed === "recording" || trimmed === "uploaded_audio" || trimmed === "written_recap" || trimmed === "intake") {
+  if (
+    trimmed === "recording" ||
+    trimmed === "uploaded_audio" ||
+    trimmed === "written_recap" ||
+    trimmed === "spoken_recap" ||
+    trimmed === "uploaded_document" ||
+    trimmed === "intake"
+  ) {
     return trimmed
   }
   if (trimmed === "upload") return "uploaded_audio"
   if (trimmed === "written" || trimmed === "notes") return "written_recap"
+  if (trimmed === "document" || trimmed === "uploaded-document") return "uploaded_document"
+  if (trimmed === "spoken-recap") return "spoken_recap"
   return undefined
 }
 
@@ -60,6 +69,8 @@ export function readSessionInput(value: unknown): Session {
     trajectoryId: payload.trajectoryId === null ? null : readOptionalId(payload.trajectoryId) ?? null,
     title: readText(payload.title, "session.title"),
     inputType,
+    sourceText: readOptionalText(payload.sourceText, true) ?? null,
+    sourceMimeType: readOptionalText(payload.sourceMimeType, true) ?? null,
     audioUploadId: readOptionalText(payload.audioUploadId ?? payload.audioBlobId, true) ?? null,
     audioDurationSeconds: readOptionalNumber(payload.audioDurationSeconds) ?? null,
     uploadFileName: readOptionalText(payload.uploadFileName, true) ?? null,

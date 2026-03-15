@@ -16,7 +16,7 @@ function normalizeEndpoint(value: string) {
 export async function completeAzureOpenAiChat(params: {
   deployment: string
   messages: ChatMessage[]
-  temperature: number
+  temperature?: number
 }): Promise<string> {
   const endpoint = normalizeEndpoint(env.azureOpenAiEndpoint)
   if (!endpoint) {
@@ -44,7 +44,7 @@ export async function completeAzureOpenAiChat(params: {
     },
     body: JSON.stringify({
       messages: params.messages,
-      temperature: params.temperature,
+      ...(typeof params.temperature === "number" ? { temperature: params.temperature } : {}),
     }),
   })
 

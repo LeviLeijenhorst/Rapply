@@ -3,11 +3,22 @@ import { buildCycleKey, clampNonNegative } from "../billing/cycleMath"
 import { ensureBillingUsersCompatibility } from "../billing/store"
 import crypto from "crypto"
 import { execute, queryOne } from "../db"
+import { requireUserDefaultOrganizationId } from "../access/clientAccess"
 import { transcriptionUploadExpirationSeconds } from "./uploadExpiration"
 
 // Creates a one-time upload token for one transcription operation.
 export async function createUploadToken(params: { userId: string; operationId: string; uploadPath: string }): Promise<{ uploadToken: string; expiresAtMs: number }> {
   const { userId, operationId, uploadPath } = params
+
+  await execute(
+    `
+    insert into public.transcription_operations (operation_id, owner_user_id, status)
+    values ($1, $2, 'started')
+    on conflict (operation_id) do update
+      set owner_user_id = excluded.owner_user_id
+    `,
+    [operationId, userId],
+  )
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const token = cryptoRandomToken()
@@ -16,7 +27,7 @@ export async function createUploadToken(params: { userId: string; operationId: s
     try {
       await execute(
         `
-        insert into public.upload_tokens (token, user_id, operation_id, upload_blob_name, expires_at, used_at)
+        insert into public.upload_tokens (token, owner_user_id, operation_id, upload_blob_name, expires_at, used_at)
         values ($1, $2, $3, $4, $5, null)
         `,
         [token, userId, operationId, uploadPath, expiresAt],
@@ -47,7 +58,7 @@ export async function consumeUploadToken(params: { userId: string; uploadToken: 
     update public.upload_tokens
     set used_at = now()
     where token = $1
-      and user_id = $2
+      and owner_user_id = $2
       and operation_id = $3
       and used_at is null
       and expires_at > now()
@@ -91,7 +102,7 @@ export async function chargeSecondsOnce(params: {
 
   const existingOperation = await queryOne<any>(`select * from public.transcription_operations where operation_id = $1`, [operationId])
   if (existingOperation) {
-    if (String(existingOperation.user_id) !== userId) {
+    if (String(existingOperation.owner_user_id) !== userId) {
       throw new Error("Operation does not belong to user")
     }
     const status = String(existingOperation.status || "")
@@ -110,15 +121,16 @@ export async function chargeSecondsOnce(params: {
     ? Math.floor(Number(freeSecondsOverride))
     : freeSeconds
   const cycleKey = buildCycleKey(cycleStartMs, cycleEndMs)
+  const organizationId = await requireUserDefaultOrganizationId(userId)
   await ensureBillingUsersCompatibility()
 
   const billingRow = await queryOne<any>(
     `
     select purchased_seconds, admin_granted_seconds, non_expiring_used_seconds, cycle_used_seconds_by_key, cycle_granted_seconds_by_key
-    from public.billing_users
-    where user_id = $1
+    from public.billing_organizations
+    where organization_id = $1
     `,
-    [userId],
+    [organizationId],
   )
 
   const purchasedSeconds = clampNonNegative(billingRow?.purchased_seconds ?? 0)
@@ -156,21 +168,21 @@ export async function chargeSecondsOnce(params: {
 
   await execute(
     `
-    insert into public.billing_users (user_id, non_expiring_used_seconds, cycle_used_seconds_by_key, updated_at)
+    insert into public.billing_organizations (organization_id, non_expiring_used_seconds, cycle_used_seconds_by_key, updated_at)
     values ($1, $2, $3::jsonb, now())
-    on conflict (user_id) do update
+    on conflict (organization_id) do update
       set non_expiring_used_seconds = excluded.non_expiring_used_seconds,
           cycle_used_seconds_by_key = excluded.cycle_used_seconds_by_key,
           updated_at = now()
     `,
-    [userId, nextNonExpiringUsedSeconds, JSON.stringify(nextCycleUsedSecondsByKey)],
+    [organizationId, nextNonExpiringUsedSeconds, JSON.stringify(nextCycleUsedSecondsByKey)],
   )
 
   await execute(
     `
     insert into public.transcription_operations (
       operation_id,
-      user_id,
+      owner_user_id,
       status,
       seconds_charged,
       charged_cycle_seconds,
@@ -182,7 +194,7 @@ export async function chargeSecondsOnce(params: {
     )
     values ($1, $2, 'charged', $3, $4, $5, $6, $7, $8, now())
     on conflict (operation_id) do update
-      set user_id = excluded.user_id,
+      set owner_user_id = excluded.owner_user_id,
           status = excluded.status,
           seconds_charged = excluded.seconds_charged,
           charged_cycle_seconds = excluded.charged_cycle_seconds,
@@ -204,7 +216,7 @@ export async function refundChargedSeconds(params: { userId: string; operationId
 
   const op = await queryOne<any>(`select * from public.transcription_operations where operation_id = $1`, [operationId])
   if (!op) return
-  if (String(op.user_id) !== userId) {
+  if (String(op.owner_user_id) !== userId) {
     throw new Error("Operation does not belong to user")
   }
   if (op.refunded_at) return
@@ -212,15 +224,16 @@ export async function refundChargedSeconds(params: { userId: string; operationId
   const chargedCycleSeconds = clampNonNegative(op.charged_cycle_seconds ?? 0)
   const chargedNonExpiringSeconds = clampNonNegative(op.charged_non_expiring_seconds ?? 0)
   const cycleKey = typeof op.cycle_key === "string" ? op.cycle_key : null
+  const organizationId = await requireUserDefaultOrganizationId(userId)
 
   await ensureBillingUsersCompatibility()
   const billingRow = await queryOne<any>(
     `
     select non_expiring_used_seconds, cycle_used_seconds_by_key
-    from public.billing_users
-    where user_id = $1
+    from public.billing_organizations
+    where organization_id = $1
     `,
-    [userId],
+    [organizationId],
   )
 
   const nonExpiringUsedSeconds = clampNonNegative(billingRow?.non_expiring_used_seconds ?? 0)
@@ -237,14 +250,14 @@ export async function refundChargedSeconds(params: { userId: string; operationId
 
   await execute(
     `
-    insert into public.billing_users (user_id, non_expiring_used_seconds, cycle_used_seconds_by_key, updated_at)
+    insert into public.billing_organizations (organization_id, non_expiring_used_seconds, cycle_used_seconds_by_key, updated_at)
     values ($1, $2, $3::jsonb, now())
-    on conflict (user_id) do update
+    on conflict (organization_id) do update
       set non_expiring_used_seconds = excluded.non_expiring_used_seconds,
           cycle_used_seconds_by_key = excluded.cycle_used_seconds_by_key,
           updated_at = now()
     `,
-    [userId, nextNonExpiringUsedSeconds, JSON.stringify(nextCycleUsedSecondsByKey)],
+    [organizationId, nextNonExpiringUsedSeconds, JSON.stringify(nextCycleUsedSecondsByKey)],
   )
 
   await execute(
@@ -253,7 +266,7 @@ export async function refundChargedSeconds(params: { userId: string; operationId
     set status = 'refunded',
         refunded_at = now()
     where operation_id = $1
-      and user_id = $2
+      and owner_user_id = $2
     `,
     [operationId, userId],
   )

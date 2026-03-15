@@ -10,7 +10,7 @@ import { MainContainer } from '../../ui/animated/MainContainer'
 import { StepBody } from './StepBody'
 import { MinimizedRecordingLayer } from './components/MinimizedRecordingLayer'
 import { InputWarningModals } from './components/InputWarningModals'
-import { useNewInputModalController } from './state/useNewInputModalController'
+import { useNewInputModalController } from './state/useNewSessionModalController'
 import type { NewInputModalArgs } from './types'
 import { styles } from './styles'
 import { formatTimeLabel } from './utils'
@@ -24,8 +24,6 @@ export function NewInputModal(args: NewInputModalArgs) {
 }
 
 function InputModalContent({
-  audioDurationSeconds,
-  audioPreviewUrl,
   backdropOpacity,
   bars,
   clientDropdownMaxHeight,
@@ -43,7 +41,6 @@ function InputModalContent({
   handlePrimaryActionPress,
   handleSelectClient,
   handleSelectOption,
-  handleAddClient,
   handleCancelRecording,
   handleCloseInsufficientMinutes,
   handleCloseRecordedWarning,
@@ -53,7 +50,6 @@ function InputModalContent({
   handleMinimizedCloseWarningCancel,
   handleMinimizedCloseWarningConfirm,
   handleMinimizedPauseOrResume,
-  handleToggleAudioSave,
   handleToggleClientDropdown,
   handleToggleConsent,
   hasRecordingConsent,
@@ -87,26 +83,30 @@ function InputModalContent({
   openFilePicker,
   recorder,
   recordingExpandProgress,
+  recordingShiftProgress,
   recordingLimitRemainingSeconds,
+  editingRecordingNoteId,
   recordingNoteDraft,
   recordingNotes,
   recordingNotesRevealProgress,
   requestClose,
   retryRecordingAfterError,
   saveRecordingNote,
+  editRecordingNote,
+  deleteRecordingNote,
+  cancelEditingRecordingNote,
   selectedAudioFile,
   selectedClientName,
   selectedOption,
   selectedOptionGroup,
   sessionTitle,
   sessionTitleInputRef,
-  setAudioDurationSeconds,
   setIsMinimizedCloseWarningVisible,
   setRecordingNoteDraft,
   setInputTitle,
   setWaveBarCount,
   shouldRenderRecordingNotesPanel,
-  shouldSaveAudio,
+  isRecordingTransitioning,
   shouldShowMinimized,
   shouldShowRecordingLimitWarning,
   showFooter,
@@ -119,6 +119,7 @@ function InputModalContent({
   waveBarCount,
   windowHeight,
   windowWidth,
+  handleStopRecording,
 }: InputModalViewModel) {
   if (shouldShowMinimized) {
     return (
@@ -132,7 +133,7 @@ function InputModalContent({
         onPauseOrResume={handleMinimizedPauseOrResume}
         onRetryRecordingAfterError={retryRecordingAfterError}
         onShowCloseWarning={() => setIsMinimizedCloseWarningVisible(true)}
-        onStopRecording={() => recorder.stop()}
+        onStopRecording={handleStopRecording}
         onRestore={startRestoreModal}
         onCloseWarningCancel={handleMinimizedCloseWarningCancel}
         onCloseWarningConfirm={handleMinimizedCloseWarningConfirm}
@@ -164,7 +165,7 @@ function InputModalContent({
             transform: [
               {
                 translateX: !limitedMode
-                  ? recordingExpandProgress.interpolate({
+                  ? recordingShiftProgress.interpolate({
                       inputRange: [0, 1],
                       outputRange: [0, -36],
                     })
@@ -231,10 +232,8 @@ function InputModalContent({
         ) : null}
 
         <View style={[styles.body, step === 'select' ? styles.bodySelect : undefined, isDesktopRecordingStep ? styles.bodyRecording : undefined]}>
-          <MainContainer contentKey={step} style={styles.stepContent}>
+          {isDesktopRecordingStep ? (
             <StepBody
-              audioDurationSeconds={audioDurationSeconds}
-              audioPreviewUrl={audioPreviewUrl}
               bars={bars}
               clientDropdownMaxHeight={clientDropdownMaxHeight}
               clientOptions={clientOptions}
@@ -248,7 +247,9 @@ function InputModalContent({
               isRecordingPaused={isRecordingPaused}
               isUploadDragActive={isUploadDragActive}
               recordingNotes={recordingNotes}
+              editingRecordingNoteId={editingRecordingNoteId}
               recordingNoteDraft={recordingNoteDraft}
+              isRecordingTransitioning={isRecordingTransitioning}
               limitedMode={limitedMode}
               liveWaveHeights={liveWaveHeights}
               recorder={recorder}
@@ -260,29 +261,82 @@ function InputModalContent({
               selectedOptionGroup={selectedOptionGroup}
               sessionTitle={sessionTitle}
               sessionTitleInputRef={sessionTitleInputRef}
-              shouldSaveAudio={shouldSaveAudio}
               step={step}
               uploadDropAreaRef={uploadDropAreaRef}
               uploadFileDurationWarning={uploadFileDurationWarning}
               waveBarCount={waveBarCount}
               clientTriggerRef={clientTriggerRef}
-              onAddClient={handleAddClient}
               onCancelRecording={handleCancelRecording}
               onOpenConsentHelpPage={openConsentHelpPage}
               onOpenFilePicker={openFilePicker}
               onRetryRecordingAfterError={retryRecordingAfterError}
+              onStopRecording={handleStopRecording}
               onSelectClient={handleSelectClient}
               onSelectOption={handleSelectOption}
               onInputTitleChange={setInputTitle}
               onSetWaveBarCount={setWaveBarCount}
               onRecordingNoteDraftChange={setRecordingNoteDraft}
+              onEditRecordingNote={editRecordingNote}
+              onDeleteRecordingNote={deleteRecordingNote}
               onSaveRecordingNote={saveRecordingNote}
-              onToggleAudioSave={handleToggleAudioSave}
+              onCancelEditingRecordingNote={cancelEditingRecordingNote}
               onToggleClientDropdown={handleToggleClientDropdown}
               onToggleConsent={handleToggleConsent}
-              onUpdateAudioDuration={setAudioDurationSeconds}
             />
-          </MainContainer>
+          ) : (
+            <MainContainer contentKey={step === 'recording_finishing' ? 'recording' : step} style={styles.stepContent}>
+              <StepBody
+                bars={bars}
+                clientDropdownMaxHeight={clientDropdownMaxHeight}
+                clientOptions={clientOptions}
+                defaultDropdownMaxHeight={defaultDropdownMaxHeight}
+                displayedRecordingElapsedSeconds={displayedRecordingElapsedSeconds}
+                gesprekOptionLabel={gesprekOptionLabel}
+                gespreksverslagOptionLabel={gespreksverslagOptionLabel}
+                hasRecordingConsent={hasRecordingConsent}
+                isClientOpen={isClientOpen}
+                isCompactConsent={isCompactConsent}
+                isRecordingPaused={isRecordingPaused}
+                isUploadDragActive={isUploadDragActive}
+                recordingNotes={recordingNotes}
+                editingRecordingNoteId={editingRecordingNoteId}
+                recordingNoteDraft={recordingNoteDraft}
+                isRecordingTransitioning={isRecordingTransitioning}
+                limitedMode={limitedMode}
+                liveWaveHeights={liveWaveHeights}
+                recorder={recorder}
+                recordingNotesRevealProgress={recordingNotesRevealProgress}
+                shouldRenderRecordingNotesPanel={shouldRenderRecordingNotesPanel}
+                selectedAudioFile={selectedAudioFile}
+                selectedClientName={selectedClientName}
+                selectedOption={selectedOption}
+                selectedOptionGroup={selectedOptionGroup}
+                sessionTitle={sessionTitle}
+                sessionTitleInputRef={sessionTitleInputRef}
+                step={step}
+                uploadDropAreaRef={uploadDropAreaRef}
+                uploadFileDurationWarning={uploadFileDurationWarning}
+                waveBarCount={waveBarCount}
+                clientTriggerRef={clientTriggerRef}
+                onCancelRecording={handleCancelRecording}
+                onOpenConsentHelpPage={openConsentHelpPage}
+                onOpenFilePicker={openFilePicker}
+                onRetryRecordingAfterError={retryRecordingAfterError}
+                onStopRecording={handleStopRecording}
+                onSelectClient={handleSelectClient}
+                onSelectOption={handleSelectOption}
+                onInputTitleChange={setInputTitle}
+                onSetWaveBarCount={setWaveBarCount}
+                onRecordingNoteDraftChange={setRecordingNoteDraft}
+                onEditRecordingNote={editRecordingNote}
+                onDeleteRecordingNote={deleteRecordingNote}
+                onSaveRecordingNote={saveRecordingNote}
+                onCancelEditingRecordingNote={cancelEditingRecordingNote}
+                onToggleClientDropdown={handleToggleClientDropdown}
+                onToggleConsent={handleToggleConsent}
+              />
+            </MainContainer>
+          )}
         </View>
 
         {showFooter ? (

@@ -1,96 +1,121 @@
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { semanticColorTokens, brandColors } from '@/design/tokens/colors'
-import { borderWidths } from '@/design/tokens/borderWidths'
-import { fontSizes } from '@/design/tokens/fontSizes'
-import { radius } from '@/design/tokens/radius'
-import { spacing } from '@/design/tokens/spacing'
 import { ClientPageAiChatIcon, ClientPageSessiesIcon } from '@/icons/ClientPageSvgIcons'
+import { colors } from '@/design/theme/colors'
+import { typography } from '@/design/theme/typography'
 import type { RightTabsProps } from '@/screens/session/sessionScreen.types'
 import { Text } from '@/ui/Text'
 
 export function RightTabs({ activeTabKey, onTabChange }: RightTabsProps) {
   return (
-    <View style={styles.row}>
-      {/* Chatbot tab */}
-      <Pressable
+    <View style={styles.tabsRow}>
+      <RightTabButton
+        label="AI-chat"
+        icon={(color) => <ClientPageAiChatIcon color={color} size={14} />}
+        isSelected={activeTabKey === 'chatbot'}
         onPress={() => onTabChange('chatbot')}
-        style={({ hovered }) => [
-          styles.tab,
-          activeTabKey === 'chatbot' ? styles.tabActive : styles.tabInactive,
-          hovered && activeTabKey !== 'chatbot' ? styles.tabHover : undefined,
-        ]}
-      >
-        <View style={styles.tabInner}>
-          <ClientPageAiChatIcon color={activeTabKey === 'chatbot' ? brandColors.primary : semanticColorTokens.light.textHeading} size={14} />
-          <Text isSemibold style={[styles.tabText, activeTabKey === 'chatbot' ? styles.tabTextActive : undefined]}>
-            Chatbot
-          </Text>
-        </View>
-      </Pressable>
-
-      {/* Notes tab */}
-      <Pressable
+      />
+      <RightTabButton
+        label="Notities"
+        icon={(color) => <ClientPageSessiesIcon color={color} size={18} />}
+        isSelected={activeTabKey === 'notes'}
         onPress={() => onTabChange('notes')}
-        style={({ hovered }) => [
-          styles.tab,
-          activeTabKey === 'notes' ? styles.tabActive : styles.tabInactive,
-          hovered && activeTabKey !== 'notes' ? styles.tabHover : undefined,
-        ]}
-      >
-        <View style={styles.tabInner}>
-          <ClientPageSessiesIcon color={activeTabKey === 'notes' ? brandColors.primary : semanticColorTokens.light.textHeading} size={18} />
-          <Text isSemibold style={[styles.tabText, activeTabKey === 'notes' ? styles.tabTextActive : undefined]}>
-            Notities
-          </Text>
-        </View>
-      </Pressable>
+      />
     </View>
   )
 }
 
+type RightTabButtonProps = {
+  label: string
+  isSelected: boolean
+  icon: (color: string) => React.ReactNode
+  onPress: () => void
+}
+
+function RightTabButton({ label, isSelected, icon, onPress }: RightTabButtonProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ hovered }) => [
+        styles.tabButton,
+        isSelected ? styles.tabButtonSelected : styles.tabButtonUnselected,
+        isSelected ? styles.tabButtonConnected : undefined,
+        hovered && !isSelected ? styles.tabButtonHovered : undefined,
+      ]}
+    >
+      <View style={styles.tabButtonContent}>
+        <View style={styles.iconWrap}>{icon(isSelected ? colors.selected : '#2C111F')}</View>
+        <Text isSemibold style={[styles.tabText, isSelected ? styles.tabTextActive : undefined]}>
+          {label}
+        </Text>
+      </View>
+    </Pressable>
+  )
+}
+
 const styles = StyleSheet.create({
-  row: {
+  tabsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 8,
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    marginTop: 0,
+    zIndex: 2,
+    marginBottom: -1,
   },
-  tab: {
-    height: 46,
-    borderTopLeftRadius: radius.sm,
-    borderTopRightRadius: radius.sm,
+  tabButton: {
+    height: 48,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
-    borderWidth: borderWidths.hairline,
-    paddingHorizontal: spacing.sm + 2,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    position: 'relative',
+  },
+  tabButtonSelected: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#DFE0E2',
+  },
+  tabButtonConnected: {
+    zIndex: 3,
+  },
+  tabButtonUnselected: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#DFE0E2',
+    borderBottomWidth: 1,
+  },
+  tabButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  tabButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  iconWrap: {
+    width: 18,
+    height: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tabActive: {
-    backgroundColor: semanticColorTokens.light.elevatedSurface,
-    borderColor: semanticColorTokens.light.panelBorder,
-    borderBottomColor: semanticColorTokens.light.elevatedSurface,
-    top: borderWidths.hairline,
-  },
-  tabInactive: {
-    backgroundColor: semanticColorTokens.light.elevatedSurface,
-    borderColor: semanticColorTokens.light.panelBorder,
-  },
-  tabHover: {
-    backgroundColor: semanticColorTokens.light.hoverAccent,
-  },
-  tabInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
   tabText: {
-    fontSize: fontSizes.md,
+    fontSize: 16,
     lineHeight: 20,
-    color: semanticColorTokens.light.textHeading,
+    color: '#2C111F',
+    fontFamily: typography.fontFamilySemibold,
   },
   tabTextActive: {
-    color: brandColors.primary,
+    color: colors.selected,
   },
 })

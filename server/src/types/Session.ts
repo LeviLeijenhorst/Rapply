@@ -1,4 +1,10 @@
-export type SessionInputType = "recording" | "uploaded_audio" | "written_recap" | "intake"
+export type SessionInputType =
+  | "recording"
+  | "uploaded_audio"
+  | "written_recap"
+  | "spoken_recap"
+  | "uploaded_document"
+  | "intake"
 
 export type StructuredSessionSummary = {
   doelstelling: string
@@ -14,6 +20,8 @@ export type Session = {
   trajectoryId: string | null
   title: string
   inputType: SessionInputType
+  sourceText: string | null
+  sourceMimeType: string | null
   audioUploadId: string | null
   audioDurationSeconds: number | null
   uploadFileName: string | null

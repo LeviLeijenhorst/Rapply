@@ -1,4 +1,5 @@
 import { ensureUsersSchemaCompatibility } from "../identity/users"
+import { ensureClientAccessSchemaCompatibility } from "../access/clientAccess"
 
 type RuntimeSchemaWarmupStep = {
   name: string
@@ -8,6 +9,7 @@ type RuntimeSchemaWarmupStep = {
 function buildRuntimeSchemaWarmupSteps(): RuntimeSchemaWarmupStep[] {
   return [
     { name: "users", run: ensureUsersSchemaCompatibility },
+    { name: "org-assignment-access", run: ensureClientAccessSchemaCompatibility },
   ]
 }
 

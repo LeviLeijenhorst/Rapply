@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Easing, useWindowDimensions } from 'react-native'
 
 import { useBrowserAudioRecorder } from '../../../audio/recording/useBrowserAudioRecorder'
@@ -8,6 +8,7 @@ import { useLocalAppData } from '../../../storage/LocalAppDataProvider'
 import { useE2ee } from '../../../security/providers/E2eeProvider'
 import { unassignedClientLabel } from '../../../types/client'
 import { setPendingPreviewAudio } from '../../../audio/pendingPreviewStore'
+import { createPipelineInput } from '../../../api/pipeline/pipelineApi'
 import { processRecordedInput } from '../../../api/transcription/recorded/processRecordedSession'
 import { fetchBillingStatus } from '../../../api/billing/billingApi'
 import { clearSubscriptionReturnDraft, readAndClearSubscriptionReturnDraft, saveSubscriptionReturnDraft } from './subscriptionReturnDraft'
@@ -22,14 +23,18 @@ import {
   resolveDefaultTrajectoryIdForClient,
   validateUploadFileDuration,
 } from './modalHelpers'
-import { useNewInputModalState } from './useNewInputModalState'
+import { useNewInputModalState } from './useNewSessionModalState'
 import { useRecordingFlow } from './useRecordingFlow'
 import {
   buildDefaultInputTitle,
   createOperationId,
+  draftOptionToOptionKey,
+  type DraftOptionKey,
   formatTimeLabel,
   getAudioMimeTypeFromFile,
+  getDocumentMimeTypeFromFile,
   isAudioFile,
+  isSupportedDocumentFile,
   maxDuration,
   maxRecordingSeconds,
   maxTranscriptionDurationSeconds,
@@ -45,7 +50,38 @@ const BASE_RECORDING_MODAL_WIDTH = 747
 const NOTES_PANEL_WIDTH = 437
 const RECORDING_PANEL_GAP = 24
 const BASE_RECORDING_MODAL_HEIGHT = 862
+const MAX_DOCUMENT_UPLOAD_BYTES = 12 * 1024 * 1024
 type InputKind = 'recording' | 'upload' | 'intake'
+
+function draftOptionFromSelection({
+  selectedOption,
+  insufficientMinutesKind,
+}: {
+  selectedOption: OptionKey | null
+  insufficientMinutesKind: 'recording' | 'upload' | null
+}): DraftOptionKey {
+  if (selectedOption === 'upload_audio' || selectedOption === 'upload_document' || insufficientMinutesKind === 'upload') return 'uploaded_audio'
+  if (selectedOption === 'schrijven') return 'written_recap'
+  if (selectedOption === 'gespreksverslag') return 'spoken_recap'
+  return 'recorded_session'
+}
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (typeof FileReader === 'undefined') {
+      reject(new Error('Bestandsupload is niet ondersteund in deze omgeving.'))
+      return
+    }
+    const reader = new FileReader()
+    reader.onerror = () => reject(reader.error ?? new Error('Bestand lezen is mislukt.'))
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : ''
+      const separatorIndex = result.indexOf(',')
+      resolve(separatorIndex >= 0 ? result.slice(separatorIndex + 1) : result)
+    }
+    reader.readAsDataURL(file)
+  })
+}
 
 export function useNewInputModalController({
   visible,
@@ -63,9 +99,10 @@ export function useNewInputModalController({
   onNewlyCreatedClientHandled,
   limitedMode = false,
   initialOption = null,
+  initialQuickAction = null,
 }: NewInputModalArgs) {
   const isReducedMotionEnabled = useReducedMotion()
-  const { data, createNote, createInput, createSnippet, updateInput } = useLocalAppData()
+  const { data, createNote, createInput, createSnippet, updateInput, refreshAppData } = useLocalAppData()
   const e2ee = useE2ee()
   const recorder = useBrowserAudioRecorder()
   const { showErrorToast } = useToast()
@@ -101,6 +138,7 @@ export function useNewInputModalController({
     modalTranslateY,
     realtimeOperationIdRef,
     recordingExpandProgress,
+    recordingShiftProgress,
     recordingNoteDraft,
     recordingNotes,
     recordingNotesRevealProgress,
@@ -168,6 +206,7 @@ export function useNewInputModalController({
     })
     return (standardTemplate ?? reportTypeTemplates[0])?.id ?? null
   }, [reportTypeTemplates])
+  const [editingRecordingNoteId, setEditingRecordingNoteId] = useState<string | null>(null)
   useEffect(() => {
     if (!recorder.errorMessage) return
     showErrorToast(recorder.errorMessage, 'Opnemen is mislukt. Probeer het opnieuw.')
@@ -211,7 +250,11 @@ export function useNewInputModalController({
     setClientDropdownMaxHeight(null)
     setRecordingNotes([])
     setRecordingNoteDraft('')
+    setEditingRecordingNoteId(null)
     setShouldRenderRecordingNotesPanel(false)
+    recordingExpandProgress.setValue(0)
+    recordingShiftProgress.setValue(0)
+    recordingNotesRevealProgress.setValue(0)
     hasAutoStartedRecordingRef.current = false
     hasAutoSubmittedRecordingRef.current = false
   }, [initialTrajectoryId, visible])
@@ -232,6 +275,47 @@ export function useNewInputModalController({
     setHasRecordingConsent(false)
     setStep('consent')
   }, [initialOption, limitedMode, restoreDraftFromSubscriptionReturn, visible])
+  useEffect(() => {
+    if (!visible) return
+    if (!initialQuickAction) return
+    if (restoreDraftFromSubscriptionReturn) return
+
+    if (initialQuickAction === 'record-session') {
+      setSelectedOption('gesprek')
+      setSelectedOptionGroup('gesprek')
+      setOpenOptionGroup(null)
+      setInputTitle(limitedMode ? buildDefaultInputTitle('gesprek') : 'Voortgangsgesprek')
+      setHasRecordingConsent(false)
+      setStep('consent')
+      return
+    }
+
+    if (initialQuickAction === 'record-summary') {
+      setSelectedOption('gespreksverslag')
+      setSelectedOptionGroup('gespreksverslag')
+      setOpenOptionGroup(null)
+      setInputTitle(limitedMode ? buildDefaultInputTitle('gespreksverslag') : 'Voortgangsverslag')
+      setStep('recording')
+      return
+    }
+
+    if (initialQuickAction === 'import-audio') {
+      setSelectedOption('upload_audio')
+      setSelectedOptionGroup(null)
+      setOpenOptionGroup(null)
+      setInputTitle('Audio uploaden')
+      setStep('upload')
+      return
+    }
+
+    if (initialQuickAction === 'import-document') {
+      setSelectedOption('upload_document')
+      setSelectedOptionGroup(null)
+      setOpenOptionGroup(null)
+      setInputTitle('Document uploaden')
+      setStep('upload')
+    }
+  }, [initialQuickAction, limitedMode, restoreDraftFromSubscriptionReturn, setHasRecordingConsent, setInputTitle, setOpenOptionGroup, setSelectedOption, setSelectedOptionGroup, setStep, visible])
 
   useEffect(() => {
     if (!visible) return
@@ -244,9 +328,9 @@ export function useNewInputModalController({
         if (isCancelled) return
         if (!draft) return
 
-        const restoredOption = normalizeDraftOption(draft.selectedOption)
+        const restoredOption = draftOptionToOptionKey(normalizeDraftOption(draft.selectedOption))
         setSelectedOption(restoredOption)
-        setSelectedOptionGroup(restoredOption === 'gespreksverslag' ? 'gespreksverslag' : 'gesprek')
+        setSelectedOptionGroup(restoredOption === 'gespreksverslag' ? 'gespreksverslag' : restoredOption === 'gesprek' ? 'gesprek' : null)
         setOpenOptionGroup(null)
         setSelectedClientId(draft.selectedClientId)
         setSelectedTemplateId(draft.selectedTemplateId ?? defaultTemplateId)
@@ -275,7 +359,29 @@ export function useNewInputModalController({
 
   async function selectUploadFile(file: File | null) {
     if (!file) return
-    if (!isAudioFile(file)) return
+    if (isSupportedDocumentFile(file) && file.size > MAX_DOCUMENT_UPLOAD_BYTES) {
+      showErrorToast('Dit document is te groot. Gebruik een bestand tot 12 MB.')
+      return
+    }
+    const isDocumentMode = selectedOption === 'upload_document'
+    if (isDocumentMode) {
+      if (!isSupportedDocumentFile(file)) {
+        showErrorToast('Alleen PDF en DOCX worden ondersteund.')
+        return
+      }
+      setSelectedAudioFile(file)
+      setSelectedUploadFileDurationSeconds(null)
+      setUploadFileDurationWarning(null)
+      return
+    }
+    if (isSupportedDocumentFile(file)) {
+      showErrorToast('Kies een audiobestand voor deze optie.')
+      return
+    }
+    if (!isAudioFile(file)) {
+      showErrorToast('Alleen audiobestanden worden ondersteund.')
+      return
+    }
     setSelectedAudioFile(file)
     const validation = await validateUploadFileDuration({
       file,
@@ -344,7 +450,9 @@ export function useNewInputModalController({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       event.preventDefault()
-      if (step === 'recording') {
+      const isRecordingLike = step === 'recording' || step === 'recording_finishing' || step === 'recording_canceling'
+      if (isRecordingLike) {
+        if (step === 'recording_finishing' || step === 'recording_canceling' || recorder.status === 'stopping') return
         startMinimizeModal()
         return
       }
@@ -352,7 +460,7 @@ export function useNewInputModalController({
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [handleClose, startMinimizeModal, step, visible])
+  }, [handleClose, recorder.status, startMinimizeModal, step, visible])
 
   const activeClients = useMemo(() => data.clients.filter((c) => !c.isArchived), [data.clients])
   const trajectoriesByClientId = useMemo(() => {
@@ -526,10 +634,15 @@ export function useNewInputModalController({
     recorder.elapsedSeconds >= recordingWarningStartSeconds &&
     recorder.elapsedSeconds < maxRecordingSeconds
   const recordingLimitRemainingSeconds = Math.max(0, displayedRecordingMaxSeconds - displayedRecordingElapsedSeconds)
-  const shouldShowMinimized = step === 'recording' && isMinimized && !isRestoringFromMinimized
+  const isRecordingStep = step === 'recording'
+  const isRecordingFinishingStep = step === 'recording_finishing'
+  const isRecordingCancelingStep = step === 'recording_canceling'
+  const isRecordingLayoutStep = isRecordingStep || isRecordingFinishingStep || isRecordingCancelingStep
+  const isRecordingTransitioning = isRecordingFinishingStep || isRecordingCancelingStep || recorder.status === 'stopping'
+  const shouldShowMinimized = isRecordingLayoutStep && isMinimized && !isRestoringFromMinimized
   const isRecordingBusy =
     visible &&
-    (step === 'recording' ||
+    (isRecordingLayoutStep ||
       recorder.status === 'requesting' ||
       recorder.status === 'stopping' ||
       isRealtimeTranscriberStarting)
@@ -562,15 +675,15 @@ export function useNewInputModalController({
         ? 'Toestemming voor opname bevestigen'
         : step === 'upload'
           ? 'Bestand uploaden'
-          : step === 'recording'
+          : isRecordingLayoutStep
             ? 'Opnemen'
             : selectedOption === 'gesprek'
               ? 'Gesprek opgenomen'
               : selectedOption === 'intake'
                 ? 'Intake opgenomen'
               : 'Verslag opgenomen'
-  const isDesktopRecordingStep = !limitedMode && step === 'recording'
-  const showFooter = limitedMode ? step === 'consent' || step === 'recorded' || step === 'upload' : step !== 'recording'
+  const isDesktopRecordingStep = !limitedMode && isRecordingLayoutStep
+  const showFooter = limitedMode ? step === 'consent' || step === 'recorded' || step === 'upload' : !isRecordingLayoutStep
   const isUploadStep = step === 'upload'
   const isConsentStep = step === 'consent'
   const isLimitedFooter = limitedMode && (step === 'consent' || step === 'recorded')
@@ -580,11 +693,13 @@ export function useNewInputModalController({
   const gesprekOptionLabel = 'Gesprek opnemen'
   const gespreksverslagOptionLabel = 'Gespreksverslag opnemen'
   const isInputTitleEmpty = sessionTitle.trim().length === 0
+  const selectedUploadIsDocument = selectedOption === 'upload_document' || isSupportedDocumentFile(selectedAudioFile)
   const isPrimaryActionDisabled =
     (step === 'upload' && (!selectedAudioFile || !!uploadFileDurationWarning)) ||
     (!selectedOption && step === 'select' && !limitedMode) ||
     (step === 'consent' && !hasRecordingConsent) ||
-    (step === 'recorded' && (!audioForTranscription || isInputTitleEmpty))
+    (step === 'recorded' && ((selectedUploadIsDocument ? false : !audioForTranscription) || isInputTitleEmpty)) ||
+    isRecordingTransitioning
   const expandedRecordingWidth = BASE_RECORDING_MODAL_WIDTH + NOTES_PANEL_WIDTH + RECORDING_PANEL_GAP
   const modalHeight = Math.min(BASE_RECORDING_MODAL_HEIGHT, windowHeight * 0.92)
   const modalWidth = Math.min(isDesktopRecordingStep ? expandedRecordingWidth : BASE_RECORDING_MODAL_WIDTH, windowWidth * 0.95)
@@ -605,6 +720,7 @@ export function useNewInputModalController({
   useEffect(() => {
     if (!visible || limitedMode) return
     if (isReducedMotionEnabled) {
+      recordingShiftProgress.setValue(isDesktopRecordingStep ? 1 : 0)
       recordingExpandProgress.setValue(isDesktopRecordingStep ? 1 : 0)
       recordingNotesRevealProgress.setValue(isDesktopRecordingStep ? 1 : 0)
       setShouldRenderRecordingNotesPanel(isDesktopRecordingStep)
@@ -612,19 +728,27 @@ export function useNewInputModalController({
     }
     if (isDesktopRecordingStep) {
       setShouldRenderRecordingNotesPanel(false)
+      recordingShiftProgress.stopAnimation()
       recordingExpandProgress.stopAnimation()
       recordingNotesRevealProgress.stopAnimation()
+      recordingShiftProgress.setValue(0)
+      recordingExpandProgress.setValue(0)
       recordingNotesRevealProgress.setValue(0)
-      Animated.timing(recordingExpandProgress, {
+      Animated.timing(recordingShiftProgress, {
         toValue: 1,
-        duration: 320,
+        duration: 220,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: false,
       }).start(({ finished }) => {
         if (!finished) return
         setShouldRenderRecordingNotesPanel(true)
-        Animated.sequence([
-          Animated.delay(70),
+        Animated.parallel([
+          Animated.timing(recordingExpandProgress, {
+            toValue: 1,
+            duration: 220,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: false,
+          }),
           Animated.timing(recordingNotesRevealProgress, {
             toValue: 1,
             duration: 240,
@@ -639,16 +763,24 @@ export function useNewInputModalController({
     Animated.sequence([
       Animated.timing(recordingNotesRevealProgress, {
         toValue: 0,
-        duration: 140,
+        duration: 120,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: false,
       }),
-      Animated.timing(recordingExpandProgress, {
-        toValue: 0,
-        duration: 260,
-        easing: Easing.inOut(Easing.cubic),
-        useNativeDriver: false,
-      }),
+      Animated.parallel([
+        Animated.timing(recordingExpandProgress, {
+          toValue: 0,
+          duration: 220,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: false,
+        }),
+        Animated.timing(recordingShiftProgress, {
+          toValue: 0,
+          duration: 220,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: false,
+        }),
+      ]),
     ]).start(() => {
       setShouldRenderRecordingNotesPanel(false)
     })
@@ -657,6 +789,7 @@ export function useNewInputModalController({
     isReducedMotionEnabled,
     limitedMode,
     recordingExpandProgress,
+    recordingShiftProgress,
     recordingNotesRevealProgress,
     visible,
   ])
@@ -664,7 +797,35 @@ export function useNewInputModalController({
   function saveRecordingNote() {
     const trimmed = recordingNoteDraft.trim()
     if (!trimmed) return
+    if (editingRecordingNoteId) {
+      setRecordingNotes((current) =>
+        current.map((note) => (note.id === editingRecordingNoteId ? { ...note, text: trimmed } : note)),
+      )
+      setEditingRecordingNoteId(null)
+      setRecordingNoteDraft('')
+      return
+    }
     setRecordingNotes((current) => [...current, { id: createOperationId(), seconds: Math.max(0, displayedRecordingElapsedSeconds), text: trimmed }])
+    setRecordingNoteDraft('')
+  }
+
+  function editRecordingNote(noteId: string) {
+    const note = recordingNotes.find((item) => item.id === noteId)
+    if (!note) return
+    setEditingRecordingNoteId(noteId)
+    setRecordingNoteDraft(note.text)
+  }
+
+  function deleteRecordingNote(noteId: string) {
+    setRecordingNotes((current) => current.filter((note) => note.id !== noteId))
+    if (editingRecordingNoteId === noteId) {
+      setEditingRecordingNoteId(null)
+      setRecordingNoteDraft('')
+    }
+  }
+
+  function cancelEditingRecordingNote() {
+    setEditingRecordingNoteId(null)
     setRecordingNoteDraft('')
   }
 
@@ -692,22 +853,30 @@ export function useNewInputModalController({
     }
     if (option === 'schrijven') {
       setSelectedOption('schrijven')
-      setSelectedOptionGroup('gespreksverslag')
+      setSelectedOptionGroup(null)
       setOpenOptionGroup(null)
       setInputTitle('Gespreksverslag')
       return
     }
-    if (option === 'upload') {
-      setSelectedOption('upload')
+    if (option === 'upload_audio') {
+      setSelectedOption('upload_audio')
       setSelectedOptionGroup(null)
       setOpenOptionGroup(null)
-      setInputTitle('Bestand uploaden')
+      setInputTitle('Audio uploaden')
+      return
+    }
+    if (option === 'upload_document') {
+      setSelectedOption('upload_document')
+      setSelectedOptionGroup(null)
+      setOpenOptionGroup(null)
+      setInputTitle('Document uploaden')
     }
   }
 
   function handlePrimaryActionPress() {
     runPrimaryFooterAction({
       hasRecordingConsent,
+      isRecordingTransitioning,
       isPrimaryActionDisabled,
       limitedMode,
       selectedClientId,
@@ -715,6 +884,7 @@ export function useNewInputModalController({
       selectedOption,
       step,
       createAndOpenInput,
+      createAndOpenWrittenInput,
       handleClose,
       onOpenGeschrevenGespreksverslag,
       saveSelectedFileToAudioStore,
@@ -738,16 +908,10 @@ export function useNewInputModalController({
 
   function handleOpenSubscriptionFromInsufficientMinutes() {
     void (async () => {
-      const selectedOptionForRestore =
-        selectedOption === 'gesprek' ||
-        selectedOption === 'gespreksverslag' ||
-        selectedOption === 'upload'
-          ? selectedOption
-          : selectedOption === 'intake'
-            ? 'gesprek'
-            : insufficientMinutesContext?.kind === 'upload'
-              ? 'upload'
-              : 'gespreksverslag'
+      const selectedOptionForRestore = draftOptionFromSelection({
+        selectedOption,
+        insufficientMinutesKind: insufficientMinutesContext?.kind ?? null,
+      })
       if (audioForTranscription) {
         try {
           await saveSubscriptionReturnDraft({
@@ -843,7 +1007,10 @@ export function useNewInputModalController({
     if (typeof document === 'undefined') return
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = 'audio/*,.mp3,.m4a,.mp4,.aac,.wav,.ogg,.opus,.webm,.flac'
+    const isDocumentMode = selectedOption === 'upload_document'
+    input.accept = isDocumentMode
+      ? '.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      : 'audio/*,.mp3,.m4a,.mp4,.aac,.wav,.ogg,.opus,.webm,.flac'
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return
@@ -927,6 +1094,15 @@ export function useNewInputModalController({
 
   async function saveSelectedFileToAudioStore() {
     if (!selectedAudioFile) return
+    if (isSupportedDocumentFile(selectedAudioFile)) {
+      setSelectedUploadFileDurationSeconds(null)
+      setUploadFileDurationWarning(null)
+      setAudioDurationSeconds(null)
+      setAudioForTranscription(null)
+      setAudioPreviewUrl(null)
+      setStep('recorded')
+      return
+    }
     const detectedDurationSeconds =
       selectedUploadFileDurationSeconds !== null ? selectedUploadFileDurationSeconds : await readAudioDurationSeconds(selectedAudioFile)
     if (Number.isFinite(detectedDurationSeconds) && detectedDurationSeconds !== null && detectedDurationSeconds > maxTranscriptionDurationSeconds) {
@@ -959,6 +1135,7 @@ export function useNewInputModalController({
   }
 
   function requestClose() {
+    if (isRecordingTransitioning) return
     if (shouldConfirmRecordedClose()) {
       setIsRecordedCloseWarningVisible(true)
       return
@@ -967,7 +1144,8 @@ export function useNewInputModalController({
   }
 
   function handleBackdropPress() {
-    if (step === 'recording') {
+    if (isRecordingLayoutStep) {
+      if (isRecordingTransitioning) return
       startMinimizeModal()
       return
     }
@@ -1002,8 +1180,39 @@ export function useNewInputModalController({
     ])
   }
 
+  async function createAndOpenDocumentInput(documentFile: File): Promise<boolean> {
+    if (!selectedClient?.id) {
+      showErrorToast('Kies eerst een client voor dit document.')
+      return false
+    }
+    const now = Date.now()
+    try {
+      const documentBase64 = await readFileAsBase64(documentFile)
+      const response = await createPipelineInput({
+        clientId: selectedClient.id,
+        trajectoryId: selectedTrajectoryId ?? null,
+        title: sessionTitle,
+        inputType: 'uploaded_document',
+        uploadFileName: documentFile.name,
+        sourceMimeType: getDocumentMimeTypeFromFile(documentFile),
+        documentBase64,
+        createdAtUnixMs: now,
+        updatedAtUnixMs: now,
+      })
+      await refreshAppData()
+      onOpenInput(response.inputId)
+      void clearSubscriptionReturnDraft()
+      handleClose()
+      return true
+    } catch (error) {
+      console.error('[NewInputModal] Documentverwerking mislukt', error)
+      showErrorToast(error instanceof Error ? error.message : 'Document uploaden is mislukt. Probeer opnieuw.')
+      return false
+    }
+  }
+
   async function createAndOpenInputInternal(
-    values: { kind: 'recording' | 'upload' },
+    values: { kind: 'recording' | 'upload' | 'written' },
     options?: {
       sessionKind?: InputKind
       overrideShouldSaveAudio?: boolean
@@ -1011,6 +1220,26 @@ export function useNewInputModalController({
       recordingDurationSeconds?: number | null
     },
   ): Promise<boolean> {
+    if (values.kind === 'written') {
+      const createdInputId = createInput({
+        clientId: selectedClient?.id ?? null,
+        trajectoryId: selectedTrajectoryId ?? null,
+        title: sessionTitle,
+        kind: 'written',
+        audioBlobId: null,
+        audioDurationSeconds: null,
+        uploadFileName: null,
+        transcriptionStatus: 'idle',
+        transcriptionError: null,
+      })
+
+      if (!createdInputId) return false
+      onOpenInput(createdInputId)
+      void clearSubscriptionReturnDraft()
+      handleClose()
+      return true
+    }
+
     const resolvedAudioForTranscription = options?.audioForTranscription ?? audioForTranscription
     if (!resolvedAudioForTranscription) return false
     const effectiveShouldSaveAudio = options?.overrideShouldSaveAudio ?? shouldSaveAudio
@@ -1120,7 +1349,7 @@ export function useNewInputModalController({
   }
 
   async function createAndOpenInput(
-    values: { kind: 'recording' | 'upload' },
+    values: { kind: 'recording' | 'upload' | 'written' },
     options?: {
       sessionKind?: InputKind
       overrideShouldSaveAudio?: boolean
@@ -1128,6 +1357,14 @@ export function useNewInputModalController({
       recordingDurationSeconds?: number | null
     },
   ): Promise<boolean> {
+    if (values.kind === 'written') {
+      return createAndOpenInputInternal(values, options)
+    }
+
+    if (values.kind === 'upload' && selectedAudioFile && isSupportedDocumentFile(selectedAudioFile)) {
+      return createAndOpenDocumentInput(selectedAudioFile)
+    }
+
     const resolvedAudioForTranscription = options?.audioForTranscription ?? audioForTranscription
     if (!resolvedAudioForTranscription) return false
     const resolvedRecordingDurationSeconds =
@@ -1150,6 +1387,80 @@ export function useNewInputModalController({
     return createAndOpenInputInternal(values, { ...options, audioForTranscription: resolvedAudioForTranscription })
   }
 
+  async function createAndOpenWrittenInput(): Promise<boolean> {
+    return createAndOpenInput({ kind: 'written' })
+  }
+
+  const recordingFinishTransitionRef = useRef(0)
+
+  const handleRecordingReady = useCallback(() => {
+    const transitionToken = recordingFinishTransitionRef.current + 1
+    recordingFinishTransitionRef.current = transitionToken
+
+    const finalizeToRecorded = () => {
+      if (recordingFinishTransitionRef.current !== transitionToken) return
+      setStep('recorded')
+    }
+
+    if (!visible || limitedMode || isReducedMotionEnabled || isMinimized) {
+      setShouldRenderRecordingNotesPanel(false)
+      recordingNotesRevealProgress.setValue(0)
+      recordingExpandProgress.setValue(0)
+      recordingShiftProgress.setValue(0)
+      finalizeToRecorded()
+      return
+    }
+
+    recordingNotesRevealProgress.stopAnimation()
+    recordingExpandProgress.stopAnimation()
+    recordingShiftProgress.stopAnimation()
+
+    Animated.sequence([
+      Animated.timing(recordingNotesRevealProgress, {
+        toValue: 0,
+        duration: 120,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: false,
+      }),
+      Animated.parallel([
+        Animated.timing(recordingExpandProgress, {
+          toValue: 0,
+          duration: 220,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: false,
+        }),
+        Animated.timing(recordingShiftProgress, {
+          toValue: 0,
+          duration: 220,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: false,
+        }),
+      ]),
+    ]).start(({ finished }) => {
+      if (!finished) return
+      if (recordingFinishTransitionRef.current !== transitionToken) return
+      setShouldRenderRecordingNotesPanel(false)
+      finalizeToRecorded()
+    })
+  }, [
+    isReducedMotionEnabled,
+    isMinimized,
+    limitedMode,
+    recordingExpandProgress,
+    recordingNotesRevealProgress,
+    recordingShiftProgress,
+    setShouldRenderRecordingNotesPanel,
+    setStep,
+    visible,
+  ])
+
+  const handleStopRecording = useCallback(() => {
+    if (isRecordingTransitioning) return
+    if (step !== 'recording') return
+    setStep('recording_finishing')
+    recorder.stop()
+  }, [isRecordingTransitioning, recorder, setStep, step])
+
   const { retryRecordingAfterError } = useRecordingFlow({
     hasAutoStartedRecordingRef,
     hasAutoSubmittedRecordingRef,
@@ -1165,14 +1476,16 @@ export function useNewInputModalController({
     setLiveTranscriptError,
     setLiveTranscriptText,
     setStep,
+    onRecordingReady: handleRecordingReady,
     step,
     visible,
   })
 
   useEffect(() => {
     if (!visible) return
-    if (step !== 'recording') {
+    if (step !== 'recording' && step !== 'recording_finishing' && step !== 'recording_canceling') {
       setIsMinimized(false)
+      setEditingRecordingNoteId(null)
     }
   }, [step, visible])
 
@@ -1201,8 +1514,31 @@ export function useNewInputModalController({
   }
 
   const handleCancelRecording = () => {
+    if (isRecordingTransitioning) return
     recorder.reset()
-    setStep('select')
+    setEditingRecordingNoteId(null)
+    if (limitedMode || isReducedMotionEnabled) {
+      setShouldRenderRecordingNotesPanel(false)
+      recordingNotesRevealProgress.setValue(0)
+      recordingExpandProgress.setValue(0)
+      recordingShiftProgress.setValue(0)
+      setStep('select')
+      return
+    }
+    setStep('recording_canceling')
+    recordingNotesRevealProgress.stopAnimation()
+    recordingExpandProgress.stopAnimation()
+    recordingShiftProgress.stopAnimation()
+    Animated.timing(recordingNotesRevealProgress, {
+      toValue: 0,
+      duration: 120,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: false,
+    }).start(({ finished }) => {
+      if (!finished) return
+      setShouldRenderRecordingNotesPanel(false)
+      setStep('select')
+    })
   }
 
   const handleToggleAudioSave = () => {
@@ -1317,13 +1653,18 @@ export function useNewInputModalController({
       openFilePicker,
       recorder,
       recordingExpandProgress,
+      recordingShiftProgress,
       recordingLimitRemainingSeconds,
+      editingRecordingNoteId,
       recordingNoteDraft,
       recordingNotes,
       recordingNotesRevealProgress,
       requestClose,
       retryRecordingAfterError,
       saveRecordingNote,
+      editRecordingNote,
+      deleteRecordingNote,
+      cancelEditingRecordingNote,
       selectedAudioFile,
       selectedClientName: selectedClient?.name ?? unassignedClientLabel,
       selectedOption,
@@ -1337,9 +1678,11 @@ export function useNewInputModalController({
       setWaveBarCount,
       shouldRenderRecordingNotesPanel,
       shouldSaveAudio,
+      isRecordingTransitioning,
       shouldShowMinimized,
       shouldShowRecordingLimitWarning,
       showFooter,
+      handleStopRecording,
       startMinimizeModal,
       startRestoreModal,
       step,
@@ -1352,5 +1695,6 @@ export function useNewInputModalController({
     },
   }
 }
+
 
 

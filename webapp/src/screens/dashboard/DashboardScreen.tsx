@@ -6,19 +6,16 @@ import { ChevronRightIcon } from '@/icons/ChevronRightIcon'
 import { ClientPageMicrophoneIcon, ClientPageRapportageIcon } from '@/icons/ClientPageSvgIcons'
 import { ImportAudioIcon } from '@/icons/ImportAudioIcon'
 import { ImportDocumentIcon } from '@/icons/ImportDocumentIcon'
+import { InputsThisWeekIcon } from '@/icons/InputsThisWeekIcon'
 import { NewClientAddIcon } from '@/icons/NewClientAddIcon'
-import { OpenActionItemsIcon } from '@/icons/OpenActionItemsIcon'
 import { RecordSummaryIcon } from '@/icons/RecordSummaryIcon'
 import { RecordVideoCallIcon } from '@/icons/RecordVideoCallIcon'
-import { InputsThisWeekIcon } from '@/icons/InputsThisWeekIcon'
 import { Text } from '@/ui/Text'
-import { SearchBar } from '@/ui/inputs/SearchBar'
 
 import { useDashboardScreenModel } from './DashboardScreen.logic'
 import { styles } from './DashboardScreen.styles'
 import type {
   DashboardContinueItem,
-  DashboardOpenActionItem,
   DashboardQuickInputAction,
   DashboardScreenProps,
   DashboardStatCardData,
@@ -35,13 +32,18 @@ function renderQuickInputIcon(action: DashboardQuickInputAction): React.ReactNod
 function renderStatIcon(card: DashboardStatCardData): React.ReactNode {
   if (card.id === 'active-clients') return <ActiveClientsIcon size={24} color="#FFFFFF" />
   if (card.id === 'inputs-this-week') return <InputsThisWeekIcon size={24} color="#FFFFFF" />
-  if (card.id === 'reports-this-week') return <ClientPageRapportageIcon size={28} color="#FFFFFF" />
-  return <OpenActionItemsIcon size={24} color="#FFFFFF" />
+  return <ClientPageRapportageIcon size={28} color="#FFFFFF" />
 }
 
 function QuickInputRow({ action }: { action: DashboardQuickInputAction }) {
+  const isDisabled = !action.onPress
+
   return (
-    <Pressable onPress={action.onPress} style={({ hovered }) => [styles.listRow, hovered ? styles.listRowHovered : undefined]}>
+    <Pressable
+      onPress={action.onPress}
+      disabled={isDisabled}
+      style={({ hovered }) => [styles.listRow, hovered && !isDisabled ? styles.listRowHovered : undefined, isDisabled ? { opacity: 0.7 } : undefined]}
+    >
       <View
         style={[
           styles.quickIconWrap,
@@ -81,56 +83,6 @@ function ContinueRow({ item, onPress }: { item: DashboardContinueItem; onPress: 
   )
 }
 
-function OpenActionRow({
-  item,
-  onOpenReportsPage,
-  onOpenInput,
-}: {
-  item: DashboardOpenActionItem
-  onOpenReportsPage: () => void
-  onOpenInput: (sessionId: string) => void
-}) {
-  const isDisabled = item.kind === 'snippet' && !item.sessionId
-
-  return (
-    <Pressable
-      onPress={() => {
-        if (item.kind === 'report') {
-          onOpenReportsPage()
-          return
-        }
-
-        if (item.sessionId) onOpenInput(item.sessionId)
-      }}
-      disabled={isDisabled}
-      style={({ hovered }) => [styles.tableRow, isDisabled ? styles.tableRowDisabled : undefined, hovered && !isDisabled ? styles.tableRowHovered : undefined]}
-    >
-      <View style={[styles.tableCell, styles.itemCell]}>
-        <Text isSemibold style={styles.tableItemText} numberOfLines={1}>{item.itemLabel}</Text>
-      </View>
-      <View style={[styles.tableCell, styles.clientCell]}>
-        <Text isSemibold style={styles.tableClientName} numberOfLines={1}>{item.clientName}</Text>
-      </View>
-      <View style={[styles.tableCell, styles.createdCell]}>
-        <Text style={styles.tableSecondaryText}>{item.createdAtLabel}</Text>
-      </View>
-      <View style={[styles.tableCell, styles.statusCell]}>
-        <View style={[styles.statusPill, item.kind === 'report' ? styles.statusPillReview : styles.statusPillPending]}>
-          <Text isSemibold style={[styles.statusPillText, item.kind === 'report' ? styles.statusPillTextReview : styles.statusPillTextPending]}>
-            {`• ${item.statusLabel}`}
-          </Text>
-        </View>
-      </View>
-      <View style={[styles.tableCell, styles.updatedCell]}>
-        <Text style={styles.tableSecondaryText}>{item.updatedLabel}</Text>
-      </View>
-      <View style={[styles.tableCell, styles.chevronCell]}>
-        <ChevronRightIcon color="#93858D" size={18} />
-      </View>
-    </Pressable>
-  )
-}
-
 function DashboardStatCard({ card }: { card: DashboardStatCardData }) {
   return (
     <Pressable
@@ -164,6 +116,11 @@ function DashboardStatCard({ card }: { card: DashboardStatCardData }) {
   )
 }
 
+function buildWelcomeTitle(name: string): string {
+  if (!name) return 'Welkom terug!'
+  return `Welkom terug, ${name}!`
+}
+
 export function DashboardScreen(props: DashboardScreenProps) {
   const model = useDashboardScreenModel(props)
 
@@ -171,7 +128,7 @@ export function DashboardScreen(props: DashboardScreenProps) {
     <ScrollView ref={model.scrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.heroCard}>
         <View style={styles.heroTextWrap}>
-          <Text isSemibold style={styles.heroTitle}>Welkom terug, Peter!</Text>
+          <Text isSemibold style={styles.heroTitle}>{buildWelcomeTitle(model.welcomeName)}</Text>
           <Text style={styles.heroSubtitle}>Hier een overzicht van hoe het ervoor staat vandaag.</Text>
         </View>
         <Pressable
@@ -212,51 +169,6 @@ export function DashboardScreen(props: DashboardScreenProps) {
           </View>
         </View>
       </View>
-
-      <View
-        style={styles.tableCard}
-        onLayout={(event) => {
-          model.setOpenActionsOffsetY(event.nativeEvent.layout.y)
-        }}
-      >
-        <View style={styles.tableHeaderTop}>
-          <Text isSemibold style={styles.tableHeading}>Open actiepunten</Text>
-          <SearchBar
-            value={model.openActionQuery}
-            onChangeText={model.setOpenActionQuery}
-            placeholder="Zoek open acties..."
-            inputRef={model.openActionInputRef}
-            containerStyle={styles.tableSearchBar}
-          />
-        </View>
-
-        <View style={styles.tableHeaderRow}>
-          <Text isSemibold style={[styles.tableHeaderText, styles.itemCell]}>Item</Text>
-          <Text isSemibold style={[styles.tableHeaderText, styles.clientCell]}>Client</Text>
-          <Text isSemibold style={[styles.tableHeaderText, styles.createdCell]}>Aangemaakt</Text>
-          <Text isSemibold style={[styles.tableHeaderText, styles.statusCell]}>Status</Text>
-          <Text isSemibold style={[styles.tableHeaderText, styles.updatedCell]}>Laatst bewerkt</Text>
-          <View style={styles.chevronCell} />
-        </View>
-
-        <View style={styles.tableBody}>
-          {model.filteredOpenActionItems.length > 0 ? (
-            model.filteredOpenActionItems.map((item) => (
-              <OpenActionRow
-                key={item.id}
-                item={item}
-                onOpenReportsPage={props.onOpenReportsPage}
-                onOpenInput={props.onOpenInput}
-              />
-            ))
-          ) : (
-            <View style={styles.emptyTableState}>
-              <Text style={styles.emptyTableText}>Geen open actiepunten gevonden.</Text>
-            </View>
-          )}
-        </View>
-      </View>
     </ScrollView>
   )
 }
-

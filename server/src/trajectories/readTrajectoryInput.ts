@@ -18,6 +18,7 @@ export function readTrajectoryInput(value: unknown): Trajectory {
   return {
     id: readId(payload.id, "trajectory.id"),
     clientId: readId(payload.clientId ?? payload.coacheeId, "trajectory.clientId"),
+    isActive: payload.isActive === undefined ? true : Boolean(payload.isActive),
     name: readText(payload.name, "trajectory.name"),
     serviceType: readOptionalText(payload.serviceType ?? payload.dienstType, true) ?? "Werkfit maken",
     uwvContactName: readOptionalText(payload.uwvContactName, true) ?? null,

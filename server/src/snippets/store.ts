@@ -1,11 +1,14 @@
-import { execute, queryMany } from "../db"
+import { assertUserCanAccessClient } from "../access/clientAccess"
+import { execute, queryMany, queryOne } from "../db"
 import type { Snippet } from "../types/Snippet"
 
 type SnippetRow = {
   id: string
   client_id: string
+  trajectory_id: string | null
   source_input_id: string | null
   snippet_type: string
+  field_id: string | null
   snippet_text: string
   snippet_date: number
   approval_status: "pending" | "approved" | "rejected"
@@ -13,14 +16,15 @@ type SnippetRow = {
   updated_at_unix_ms: number
 }
 
-// Maps a database snippet row to the application snippet model.
 function mapSnippetRow(row: SnippetRow): Snippet {
   return {
     id: row.id,
     clientId: row.client_id,
-    trajectoryId: "",
+    trajectoryId: row.trajectory_id ?? null,
     sourceSessionId: row.source_input_id ?? "",
+    sourceInputId: row.source_input_id ?? null,
     snippetType: row.snippet_type,
+    fieldId: row.field_id ?? row.snippet_type,
     text: row.snippet_text,
     snippetDate: Number(row.snippet_date),
     approvalStatus: row.approval_status,
@@ -29,44 +33,67 @@ function mapSnippetRow(row: SnippetRow): Snippet {
   }
 }
 
-// Lists all snippets for one user ordered by snippet date and creation time.
+async function readSnippetClientId(id: string): Promise<string | null> {
+  const row = await queryOne<{ client_id: string }>(
+    `
+    select client_id
+    from public.snippets
+    where id = $1
+    limit 1
+    `,
+    [id],
+  )
+  return row?.client_id ?? null
+}
+
 export async function listSnippets(userId: string): Promise<Snippet[]> {
   const rows = await queryMany<SnippetRow>(
     `
-    select id, client_id, source_input_id, snippet_type, snippet_text, snippet_date, approval_status, created_at_unix_ms, updated_at_unix_ms
-    from public.snippets
-    where owner_user_id = $1
-    order by snippet_date desc, created_at_unix_ms desc
+    select s.id, s.client_id, s.trajectory_id, s.source_input_id, s.snippet_type, s.field_id, s.snippet_text, s.snippet_date, s.approval_status, s.created_at_unix_ms, s.updated_at_unix_ms
+    from public.snippets s
+    join public.clients c on c.id = s.client_id
+    left join public.organization_users ou
+      on ou.organization_id = c.organization_id
+     and ou.user_id = $1
+    left join public.client_assignments ca
+      on ca.client_id = c.id
+     and ca.user_id = $1
+    where ou.role = 'admin'
+       or ca.user_id is not null
+    order by s.snippet_date desc, s.created_at_unix_ms desc
     `,
     [userId],
   )
   return rows.map(mapSnippetRow)
 }
 
-// Creates a snippet or updates it when the same snippet id already exists.
 export async function createSnippet(userId: string, snippet: Snippet): Promise<void> {
+  await assertUserCanAccessClient(userId, snippet.clientId)
   await execute(
     `
     insert into public.snippets (
-      id, owner_user_id, client_id, source_input_id, snippet_type, snippet_text, snippet_date, approval_status, created_at_unix_ms, updated_at_unix_ms
+      id, client_id, trajectory_id, source_input_id, created_by_user_id, snippet_type, field_id, snippet_text, snippet_date, approval_status, created_at_unix_ms, updated_at_unix_ms
     )
-    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     on conflict (id) do update
       set client_id = excluded.client_id,
+          trajectory_id = excluded.trajectory_id,
           source_input_id = excluded.source_input_id,
           snippet_type = excluded.snippet_type,
+          field_id = excluded.field_id,
           snippet_text = excluded.snippet_text,
           snippet_date = excluded.snippet_date,
           approval_status = excluded.approval_status,
           updated_at_unix_ms = excluded.updated_at_unix_ms
-      where public.snippets.owner_user_id = excluded.owner_user_id
     `,
     [
       snippet.id,
-      userId,
       snippet.clientId,
-      snippet.sourceSessionId || null,
+      snippet.trajectoryId,
+      snippet.sourceInputId ?? snippet.sourceSessionId ?? null,
+      userId,
       snippet.snippetType,
+      snippet.fieldId,
       snippet.text,
       snippet.snippetDate,
       snippet.approvalStatus,
@@ -76,17 +103,21 @@ export async function createSnippet(userId: string, snippet: Snippet): Promise<v
   )
 }
 
-// Updates selected snippet fields and always writes an updated timestamp.
 export async function updateSnippet(
   userId: string,
   params: {
     id: string
     snippetType?: string | null
+    fieldId?: string | null
     text?: string | null
     approvalStatus?: Snippet["approvalStatus"]
     updatedAtUnixMs: number
   },
 ): Promise<void> {
+  const clientId = await readSnippetClientId(params.id)
+  if (!clientId) return
+  await assertUserCanAccessClient(userId, clientId)
+
   const updates: string[] = []
   const values: unknown[] = []
   let index = 1
@@ -98,31 +129,34 @@ export async function updateSnippet(
     updates.push(`snippet_type = $${index++}`)
     values.push(params.snippetType)
   }
-
+  if (typeof params.fieldId === "string") {
+    updates.push(`field_id = $${index++}`)
+    values.push(params.fieldId)
+  }
   if (typeof params.text === "string") {
     updates.push(`snippet_text = $${index++}`)
     values.push(params.text)
   }
-
   if (params.approvalStatus !== undefined) {
     updates.push(`approval_status = $${index++}`)
     values.push(params.approvalStatus)
   }
 
-  values.push(userId)
   values.push(params.id)
-
   await execute(
     `
     update public.snippets
     set ${updates.join(", ")}
-    where owner_user_id = $${index++} and id = $${index}
+    where id = $${index}
     `,
     values,
   )
 }
 
-// Deletes a snippet owned by the given user.
 export async function deleteSnippet(userId: string, id: string): Promise<void> {
-  await execute(`delete from public.snippets where owner_user_id = $1 and id = $2`, [userId, id])
+  const clientId = await readSnippetClientId(id)
+  if (!clientId) return
+  await assertUserCanAccessClient(userId, clientId)
+  await execute(`delete from public.snippets where id = $1`, [id])
 }
+

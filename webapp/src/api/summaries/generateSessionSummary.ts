@@ -1,4 +1,5 @@
 import { callSecureApi } from '../secureApi'
+import type { SummaryTemplate } from './summaryTemplate'
 
 type GenerateSummaryResponse = {
   summary?: string
@@ -29,7 +30,8 @@ async function wait(ms: number): Promise<void> {
 }
 
 export async function generateInputSummary(params: {
-  prompt: string
+  transcript: string
+  template?: SummaryTemplate
   signal?: AbortSignal
   responseMode?: SummaryResponseMode
 }): Promise<string> {
@@ -41,7 +43,8 @@ export async function generateInputSummary(params: {
       response = await callSecureApi<GenerateSummaryResponse>(
         '/summary/generate',
         {
-          transcript: params.prompt,
+          transcript: params.transcript,
+          template: params.template,
           responseMode,
         },
         { signal: params.signal, timeoutMs: SUMMARY_TIMEOUT_MS },

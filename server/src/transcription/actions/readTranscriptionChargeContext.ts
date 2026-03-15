@@ -12,7 +12,15 @@ export type TranscriptionChargeContext = {
 export async function readTranscriptionChargeContext(params: { userId: string }): Promise<TranscriptionChargeContext> {
   const useMollie = isMollieConfigured()
   if (useMollie) {
-    await syncMollieSubscriptionForUser(params.userId)
+    try {
+      await syncMollieSubscriptionForUser(params.userId)
+    } catch (error: any) {
+      const message = String(error?.message || error || "")
+      console.warn("[transcription] mollie sync failed; continuing with manual pricing context", {
+        userId: params.userId,
+        message,
+      })
+    }
   }
 
   const manualPricing = await readManualPricingContextForUser(params.userId)

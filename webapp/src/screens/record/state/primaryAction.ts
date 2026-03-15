@@ -4,7 +4,7 @@ import type { NewInputStep } from '../types'
 type InputKind = 'recording' | 'upload' | 'intake'
 
 type CreateInputFn = (
-  values: { kind: 'recording' | 'upload' },
+  values: { kind: 'recording' | 'upload' | 'written' },
   options?: {
     sessionKind?: InputKind
     overrideShouldSaveAudio?: boolean
@@ -15,6 +15,7 @@ type CreateInputFn = (
 
 type Params = {
   hasRecordingConsent: boolean
+  isRecordingTransitioning: boolean
   isPrimaryActionDisabled: boolean
   limitedMode: boolean
   selectedClientId: string | null
@@ -22,6 +23,7 @@ type Params = {
   selectedOption: OptionKey | null
   step: NewInputStep
   createAndOpenInput: CreateInputFn
+  createAndOpenWrittenInput: () => Promise<boolean>
   handleClose: () => void
   onOpenGeschrevenGespreksverslag: (clientId: string | null) => void
   saveSelectedFileToAudioStore: () => Promise<void>
@@ -32,10 +34,10 @@ type Params = {
 
 // Centralized footer primary action branching to keep modal rendering readable.
 export function runPrimaryFooterAction(params: Params) {
-  if (params.isPrimaryActionDisabled) return
+  if (params.isPrimaryActionDisabled || params.isRecordingTransitioning) return
 
   if (params.step === 'recorded') {
-    if (params.selectedOption === 'upload') {
+    if (params.selectedOption === 'upload_audio' || params.selectedOption === 'upload_document') {
       void params.createAndOpenInput({ kind: 'upload' })
       return
     }
@@ -57,7 +59,7 @@ export function runPrimaryFooterAction(params: Params) {
 
   if (params.step === 'consent') {
     if (!params.selectedOption || !params.hasRecordingConsent) return
-    if (!params.limitedMode && params.selectedOption === 'upload') {
+    if (!params.limitedMode && (params.selectedOption === 'upload_audio' || params.selectedOption === 'upload_document')) {
       params.setStep('upload')
       return
     }
@@ -67,10 +69,13 @@ export function runPrimaryFooterAction(params: Params) {
 
   if (!params.selectedOption) return
 
+  if (params.selectedOption === 'upload_audio' || params.selectedOption === 'upload_document') {
+    params.setStep('upload')
+    return
+  }
+
   if (params.selectedOption === 'schrijven') {
-    params.onOpenGeschrevenGespreksverslag(params.selectedClientResolvedId ?? params.selectedClientId ?? null)
-    void params.clearSubscriptionReturnDraft()
-    params.handleClose()
+    void params.createAndOpenWrittenInput()
     return
   }
 

@@ -77,6 +77,8 @@ export const env = {
   azureOpenAiEndpoint: optionalString("AZURE_OPENAI_ENDPOINT") || "",
   azureOpenAiKey: optionalString("AZURE_OPENAI_KEY") || "",
   azureOpenAiVersion: optionalString("AZURE_OPENAI_VERSION") || "2024-06-01",
+  azureOpenAiReasoningDeployment: optionalString("AZURE_OPENAI_REASONING_DEPLOYMENT") || "",
+  azureOpenAiReportDeployment: optionalString("AZURE_OPENAI_REPORT_DEPLOYMENT") || "",
   azureOpenAiChatDeployment: optionalString("AZURE_OPENAI_CHAT_DEPLOYMENT") || "",
   azureOpenAiSummaryDeployment: optionalString("AZURE_OPENAI_SUMMARY_DEPLOYMENT") || "",
   azureSpeechKey: optionalString("AZURE_SPEECH_KEY") || "",
