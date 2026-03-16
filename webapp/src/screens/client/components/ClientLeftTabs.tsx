@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     paddingLeft: 0,
     marginTop: 0,
     zIndex: 2,
-    marginBottom: -2,
+    marginBottom: -1,
   },
   leftTabsList: {
     flexDirection: 'row',
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 8,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     borderWidth: 1,
     flexDirection: 'row',

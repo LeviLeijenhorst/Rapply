@@ -55,6 +55,7 @@ type SetupMode = 'none' | 'new' | 'recovered'
 type E2eeStage = 'unauthenticated' | 'loading' | 'setupPassphrase' | 'setupRecoveryKey' | 'unlockWithPassphrase' | 'recoveryRequired' | 'ready'
 
 const E2eeContext = createContext<E2eeContextValue | null>(null)
+const DEV_AUTH_BYPASS = String(process.env.EXPO_PUBLIC_DEV_AUTH_BYPASS || '').trim().toLowerCase() === 'true'
 
 type Props = {
   isAuthenticated: boolean
@@ -112,6 +113,27 @@ async function createPassphraseKey(params: { passphrase: string; material: Pick<
 
 // Manages passphrase-first E2EE setup, unlock, fallback recovery, and crypto helpers.
 export function E2eeProvider({ isAuthenticated, children }: Props) {
+  const devBypassValue = useMemo<E2eeContextValue>(() => ({
+    encryptText: async (value) => value,
+    decryptText: async (value) => value,
+    encryptOptionalText: async (value) => value,
+    decryptOptionalText: async (value) => value,
+    encryptAudioBlobForStorage: async ({ audioBlob }) => audioBlob,
+    decryptAudioBlobFromStorage: async (encryptedBlob) => ({ audioBlob: encryptedBlob, mimeType: encryptedBlob.type || 'audio/webm' }),
+    decryptAudioStreamFromStorage: async (encryptedStream) => ({ stream: encryptedStream, mimeType: 'audio/webm' }),
+    encryptAudioChunkForStorage: async ({ audioBytes }) => audioBytes,
+    decryptAudioChunkFromStorage: async ({ encryptedChunk }) => encryptedChunk,
+    rotateRecoveryKey: async () => '',
+    isConfigured: false,
+    isEnabled: false,
+    setEnabled: async () => undefined,
+    beginSetup: () => undefined,
+    shouldStoreAudioAsOctetStream: false,
+  }), [])
+
+  if (DEV_AUTH_BYPASS) {
+    return <E2eeContext.Provider value={devBypassValue}>{children}</E2eeContext.Provider>
+  }
   const [stage, setStage] = useState<E2eeStage>('unauthenticated')
   const [userDataKey, setUserDataKey] = useState<CryptoKey | null>(null)
   const [isConfigured, setIsConfigured] = useState(false)
@@ -859,4 +881,6 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
   },
 })
+
+
 

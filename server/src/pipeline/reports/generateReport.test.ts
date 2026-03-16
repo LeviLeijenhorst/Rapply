@@ -5,7 +5,7 @@ import type { Client } from "../../types/Client"
 import type { OrganizationSettings } from "../../types/OrganizationSettings"
 import type { Trajectory } from "../../types/Trajectory"
 import type { UserSettings } from "../../types/UserSettings"
-import { generateStructuredReport } from "./generateReport"
+import { createTemplateFieldIdResolver, generateStructuredReport } from "./generateReport"
 import { readSupportedUwvTemplate } from "../templates/uwvTemplates"
 
 async function withDisabledAzureDeployments<T>(callback: () => Promise<T>): Promise<T> {
@@ -94,4 +94,16 @@ test("generateStructuredReport leaves AI answers empty when there is no supporti
     assert.equal(generated.structuredReport.fields.rp_werkfit_7_1.answer, "")
     assert.equal(generated.structuredReport.fields.rp_werkfit_8_3.answer, "")
   })
+})
+
+test("createTemplateFieldIdResolver maps model variants to canonical fieldId", () => {
+  const template = readSupportedUwvTemplate("reintegratieplan_werkfit_maken")
+  const resolve = createTemplateFieldIdResolver(template)
+  assert.equal(resolve("rp_werkfit_5_1"), "rp_werkfit_5_1")
+  assert.equal(resolve("RP_WERKFIT_5_1"), "rp_werkfit_5_1")
+  assert.equal(resolve("fieldId=rp_werkfit_5_1"), "rp_werkfit_5_1")
+  assert.equal(resolve("5.1"), "rp_werkfit_5_1")
+  assert.equal(resolve("5_1"), "rp_werkfit_5_1")
+  assert.equal(resolve("veld 5.1 activiteiten"), "rp_werkfit_5_1")
+  assert.equal(resolve("onbekend"), "")
 })

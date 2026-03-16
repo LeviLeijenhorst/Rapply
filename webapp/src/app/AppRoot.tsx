@@ -16,6 +16,8 @@ import { warmUpSecureApi } from '../api/secureApi'
 import { AppProviders } from './providers/AppProviders'
 import { getInitialAuthenticationState } from './bootstrap/authBootstrap'
 
+const DEV_AUTH_BYPASS = String(process.env.EXPO_PUBLIC_DEV_AUTH_BYPASS || '').trim().toLowerCase() === 'true'
+
 export function AppRoot() {
   const [areFontsLoaded] = useFonts({
     Catamaran_400Regular,
@@ -24,13 +26,14 @@ export function AppRoot() {
     Catamaran_700Bold,
   })
   const [isAuthenticated, setIsAuthenticated] = useState(() => getInitialAuthenticationState())
+  const isAppAuthenticated = isAuthenticated || DEV_AUTH_BYPASS
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const logoutTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    if (!isAuthenticated) return
+    if (!isAppAuthenticated) return
     void warmUpSecureApi()
-  }, [isAuthenticated])
+  }, [isAppAuthenticated])
 
   useEffect(() => {
     return () => {
@@ -43,14 +46,14 @@ export function AppRoot() {
   return (
     <AppProviders>
       <StatusBar style="auto" />
-      <WebappAnalyticsTracker isAuthenticated={isAuthenticated} />
-      <E2eeProvider isAuthenticated={isAuthenticated}>
-        <LocalAppDataProvider isAuthenticated={isAuthenticated}>
+      <WebappAnalyticsTracker isAuthenticated={isAppAuthenticated} />
+      <E2eeProvider isAuthenticated={isAppAuthenticated}>
+        <LocalAppDataProvider isAuthenticated={isAppAuthenticated}>
           {isLoggingOut ? (
             <AuthScreenLayout>
               <AuthLoadingScreen message="Bezig met uitloggen..." />
             </AuthScreenLayout>
-          ) : isAuthenticated ? (
+          ) : isAppAuthenticated ? (
             <ErrorBoundary onReset={() => setIsAuthenticated(false)}>
               <AppShell
                 onLogout={() => {
@@ -58,9 +61,9 @@ export function AppRoot() {
                     if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current)
                     setIsLoggingOut(true)
                     setIsAuthenticated(false)
-                    navigate('/inloggen', { replace: true })
+                    if (!DEV_AUTH_BYPASS) navigate('/inloggen', { replace: true })
                     try {
-                      await signOutFromEntra()
+                      if (!DEV_AUTH_BYPASS) await signOutFromEntra()
                     } finally {
                       logoutTimeoutRef.current = setTimeout(() => setIsLoggingOut(false), 300)
                     }
@@ -76,4 +79,6 @@ export function AppRoot() {
     </AppProviders>
   )
 }
+
+
 

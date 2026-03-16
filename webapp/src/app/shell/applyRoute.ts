@@ -52,7 +52,7 @@ export function applyRouteToShell(params: ApplyRouteParams): void {
 
   const route = normalizeRouteForAvailability(routeInput)
 
-  if (route.kind !== 'nieuwe-rapportage') {
+  if (route.kind !== 'nieuwe-rapportage' && route.kind !== 'rapportage') {
     setRapportageScreenMode('controleren')
     setRapportageEditInputId(null)
   }
@@ -141,6 +141,15 @@ export function applyRouteToShell(params: ApplyRouteParams): void {
     setSelectedTrajectoryId(null)
     setSelectedSessieId(null)
     setInputOriginRoute(null)
+    return
+  }
+  if (route.kind === 'rapportage') {
+    setSelectedSidebarItemKey('clients')
+    setSelectedSessieId(null)
+    setInputOriginRoute(null)
+    setRapportageScreenMode('bewerken')
+    setRapportageEditInputId(route.reportId)
+    setIsNieuweRapportageOpen(true)
     return
   }
 

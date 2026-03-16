@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, LayoutAnimation, Platform, Pressable, StyleSheet, UIManager, View } from 'react-native'
+import { ActivityIndicator, LayoutAnimation, Platform, Pressable, StyleSheet, TextInput, UIManager, View } from 'react-native'
 
 import { semanticColorTokens, brandColors } from '@/design/tokens/colors'
 import { borderWidths } from '@/design/tokens/borderWidths'
@@ -7,7 +7,7 @@ import { fontSizes } from '@/design/tokens/fontSizes'
 import { radius } from '@/design/tokens/radius'
 import { rnShadows } from '@/design/tokens/shadows'
 import { spacing } from '@/design/tokens/spacing'
-import { InputThumbsDownIcon, InputThumbsUpIcon } from '@/icons/InputPageIcons'
+import { InputEditIcon, InputThumbsDownIcon, InputThumbsUpIcon } from '@/icons/InputPageIcons'
 import { ModalCloseDarkIcon } from '@/icons/ModalCloseDarkIcon'
 import { RotateLeftIcon } from '@/icons/RotateLeftIcon'
 import { TrashIcon } from '@/icons/TrashIcon'
@@ -34,9 +34,12 @@ export function SnippetSection({
   isRegenerating = false,
   onRegenerate,
   onUpdateSnippetStatus,
+  onSaveSnippetText,
   onDeleteSnippet,
 }: SnippetSectionProps) {
   const [snippetIdPendingDelete, setSnippetIdPendingDelete] = useState<string | null>(null)
+  const [snippetIdBeingEdited, setSnippetIdBeingEdited] = useState<string | null>(null)
+  const [draftSnippetText, setDraftSnippetText] = useState('')
   const sortedSnippets = useMemo(
     () => [...snippets].sort((leftSnippet, rightSnippet) => leftSnippet.createdAtUnixMs - rightSnippet.createdAtUnixMs),
     [snippets],
@@ -62,7 +65,7 @@ export function SnippetSection({
                 onPress={onRegenerate}
                 style={({ hovered }) => [
                   styles.headerIconButton,
-                  hovered && !isRegenerating ? styles.headerIconButtonHover : undefined,
+                  hovered && !isRegenerating ? styles.iconButtonHover : undefined,
                   isRegenerating ? styles.disabledButton : undefined,
                 ]}
               >
@@ -74,7 +77,7 @@ export function SnippetSection({
                 onPress={onRegenerate}
                 style={({ hovered }) => [
                   styles.headerActionButton,
-                  hovered && !isRegenerating ? styles.headerActionButtonHover : undefined,
+                  hovered && !isRegenerating ? styles.iconButtonHover : undefined,
                   isRegenerating ? styles.disabledButton : undefined,
                 ]}
               >
@@ -89,10 +92,10 @@ export function SnippetSection({
                   if (snippet.status !== 'approved') onUpdateSnippetStatus(snippet.id, 'approved')
                 })
               }}
-              style={({ hovered }) => [styles.headerActionButton, hovered ? styles.headerActionButtonHover : undefined]}
+              style={({ hovered }) => [styles.headerActionButton, hovered ? styles.iconButtonHover : undefined]}
             >
               <View style={styles.headerActionContent}>
-                <InputThumbsUpIcon size={14} />
+                <InputThumbsUpIcon size={18} color={brandColors.primary} />
                 <Text style={styles.headerActionText}>Alles goedkeuren</Text>
               </View>
             </Pressable>
@@ -121,28 +124,37 @@ export function SnippetSection({
                 <Text style={styles.snippetText}>{snippet.text}</Text>
                 <View style={styles.actionsRow}>
                   <Pressable
+                    onPress={() => {
+                      setSnippetIdBeingEdited(snippet.id)
+                      setDraftSnippetText(snippet.text)
+                    }}
+                    style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHover : undefined]}
+                  >
+                    <InputEditIcon size={18} />
+                  </Pressable>
+                  <Pressable
                     onPress={() => onUpdateSnippetStatus(snippet.id, 'approved')}
                     style={({ hovered }) => [
                       styles.iconButton,
-                      snippet.status === 'approved' ? styles.iconApprove : styles.iconNeutral,
-                      hovered ? (snippet.status === 'approved' ? styles.iconApproveHover : styles.iconNeutralHover) : undefined,
+                      snippet.status === 'approved' ? styles.iconButtonSelected : undefined,
+                      hovered ? styles.iconButtonHover : undefined,
                     ]}
                   >
-                    <InputThumbsUpIcon size={18} />
+                    <InputThumbsUpIcon size={18} color={brandColors.primary} />
                   </Pressable>
                   <Pressable
                     onPress={() => onUpdateSnippetStatus(snippet.id, 'rejected')}
                     style={({ hovered }) => [
                       styles.iconButton,
-                      snippet.status === 'rejected' ? styles.iconReject : styles.iconNeutral,
-                      hovered ? (snippet.status === 'rejected' ? styles.iconRejectHover : styles.iconNeutralHover) : undefined,
+                      snippet.status === 'rejected' ? styles.iconButtonSelected : undefined,
+                      hovered ? styles.iconButtonHover : undefined,
                     ]}
                   >
-                    <InputThumbsDownIcon size={18} />
+                    <InputThumbsDownIcon size={18} color={brandColors.primary} />
                   </Pressable>
                   <Pressable
                     onPress={() => setSnippetIdPendingDelete(snippet.id)}
-                    style={({ hovered }) => [styles.iconButton, styles.iconNeutral, hovered ? styles.iconNeutralHover : undefined]}
+                    style={({ hovered }) => [styles.iconButton, hovered ? styles.iconButtonHover : undefined]}
                   >
                     <TrashIcon size={16} color={semanticColorTokens.light.textSecondary} />
                   </Pressable>
@@ -152,6 +164,47 @@ export function SnippetSection({
           ))}
         </View>
       ) : null}
+
+      <Modal visible={Boolean(snippetIdBeingEdited)} onClose={() => setSnippetIdBeingEdited(null)} contentContainerStyle={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <Text isBold style={styles.modalTitle}>
+            Snippet bewerken
+          </Text>
+          <Pressable onPress={() => setSnippetIdBeingEdited(null)} style={({ hovered }) => [styles.modalCloseButton, hovered ? styles.modalCloseButtonHover : undefined]}>
+            <ModalCloseDarkIcon />
+          </Pressable>
+        </View>
+        <View style={styles.modalBody}>
+          <TextInput
+            value={draftSnippetText}
+            onChangeText={setDraftSnippetText}
+            placeholder="Schrijf of bewerk de snippet..."
+            placeholderTextColor={semanticColorTokens.light.textMuted}
+            multiline
+            textAlignVertical="top"
+            style={styles.modalEditorInput}
+          />
+        </View>
+        <View style={styles.modalFooter}>
+          <Pressable onPress={() => setSnippetIdBeingEdited(null)} style={({ hovered }) => [styles.modalCancelButton, hovered ? styles.modalCancelButtonHover : undefined]}>
+            <Text isBold style={styles.modalCancelButtonText}>
+              Annuleren
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              if (!snippetIdBeingEdited) return
+              onSaveSnippetText(snippetIdBeingEdited, draftSnippetText)
+              setSnippetIdBeingEdited(null)
+            }}
+            style={({ hovered }) => [styles.modalSaveButton, hovered ? styles.modalSaveButtonHover : undefined]}
+          >
+            <Text isBold style={styles.modalSaveButtonText}>
+              Opslaan
+            </Text>
+          </Pressable>
+        </View>
+      </Modal>
 
       <Modal visible={Boolean(snippetIdPendingDelete)} onClose={() => setSnippetIdPendingDelete(null)} contentContainerStyle={styles.modalContainer}>
         <View style={styles.modalHeader}>
@@ -205,15 +258,15 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   heading: {
-    fontSize: fontSizes.lg,
-    lineHeight: 24,
+    fontSize: fontSizes.md,
+    lineHeight: 22,
     color: semanticColorTokens.light.textHeading,
   },
   headerActionButton: {
     borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
-    backgroundColor: semanticColorTokens.light.hoverAccent,
+    backgroundColor: 'transparent',
   },
   headerActionContent: {
     flexDirection: 'row',
@@ -226,13 +279,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  iconButtonHover: {
     backgroundColor: semanticColorTokens.light.hoverAccent,
-  },
-  headerIconButtonHover: {
-    backgroundColor: semanticColorTokens.light.badgeBackground,
-  },
-  headerActionButtonHover: {
-    backgroundColor: semanticColorTokens.light.badgeBackground,
   },
   headerActionText: {
     fontSize: fontSizes.md,
@@ -291,24 +341,10 @@ const styles = StyleSheet.create({
     borderRadius: spacing.xxs,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
-  iconNeutral: {
-    backgroundColor: semanticColorTokens.light.neutralSurface,
-  },
-  iconNeutralHover: {
-    backgroundColor: semanticColorTokens.light.hoverNeutral,
-  },
-  iconApprove: {
-    backgroundColor: semanticColorTokens.light.successBackground,
-  },
-  iconApproveHover: {
-    backgroundColor: '#B8F5D4',
-  },
-  iconReject: {
-    backgroundColor: semanticColorTokens.light.dangerBackground,
-  },
-  iconRejectHover: {
-    backgroundColor: '#F9C1C1',
+  iconButtonSelected: {
+    backgroundColor: semanticColorTokens.light.hoverAccent,
   },
   snippetText: {
     flex: 1,
@@ -352,6 +388,17 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 24,
     gap: spacing.sm,
+  },
+  modalEditorInput: {
+    minHeight: 320,
+    borderRadius: radius.md,
+    borderWidth: borderWidths.hairline,
+    borderColor: semanticColorTokens.light.border,
+    backgroundColor: semanticColorTokens.light.pageBackground,
+    padding: spacing.md,
+    fontSize: fontSizes.md,
+    lineHeight: 24,
+    color: semanticColorTokens.light.textBody,
   },
   modalBodyText: {
     fontSize: fontSizes.sm,
@@ -398,5 +445,22 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     lineHeight: 18,
     color: brandColors.white,
+  },
+  modalSaveButton: {
+    height: 48,
+    borderBottomRightRadius: radius.lg,
+    backgroundColor: semanticColorTokens.light.selected,
+    paddingHorizontal: spacing.lg,
+    minWidth: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSaveButtonHover: {
+    backgroundColor: '#A50058',
+  },
+  modalSaveButtonText: {
+    fontSize: fontSizes.sm,
+    lineHeight: 18,
+    color: '#FFFFFF',
   },
 })

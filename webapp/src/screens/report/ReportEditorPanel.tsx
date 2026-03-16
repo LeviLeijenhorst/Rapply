@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import Svg, { Path } from 'react-native-svg'
 import { ChevronDownIcon } from '@/icons/ChevronDownIcon'
 import { PlusIcon } from '@/icons/PlusIcon'
 import { ReportUwvLogoIcon } from '@/icons/ReportScreenIcons'
@@ -53,10 +54,23 @@ type RenderSection = {
   status: 'complete' | 'incomplete'
 }
 
-const webNoOutlineInputStyle = { outlineStyle: 'none', outlineWidth: 0 } as any
+const webNoOutlineInputStyle = { outlineStyle: 'none', outlineWidth: 0, resize: 'none' } as any
+const webScrollableMultilineInputStyle = { overflow: 'auto' } as any
 const FIVE_LINE_HEIGHT = 120
-const ONE_LINE_HEIGHT = 46
-const REPEATABLE_ROW_BASE_HEIGHT = 34
+const ONE_LINE_HEIGHT = 38
+const ACTIVITY_INPUT_BASE_HEIGHT = 45
+const HOUR_INPUT_SIZE = 44
+const ACTIVITY_INPUT_MAX_HEIGHT = 220
+function RefreshIcon() {
+  return (
+    <Svg width={12} height={12} viewBox="0 0 20 20" fill="none">
+      <Path d="M16.5 3.5V7h-3.5" stroke="#344054" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M3.5 16.5V13h3.5" stroke="#344054" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M5.4 8.1A6 6 0 0 1 15 6.2L16.5 7" stroke="#344054" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M14.6 11.9A6 6 0 0 1 5 13.8L3.5 13" stroke="#344054" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  )
+}
 
 function parsePostcodePlace(value: string): { postcode: string; place: string } {
   const text = String(value || '').trim()
@@ -76,13 +90,13 @@ function joinPostcodePlace(postcode: string, place: string): string {
 
 function estimateRepeatableActivityHeight(value: string): number {
   const text = String(value || '')
-  if (!text) return REPEATABLE_ROW_BASE_HEIGHT
+  if (!text) return ACTIVITY_INPUT_BASE_HEIGHT
   const approxCharsPerLine = 44
   const explicitLines = text.split('\n')
   let totalLines = 0
   for (const line of explicitLines) totalLines += Math.max(1, Math.ceil(line.length / approxCharsPerLine))
-  const estimated = REPEATABLE_ROW_BASE_HEIGHT + Math.max(0, totalLines - 1) * 20
-  return Math.min(220, estimated)
+  const estimated = ACTIVITY_INPUT_BASE_HEIGHT + Math.max(0, totalLines - 1) * 20
+  return Math.min(ACTIVITY_INPUT_MAX_HEIGHT, estimated)
 }
 function estimateMultilineHeight(value: string, baseHeight: number): number {
   const text = String(value || '')
@@ -302,17 +316,19 @@ export function ReportEditorPanel({ report, templates, onReportUpdated }: Props)
 
   return (
     <View style={styles.root}>
-      <View style={styles.headerRow}>
-        <View style={styles.headerMeta}>
-          <Text isBold style={styles.title}>{report.title || template?.name || 'Rapport'}</Text>
-          <Text style={styles.subtitle}>Template: {template?.name || structured.templateName}</Text>
+      <View style={styles.headerWrap}>
+        <View style={styles.headerRow}>
+          <View style={styles.headerMeta}>
+            <Text isBold style={styles.title}>{report.title || template?.name || 'Rapport'}</Text>
+          </View>
+          <View style={styles.headerActions}>
+            {savingFieldId ? <ActivityIndicator size="small" color="#475467" /> : null}
+            <Pressable onPress={() => void handleExportWord()} style={({ hovered }) => [styles.exportButton, hovered ? styles.exportButtonHover : undefined]}>
+              {isExporting ? <ActivityIndicator size="small" color="#007ACF" /> : <View style={styles.exportButtonContent}><ReportUwvLogoIcon /><Text isSemibold style={styles.exportButtonText}>Exporteer naar Word</Text></View>}
+            </Pressable>
+          </View>
         </View>
-        <View style={styles.headerActions}>
-          {savingFieldId ? <ActivityIndicator size="small" color="#475467" /> : null}
-          <Pressable onPress={() => void handleExportWord()} style={({ hovered }) => [styles.exportButton, hovered ? styles.exportButtonHover : undefined]}>
-            {isExporting ? <ActivityIndicator size="small" color="#007ACF" /> : <View style={styles.exportButtonContent}><ReportUwvLogoIcon /><Text isSemibold style={styles.exportButtonText}>Exporteer UWV Word</Text></View>}
-          </Pressable>
-        </View>
+        <View pointerEvents="none" style={styles.headerFade} />
       </View>
 
       <View style={styles.bodyRow}>
@@ -358,7 +374,7 @@ export function ReportEditorPanel({ report, templates, onReportUpdated }: Props)
                             return (
                               <Pressable key={option} onPress={() => setSpecialistTariffBySection((p) => ({ ...p, [section.key]: option }))} style={({ hovered }) => [styles.choiceRow, hovered ? styles.choiceRowHovered : undefined]}>
                                 <View style={[styles.choiceSquare, selected ? styles.choiceSquareSelected : undefined]}>
-                                  {selected ? <View style={styles.choiceSquareInnerWrap}><View style={styles.choiceSquareInner} /></View> : null}
+                                  {selected ? <View style={styles.choiceSquareInner} /> : null}
                                 </View>
                                 <Text style={[styles.choiceRowText, selected ? styles.choiceRowTextSelected : undefined]}>{option.toUpperCase()}</Text>
                               </Pressable>
@@ -393,7 +409,7 @@ export function ReportEditorPanel({ report, templates, onReportUpdated }: Props)
                                     style={({ hovered }) => [styles.choiceRow, hovered ? styles.choiceRowHovered : undefined]}
                                   >
                                     <View style={[styles.choiceSquare, isSelected ? styles.choiceSquareSelected : undefined]}>
-                                      {isSelected ? <View style={styles.choiceSquareInnerWrap}><View style={styles.choiceSquareInner} /></View> : null}
+                                      {isSelected ? <View style={styles.choiceSquareInner} /> : null}
                                     </View>
                                     <Text style={[styles.choiceRowText, isSelected ? styles.choiceRowTextSelected : undefined]}>{option}</Text>
                                   </Pressable>
@@ -424,8 +440,14 @@ export function ReportEditorPanel({ report, templates, onReportUpdated }: Props)
                                       }}
 
                                       multiline
-                                      scrollEnabled={false}
-                                      style={[styles.answerInput, styles.activityInputLarge, { minHeight: rowHeight }, webNoOutlineInputStyle]}
+                                      scrollEnabled={rowHeight >= ACTIVITY_INPUT_MAX_HEIGHT}
+                                      style={[
+                                        styles.answerInput,
+                                        styles.activityInputLarge,
+                                        { height: rowHeight, maxHeight: ACTIVITY_INPUT_MAX_HEIGHT },
+                                        rowHeight >= ACTIVITY_INPUT_MAX_HEIGHT ? webScrollableMultilineInputStyle : undefined,
+                                        webNoOutlineInputStyle,
+                                      ]}
                                       placeholder="Re-integratieactiviteit"
                                       placeholderTextColor="#8E8480"
                                     />
@@ -572,8 +594,17 @@ export function ReportEditorPanel({ report, templates, onReportUpdated }: Props)
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, padding: 24, gap: 16, backgroundColor: '#FFFFFF' },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
+  root: { flex: 1, paddingTop: 24, paddingHorizontal: 24, paddingBottom: 10, gap: 0, backgroundColor: '#FFFFFF' },
+  headerWrap: { position: 'relative' as any, zIndex: 5, backgroundColor: '#FFFFFF' },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+    paddingBottom: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  headerFade: { height: 26, ...( { backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%)', marginBottom: -14 } as any ) },
   headerMeta: { flex: 1, gap: 4 },
   title: { fontSize: 30, lineHeight: 36, color: '#2C111F' },
   subtitle: { fontSize: 14, lineHeight: 18, color: '#7C6E76' },
@@ -582,9 +613,9 @@ const styles = StyleSheet.create({
   exportButtonHover: { backgroundColor: '#EFF7FF' },
   exportButtonContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   exportButtonText: { fontSize: 14, lineHeight: 18, color: '#007ACF' },
-  bodyRow: { flex: 1, flexDirection: 'row', gap: 16, minHeight: 0 },
+  bodyRow: { flex: 1, flexDirection: 'row', gap: 16, minHeight: 0, marginTop: -2 },
   fieldsColumn: { flex: 1, minWidth: 0 },
-  fieldsContent: { gap: 12, paddingBottom: 8 },
+  fieldsContent: { gap: 12, paddingBottom: 0 },
   sectionCard: { borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFFFFF', padding: 16, gap: 10 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderRadius: 8, paddingHorizontal: 4, paddingVertical: 2 },
   sectionHeaderHover: { backgroundColor: '#F8FAFC' },
@@ -601,6 +632,10 @@ const styles = StyleSheet.create({
   fieldBlock: { gap: 6 },
   fieldLabel: { fontSize: 13, lineHeight: 18, color: '#344054' },
   answerInput: { borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#2C111F', backgroundColor: '#FFFFFF' },
+  answerInputWithRefresh: { paddingRight: 34 },
+  inputWithIconWrap: { position: 'relative' as any },
+  inputRefreshButton: { position: 'absolute' as any, top: 8, right: 8, width: 20, height: 20, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  inputRefreshButtonHover: { backgroundColor: '#ECEFF3' },
   programmaticHeight: { minHeight: ONE_LINE_HEIGHT },
   fiveLineHeight: { minHeight: FIVE_LINE_HEIGHT, textAlignVertical: 'top' as any },
   multichoiceWrap: { flexDirection: 'column', gap: 8 },
@@ -608,15 +643,28 @@ const styles = StyleSheet.create({
   choiceRowHovered: { backgroundColor: '#F8FAFC' },
   choiceSquare: { width: 18, height: 18, borderRadius: 4, borderWidth: 1, borderColor: '#B7BCC5', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   choiceSquareSelected: { borderColor: '#BE0165', backgroundColor: '#FFFFFF' },
-  choiceSquareInnerWrap: { width: 12, height: 12, borderRadius: 2, borderWidth: 1, borderColor: '#FFFFFF', backgroundColor: '#BE0165', alignItems: 'center', justifyContent: 'center' },
-  choiceSquareInner: { width: 10, height: 10, borderRadius: 2, backgroundColor: '#BE0165' },
+  choiceSquareInner: { width: 12, height: 12, borderRadius: 2, backgroundColor: '#BE0165' },
   choiceRowText: { fontSize: 14, lineHeight: 18, color: '#2C111F' },
   choiceRowTextSelected: { color: '#BE0165' },
   activityRowsWrap: { gap: 8 },
-  activityRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  activityInputLarge: { flex: 1, textAlignVertical: 'top' as any, paddingVertical: 6 },
-  activityInputSmall: { width: 58, minHeight: REPEATABLE_ROW_BASE_HEIGHT, paddingHorizontal: 6, paddingVertical: 6, textAlign: 'center' as any, fontSize: 12 },
-  rowActionButton: { width: 24, height: 24, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  activityRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  activityInputLarge: { flex: 1, paddingTop: 10, paddingBottom: 4 },
+  activityInputSmall: {
+    width: HOUR_INPUT_SIZE,
+    height: HOUR_INPUT_SIZE,
+    minHeight: HOUR_INPUT_SIZE,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    marginTop: 1,
+    textAlign: 'center' as any,
+    textAlignVertical: 'center' as any,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  currencyInputWrap: { minHeight: ONE_LINE_HEIGHT, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  currencyPrefix: { fontSize: 14, lineHeight: 18, color: '#2C111F' },
+  currencyInput: { flex: 1, borderWidth: 0, paddingHorizontal: 0, backgroundColor: 'transparent' },
+  rowActionButton: { width: HOUR_INPUT_SIZE, height: HOUR_INPUT_SIZE, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   rowActionButtonHover: { backgroundColor: '#EEF2F7' },
   removeRowIconWrap: { transform: [{ rotate: '45deg' }] },
   chatColumn: { width: 420, minWidth: 360, maxWidth: 460 },
@@ -632,6 +680,11 @@ const styles = StyleSheet.create({
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   emptyText: { fontSize: 16, lineHeight: 22, color: '#2C111F', textAlign: 'center' },
 })
+
+
+
+
+
 
 
 

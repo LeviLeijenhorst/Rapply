@@ -38,6 +38,15 @@ type ChatMessage = {
   text: string
 }
 
+function logPipelineDebug(label: string, payload: unknown): void {
+  try {
+    const serialized = JSON.stringify(payload)
+    console.log(`[pipeline:${label}] ${serialized}`)
+  } catch {
+    // Never let diagnostics break request handling.
+  }
+}
+
 function readChatMessages(value: unknown): ChatMessage[] {
   if (!Array.isArray(value)) return []
   return value
@@ -409,6 +418,40 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
         sendError(res, 400, message)
         return
       }
+
+      const selectedInputIdSet = new Set(selectedInputIds)
+      const snippetsFromSelectedInputs = snippets.filter((snippet) => {
+        const sourceInputId = normalizeText(snippet.sourceInputId ?? snippet.sourceSessionId)
+        return sourceInputId && selectedInputIdSet.has(sourceInputId)
+      })
+      const evidenceByFieldIdEntries = Array.from(evidence.evidenceByFieldId.entries()).map(([fieldId, lines]) => ({
+        fieldId,
+        lines,
+      }))
+      logPipelineDebug("generate-report:evidence", {
+        templateId,
+        clientId,
+        selectedInputIds,
+        selectedNoteIds,
+        totalSnippetsInWorkspace: snippets.length,
+        snippetsFromSelectedInputsCount: snippetsFromSelectedInputs.length,
+        approvedSnippetsUsedCount: evidence.approvedSnippets.length,
+        snippetsFromSelectedInputs: snippetsFromSelectedInputs.map((snippet) => ({
+          id: snippet.id,
+          approvalStatus: snippet.approvalStatus,
+          sourceInputId: normalizeText(snippet.sourceInputId ?? snippet.sourceSessionId),
+          fieldId: normalizeText(snippet.fieldId ?? snippet.snippetType),
+          text: normalizeText(snippet.text),
+        })),
+        approvedSnippetsUsed: evidence.approvedSnippets.map((snippet) => ({
+          id: snippet.id,
+          sourceInputId: normalizeText(snippet.sourceInputId ?? snippet.sourceSessionId),
+          fieldId: normalizeText(snippet.fieldId ?? snippet.snippetType),
+          text: normalizeText(snippet.text),
+        })),
+        evidenceByFieldId: evidenceByFieldIdEntries,
+      })
+
       if (evidence.approvedSnippets.length === 0) {
         sendError(res, 400, "Geen goedgekeurde snippets voor de geselecteerde evidence. Keur eerst snippets goed.")
         return

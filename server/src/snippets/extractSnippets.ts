@@ -174,6 +174,8 @@ function buildSnippetPrompt(params: { inputType: SnippetInputType; transcript: s
     "- Er mag geen medische informatie in de snippets staan.",
     "- Gebruik uitsluitend fields uit de mapping hieronder.",
     "- Kies altijd het meest specifieke field dat past.",
+    "- Als een feit aantoonbaar relevant is voor zowel een RP-veld (`rp_*`) als een ER-veld (`er_*`), label het feit met beide fields.",
+    "- Voorkeur: gebruik bij dual-labeling één snippet-object met `fields` als array (bijv. `{\"fields\":[\"rp_werkfit_5_1\",\"er_werkfit_7_1\"],\"text\":\"...\"}`); als dat niet lukt, geef meerdere snippet-objecten met identieke tekst.",
     "- Gebruik `general` alleen voor context die nuttig is voor AI-assistentvragen/chatbot in Coachscribe.",
     "- Gebruik `general` niet voor feiten die onder een specifiek rapportagefield passen.",
     "- Bij twijfel tussen een specifiek field en `general`: kies het specifieke field.",
@@ -190,7 +192,7 @@ function buildSnippetPrompt(params: { inputType: SnippetInputType; transcript: s
     "",
     "Output:",
     "- Geef uitsluitend geldige JSON.",
-    '- Exact dit formaat: {"snippets":[{"field":"string","text":"string"}]}',
+    '- Formaat: {"snippets":[{"field":"string","text":"string"}]} of {"snippets":[{"fields":["string","string"],"text":"string"}]}',
     "",
     inputTypeInstruction(params.inputType),
     "",
@@ -270,8 +272,21 @@ function extractFirstJsonObjectOrArray(value: string): string | null {
   return null
 }
 
+function readSnippetFields(rawSnippet: any): string[] {
+  const fields = new Set<string>()
+  const singleField = normalizeSnippetField(rawSnippet?.field)
+  if (singleField) fields.add(singleField)
+  if (Array.isArray(rawSnippet?.fields)) {
+    for (const candidate of rawSnippet.fields) {
+      const normalized = normalizeSnippetField(candidate)
+      if (normalized) fields.add(normalized)
+    }
+  }
+  return Array.from(fields)
+}
+
 // Parses model output into valid snippets.
-function parseSnippetExtraction(rawText: string): SnippetExtractionResult[] {
+export function parseSnippetExtraction(rawText: string): SnippetExtractionResult[] {
   const rawInput = String(rawText || "").trim()
   if (!rawInput) return []
   const stripped = stripJsonCodeFences(rawInput)
@@ -290,13 +305,16 @@ function parseSnippetExtraction(rawText: string): SnippetExtractionResult[] {
   const seen = new Set<string>()
 
   for (const rawSnippet of rawSnippets) {
-    const field = normalizeSnippetField(rawSnippet?.field)
     const text = sanitizeSnippetText(String(rawSnippet?.text || ""))
-    if (!snippetFieldSet.has(field) || !text) continue
-    const dedupeKey = `${field.toLowerCase()}::${text.toLowerCase()}`
-    if (seen.has(dedupeKey)) continue
-    seen.add(dedupeKey)
-    snippets.push({ field, text })
+    if (!text) continue
+    const fields = readSnippetFields(rawSnippet)
+    for (const field of fields) {
+      if (!snippetFieldSet.has(field)) continue
+      const dedupeKey = `${field.toLowerCase()}::${text.toLowerCase()}`
+      if (seen.has(dedupeKey)) continue
+      seen.add(dedupeKey)
+      snippets.push({ field, text })
+    }
   }
 
   return snippets

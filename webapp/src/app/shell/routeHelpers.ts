@@ -5,6 +5,7 @@ export type RouteState =
   | { kind: 'dashboard' }
   | { kind: 'record' }
   | { kind: 'reports' }
+  | { kind: 'rapportage'; reportId: string }
   | { kind: 'new-client' }
   | { kind: 'sessie'; sessieId: string }
   | { kind: 'item'; clientId: string; trajectoryId: string; itemId: string }
@@ -50,6 +51,7 @@ export function parseRouteFromPath(pathname: string): RouteState {
   const parts = path.split('/').filter(Boolean)
 
   if (parts[0] === 'opnemen') return { kind: 'record' }
+  if (parts[0] === 'rapportages' && parts[1]) return { kind: 'rapportage', reportId: ensurePrefix(parts[1], 'session') }
   if (parts[0] === 'rapportages') return { kind: 'reports' }
 
   if (parts[0] === 'clienten' || parts[0] === 'clients' || parts[0] === 'coaches') {
@@ -94,6 +96,7 @@ export function buildPathFromRoute(routeInput: RouteState): string {
   const route = normalizeRouteForAvailability(routeInput)
   if (route.kind === 'dashboard') return '/dashboard'
   if (route.kind === 'record') return '/opnemen'
+  if (route.kind === 'rapportage') return `/rapportages/${stripPrefix(route.reportId, 'session')}`
   if (route.kind === 'reports') return '/rapportages'
   if (route.kind === 'new-client') return '/clienten/nieuw'
   if (route.kind === 'sessie') return `/sessies/${stripPrefix(route.sessieId, 'session')}`

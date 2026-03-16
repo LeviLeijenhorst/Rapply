@@ -69,8 +69,8 @@ const styles = StyleSheet.create({
   },
   title: {
     color: semanticColorTokens.light.textStrong,
-    fontSize: fontSizes.lg,
-    lineHeight: 24,
+    fontSize: fontSizes.md,
+    lineHeight: 22,
   },
   headerRow: {
     flexDirection: 'row',
@@ -84,10 +84,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: semanticColorTokens.light.hoverAccent,
+    backgroundColor: 'transparent',
   },
   editButtonHover: {
-    backgroundColor: semanticColorTokens.light.badgeBackground,
+    backgroundColor: semanticColorTokens.light.hoverAccent,
   },
   bodyContainer: {
     minHeight: summaryBodyMinHeight,

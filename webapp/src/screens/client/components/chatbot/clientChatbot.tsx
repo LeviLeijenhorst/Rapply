@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   chatTopTextAction: { height: 28, justifyContent: 'center', alignItems: 'center' },
-  chatTopTextActionModal: { marginTop: -5 },
+  chatTopTextActionModal: { marginTop: -7, minWidth: 68, paddingHorizontal: 8 },
   chatTopTextActionHovered: { opacity: 0.7 },
   chatTopTextActionText: { fontSize: 14, lineHeight: 16, color: '#2C111F' },
   chatTopIconAction: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },

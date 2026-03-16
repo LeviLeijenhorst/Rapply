@@ -12,11 +12,21 @@ function normalizeEndpoint(value: string) {
   return String(value || "").trim().replace(/\/+$/, "")
 }
 
+function logAzureOpenAiDebug(label: string, payload: unknown): void {
+  try {
+    const serialized = JSON.stringify(payload)
+    console.log(`[ai:${label}] ${serialized}`)
+  } catch {
+    // Never let diagnostics break production flow.
+  }
+}
+
 // Intent: completeAzureOpenAiChat
 export async function completeAzureOpenAiChat(params: {
   deployment: string
   messages: ChatMessage[]
   temperature?: number
+  debugLogLabel?: string
 }): Promise<string> {
   const endpoint = normalizeEndpoint(env.azureOpenAiEndpoint)
   if (!endpoint) {
@@ -35,6 +45,18 @@ export async function completeAzureOpenAiChat(params: {
     throw new Error("Azure OpenAI deployment is not configured")
   }
   const url = `${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=${version}`
+  const requestBody = {
+    messages: params.messages,
+    ...(typeof params.temperature === "number" ? { temperature: params.temperature } : {}),
+  }
+
+  if (params.debugLogLabel) {
+    logAzureOpenAiDebug(`${params.debugLogLabel}:request`, {
+      url,
+      deployment,
+      body: requestBody,
+    })
+  }
 
   const response = await fetch(url, {
     method: "POST",
@@ -42,13 +64,17 @@ export async function completeAzureOpenAiChat(params: {
       "Content-Type": "application/json",
       "api-key": key,
     },
-    body: JSON.stringify({
-      messages: params.messages,
-      ...(typeof params.temperature === "number" ? { temperature: params.temperature } : {}),
-    }),
+    body: JSON.stringify(requestBody),
   })
 
   const textBody = await response.text().catch(() => "")
+  if (params.debugLogLabel) {
+    logAzureOpenAiDebug(`${params.debugLogLabel}:response`, {
+      status: response.status,
+      ok: response.ok,
+      body: textBody,
+    })
+  }
   if (!response.ok) {
     throw new Error(`Azure OpenAI chat failed: ${textBody || response.statusText || "Unknown error"}`)
   }

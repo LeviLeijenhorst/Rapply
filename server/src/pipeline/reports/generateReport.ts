@@ -24,6 +24,108 @@ type AnswerField = {
   answer: string
 }
 
+function logReportPrompt(label: string, prompt: string): void {
+  try {
+    console.log(`[ai:${label}:prompt]\n${prompt}`)
+  } catch {
+    // Never let diagnostics break report generation.
+  }
+}
+
+export function buildReasoningPrompt(params: {
+  template: UwvTemplate
+  evidenceByFieldId: Map<string, string[]>
+}): string {
+  const fieldEvidenceLines = params.template.fields.map((field) => {
+    const evidence = params.evidenceByFieldId.get(field.fieldId) ?? []
+    const notes = params.evidenceByFieldId.get("general_notes") ?? []
+    const merged = [...evidence, ...notes].slice(0, 8)
+    return `${field.fieldId}\n${merged.length > 0 ? merged.map((line) => `- ${line}`).join("\n") : "- GEEN_DIRECT_BEWIJS"}`
+  })
+
+  return [
+    "U bent een redeneringsstap voor UWV-rapportvelden.",
+    "Gebruik alleen de aangeleverde evidence. Geen externe kennis.",
+    "Voor elk fieldId: bepaal factualBasis, korte reasoning, confidence (0-1).",
+    "Als er geen direct bewijs is: factualBasis leeg laten en expliciet benoemen dat het antwoord leeg moet blijven.",
+    'Antwoord uitsluitend als JSON: {"fields":[{"fieldId":"string","factualBasis":"string","reasoning":"string","confidence":0.0}]}',
+    "",
+    `Template: ${params.template.name}`,
+    "",
+    ...fieldEvidenceLines,
+  ].join("\n")
+}
+
+export function buildAnswerPrompt(params: {
+  template: UwvTemplate
+  reasoningByFieldId: Map<string, ReasoningField>
+}): string {
+  const reasoningLines = params.template.fields
+    .filter((field) => field.fieldType === "ai")
+    .map((field) => {
+      const reasoning = params.reasoningByFieldId.get(field.fieldId)
+      return [
+        `fieldId=${field.fieldId}`,
+        `label=${field.label}`,
+        `factualBasis=${reasoning?.factualBasis || "GEEN_DIRECT_BEWIJS"}`,
+      ].join("\n")
+    })
+
+  return [
+    "U schrijft antwoorden voor UWV-rapportvelden.",
+    "Gebruik alleen factualBasis per fieldId; geen extra aannames.",
+    "Schrijf kort, zakelijk Nederlands, 1-4 zinnen per veld.",
+    "Als factualBasis ontbreekt of GEEN_DIRECT_BEWIJS bevat: geef exact een lege string als answer.",
+    'Antwoord uitsluitend als JSON: {"fields":[{"fieldId":"string","answer":"string"}]}',
+    "",
+    `Template: ${params.template.name}`,
+    "",
+    ...reasoningLines,
+  ].join("\n")
+}
+
+export function createTemplateFieldIdResolver(template: UwvTemplate): (rawFieldId: unknown) => string {
+  const strictMap = new Map<string, string>()
+  const looseMap = new Map<string, string>()
+
+  const addKey = (key: string, fieldId: string) => {
+    const normalized = normalizeText(key).toLowerCase()
+    if (!normalized) return
+    if (!strictMap.has(normalized)) strictMap.set(normalized, fieldId)
+    const loose = normalized.replace(/[^a-z0-9]/g, "")
+    if (!looseMap.has(loose)) looseMap.set(loose, fieldId)
+  }
+
+  for (const field of template.fields) {
+    addKey(field.fieldId, field.fieldId)
+    addKey(field.exportNumberKey, field.fieldId)
+  }
+
+  return (rawFieldId: unknown): string => {
+    const raw = normalizeText(rawFieldId).toLowerCase()
+    if (!raw) return ""
+
+    const candidates = new Set<string>()
+    candidates.add(raw)
+    candidates.add(raw.replace(/^fieldid\s*[:=]\s*/i, ""))
+
+    const fieldIdMatch = raw.match(/[a-z]{2}_[a-z0-9_]+/i)
+    if (fieldIdMatch?.[0]) candidates.add(fieldIdMatch[0])
+
+    const exportNumberMatch = raw.match(/\b\d{1,2}[._]\d{1,2}\b/)
+    if (exportNumberMatch?.[0]) candidates.add(exportNumberMatch[0].replace("_", "."))
+
+    for (const candidate of candidates) {
+      const strict = strictMap.get(candidate)
+      if (strict) return strict
+      const loose = looseMap.get(candidate.replace(/[^a-z0-9]/g, ""))
+      if (loose) return loose
+    }
+
+    return ""
+  }
+}
+
 function hasDirectEvidence(factualBasis: string): boolean {
   const normalized = normalizeText(factualBasis).toUpperCase()
   if (!normalized) return false
@@ -107,30 +209,22 @@ async function runReasoningCall(params: {
   template: UwvTemplate
   evidenceByFieldId: EvidenceByFieldId
 }): Promise<ReasoningField[]> {
+  const resolveFieldId = createTemplateFieldIdResolver(params.template)
+  const fallbackByFieldId = new Map(
+    createFallbackReasoning(params.template, params.evidenceByFieldId).map((field) => [field.fieldId, field]),
+  )
   const deployment = readReasoningDeploymentOrEmpty() || readLegacyDeploymentOrEmpty()
-  if (!deployment) return createFallbackReasoning(params.template, params.evidenceByFieldId)
+  if (!deployment) return Array.from(fallbackByFieldId.values())
 
-  const fieldEvidenceLines = params.template.fields.map((field) => {
-    const evidence = params.evidenceByFieldId.get(field.fieldId) ?? []
-    const notes = params.evidenceByFieldId.get("general_notes") ?? []
-    const merged = [...evidence, ...notes].slice(0, 8)
-    return `${field.fieldId}\n${merged.length > 0 ? merged.map((line) => `- ${line}`).join("\n") : "- GEEN_DIRECT_BEWIJS"}`
+  const prompt = buildReasoningPrompt({
+    template: params.template,
+    evidenceByFieldId: params.evidenceByFieldId,
   })
-
-  const prompt = [
-    "U bent een redeneringsstap voor UWV-rapportvelden.",
-    "Gebruik alleen de aangeleverde evidence. Geen externe kennis.",
-    "Voor elk fieldId: bepaal factualBasis, korte reasoning, confidence (0-1).",
-    "Als er geen direct bewijs is: factualBasis leeg laten en expliciet benoemen dat het antwoord leeg moet blijven.",
-    'Antwoord uitsluitend als JSON: {"fields":[{"fieldId":"string","factualBasis":"string","reasoning":"string","confidence":0.0}]}',
-    "",
-    `Template: ${params.template.name}`,
-    "",
-    ...fieldEvidenceLines,
-  ].join("\n")
+  logReportPrompt("report-generation:reasoning", prompt)
 
   const raw = await completeAzureOpenAiChat({
     deployment,
+    debugLogLabel: "report-generation:reasoning",
     messages: [
       { role: "system", content: "U geeft alleen geldige JSON terug zonder markdown." },
       { role: "user", content: prompt },
@@ -138,11 +232,11 @@ async function runReasoningCall(params: {
   })
   const parsed = safeJsonParse<{ fields?: Array<Record<string, unknown>> }>(raw)
   const parsedFields = Array.isArray(parsed?.fields) ? parsed.fields : []
-  if (parsedFields.length === 0) return createFallbackReasoning(params.template, params.evidenceByFieldId)
+  if (parsedFields.length === 0) return Array.from(fallbackByFieldId.values())
 
   const output: ReasoningField[] = []
   for (const rawField of parsedFields) {
-    const fieldId = normalizeText(rawField.fieldId)
+    const fieldId = resolveFieldId(rawField.fieldId)
     if (!fieldId) continue
     output.push({
       fieldId,
@@ -151,8 +245,10 @@ async function runReasoningCall(params: {
       confidence: normalizeConfidence(rawField.confidence),
     })
   }
-  if (output.length === 0) return createFallbackReasoning(params.template, params.evidenceByFieldId)
-  return output
+  for (const field of output) {
+    fallbackByFieldId.set(field.fieldId, field)
+  }
+  return params.template.fields.map((field) => fallbackByFieldId.get(field.fieldId)!)
 }
 
 function createFallbackAnswers(params: { template: UwvTemplate; reasoningByFieldId: Map<string, ReasoningField> }): AnswerField[] {
@@ -177,35 +273,27 @@ async function runAnswerCall(params: {
   template: UwvTemplate
   reasoningByFieldId: Map<string, ReasoningField>
 }): Promise<AnswerField[]> {
+  const resolveFieldId = createTemplateFieldIdResolver(params.template)
+  const fallbackByFieldId = new Map(
+    createFallbackAnswers(params).map((field) => [field.fieldId, field.answer]),
+  )
   const deployment = readReportDeploymentOrEmpty() || readLegacyDeploymentOrEmpty()
-  if (!deployment) return createFallbackAnswers(params)
+  if (!deployment) {
+    return params.template.fields
+      .filter((field) => field.fieldType === "ai")
+      .map((field) => ({ fieldId: field.fieldId, answer: fallbackByFieldId.get(field.fieldId) ?? "" }))
+  }
 
-  const reasoningLines = params.template.fields
-    .filter((field) => field.fieldType === "ai")
-    .map((field) => {
-      const reasoning = params.reasoningByFieldId.get(field.fieldId)
-      return [
-        `fieldId=${field.fieldId}`,
-        `label=${field.label}`,
-        `factualBasis=${reasoning?.factualBasis || "GEEN_DIRECT_BEWIJS"}`,
-      ].join("\n")
-    })
-
-  const prompt = [
-    "U schrijft antwoorden voor UWV-rapportvelden.",
-    "Gebruik alleen factualBasis per fieldId; geen extra aannames.",
-    "Schrijf kort, zakelijk Nederlands, 1-4 zinnen per veld.",
-    "Als factualBasis ontbreekt of GEEN_DIRECT_BEWIJS bevat: geef exact een lege string als answer.",
-    'Antwoord uitsluitend als JSON: {"fields":[{"fieldId":"string","answer":"string"}]}',
-    "",
-    `Template: ${params.template.name}`,
-    "",
-    ...reasoningLines,
-  ].join("\n")
+  const prompt = buildAnswerPrompt({
+    template: params.template,
+    reasoningByFieldId: params.reasoningByFieldId,
+  })
+  logReportPrompt("report-generation:answer", prompt)
 
   const raw = await completeAzureOpenAiChat({
     deployment,
     temperature: 0.2,
+    debugLogLabel: "report-generation:answer",
     messages: [
       { role: "system", content: "U geeft alleen geldige JSON terug zonder markdown." },
       { role: "user", content: prompt },
@@ -213,17 +301,25 @@ async function runAnswerCall(params: {
   })
   const parsed = safeJsonParse<{ fields?: Array<Record<string, unknown>> }>(raw)
   const parsedFields = Array.isArray(parsed?.fields) ? parsed.fields : []
-  if (parsedFields.length === 0) return createFallbackAnswers(params)
+  if (parsedFields.length === 0) {
+    return params.template.fields
+      .filter((field) => field.fieldType === "ai")
+      .map((field) => ({ fieldId: field.fieldId, answer: fallbackByFieldId.get(field.fieldId) ?? "" }))
+  }
 
   const output: AnswerField[] = []
   for (const rawField of parsedFields) {
-    const fieldId = normalizeText(rawField.fieldId)
+    const fieldId = resolveFieldId(rawField.fieldId)
     const answer = normalizeText(rawField.answer)
     if (!fieldId) continue
     output.push({ fieldId, answer })
   }
-  if (output.length === 0) return createFallbackAnswers(params)
-  return output
+  for (const field of output) {
+    fallbackByFieldId.set(field.fieldId, field.answer)
+  }
+  return params.template.fields
+    .filter((field) => field.fieldType === "ai")
+    .map((field) => ({ fieldId: field.fieldId, answer: fallbackByFieldId.get(field.fieldId) ?? "" }))
 }
 
 export async function generateStructuredReport(params: {

@@ -19,7 +19,7 @@ export function Header({ title, clientName, date, onBack }: HeaderProps) {
           <Pressable onPress={onBack} style={({ hovered }) => [styles.backButton, hovered ? styles.backButtonHover : undefined]}>
             <ChevronLeftIcon color={semanticColorTokens.light.textHeading} size={24} />
           </Pressable>
-          <Text isSemibold style={styles.title} numberOfLines={1}>
+          <Text isBold style={styles.title} numberOfLines={1}>
             {title}
           </Text>
         </View>
@@ -27,14 +27,14 @@ export function Header({ title, clientName, date, onBack }: HeaderProps) {
         <View style={styles.metaRow}>
           <View style={styles.metaPill}>
             <ProfileCircleIcon size={24} />
-            <Text isSemibold style={styles.metaText} numberOfLines={1}>
+            <Text isBold style={styles.metaText} numberOfLines={1}>
               {clientName}
             </Text>
           </View>
           {date ? (
             <View style={styles.metaPill}>
               <CalendarCircleIcon size={24} />
-              <Text isSemibold style={styles.metaText}>{date}</Text>
+              <Text isBold style={styles.metaText}>{date}</Text>
             </View>
           ) : null}
         </View>
@@ -50,27 +50,27 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    gap: spacing.sm,
+    flexWrap: 'nowrap',
   },
   titlePill: {
+    height: 48,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: '#ECEDEF',
-    borderRadius: radius.lg,
-    paddingLeft: spacing.sm,
-    paddingRight: spacing.md,
-    paddingVertical: spacing.xs,
-    minWidth: 260,
+    gap: spacing.xs,
+    backgroundColor: 'transparent',
+    borderRadius: radius.sm,
+    paddingLeft: spacing.xxs,
+    paddingRight: spacing.xs,
+    minWidth: 0,
     maxWidth: 560,
     flexShrink: 1,
   },
   backButton: {
     width: 32,
     height: 32,
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -80,27 +80,29 @@ const styles = StyleSheet.create({
   title: {
     flexShrink: 1,
     color: semanticColorTokens.light.textHeading,
-    fontSize: fontSizes.xxl,
-    lineHeight: 40,
+    fontSize: fontSizes.lg,
+    lineHeight: 24,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-start',
     gap: spacing.sm,
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
+    flexShrink: 0,
   },
   metaPill: {
     height: 48,
-    borderRadius: radius.md,
-    backgroundColor: '#ECEDEF',
-    paddingHorizontal: spacing.md,
+    borderRadius: radius.sm,
+    backgroundColor: 'transparent',
+    paddingHorizontal: spacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.xxs,
   },
   metaText: {
     color: semanticColorTokens.light.textHeading,
-    fontSize: fontSizes.xl,
-    lineHeight: 24,
+    fontSize: fontSizes.md,
+    lineHeight: 20,
   },
 })

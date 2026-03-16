@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
     marginTop: 0,
     zIndex: 2,
-    marginBottom: -2,
+    marginBottom: -1,
   },
   tabButton: {
     height: 48,
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 8,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     borderWidth: 1,
     borderBottomWidth: 0,

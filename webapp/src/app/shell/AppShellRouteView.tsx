@@ -146,7 +146,7 @@ export function AppShellRouteView(props: Props) {
           props.onSetRapportageOnlyInputId(null)
           props.onSetRapportageScreenMode('bewerken')
           props.onSetRapportageEditInputId(reportId)
-          props.navigateTo({ kind: 'nieuwe-rapportage' })
+          props.navigateTo({ kind: 'rapportage', reportId })
         }}
       />
     )
@@ -182,7 +182,7 @@ export function AppShellRouteView(props: Props) {
               props.onSetRapportageOnlyInputId(null)
               props.onSetRapportageScreenMode('bewerken')
               props.onSetRapportageEditInputId(sessionId)
-              props.navigateTo({ kind: 'nieuwe-rapportage' })
+              props.navigateTo({ kind: 'rapportage', reportId: sessionId })
               return
             }
             if (selectedInput?.clientId && selectedInput?.trajectoryId) {

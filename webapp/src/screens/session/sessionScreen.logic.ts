@@ -158,6 +158,10 @@ export function useInputScreen(props: InputScreenProps) {
     deleteSnippet(snippetId)
   }
 
+  function handleSaveSnippetText(snippetId: string, text: string) {
+    updateSnippet(snippetId, { text: String(text || '') })
+  }
+
   function handleSaveSummary(nextSummary: string) {
     if (!session) return
     updateInput(session.id, {
@@ -182,6 +186,7 @@ export function useInputScreen(props: InputScreenProps) {
     isRegeneratingSnippets,
     handleRegenerateInputSnippets,
     handleUpdateSnippetStatus,
+    handleSaveSnippetText,
     handleDeleteSnippet,
     handleSaveSummary,
     createNote,
