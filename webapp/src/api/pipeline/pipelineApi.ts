@@ -98,7 +98,16 @@ function normalizeSnippet(value: unknown): Snippet | null {
   const source = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>
   const id = normalizeText(source.id)
   const inputId = normalizeText(source.sourceInputId ?? source.sourceSessionId ?? source.inputId ?? source.itemId)
-  const fieldId = normalizeText(source.fieldId ?? source.snippetType ?? source.field)
+  const fields = [
+    ...(Array.isArray(source.fieldIds) ? source.fieldIds : []),
+    ...(Array.isArray(source.fields) ? source.fields : []),
+    source.fieldId,
+    source.snippetType,
+    source.field,
+  ]
+    .map((item) => normalizeText(item))
+    .filter((item, index, array) => item.length > 0 && array.indexOf(item) === index)
+  const fieldId = fields[0] ?? ''
   if (!id || !inputId || !fieldId) return null
   const now = Date.now()
   const trajectoryId = normalizeText(source.trajectoryId) || null
@@ -111,6 +120,7 @@ function normalizeSnippet(value: unknown): Snippet | null {
     sourceInputId: inputId,
     sourceSessionId: inputId,
     itemId: inputId,
+    fields,
     field: fieldId,
     fieldId,
     text: normalizeText(source.text),

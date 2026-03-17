@@ -1,0 +1,1098 @@
+﻿// @ts-nocheck
+
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+
+import { ChatMessage } from '@/screens/shared/components/chat/ChatMessage'
+import { ChatComposer } from '@/screens/shared/components/chat/ChatComposer'
+import { Text } from '@/ui/Text'
+import {
+  ReportCheckIcon as CheckIcon,
+  ReportCloseIcon as CloseIcon,
+  ReportPlusIcon as PlusIcon,
+  ReportSessiesIcon as SessiesIcon,
+  ReportUwvLogoIcon as UwvLogoIcon,
+} from '@/icons/ReportScreenIcons'
+import {
+  buildFieldsFromTemplate,
+  buildGeneratedFieldMap,
+  buildReportTextFromFields,
+  capitalizeFirstLetter,
+  extractBsn,
+  exportReportWord,
+  formatDateLabel,
+  formatOnBlur,
+  getGroupTitle,
+  isActivityHoursDistribution,
+  isMainActivityMultichoice,
+  isSpecialistExpertiseDetail,
+  isSpecialistTariffDetail,
+  isSpecialistTariffQuestion,
+  isWerkfitTemplate,
+  normalizeFieldValueForStorage,
+  normalizeMatchValue,
+  normalizeYesNo,
+  parsePostalCodeAndCity,
+  parseStreetAndHouseNumber,
+  placeholderForField,
+  sanitizeCurrencyInput,
+  sanitizeOnChange,
+  sanitizePhoneInput,
+  splitCoacheeName,
+  toPlaceholderKey,
+  runGenerateFromSetup,
+  runSendAssistantMessage,
+} from '@/screens/report/report.logic'
+import { useLocalAppData } from '@/storage/LocalAppDataProvider'
+import { features } from '@/config/features'
+import { colors } from '@/design/theme/colors'
+import { useToast } from '@/toast/ToastProvider'
+import { createChatMessageId, type ChatStateMessage } from '@/types/chatState'
+import { isInputNotesArtifact, isInputPrimaryInputArtifact, isInputReportArtifact } from '@/types/sessionArtifacts'
+import { useReportScreenProps } from '@/screens/report/report.hooks'
+import type {
+  ActivityAllocationRow,
+  InputRow,
+  InputTabKey,
+  ReportScreenProps,
+  UwvField,
+  UwvFieldGroup,
+  ViewMode,
+} from '@/screens/report/report.types'
+
+const MULTILINE_BASE_HEIGHT = 48
+
+
+export function ReportEditorScreen(props: ReportScreenProps) {
+  const { initialCoacheeId, initialSessionId, mode } = useReportScreenProps(props)
+  if (!initialSessionId) return null
+  const { data, createSession, setWrittenReport, updateSession } = useLocalAppData() as any
+  const { showErrorToast, showToast } = useToast()
+  const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
+  const isMountedRef = useRef(true)
+
+  const initialSessionReportText = useMemo(
+    () => (initialSessionId ? data.writtenReports.find((item) => item.sessionId === initialSessionId)?.text ?? '' : ''),
+    [data.writtenReports, initialSessionId],
+  )
+  const [viewMode, setViewMode] = useState<ViewMode>('edit')
+  const [activeTab, setActiveTab] = useState<InputTabKey>('sessies')
+  const [assistantMessage, setAssistantMessage] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generateError, setGenerateError] = useState<string | null>(null)
+  const [generatedReportText, setGeneratedReportText] = useState(initialSessionReportText)
+  const [currentReportSessionId, setCurrentReportSessionId] = useState<string | null>(initialSessionId)
+
+  const activeCoachees = useMemo(() => data.coachees.filter((item) => !item.isArchived), [data.coachees])
+  const selectedCoachee = useMemo(() => {
+    if (initialCoacheeId) {
+      const byId = activeCoachees.find((item) => item.id === initialCoacheeId) ?? null
+      if (byId) return byId
+    }
+    return activeCoachees[0] ?? null
+  }, [activeCoachees, initialCoacheeId])
+  const selectedTrajectory = useMemo(() => {
+    if (!selectedCoachee) return null
+    return data.trajectories.find((item) => item.coacheeId === selectedCoachee.id) ?? null
+  }, [data.trajectories, selectedCoachee])
+
+  const sessionRows = useMemo<InputRow[]>(() => {
+    if (!selectedCoachee) return []
+    // Session is a shared artifact container; for this tab we only include primary input artifacts.
+    return data.sessions
+      .filter((session) => session.coacheeId === selectedCoachee.id && isInputPrimaryInputArtifact(session))
+      .map((session) => ({ id: session.id, title: String(session.title || '').trim() || 'Sessie', dateLabel: formatDateLabel(session.createdAtUnixMs), createdAtUnixMs: session.createdAtUnixMs }))
+      .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
+  }, [data.sessions, selectedCoachee])
+
+  const rapportageRows = useMemo<InputRow[]>(() => {
+    if (!selectedCoachee) return []
+    return data.sessions
+      .filter((session) => session.coacheeId === selectedCoachee.id && isInputReportArtifact(session))
+      .map((session) => ({ id: session.id, title: String(session.title || '').trim() || 'Rapportage', dateLabel: formatDateLabel(session.createdAtUnixMs), createdAtUnixMs: session.createdAtUnixMs }))
+      .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
+  }, [data.sessions, selectedCoachee])
+
+  const noteRows = useMemo<InputRow[]>(() => {
+    if (!selectedCoachee) return []
+    const notesSessionIds = new Set(
+      data.sessions
+        .filter((session) => session.coacheeId === selectedCoachee.id && isInputNotesArtifact(session))
+        .map((session) => session.id),
+    )
+    if (notesSessionIds.size === 0) return []
+    return data.notes
+      .filter((note) => notesSessionIds.has(note.sessionId))
+      .map((note) => ({
+        id: note.id,
+        title: String(note.title || '').trim() || String(note.text || '').trim().split('\n')[0] || 'Notitie',
+        dateLabel: formatDateLabel(note.updatedAtUnixMs),
+        createdAtUnixMs: note.updatedAtUnixMs,
+      }))
+      .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
+  }, [data.notes, data.sessions, selectedCoachee])
+
+  const werkfitTemplates = useMemo(() => data.templates.filter((template) => isWerkfitTemplate(template)).slice(0, 2), [data.templates])
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
+  const [selectedSessionIds, setSelectedSessionIds] = useState<string[]>([])
+  const [selectedRapportageIds, setSelectedRapportageIds] = useState<string[]>([])
+  const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([])
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
+  const [activityAllocationRows, setActivityAllocationRows] = useState<ActivityAllocationRow[]>([{ id: 'row-1', activity: '', hours: '' }])
+  const [specialistExpertiseByField, setSpecialistExpertiseByField] = useState<Record<string, { hours: string; motivation: string }>>({})
+  const [specialistTariffByField, setSpecialistTariffByField] = useState<Record<string, { hourlyRate: string; motivation: string }>>({})
+  const [inputHeights, setInputHeights] = useState<Record<string, number>>({})
+  const [assistantMessages, setAssistantMessages] = useState<ChatStateMessage[]>([])
+  const [isAssistantSending, setIsAssistantSending] = useState(false)
+  const assistantScrollRef = useRef<ScrollView | null>(null)
+  const readyRevealOpacity = useRef(new Animated.Value(1)).current
+  const readyRevealTranslateY = useRef(new Animated.Value(0)).current
+  const shouldAnimateReadyRevealRef = useRef(false)
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (werkfitTemplates.length === 0) {
+      setSelectedTemplateId(null)
+      return
+    }
+    setSelectedTemplateId((current) => (current && werkfitTemplates.some((template) => template.id === current) ? current : null))
+  }, [werkfitTemplates])
+
+  useEffect(() => {
+    if (!initialSessionId) return
+    setViewMode('edit')
+    setGeneratedReportText(initialSessionReportText)
+    setCurrentReportSessionId(initialSessionId)
+  }, [initialSessionId, initialSessionReportText])
+
+  useEffect(() => {
+    if (!initialSessionId || werkfitTemplates.length === 0) return
+    const initialSession = data.sessions.find((item) => item.id === initialSessionId) ?? null
+    if (!initialSession) return
+    const normalizedSessionTitle = normalizeMatchValue(String(initialSession.title || ''))
+    const matchedTemplate = werkfitTemplates.find((template) => normalizeMatchValue(template.name) === normalizedSessionTitle)
+    if (!matchedTemplate) return
+    setSelectedTemplateId(matchedTemplate.id)
+  }, [data.sessions, initialSessionId, werkfitTemplates])
+
+  useEffect(() => {
+    setSelectedSessionIds((current) => {
+      if (current.length === 0) return sessionRows.map((item) => item.id)
+      const validIds = new Set(sessionRows.map((item) => item.id))
+      const next = current.filter((id) => validIds.has(id))
+      return next.length === 0 ? sessionRows.map((item) => item.id) : next
+    })
+  }, [sessionRows])
+
+  useEffect(() => {
+    setSelectedRapportageIds((current) => {
+      if (current.length === 0) return rapportageRows.map((item) => item.id)
+      const validIds = new Set(rapportageRows.map((item) => item.id))
+      const next = current.filter((id) => validIds.has(id))
+      return next.length === 0 ? rapportageRows.map((item) => item.id) : next
+    })
+  }, [rapportageRows])
+
+  useEffect(() => {
+    setSelectedNoteIds((current) => {
+      if (current.length === 0) return noteRows.map((item) => item.id)
+      const validIds = new Set(noteRows.map((item) => item.id))
+      const next = current.filter((id) => validIds.has(id))
+      return next.length === 0 ? noteRows.map((item) => item.id) : next
+    })
+  }, [noteRows])
+
+  const selectedTemplate = useMemo(() => werkfitTemplates.find((template) => template.id === selectedTemplateId) ?? null, [selectedTemplateId, werkfitTemplates])
+  const uwvFields = useMemo(() => buildFieldsFromTemplate(selectedTemplate), [selectedTemplate])
+
+  const groupedFields = useMemo<UwvFieldGroup[]>(() => {
+    if (!selectedTemplate?.name || uwvFields.length === 0) return []
+    const groupMap = new Map<string, UwvFieldGroup>()
+    for (const field of uwvFields) {
+      const group = groupMap.get(field.numberPrefix)
+      if (group) group.fields.push(field)
+      else groupMap.set(field.numberPrefix, { key: field.numberPrefix, title: getGroupTitle(selectedTemplate.name, field.numberPrefix), fields: [field] })
+    }
+    return Array.from(groupMap.values()).sort((a, b) => Number(a.key) - Number(b.key))
+  }, [selectedTemplate?.name, uwvFields])
+
+  const specialistTariffAnswerByGroup = useMemo(() => {
+    const answerByGroup = new Map<string, 'ja' | 'nee' | ''>()
+    for (const group of groupedFields) {
+      const tariffField = group.fields.find((field) => isSpecialistTariffQuestion(field.label))
+      if (!tariffField) continue
+      answerByGroup.set(group.key, normalizeYesNo(fieldValues[tariffField.key] || ''))
+    }
+    return answerByGroup
+  }, [fieldValues, groupedFields])
+
+  useEffect(() => {
+    const { initials, surname, full } = splitCoacheeName(String(selectedCoachee?.name || '').trim())
+    const bsn = extractBsn(String(selectedCoachee?.clientDetails || ''))
+    const parsedVisitAddress = parseStreetAndHouseNumber(String(data.practiceSettings.visitAddress || ''))
+    const parsedPostalAddress = parseStreetAndHouseNumber(String(data.practiceSettings.postalAddress || ''))
+    const parsedPostalCodeCity = parsePostalCodeAndCity(String(data.practiceSettings.postalCodeCity || ''))
+
+    const defaults = {
+      uwvName: capitalizeFirstLetter(String(selectedTrajectory?.uwvContactName || '').trim()),
+      orderNumber: String(selectedTrajectory?.orderNumber || '').trim(),
+      practiceName: capitalizeFirstLetter(String(data.practiceSettings.practiceName || '').trim()),
+      visitAddress: capitalizeFirstLetter(String(data.practiceSettings.visitAddress || '').trim()),
+      postalAddress: capitalizeFirstLetter(String(data.practiceSettings.postalAddress || '').trim()),
+      postalCodeCity: capitalizeFirstLetter(String(data.practiceSettings.postalCodeCity || '').trim()),
+      contactName: capitalizeFirstLetter(String(data.practiceSettings.contactName || '').trim()),
+      contactRole: capitalizeFirstLetter(String(data.practiceSettings.contactRole || '').trim()),
+      contactPhone: sanitizePhoneInput(String(data.practiceSettings.contactPhone || '').trim()),
+      contactEmail: String(data.practiceSettings.contactEmail || '').trim().toLowerCase(),
+      postStreet: capitalizeFirstLetter(parsedPostalAddress.street),
+      postHouseNumber: parsedPostalAddress.houseNumber,
+      postPostcode: parsedPostalCodeCity.postalCode,
+      postCity: capitalizeFirstLetter(parsedPostalCodeCity.city),
+      visitStreet: capitalizeFirstLetter(parsedVisitAddress.street),
+      visitHouseNumber: parsedVisitAddress.houseNumber,
+      visitPostcode: parsedPostalCodeCity.postalCode,
+      visitCity: capitalizeFirstLetter(parsedPostalCodeCity.city),
+    }
+
+    setFieldValues((current) => {
+      const next: Record<string, string> = {}
+      for (const field of uwvFields) {
+        if (current[field.key] !== undefined) {
+          next[field.key] = normalizeFieldValueForStorage(field, current[field.key] || '')
+          continue
+        }
+        const normalizedLabel = normalizeMatchValue(field.label)
+        let value = ''
+        if (field.metadataKind === 'initials') value = initials
+        else if (field.metadataKind === 'surname') value = surname
+        else if (field.metadataKind === 'bsn') value = bsn
+        else if (field.metadataKind === 'order') value = defaults.orderNumber
+        else if (field.metadataKind === 'months') value = ''
+        else if (field.metadataKind === 'phone') value = defaults.contactPhone
+        else if (field.metadataKind === 'email') value = defaults.contactEmail
+        else if (normalizedLabel.includes('naam contactpersoon uwv')) value = defaults.uwvName
+        else if (normalizedLabel.includes('naam organisatie')) value = defaults.practiceName
+        else if (normalizedLabel.includes('postadres straatnaam')) value = defaults.postStreet
+        else if (normalizedLabel.includes('postadres huisnummer')) value = defaults.postHouseNumber
+        else if (normalizedLabel.includes('postadres postcode')) value = defaults.postPostcode
+        else if (normalizedLabel.includes('postadres plaats')) value = defaults.postCity
+        else if (normalizedLabel.includes('bezoekadres straatnaam')) value = defaults.visitStreet
+        else if (normalizedLabel.includes('bezoekadres huisnummer')) value = defaults.visitHouseNumber
+        else if (normalizedLabel.includes('bezoekadres postcode')) value = defaults.visitPostcode
+        else if (normalizedLabel.includes('bezoekadres plaats')) value = defaults.visitCity
+        else if (normalizedLabel.includes('bezoekadres')) value = defaults.visitAddress
+        else if (normalizedLabel.includes('postadres')) value = defaults.postalAddress
+        else if (normalizedLabel.includes('postcode en plaats')) value = defaults.postalCodeCity
+        else if (normalizedLabel.includes('naam contactpersoon re integratiebedrijf')) value = defaults.contactName
+        else if (normalizedLabel.includes('naam contactpersoon')) value = defaults.contactName
+        else if (normalizedLabel.includes('naam client') || normalizedLabel.includes('naam cli?nt')) value = full
+        else if (normalizedLabel.includes('functie contactpersoon')) value = defaults.contactRole
+        next[field.key] = value
+      }
+      const same = Object.keys(next).length === Object.keys(current).length && Object.keys(next).every((key) => next[key] === current[key])
+      return same ? current : next
+    })
+  }, [data.practiceSettings, selectedCoachee?.clientDetails, selectedCoachee?.name, selectedTrajectory?.orderNumber, selectedTrajectory?.uwvContactName, uwvFields])
+
+  useEffect(() => {
+    setSpecialistExpertiseByField((current) => {
+      const next = { ...current }
+      for (const field of uwvFields) {
+        if (!isSpecialistExpertiseDetail(field.label)) continue
+        if (!next[field.key]) next[field.key] = { hours: '', motivation: '' }
+      }
+      return next
+    })
+    setSpecialistTariffByField((current) => {
+      const next = { ...current }
+      for (const field of uwvFields) {
+        if (!isSpecialistTariffDetail(field.label)) continue
+        if (!next[field.key]) next[field.key] = { hourlyRate: '', motivation: '' }
+      }
+      return next
+    })
+  }, [uwvFields])
+
+  useEffect(() => {
+    for (const field of uwvFields) {
+      if (isSpecialistExpertiseDetail(field.label)) {
+        const entry = specialistExpertiseByField[field.key] || { hours: '', motivation: '' }
+        const serialized = `Aantal uren: ${entry.hours}\nMotivering: ${entry.motivation}`.trim()
+        setFieldValues((current) => (current[field.key] === serialized ? current : { ...current, [field.key]: serialized }))
+      }
+      if (isSpecialistTariffDetail(field.label)) {
+        const entry = specialistTariffByField[field.key] || { hourlyRate: '', motivation: '' }
+        const serialized = `Uurtarief exclusief btw: � ${entry.hourlyRate}\nMotivering: ${entry.motivation}`.trim()
+        setFieldValues((current) => (current[field.key] === serialized ? current : { ...current, [field.key]: serialized }))
+      }
+    }
+  }, [specialistExpertiseByField, specialistTariffByField, uwvFields])
+
+  useEffect(() => {
+    const nextCount = assistantMessages.length
+    if (nextCount === 0) return
+    const scrollView = assistantScrollRef.current
+    if (!scrollView) return
+    setTimeout(() => scrollView.scrollToEnd({ animated: true }), 0)
+  }, [assistantMessages.length, isAssistantSending])
+
+  useEffect(() => {
+    const generatedText = String(generatedReportText || '').trim()
+    if (!generatedText || uwvFields.length === 0) return
+    const generatedMap = buildGeneratedFieldMap(generatedText)
+    setFieldValues((current) => {
+      let hasChanges = false
+      const next = { ...current }
+      for (const field of uwvFields) {
+        const rawMatch = String(field.rawLabel || '').trim().match(/^(\d{1,2})(?:[._]([0-9a-z]+))?/i)
+        const numberKey = rawMatch ? `${Number(rawMatch[1])}.${String(rawMatch[2] || '').toLowerCase()}` : ''
+        const candidateByNumber = numberKey ? generatedMap.byNumberKey.get(numberKey) : ''
+        const candidateByLabel = generatedMap.byLabel.get(normalizeMatchValue(field.label))
+        const nextValue = normalizeFieldValueForStorage(field, String(candidateByNumber || candidateByLabel || '').trim())
+        if (!nextValue) continue
+        if (next[field.key] === nextValue) continue
+        next[field.key] = nextValue
+        hasChanges = true
+      }
+      return hasChanges ? next : current
+    })
+  }, [generatedReportText, uwvFields])
+
+  useEffect(() => {
+    if (viewMode !== 'edit' || !currentReportSessionId) return
+    const nextReportText = buildReportTextFromFields(groupedFields, fieldValues)
+    if (!nextReportText) return
+    setWrittenReport(currentReportSessionId, nextReportText)
+    updateSession(currentReportSessionId, {
+      summary: nextReportText,
+      summaryStructured: null,
+      transcriptionStatus: 'done',
+      transcriptionError: null,
+    })
+  }, [currentReportSessionId, fieldValues, groupedFields, viewMode])
+
+  const activeRows = activeTab === 'sessies' ? sessionRows : activeTab === 'rapportages' ? rapportageRows : noteRows
+  const activeSelectedIds =
+    activeTab === 'sessies'
+      ? selectedSessionIds
+      : activeTab === 'rapportages'
+        ? selectedRapportageIds
+        : selectedNoteIds
+  const activeSelectedSet = useMemo(() => new Set(activeSelectedIds), [activeSelectedIds])
+  const areAllActiveRowsSelected = activeRows.length > 0 && activeRows.every((item) => activeSelectedSet.has(item.id))
+
+  const canStartGeneration = Boolean(selectedTemplate)
+  const setGrowHeight = (key: string, nextHeight: number, baseHeight: number) => {
+    const target = Math.max(baseHeight, Math.ceil(nextHeight))
+    setInputHeights((current) => (current[key] === target ? current : { ...current, [key]: target }))
+  }
+  const autoSizeWebTextarea = (heightKey: string, baseHeight: number, event?: any, nativeId?: string) => {
+    if (typeof document === 'undefined') return
+    let textarea: HTMLTextAreaElement | null = null
+    const eventTarget = event?.nativeEvent?.target
+    if (eventTarget instanceof HTMLTextAreaElement) textarea = eventTarget
+    if (!textarea && nativeId) {
+      const node = document.getElementById(nativeId)
+      if (node instanceof HTMLTextAreaElement) textarea = node
+    }
+    if (!textarea) return
+
+    textarea.style.height = 'auto'
+    textarea.style.overflowY = 'hidden'
+    const nextHeight = Math.max(baseHeight, Math.ceil(textarea.scrollHeight))
+    textarea.style.height = `${nextHeight}px`
+    setGrowHeight(heightKey, nextHeight, baseHeight)
+  }
+  const handleMultilineContentSizeChange = (heightKey: string, baseHeight: number, event: any, nativeId?: string) => {
+    setGrowHeight(heightKey, event?.nativeEvent?.contentSize?.height ?? baseHeight, baseHeight)
+    autoSizeWebTextarea(heightKey, baseHeight, event, nativeId)
+  }
+
+  const toggleItemSelection = (id: string) => {
+    if (activeTab === 'sessies') setSelectedSessionIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))
+    else if (activeTab === 'rapportages') setSelectedRapportageIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))
+    else setSelectedNoteIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))
+  }
+
+  const toggleSelectAllForActiveTab = () => {
+    if (activeTab === 'sessies') setSelectedSessionIds(areAllActiveRowsSelected ? [] : sessionRows.map((item) => item.id))
+    else if (activeTab === 'rapportages') setSelectedRapportageIds(areAllActiveRowsSelected ? [] : rapportageRows.map((item) => item.id))
+    else setSelectedNoteIds(areAllActiveRowsSelected ? [] : noteRows.map((item) => item.id))
+  }
+
+  useEffect(() => {
+    if (viewMode !== 'edit' || typeof document === 'undefined') return
+    const nextFrame = requestAnimationFrame(() => {
+      for (const field of uwvFields) {
+        if (field.singleLine) continue
+        autoSizeWebTextarea(field.key, MULTILINE_BASE_HEIGHT, undefined, `new-report-field-${field.key}`)
+        if (isSpecialistExpertiseDetail(field.label)) {
+          autoSizeWebTextarea(`specialist-expertise-${field.key}`, MULTILINE_BASE_HEIGHT, undefined, `new-report-specialist-expertise-${field.key}`)
+        }
+        if (isSpecialistTariffDetail(field.label)) {
+          autoSizeWebTextarea(`specialist-tariff-${field.key}`, MULTILINE_BASE_HEIGHT, undefined, `new-report-specialist-tariff-${field.key}`)
+        }
+      }
+    })
+    return () => cancelAnimationFrame(nextFrame)
+  }, [fieldValues, specialistExpertiseByField, specialistTariffByField, uwvFields, viewMode])
+
+  useEffect(() => {
+    if (viewMode !== 'edit' || !shouldAnimateReadyRevealRef.current) {
+      readyRevealOpacity.setValue(1)
+      readyRevealTranslateY.setValue(0)
+      return
+    }
+
+    shouldAnimateReadyRevealRef.current = false
+    readyRevealOpacity.setValue(0)
+    readyRevealTranslateY.setValue(6)
+    Animated.parallel([
+      Animated.timing(readyRevealOpacity, { toValue: 1, duration: 200, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(readyRevealTranslateY, { toValue: 0, duration: 200, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]).start()
+  }, [readyRevealOpacity, readyRevealTranslateY, viewMode])
+
+  const isFieldValid = (field: UwvField, value: string): boolean => {
+    const trimmed = String(value || '').trim()
+    if (!trimmed) return false
+    if (field.metadataKind === 'bsn') return /^\d{8,9}$/.test(trimmed)
+    if (field.metadataKind === 'months') return /^\d+$/.test(trimmed)
+    if (field.metadataKind === 'phone') return /^\+?\d+$/.test(trimmed)
+    if (field.type === 'multichoice') return trimmed.length > 0
+    return true
+  }
+
+  const getGroupStatus = (group: UwvFieldGroup): 'complete' | 'incomplete' => {
+    const specialistAnswer = specialistTariffAnswerByGroup.get(group.key)
+    const visibleFields = group.fields.filter((field) => {
+      if ((isSpecialistExpertiseDetail(field.label) || isSpecialistTariffDetail(field.label)) && specialistAnswer === 'nee') return false
+      return true
+    })
+    const validCount = visibleFields.filter((field) => isFieldValid(field, fieldValues[field.key] || '')).length
+    return validCount === visibleFields.length && visibleFields.length > 0 ? 'complete' : 'incomplete'
+  }
+
+  async function handleGenerateFromSetup() {
+    await runGenerateFromSetup({
+      selectedTemplate,
+      isGenerating,
+      createSession,
+      selectedCoachee,
+      selectedTrajectory,
+      data,
+      selectedSessionIds,
+      selectedRapportageIds,
+      selectedNoteIds,
+      setCurrentReportSessionId,
+      isMountedRef,
+      setGenerateError,
+      setIsGenerating,
+      setGeneratedReportText,
+      setWrittenReport,
+      updateSession,
+      setViewMode: (nextMode) => setViewMode(nextMode),
+      shouldAnimateReadyRevealRef,
+    })
+  }
+
+  const updateMultichoiceValue = (field: UwvField, option: string) => {
+    const currentValue = String(fieldValues[field.key] || '')
+    const currentItems = currentValue.split(',').map((item) => item.trim()).filter(Boolean)
+    const has = currentItems.includes(option)
+    const nextItems = isSpecialistTariffQuestion(field.label)
+      ? (has ? [] : [option])
+      : (has ? currentItems.filter((item) => item !== option) : [...currentItems, option])
+    setFieldValues((current) => ({ ...current, [field.key]: nextItems.join(', ') }))
+  }
+
+  const addActivityAllocationRow = () => {
+    setActivityAllocationRows((current) => [...current, { id: `row-${Date.now()}-${current.length + 1}`, activity: '', hours: '' }])
+  }
+
+  const removeActivityAllocationRow = (id: string) => {
+    setActivityAllocationRows((current) => {
+      if (current.length <= 1) return current
+      return current.filter((row) => row.id !== id)
+    })
+  }
+
+  const updateActivityAllocationRow = (id: string, patch: Partial<Pick<ActivityAllocationRow, 'activity' | 'hours'>>) => {
+    setActivityAllocationRows((current) => {
+      const next = current.map((row) => row.id === id ? {
+        ...row,
+        ...(patch.activity !== undefined ? { activity: patch.activity } : {}),
+        ...(patch.hours !== undefined ? { hours: patch.hours.replace(/\D/g, '') } : {}),
+      } : row)
+      return next
+    })
+  }
+
+  useEffect(() => {
+    const joined = activityAllocationRows
+      .map((row) => ({ activity: String(row.activity || '').trim(), hours: String(row.hours || '').trim() }))
+      .filter((row) => row.activity.length > 0 || row.hours.length > 0)
+      .map((row) => `${row.activity} (${row.hours} uur)`)
+      .join('; ')
+    const activityField = uwvFields.find((field) => isActivityHoursDistribution(field.label))
+    if (!activityField) return
+    setFieldValues((current) => (current[activityField.key] === joined ? current : { ...current, [activityField.key]: joined }))
+  }, [activityAllocationRows, uwvFields])
+
+  const handleExportWord = async () => {
+    try {
+      if (!selectedTemplate) {
+        showErrorToast('Selecteer eerst een rapporttemplate.')
+        return
+      }
+      const defaultReportText = buildReportTextFromFields(groupedFields, fieldValues)
+      const reportText = String(generatedReportText || defaultReportText || '').trim()
+      const contextValues: Record<string, string> = {}
+      for (const field of uwvFields) {
+        const value = normalizeFieldValueForStorage(field, String(fieldValues[field.key] || '').trim())
+        if (!value) continue
+        const normalizedLabel = normalizeMatchValue(field.label)
+        contextValues[toPlaceholderKey(field.label)] = value
+        contextValues[toPlaceholderKey(field.rawLabel)] = value
+        const rawMatch = String(field.rawLabel || '').trim().match(/^(\d{1,2})(?:[._]([0-9a-z]+))?/)
+        if (rawMatch) {
+          const main = String(rawMatch[1] || '')
+          const sub = String(rawMatch[2] || '')
+          if (main && sub) {
+            const numberKey = `${main}_${sub}`
+            if (normalizedLabel.includes('voorletters')) contextValues[`${numberKey}_voorletters`] = value
+            if (normalizedLabel.includes('achternaam')) contextValues[`${numberKey}_achternaam`] = value
+            if (!normalizedLabel.includes('voorletters') && !normalizedLabel.includes('achternaam')) {
+              contextValues[numberKey] = value
+            }
+            contextValues[`${main}.${sub}`] = value
+          }
+        }
+        if (isSpecialistExpertiseDetail(field.label)) {
+          const entry = specialistExpertiseByField[field.key]
+          if (entry) {
+            contextValues['8_2_aantal_uren'] = String(entry.hours || '').trim()
+            contextValues['8_2_motivering'] = String(entry.motivation || '').trim()
+          }
+        }
+      }
+      const initialsField = uwvFields.find((field) => normalizeMatchValue(field.label).includes('voorletters'))
+      const surnameField = uwvFields.find((field) => normalizeMatchValue(field.label).includes('achternaam'))
+      const initialsValue = initialsField ? String(fieldValues[initialsField.key] || '').trim() : ''
+      const surnameValue = surnameField ? String(fieldValues[surnameField.key] || '').trim() : ''
+      const fullNameValue = [initialsValue, surnameValue].filter(Boolean).join(' ').trim()
+      if (fullNameValue) contextValues.voorletters_en_achternaam = fullNameValue
+      const visitAddressParsed = parseStreetAndHouseNumber(String(data.practiceSettings.visitAddress || '').trim())
+      const visitPostalCodeCityParsed = parsePostalCodeAndCity(String(data.practiceSettings.postalCodeCity || '').trim())
+      const exportContextValues: Record<string, string> = { ...contextValues, report_text: reportText }
+      const setDefaultContextValue = (key: string, value: string) => {
+        if (!value) return
+        if (String(exportContextValues[key] || '').trim()) return
+        exportContextValues[key] = value
+      }
+      setDefaultContextValue('naam_organisatie', String(data.practiceSettings.practiceName || '').trim())
+      setDefaultContextValue('bezoekadres', String(data.practiceSettings.visitAddress || '').trim())
+      setDefaultContextValue('bezoekadres_straatnaam', visitAddressParsed.street)
+      setDefaultContextValue('bezoekadres_huisnummer', visitAddressParsed.houseNumber)
+      setDefaultContextValue('bezoekadres_postcode', visitPostalCodeCityParsed.postalCode)
+      setDefaultContextValue('bezoekadres_plaats', visitPostalCodeCityParsed.city)
+      setDefaultContextValue('postadres', String(data.practiceSettings.postalAddress || data.practiceSettings.visitAddress || '').trim())
+      setDefaultContextValue('postcode_en_plaats', String(data.practiceSettings.postalCodeCity || '').trim())
+      setDefaultContextValue('naam_contactpersoon', String(data.practiceSettings.contactName || '').trim())
+      setDefaultContextValue('functie_contactpersoon', String(data.practiceSettings.contactRole || '').trim())
+      setDefaultContextValue('telefoonnummer_contactpersoon', sanitizePhoneInput(String(data.practiceSettings.contactPhone || '').trim()))
+      setDefaultContextValue('e_mailadres_contactpersoon', String(data.practiceSettings.contactEmail || '').trim().toLowerCase())
+      const didExport = await exportReportWord({
+        templateName: selectedTemplate.name,
+        reportText,
+        contextValues: exportContextValues,
+      })
+      if (!didExport) {
+        showErrorToast('Geen UWV-formulier gekoppeld aan dit rapporttype.')
+        return
+      }
+      showToast('UWV-document ge�xporteerd.')
+    } catch (error) {
+      console.error('[ReportEditorScreen] UWV Word export failed', error)
+      showErrorToast('Het UWV-formulier kon niet worden ge�xporteerd.')
+    }
+  }
+  async function handleSendAssistantMessage() {
+    await runSendAssistantMessage({
+      assistantMessage,
+      isAssistantSending,
+      assistantMessages,
+      createMessageId: createChatMessageId,
+      setAssistantMessages,
+      setAssistantMessage,
+      setIsAssistantSending,
+      groupedFields,
+      fieldValues,
+    })
+  }
+
+
+  return (
+    <Animated.View
+      style={[
+        styles.editRoot,
+        {
+          opacity: readyRevealOpacity,
+          transform: [{ translateY: readyRevealTranslateY }],
+        },
+      ]}
+    >
+      <ScrollView style={styles.screenScroll} contentContainerStyle={styles.screenScrollContent} showsVerticalScrollIndicator={false}>
+        <View style={[styles.page, styles.pageWithAssistant]}>
+          <View style={styles.leftColumn}>
+            <View style={styles.headerWrap}>
+              <View style={styles.headerTopRow}>
+                <Text isSemibold style={styles.title}>{mode === 'bewerken' ? 'Rapportage bewerken' : 'Rapportage controleren'}</Text>
+                <View style={styles.headerActionsRow}>
+                  <Pressable onPress={handleExportWord} style={({ hovered }) => [styles.exportButton, hovered ? styles.exportButtonHovered : undefined]}>
+                    <UwvLogoIcon />
+                    <Text isSemibold style={styles.exportButtonText}>Exporteer naar Word</Text>
+                  </Pressable>
+                </View>
+              </View>
+              <Text style={styles.subtitle}>{selectedTemplate?.name || 'Selecteer een UWV-verslag'}</Text>
+            </View>
+            {groupedFields.map((group) => {
+                const status = getGroupStatus(group)
+                const specialistAnswer = specialistTariffAnswerByGroup.get(group.key)
+                const visibleFields = group.fields.filter((field) => {
+                  if ((isSpecialistExpertiseDetail(field.label) || isSpecialistTariffDetail(field.label)) && specialistAnswer === 'nee') return false
+                  return true
+                })
+                const postAddressFields = visibleFields.filter((field) => normalizeMatchValue(field.label).startsWith('postadres '))
+                const visitAddressFields = visibleFields.filter((field) => normalizeMatchValue(field.label).startsWith('bezoekadres '))
+                const defaultFields = visibleFields.filter((field) => !normalizeMatchValue(field.label).startsWith('postadres ') && !normalizeMatchValue(field.label).startsWith('bezoekadres '))
+
+                const renderField = (field: UwvField) => {
+                        const value = fieldValues[field.key] || ''
+                        if (field.type === 'multichoice') {
+                          const selectedItems = value.split(',').map((item) => item.trim()).filter(Boolean)
+                          const useSquareIndicator = isMainActivityMultichoice(field.label)
+                          return (
+                            <View key={field.key} style={styles.fieldItemFull}>
+                              <Text style={styles.fieldLabel}>{field.label}</Text>
+                              <View style={styles.multichoiceWrap}>
+                                {(field.options || []).map((option) => {
+                                  const isSelected = selectedItems.includes(option)
+                                  return (
+                                    <Pressable key={option} onPress={() => updateMultichoiceValue(field, option)} style={({ hovered }) => [styles.choiceRow, hovered ? styles.choiceRowHovered : undefined]}>
+                                      <View style={[useSquareIndicator ? styles.choiceSquare : styles.choiceCircle, isSelected ? styles.choiceCircleSelected : undefined]}>{isSelected ? <View style={useSquareIndicator ? styles.choiceSquareInner : styles.choiceCircleInner} /> : null}</View>
+                                      <Text style={[styles.choiceRowText, isSelected ? styles.choiceRowTextSelected : undefined]}>{option}</Text>
+                                    </Pressable>
+                                  )
+                                })}
+                              </View>
+                            </View>
+                          )
+                        }
+                        if (isActivityHoursDistribution(field.label)) {
+                          return (
+                            <View key={field.key} style={styles.fieldItemFull}>
+                              <Text style={styles.fieldLabel}>{field.label}</Text>
+                              <View style={styles.activityRowsWrap}>
+                                {activityAllocationRows.map((row, index) => (
+                                  <View key={row.id} style={styles.activityRow}>
+                                    <View style={[styles.activityInputLarge, inputHeights[`activity-${row.id}`] ? { minHeight: inputHeights[`activity-${row.id}`] } : undefined]}>
+                                      <TextInput
+                                        value={row.activity}
+                                        onChangeText={(nextValue) => updateActivityAllocationRow(row.id, { activity: nextValue })}
+                                        onContentSizeChange={(event) => setGrowHeight(`activity-${row.id}`, event.nativeEvent.contentSize.height, 48)}
+                                        placeholder="Re-integratieactiviteit"
+                                        placeholderTextColor="#8E8480"
+                                        style={[styles.input, inputWebStyle]}
+                                      />
+                                    </View>
+                                    <View style={[styles.activityInputSmall, inputHeights[`hours-${row.id}`] ? { minHeight: inputHeights[`hours-${row.id}`] } : undefined]}>
+                                      <TextInput
+                                        value={row.hours}
+                                        onChangeText={(nextValue) => updateActivityAllocationRow(row.id, { hours: nextValue })}
+                                        onContentSizeChange={(event) => setGrowHeight(`hours-${row.id}`, event.nativeEvent.contentSize.height, 48)}
+                                        placeholder="Aantal begeleidingsuren"
+                                        placeholderTextColor="#8E8480"
+                                        keyboardType="numeric"
+                                        style={[styles.input, inputWebStyle]}
+                                      />
+                                    </View>
+                                    {index === activityAllocationRows.length - 1 ? (
+                                      <Pressable onPress={addActivityAllocationRow} style={({ hovered }) => [styles.addActivityButton, hovered ? styles.addActivityButtonHovered : undefined]}>
+                                        <PlusIcon />
+                                      </Pressable>
+                                    ) : (
+                                      <Pressable onPress={() => removeActivityAllocationRow(row.id)} style={({ hovered }) => [styles.removeActivityButton, hovered ? styles.removeActivityButtonHovered : undefined]}>
+                                        <CloseIcon />
+                                      </Pressable>
+                                    )}
+                                  </View>
+                                ))}
+                              </View>
+                            </View>
+                          )
+                        }
+                        if (isSpecialistExpertiseDetail(field.label)) {
+                          const entry = specialistExpertiseByField[field.key] || { hours: '', motivation: '' }
+                          return (
+                            <View key={field.key} style={styles.fieldItemFull}>
+                              <Text style={styles.fieldLabel}>{field.label}</Text>
+                              <View style={styles.specialFieldWrap}>
+                                <View style={styles.fieldItem}>
+                                  <Text style={styles.fieldLabel}>Aantal uren</Text>
+                                  <View style={styles.inputWrap}>
+                                    <TextInput
+                                      value={entry.hours}
+                                      onChangeText={(nextValue) => setSpecialistExpertiseByField((current) => ({ ...current, [field.key]: { ...entry, hours: nextValue.replace(/\D/g, '') } }))}
+                                      placeholder="Bijv. 8"
+                                      placeholderTextColor="#8E8480"
+                                      keyboardType="numeric"
+                                      style={[styles.input, inputWebStyle]}
+                                    />
+                                  </View>
+                                </View>
+                                <View style={styles.fieldItemFull}>
+                                  <Text style={styles.fieldLabel}>Motivering</Text>
+                                  <View style={[styles.inputWrap, styles.inputWrapMultiline, inputHeights[`specialist-expertise-${field.key}`] ? { minHeight: inputHeights[`specialist-expertise-${field.key}`] } : undefined]}>
+                                    <TextInput
+                                      nativeID={`new-report-specialist-expertise-${field.key}`}
+                                      value={entry.motivation}
+                                      onChangeText={(nextValue) => setSpecialistExpertiseByField((current) => ({ ...current, [field.key]: { ...entry, motivation: nextValue } }))}
+                                      onChange={(event) => autoSizeWebTextarea(`specialist-expertise-${field.key}`, MULTILINE_BASE_HEIGHT, event)}
+                                      onContentSizeChange={(event) =>
+                                        handleMultilineContentSizeChange(`specialist-expertise-${field.key}`, MULTILINE_BASE_HEIGHT, event, `new-report-specialist-expertise-${field.key}`)
+                                      }
+                                      multiline
+                                      scrollEnabled={false}
+                                      textAlignVertical="top"
+                                      placeholder="Typ uw motivering"
+                                      placeholderTextColor="#8E8480"
+                                      style={[
+                                        styles.input,
+                                        styles.inputMultiline,
+                                        inputHeights[`specialist-expertise-${field.key}`]
+                                          ? { height: inputHeights[`specialist-expertise-${field.key}`] }
+                                          : undefined,
+                                        inputWebStyle,
+                                      ]}
+                                    />
+                                  </View>
+                                </View>
+                              </View>
+                            </View>
+                          )
+                        }
+                        if (isSpecialistTariffDetail(field.label)) {
+                          const entry = specialistTariffByField[field.key] || { hourlyRate: '', motivation: '' }
+                          return (
+                            <View key={field.key} style={styles.fieldItemFull}>
+                              <Text style={styles.fieldLabel}>{field.label}</Text>
+                              <View style={styles.specialFieldWrap}>
+                                <View style={styles.fieldItem}>
+                                  <Text style={styles.fieldLabel}>Uurtarief exclusief btw</Text>
+                                  <View style={styles.currencyWrap}>
+                                    <Text style={styles.currencyPrefix}>�</Text>
+                                    <TextInput
+                                      value={entry.hourlyRate}
+                                      onChangeText={(nextValue) => setSpecialistTariffByField((current) => ({ ...current, [field.key]: { ...entry, hourlyRate: sanitizeCurrencyInput(nextValue) } }))}
+                                      placeholder="125,00"
+                                      placeholderTextColor="#8E8480"
+                                      keyboardType="decimal-pad"
+                                      style={[styles.input, styles.currencyInput, inputWebStyle]}
+                                    />
+                                  </View>
+                                </View>
+                                <View style={styles.fieldItemFull}>
+                                  <Text style={styles.fieldLabel}>Motivering</Text>
+                                  <View style={[styles.inputWrap, styles.inputWrapMultiline, inputHeights[`specialist-tariff-${field.key}`] ? { minHeight: inputHeights[`specialist-tariff-${field.key}`] } : undefined]}>
+                                    <TextInput
+                                      nativeID={`new-report-specialist-tariff-${field.key}`}
+                                      value={entry.motivation}
+                                      onChangeText={(nextValue) => setSpecialistTariffByField((current) => ({ ...current, [field.key]: { ...entry, motivation: nextValue } }))}
+                                      onChange={(event) => autoSizeWebTextarea(`specialist-tariff-${field.key}`, MULTILINE_BASE_HEIGHT, event)}
+                                      onContentSizeChange={(event) =>
+                                        handleMultilineContentSizeChange(`specialist-tariff-${field.key}`, MULTILINE_BASE_HEIGHT, event, `new-report-specialist-tariff-${field.key}`)
+                                      }
+                                      multiline
+                                      scrollEnabled={false}
+                                      textAlignVertical="top"
+                                      placeholder="Typ uw motivering"
+                                      placeholderTextColor="#8E8480"
+                                      style={[
+                                        styles.input,
+                                        styles.inputMultiline,
+                                        inputHeights[`specialist-tariff-${field.key}`]
+                                          ? { height: inputHeights[`specialist-tariff-${field.key}`] }
+                                          : undefined,
+                                        inputWebStyle,
+                                      ]}
+                                    />
+                                  </View>
+                                </View>
+                              </View>
+                            </View>
+                          )
+                        }
+                        const multiline = !field.singleLine
+                        return (
+                          <View key={field.key} style={[styles.fieldItem, multiline ? styles.fieldItemFull : undefined]}>
+                            <Text style={styles.fieldLabel}>{field.label}</Text>
+                            <View style={[styles.inputWrap, multiline ? styles.inputWrapMultiline : undefined, inputHeights[field.key] ? { minHeight: inputHeights[field.key] } : undefined]}>
+                              <TextInput
+                                nativeID={multiline ? `new-report-field-${field.key}` : undefined}
+                                value={value}
+                                onChangeText={(nextValue) => setFieldValues((current) => ({ ...current, [field.key]: sanitizeOnChange(field.metadataKind, nextValue, current[field.key] || '') }))}
+                                onChange={multiline ? (event) => autoSizeWebTextarea(field.key, MULTILINE_BASE_HEIGHT, event) : undefined}
+                                onBlur={() => setFieldValues((current) => ({ ...current, [field.key]: formatOnBlur(field.metadataKind, current[field.key] || '') }))}
+                                onContentSizeChange={(event) =>
+                                  multiline
+                                    ? handleMultilineContentSizeChange(field.key, MULTILINE_BASE_HEIGHT, event, `new-report-field-${field.key}`)
+                                    : setGrowHeight(field.key, event.nativeEvent.contentSize.height, 48)
+                                }
+                                multiline={multiline}
+                                scrollEnabled={false}
+                                placeholder={placeholderForField(field)}
+                                placeholderTextColor="#8E8480"
+                                textAlignVertical={multiline ? 'top' : 'center'}
+                                keyboardType={
+                                  field.metadataKind === 'phone'
+                                    ? 'phone-pad'
+                                    : field.metadataKind === 'months' || field.metadataKind === 'bsn'
+                                      ? 'number-pad'
+                                      : undefined
+                                }
+                                style={[
+                                  styles.input,
+                                  multiline ? styles.inputMultiline : undefined,
+                                  multiline && inputHeights[field.key] ? { height: inputHeights[field.key] } : undefined,
+                                  inputWebStyle,
+                                ]}
+                              />
+                            </View>
+                          </View>
+                        )
+                      }
+
+              return (
+                <View key={group.key} style={[styles.formCard, status === 'complete' ? styles.formCardComplete : styles.formCardIncomplete]}>
+                  <View style={styles.formCardHeader}>
+                    <Text isSemibold style={styles.formCardTitle}>{group.title}</Text>
+                    <View style={[styles.statusBadge, status === 'complete' ? styles.statusBadgeComplete : styles.statusBadgeIncomplete]}>
+                      <Text style={[styles.statusBadgeText, status === 'complete' ? styles.statusBadgeTextComplete : styles.statusBadgeTextIncomplete]}>{status === 'complete' ? 'Compleet' : 'Onvolledig'}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.fieldGrid}>
+                    {defaultFields.map(renderField)}
+                  </View>
+                  {group.key === '3' ? (
+                    <View style={styles.addressSectionsWrap}>
+                      <View style={styles.addressSection}>
+                        <Text isSemibold style={styles.addressSectionTitle}>Postadres</Text>
+                        <View style={styles.addressSectionGrid}>{postAddressFields.map(renderField)}</View>
+                      </View>
+                      <View style={styles.addressSection}>
+                        <Text isSemibold style={styles.addressSectionTitle}>Bezoekadres</Text>
+                        <View style={styles.addressSectionGrid}>{visitAddressFields.map(renderField)}</View>
+                      </View>
+                    </View>
+                  ) : null}
+                </View>
+              )
+            })}
+          </View>
+        </View>
+      </ScrollView>
+      <View style={styles.rightColumn}>
+        <View style={styles.assistantCard}>
+          <View style={styles.assistantHeader}>
+            <View>
+              <Text isSemibold style={styles.assistantTitle}>AI Assistent</Text>
+              <Text style={styles.assistantSubtitle}>Verbeter je rapport</Text>
+            </View>
+          </View>
+          <ScrollView
+            ref={assistantScrollRef}
+            style={styles.assistantMessages}
+            contentContainerStyle={assistantMessages.length === 0 ? styles.assistantMessagesEmpty : styles.assistantMessagesContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {assistantMessages.length === 0 ? (
+              <Text style={styles.assistantEmptyText}>Stel een vraag over deze rapportage.</Text>
+            ) : (
+              <>
+                {assistantMessages.map((message) => (
+                  <ChatMessage key={message.id} role={message.role} text={message.text} />
+                ))}
+                {isAssistantSending ? <ChatMessage role="assistant" text="" isLoading /> : null}
+              </>
+            )}
+          </ScrollView>
+          <View style={styles.assistantComposerWrap}>
+            <ChatComposer
+              value={assistantMessage}
+              onChangeValue={setAssistantMessage}
+              onSend={() => {
+                void handleSendAssistantMessage()
+              }}
+              showDisclaimer={false}
+              sendIconVariant="arrow"
+              preferCenteredSingleLine
+              forceSingleLine
+              isSendDisabled={isAssistantSending || assistantMessage.trim().length === 0}
+            />
+          </View>
+        </View>
+      </View>
+    </Animated.View>
+  )
+}
+
+const styles = StyleSheet.create({
+  editRoot: { flex: 1 },
+  screenScroll: { flex: 1 },
+  screenScrollContent: { paddingBottom: 24 },
+  setupContainer: { minHeight: '100%', gap: 16, padding: 24 },
+  setupHeaderWrap: { gap: 6 },
+  setupTitle: { fontSize: 40, lineHeight: 46, color: '#2C111F' },
+  setupSubtitle: { fontSize: 16, lineHeight: 24, color: '#2C111F' },
+  setupContentRow: { flexDirection: 'row', gap: 24, alignItems: 'flex-start' },
+  setupLeftColumn: { flex: 1, minWidth: 0 },
+  setupRightColumn: { width: 437, gap: 16 },
+  setupCard: { borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFE0E2', padding: 20, ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ) },
+  setupSummaryCard: { borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFE0E2', padding: 20, flexDirection: 'row', gap: 14, ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ) },
+  setupSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  setupSectionTitle: { fontSize: 16, lineHeight: 20, color: '#2C111F' },
+  setupSectionSubtitle: { marginTop: 4, fontSize: 14, lineHeight: 18, color: '#93858D' },
+  generateErrorText: { marginTop: 12, fontSize: 13, lineHeight: 18, color: '#B42318' },
+  selectAllButton: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 28, paddingHorizontal: 8, borderRadius: 8 },
+  selectAllButtonDisabled: { opacity: 0.6 },
+  selectAllButtonHovered: { backgroundColor: colors.hoverBackground },
+  selectAllText: { fontSize: 15, lineHeight: 20, color: '#BE0165' },
+  selectAllTextDisabled: { color: '#93858D' },
+  selectAllCheckbox: { width: 16, height: 16, borderRadius: 4, borderWidth: 1, borderColor: '#767676', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
+  selectAllCheckboxSelected: { borderColor: '#BE0165', backgroundColor: '#BE0165' },
+  tabRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10, paddingVertical: 14 },
+  tabButton: { borderRadius: 8, minHeight: 32, paddingHorizontal: 8, alignItems: 'center', flexDirection: 'row', gap: 8 },
+  tabButtonDisabled: { opacity: 0.5 },
+  tabButtonHovered: { backgroundColor: '#F1EDF2' },
+  tabButtonActive: { backgroundColor: '#FCF2F7' },
+  tabText: { fontSize: 16, lineHeight: 20, color: '#2C111F' },
+  tabCountBadge: { backgroundColor: '#F3F4F6', borderRadius: 16, paddingHorizontal: 8, paddingVertical: 2 },
+  tabCountText: { fontSize: 12, lineHeight: 16, color: '#2C111F' },
+  sessiesIconWrap: { width: 18, height: 18 },
+  inputList: { maxHeight: 560 },
+  inputListContent: { paddingBottom: 8, gap: 12 },
+  inputListPlaceholder: { minHeight: 120, borderRadius: 8, borderWidth: 1, borderColor: '#DFE0E2', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 16, gap: 6 },
+  inputListPlaceholderTitle: { fontSize: 16, lineHeight: 20, color: '#2C111F', textAlign: 'center' },
+  inputListPlaceholderText: { fontSize: 14, lineHeight: 20, color: '#93858D', textAlign: 'center' },
+  inputRow: { minHeight: 76, borderRadius: 8, borderWidth: 1, borderColor: '#DFE0E2', backgroundColor: '#FFFFFF', paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  inputRowHovered: { borderColor: '#C9CCD1', backgroundColor: '#FBFBFC' },
+  checkbox: { width: 16, height: 16, borderRadius: 4, borderWidth: 1, borderColor: '#767676', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
+  checkboxSelected: { borderColor: '#BE0165', backgroundColor: '#BE0165' },
+  inputMeta: { flex: 1, minWidth: 0, gap: 2 },
+  inputTitle: { fontSize: 20, lineHeight: 24, color: '#2C111F' },
+  inputDate: { fontSize: 14, lineHeight: 18, color: '#93858D' },
+  templateList: { marginTop: 12, gap: 10 },
+  templateCard: { borderRadius: 8, borderWidth: 1, borderColor: '#DFE0E2', backgroundColor: '#FFFFFF', padding: 14, flexDirection: 'row', gap: 10 },
+  templateCardHovered: { backgroundColor: '#FAFBFD' },
+  templateCardSelected: { borderColor: '#BE0165', backgroundColor: '#FCF2F7' },
+  templateRadio: { width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: '#767676', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
+  templateRadioSelected: { borderColor: '#0075FF' },
+  templateRadioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#0075FF' },
+  templateTextWrap: { flex: 1, gap: 4 },
+  templateName: { fontSize: 20, lineHeight: 24, color: '#2C111F' },
+  templateDescription: { fontSize: 14, lineHeight: 18, color: '#6B7280' },
+  generateButton: { marginTop: 16, height: 44, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 10, backgroundColor: '#BE0165' },
+  generateButtonHovered: { backgroundColor: '#A50058' },
+  generateButtonDisabled: { backgroundColor: '#C6C6C6' },
+  generateButtonText: { fontSize: 15, lineHeight: 20, color: '#FFFFFF' },
+  page: { minHeight: '100%', paddingTop: 24, paddingBottom: 24, paddingLeft: 24, paddingRight: 12 },
+  leftColumn: { maxWidth: '100%', gap: 12 },
+  pageWithAssistant: { ...( { paddingRight: 456 } as any ) },
+  rightColumn: { width: 428, maxWidth: '100%', ...( { position: 'absolute', top: 24, right: 12, bottom: 24 } as any ) },
+  headerWrap: { gap: 6 },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  headerActionsRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  title: { fontSize: 44, lineHeight: 50, color: '#2C111F' },
+  subtitle: { fontSize: 16, lineHeight: 24, color: '#2C111F' },
+  exportButton: { minHeight: 44, borderRadius: 8, paddingHorizontal: 14, borderWidth: 1, borderColor: '#007ACF', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 10 },
+  exportButtonHovered: { backgroundColor: '#EFF7FF' },
+  exportButtonText: { fontSize: 14, lineHeight: 18, color: '#007ACF' },
+  formCard: { borderRadius: 12, borderWidth: 1, backgroundColor: '#FFFFFF', padding: 16, gap: 12, ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ) },
+  formCardComplete: { borderColor: '#008234' },
+  formCardIncomplete: { borderColor: '#DC2626' },
+  formCardHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  formCardTitle: { flex: 1, fontSize: 16, lineHeight: 20, color: '#2C111F' },
+  statusBadge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2 },
+  statusBadgeComplete: { backgroundColor: '#D4FDE5' },
+  statusBadgeIncomplete: { backgroundColor: '#FEE2E2' },
+  statusBadgeText: { fontSize: 12, lineHeight: 16 },
+  statusBadgeTextComplete: { color: '#008234' },
+  statusBadgeTextIncomplete: { color: '#DC2626' },
+  fieldGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  fieldItem: { width: '48.5%', gap: 6 },
+  fieldItemFull: { width: '100%', gap: 6 },
+  fieldLabel: { fontSize: 14, lineHeight: 18, color: '#2C111F' },
+  inputWrap: { minHeight: 48, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', paddingHorizontal: 12, justifyContent: 'center' },
+  inputWrapMultiline: { minHeight: MULTILINE_BASE_HEIGHT, paddingTop: 10, paddingBottom: 10, justifyContent: 'flex-start' },
+  input: { width: '100%', padding: 0, fontSize: 14, lineHeight: 20, color: '#2C111F' },
+  inputMultiline: { minHeight: 20, paddingTop: 2 },
+  multichoiceWrap: { flexDirection: 'column', gap: 10 },
+  choiceRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 8, paddingHorizontal: 8 },
+  choiceRowHovered: { backgroundColor: '#F8FAFC' },
+  choiceCircle: { width: 18, height: 18, borderRadius: 9, borderWidth: 1, borderColor: '#B7BCC5', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
+  choiceSquare: { width: 18, height: 18, borderRadius: 4, borderWidth: 1, borderColor: '#B7BCC5', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
+  choiceCircleSelected: { borderColor: '#BE0165' },
+  choiceCircleInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#BE0165' },
+  choiceSquareInner: { width: 10, height: 10, borderRadius: 2, backgroundColor: '#BE0165' },
+  choiceRowText: { fontSize: 14, lineHeight: 18, color: '#2C111F' },
+  choiceRowTextSelected: { color: '#BE0165' },
+  activityRowsWrap: { gap: 8 },
+  activityRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  activityInputLarge: { flex: 1, minHeight: 48, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', paddingHorizontal: 12, justifyContent: 'center' },
+  activityInputSmall: { width: 220, minHeight: 48, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', paddingHorizontal: 12, justifyContent: 'center' },
+  addActivityButton: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#BE0165', alignItems: 'center', justifyContent: 'center' },
+  addActivityButtonHovered: { backgroundColor: '#A50058' },
+  removeActivityButton: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+  removeActivityButtonHovered: { backgroundColor: '#F3F4F6' },
+  addressSectionsWrap: { gap: 12 },
+  addressSection: { gap: 8 },
+  addressSectionTitle: { fontSize: 14, lineHeight: 18, color: '#2C111F' },
+  addressSectionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  specialFieldWrap: { gap: 12 },
+  currencyWrap: { minHeight: 48, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  currencyPrefix: { fontSize: 14, lineHeight: 18, color: '#2C111F' },
+  currencyInput: { flex: 1 },
+  assistantCard: { borderRadius: 12, borderWidth: 1, borderColor: '#DFE0E2', backgroundColor: '#FFFFFF', height: '100%', ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ) },
+  assistantHeader: { minHeight: 72, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center' },
+  assistantTitle: { fontSize: 20, lineHeight: 24, color: '#2C111F' },
+  assistantSubtitle: { fontSize: 14, lineHeight: 18, color: '#93858D' },
+  assistantMessages: { flex: 1 },
+  assistantMessagesContent: { gap: 12, paddingHorizontal: 20, paddingVertical: 14 },
+  assistantMessagesEmpty: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 14 },
+  assistantEmptyText: { fontSize: 14, lineHeight: 20, color: '#93858D', textAlign: 'center' },
+  assistantComposerWrap: { paddingHorizontal: 20, paddingBottom: 16 },
+  avatarCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#E9D7E1', alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 16, lineHeight: 20, color: '#2C111F' },
+  summaryMeta: { flex: 1, gap: 10 },
+  summaryName: { fontSize: 18, lineHeight: 22, color: '#2C111F' },
+  summaryLine: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  summaryLabel: { fontSize: 14, lineHeight: 18, color: '#93858D' },
+  summaryValue: { fontSize: 14, lineHeight: 18, color: '#2C111F', textAlign: 'right' },
+})
+
+
+
+
+
+
+
+
+

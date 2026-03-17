@@ -121,6 +121,7 @@ type ContextValue = {
     updatedAtUnixMs?: number
     trajectoryId: string | null
     inputId: string
+    fields?: string[]
     field: string
     text: string
     date: number
@@ -129,6 +130,7 @@ type ContextValue = {
   updateSnippet: (
     snippetId: string,
     values: {
+      fields?: string[]
       field?: string
       text?: string
       status?: Snippet['status']
@@ -466,7 +468,13 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
       createSnippet: (values) => {
         const now = Date.now()
         const inputId = values.inputId
-        const fieldId = values.field
+        const fields = [
+          ...(Array.isArray(values.fields) ? values.fields : []),
+          values.field,
+        ]
+          .map((value) => String(value || '').trim())
+          .filter((value, index, array) => value.length > 0 && array.indexOf(value) === index)
+        const fieldId = fields[0] || 'general'
         const snippet: Snippet = {
           id: values.id ?? createId('snippet'),
           clientId: data.inputs.find((item) => item.id === inputId)?.clientId ?? null,
@@ -475,6 +483,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           sourceInputId: inputId,
           sourceSessionId: inputId,
           itemId: values.itemId ?? inputId,
+          fields,
           field: fieldId,
           fieldId,
           text: values.text,
@@ -501,6 +510,7 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
         runRemoteMutation('update snippet', () =>
           snippetApi.update({
             id: snippetId,
+            fields: values.fields,
             field: values.field,
             text: values.text,
             status: values.status,

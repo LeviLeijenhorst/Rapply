@@ -7,6 +7,7 @@ export async function createSnippetRemote(snippet: Snippet): Promise<void> {
 
 export async function updateSnippetRemote(params: {
   id: string
+  fields?: string[]
   field?: string
   text?: string
   status?: Snippet['status']

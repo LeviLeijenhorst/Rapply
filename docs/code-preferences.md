@@ -1,286 +1,63 @@
-This document defines the coding principles and architectural preferences for the Coachscribe codebase.
+# Coachscribe Code Preferences
 
-All engineers, AI agents, and contributors should follow these guidelines.
+This document defines implementation rules for the active migrated product (`webapp` + `server`), with emphasis on the pipeline.
 
----
+## 1. Architectural defaults
 
-# 1. General Philosophy
+- Server is the canonical source of truth.
+- Frontend state is fetch/cache/UI state only.
+- AI orchestration lives on the server.
+- Frontend must call backend tools with explicit names; it must not assemble prompts or reasoning context.
+- Avoid thin passthrough files that obscure ownership. Prefer domain modules with clear responsibility.
 
-The codebase should be:
+## 2. Canonical pipeline terminology
 
-- consistent  
-- explicit  
-- modular  
-- readable  
-- predictable  
+Use these terms consistently in pipeline surfaces, types, routes, and docs:
 
-Avoid clever abstractions.  
-Prefer clarity over complexity.
+- `client`
+- `trajectory`
+- `input`
+- `note`
+- `snippet`
+- `report`
 
-Every file and folder should have a clear purpose.
+Avoid legacy naming in new pipeline surfaces:
 
----
+- `coachee`
+- `session` (when the domain object is an input)
+- `writtenReport`
 
-# 2. Naming Conventions
+## 3. Pipeline identity rules
 
-Names must clearly describe what something does or represents.
+- `fieldId` is the canonical report question id.
+- Snippets are question-specific and keyed by `fieldId`.
+- Structured report JSON (`report_structured_json`) is the editable report source of truth.
+- Freeform `report_text` is derived/export support only.
 
-## Preferred naming style
+## 4. AI and prompt ownership
 
-Use descriptive names.
+- No prompts in frontend pipeline code.
+- No frontend evidence grouping for pipeline chat or report generation.
+- Backend tools own:
+  - prompt construction
+  - context grouping
+  - evidence selection
+  - model routing
 
-Examples:
+## 5. Domain foldering and file ownership
 
-generateSummary.ts  
-extractSnippets.ts  
-getReportStructure.ts  
-transcribeAudio.ts  
-approveSnippet.ts  
-rejectSnippet.ts  
+- Organize by domain (`pipeline`, `reports`, `snippets`, `chat`, `clients`, `inputs`, `trajectories`, `notes`).
+- Keep one file focused on one responsibility.
+- Prefer explicit names (`generateReport`, `regenerateReportField`, `sendReportChatMessage`) over generic names.
 
-## Avoid vague names
+## 6. TypeScript and quality rules
 
-Do NOT use:
+- No `@ts-nocheck` in pipeline surfaces.
+- Prefer explicit shared types for report fields, field versions, and pipeline chat responses.
+- Keep transformations deterministic and side-effect free where possible.
 
-helpers.ts  
-logic.ts  
-manager.ts  
-handler.ts  
-misc.ts  
-common.ts  
-stuff.ts  
+## 7. Export and template rules
 
-Names must communicate intent.
-
----
-
-# 3. Domain Terminology
-
-Use the current product terminology consistently.
-
-Correct terms:
-
-- client  
-- session  
-- report  
-- snippet  
-- summary  
-- transcript  
-
-Avoid legacy terms:
-
-- coachee  
-- sessie  
-- rapportage  
-
----
-
-# 4. Folder Structure Philosophy
-
-Folders represent **domains**, not technical layers.
-
-Good examples:
-
-ai/  
-snippets/  
-reports/  
-transcription/  
-chat/  
-clients/  
-sessions/  
-
-Avoid meaningless generic folders:
-
-helpers/  
-managers/  
-misc/  
-temp/  
-old/  
-
----
-
-# 5. UI Structure
-
-UI code should follow these rules.
-
-## Screen-owned components
-
-Components specific to a screen should live inside that screen folder.
-
-Example:
-
-screens/session/components/  
-screens/client/components/  
-screens/clients/components/  
-
-## Shared UI components
-
-Reusable UI components belong in:
-
-ui/  
-ui/components/  
-ui/inputs/  
-ui/modals/  
-ui/layout/  
-
-Avoid duplicating UI components.
-
-Reuse existing primitives where possible.
-
----
-
-# 6. File Responsibility
-
-Each file should have **one clear responsibility**.
-
-Bad:
-
-sessionLogic.ts  
-
-Good:
-
-generateSessionSummary.ts  
-extractSessionSnippets.ts  
-approveSnippet.ts  
-
-Do not combine unrelated functionality in a single file.
-
----
-
-# 7. Modularity
-
-Prefer smaller focused components.
-
-Large screens should be split into:
-
-- headers  
-- cards  
-- panels  
-- tab systems  
-- modals  
-- sections  
-
-But do not over-fragment into meaningless tiny files.
-
----
-
-# 8. Reuse Rules
-
-Reuse existing patterns whenever possible.
-
-Examples:
-
-- tab indicators  
-- loading states  
-- buttons  
-- layout containers  
-- form inputs  
-- icons  
-
-Do not create duplicate implementations of existing UI primitives.
-
----
-
-# 9. Styling Preferences
-
-Use the existing design system and theme tokens.
-
-Avoid:
-
-- hardcoded colors  
-- random spacing values  
-- inconsistent font sizes  
-
-Prefer:
-
-- theme tokens  
-- shared spacing values  
-- consistent typography  
-
----
-
-# 10. Icons
-
-Reuse icons from the icons directory.
-
-Do not create new icons if an existing one already fits.
-
-Prefer icon components instead of inline SVGs when possible.
-
----
-
-# 11. Animation
-
-Animations should follow the existing animation style.
-
-Do not introduce completely new animation patterns.
-
-Reuse the same animation behavior across screens where possible.
-
----
-
-# 12. No Catch-All Utility Files
-
-Avoid:
-
-utils.ts  
-helpers.ts  
-common.ts  
-misc.ts  
-
-Utilities should be grouped by domain.
-
-Example:
-
-utils/date/  
-utils/text/  
-
----
-
-# 13. Consistency Rule
-
-If a concept exists for one entity, it should exist consistently for similar entities.
-
-Example:
-
-If there is:
-
-snippetTypes.ts  
-
-Then other domains should follow similar patterns.
-
-Avoid one-off patterns.
-
----
-
-# 14. Do Not Force Architecture
-
-If a feature does not clearly belong in an existing file, create a new file.
-
-Do NOT force unrelated logic into an existing file just to satisfy structure.
-
----
-
-# 15. No Dead Code
-
-Remove:
-
-- unused modules  
-- legacy implementations  
-- abandoned features  
-- duplicate implementations  
-
----
-
-# 16. Documentation
-
-Architecture and product behavior should be documented.
-
-The repository should contain:
-
-docs/product-features.md  
-docs/code-preferences.md  
-docs/ai-pipeline.md  
-docs/architecture.md  
-
-These documents define the system's structure and behavior.
+- UWV export reads from structured report field maps deterministically.
+- Do not reparse freeform markdown as report editing source.
+- Current implementation supports the two active UWV templates; template loading must remain extensible so `tussentijdse rapportage` can be added without redesign.

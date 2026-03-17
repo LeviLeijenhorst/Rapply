@@ -357,12 +357,21 @@ export function useNewInputModalController({
       return
     }
 
+    if (initialQuickAction === 'write-report') {
+      setSelectedOption('schrijven')
+      setSelectedOptionGroup(null)
+      setOpenOptionGroup(null)
+      setInputTitle('Gespreksverslag')
+      setStep('select')
+      return
+    }
+
     if (initialQuickAction === 'record-video') {
       setSelectedOption('record-video')
       setSelectedOptionGroup('gesprek')
       setOpenOptionGroup(null)
       setInputTitle('Video call')
-      setStep('recording')
+      setStep('select')
       return
     }
 
@@ -680,30 +689,34 @@ export function useNewInputModalController({
     return activeClients.find((client) => client.id === selectedClientId) ?? null
   }, [activeClients, selectedClientId])
 
+  useEffect(() => {
+    if (!visible) return
+    if (selectedOption !== 'record-video') return
+    if (selectedClientId) return
+    const fallbackClientId = String(activeClients[0]?.id || '').trim()
+    if (!fallbackClientId) return
+    setSelectedClientId(fallbackClientId)
+    setSelectedTrajectoryId(
+      resolveDefaultTrajectoryIdForClient({
+        clientId: fallbackClientId,
+        initialTrajectoryId,
+        trajectoriesByClientId,
+      }),
+    )
+  }, [activeClients, initialTrajectoryId, selectedClientId, selectedOption, setSelectedClientId, setSelectedTrajectoryId, trajectoriesByClientId, visible])
+
   const clientOptions = useMemo(() => {
     return [{ id: null, name: unassignedClientLabel }, ...activeClients]
   }, [activeClients])
 
   const bars = useMemo(() => Array.from({ length: waveBarCount }, (_, index) => index), [waveBarCount])
   const isRealtimeModeActive = transcriptionMode === 'azure-realtime-live'
+  const shouldUseRealtimeForRecording = isRealtimeModeActive || selectedOption === 'record-video'
   const liveWaveHeights = useLiveAudioWaveformBars({
     mediaStream: recorder.mediaStream,
     barCount: waveBarCount,
     isActive: step === 'recording' && (recorder.status === 'recording' || recorder.status === 'paused'),
   })
-  const effectiveLiveWaveHeights = useMemo(() => {
-    const hasRealWave = liveWaveHeights.some((value) => Number.isFinite(value) && value > 10)
-    if (hasRealWave) return liveWaveHeights
-    const level = Math.max(0, Math.min(1, Number((recorder as any).liveChunkLevel || 0)))
-    if (level <= 0.02) return liveWaveHeights
-    const centerIndex = (bars.length - 1) / 2
-    const activeRadius = Math.max(1, Math.floor(bars.length * 0.4))
-    return bars.map((index) => {
-      const distance = Math.abs(index - centerIndex)
-      const centerWeight = Math.max(0, 1 - distance / activeRadius)
-      return 8 + level * centerWeight * 140
-    })
-  }, [bars, liveWaveHeights, recorder, (recorder as any).liveChunkLevel])
   const isRecordingPaused = recorder.status === 'paused'
   const isRecordingInProgress = recorder.status === 'recording' || recorder.status === 'paused'
   const displayedRecordingElapsedSeconds = isRecordingInProgress || recorder.status === 'ready' ? recorder.elapsedSeconds + 1 : recorder.elapsedSeconds
@@ -1389,8 +1402,9 @@ export function useNewInputModalController({
     }
 
     const nextAudioForTranscription = resolvedAudioForTranscription
-    const realtimeChargeOperationId = isRealtimeModeActive ? (realtimeOperationIdRef.current || createOperationId()) : null
-    if (isRealtimeModeActive && realtimeChargeOperationId) {
+    const realtimeTranscript = shouldUseRealtimeForRecording ? liveTranscriptText.trim() : ''
+    const realtimeChargeOperationId = shouldUseRealtimeForRecording ? (realtimeOperationIdRef.current || createOperationId()) : null
+    if (shouldUseRealtimeForRecording && realtimeChargeOperationId) {
       realtimeOperationIdRef.current = realtimeChargeOperationId
     }
     onOpenInput(createdInputId)
@@ -1402,9 +1416,9 @@ export function useNewInputModalController({
       audioBlob: nextAudioForTranscription.blob,
       mimeType: nextAudioForTranscription.mimeType,
       shouldSaveAudio: effectiveShouldSaveAudio,
-      transcriptOverride: isRealtimeModeActive ? liveTranscriptText.trim() : null,
+      transcriptOverride: shouldUseRealtimeForRecording ? realtimeTranscript : null,
       realtimeCharge:
-        isRealtimeModeActive
+        shouldUseRealtimeForRecording
           ? {
               operationId: String(realtimeChargeOperationId || ''),
               durationSeconds: Math.max(1, Math.ceil(nextAudioDurationSeconds || 0)),
@@ -1473,11 +1487,13 @@ export function useNewInputModalController({
       1,
       Math.ceil(values.kind === 'recording' ? resolvedRecordingDurationSeconds : audioDurationSeconds || 0),
     )
-    const remainingSeconds = await readRemainingSecondsBeforeStart()
-    if (remainingSeconds !== null && remainingSeconds < requiredSeconds) {
-      setInsufficientMinutesContext({ kind: values.kind, remainingSeconds, requiredSeconds })
-      setIsInsufficientMinutesWarningVisible(true)
-      return false
+    if (values.kind !== 'recording') {
+      const remainingSeconds = await readRemainingSecondsBeforeStart()
+      if (remainingSeconds !== null && remainingSeconds < requiredSeconds) {
+        setInsufficientMinutesContext({ kind: values.kind, remainingSeconds, requiredSeconds })
+        setIsInsufficientMinutesWarningVisible(true)
+        return false
+      }
     }
     return createAndOpenInputInternal(values, { ...options, audioForTranscription: resolvedAudioForTranscription })
   }
@@ -1489,6 +1505,11 @@ export function useNewInputModalController({
   const startVideoMeetingRecording = useCallback(async () => {
     if (!selectedClient?.id) {
       showErrorToast('Kies eerst een client voordat je een videogesprek opneemt.')
+      setStep('select')
+      return
+    }
+    if (!isRealtimeModeActive) {
+      showErrorToast('Realtime transcriptie staat uit. Zet transcription mode op "azure-realtime-live" om een videogesprek op te nemen.')
       setStep('select')
       return
     }
@@ -1516,105 +1537,28 @@ export function useNewInputModalController({
       return
     }
     recorder.start()
-  }, [hasAutoSubmittedRecordingRef, recorder, selectedClient?.id, selectedTrajectoryId, sessionTitle, setStep, showErrorToast])
+  }, [hasAutoSubmittedRecordingRef, isRealtimeModeActive, recorder, selectedClient?.id, selectedTrajectoryId, sessionTitle, setStep, showErrorToast])
 
-  const finalizeVideoMeetingRecording = useCallback(async (recordingPayload?: { blob: Blob; mimeType: string; durationSeconds: number }) => {
+  const stopVideoMeetingRecordingDraft = useCallback(async () => {
     if (isMeetingRecordingFinalizingRef.current) return
     const activeMeetingRecording = activeMeetingRecordingRef.current
     if (!activeMeetingRecording) return
     isMeetingRecordingFinalizingRef.current = true
     try {
-      if (activeMeetingRecording.uploadError) {
-        throw new Error(activeMeetingRecording.uploadError)
-      }
       await stopMeetingRecordingRemote({
         meetingRecordingId: activeMeetingRecording.meetingRecordingId,
         endedAtUnixMs: Date.now(),
         reason: 'user_stop',
       })
-      const nextSessionId = activeMeetingRecording.sessionId
-      const recordedBlob = recordingPayload?.blob ?? recorder.recordedBlob
-      const recordedMimeType = recordingPayload?.mimeType ?? recorder.recordedMimeType ?? recorder.activeMimeType ?? 'video/webm'
-
-      await refreshAppData()
       activeMeetingRecordingRef.current = null
-      onOpenInput(nextSessionId)
-      if (recordedBlob && recordedBlob.size > 0) {
-        updateInput(nextSessionId, {
-          transcriptionStatus: 'transcribing',
-          transcriptionError: null,
-          updatedAtUnixMs: Date.now(),
-        })
-        void processRecordedInput({
-          sessionId: nextSessionId,
-          audioBlob: recordedBlob,
-          mimeType: recordedMimeType,
-          shouldSaveAudio,
-          transcriptOverride: null,
-          realtimeCharge: null,
-          summaryTemplate: undefined,
-          initialAudioBlobId: null,
-          e2ee,
-          updateInput,
-          snippetExtraction: {
-            enabled: true,
-            clientId: selectedClient?.id ?? null,
-            trajectoryId: selectedTrajectoryId ?? null,
-            itemDate: Date.now(),
-            onCreatedSnippets: (snippets) => {
-              for (const snippet of snippets) {
-                createSnippet({
-                  id: snippet.id,
-                  trajectoryId: snippet.trajectoryId,
-                  inputId: snippet.inputId,
-                  itemId: snippet.itemId ?? snippet.inputId,
-                  field: snippet.field,
-                  text: snippet.text,
-                  date: snippet.date,
-                  status: snippet.status,
-                  createdAtUnixMs: snippet.createdAtUnixMs,
-                  updatedAtUnixMs: snippet.updatedAtUnixMs,
-                })
-              }
-            },
-          },
-        }).catch((error) => {
-          console.error('[NewInputModal] Video input processing failed', { sessionId: nextSessionId, error })
-        })
-      } else {
-        updateInput(nextSessionId, {
-          transcriptionStatus: 'error',
-          transcriptionError: 'Opname bevat geen bruikbare audio.',
-          updatedAtUnixMs: Date.now(),
-        })
-      }
-      void clearSubscriptionReturnDraft()
-      handleClose()
     } catch (error) {
       const message = mapMeetingRecordingErrorMessage(error)
+      console.warn('[NewInputModal] Stoppen van video-opname is mislukt', { error: message })
       showErrorToast(message, 'Stoppen van video-opname is mislukt.')
-      setStep('select')
-      activeMeetingRecordingRef.current = null
     } finally {
       isMeetingRecordingFinalizingRef.current = false
     }
-  }, [
-    clearSubscriptionReturnDraft,
-    createSnippet,
-    e2ee,
-    handleClose,
-    onOpenInput,
-    recorder.activeMimeType,
-    recorder.recordedBlob,
-    recorder.recordedMimeType,
-    refreshAppData,
-    selectedClient?.id,
-    selectedTrajectoryId,
-    setStep,
-    shouldSaveAudio,
-    showErrorToast,
-    updateInput,
-  ])
+  }, [showErrorToast])
 
   const cancelVideoMeetingRecording = useCallback(async () => {
     const activeMeetingRecording = activeMeetingRecordingRef.current
@@ -1631,9 +1575,10 @@ export function useNewInputModalController({
 
   const recordingFinishTransitionRef = useRef(0)
 
-  const handleRecordingReady = useCallback((payload: { blob: Blob; mimeType: string; durationSeconds: number }) => {
+  const handleRecordingReady = useCallback((_payload: { blob: Blob; mimeType: string; durationSeconds: number }) => {
     if (selectedOption === 'record-video') {
-      void finalizeVideoMeetingRecording(payload)
+      void stopVideoMeetingRecordingDraft()
+      setStep('recorded')
       return
     }
     const transitionToken = recordingFinishTransitionRef.current + 1
@@ -1685,7 +1630,6 @@ export function useNewInputModalController({
       finalizeToRecorded()
     })
   }, [
-    finalizeVideoMeetingRecording,
     isReducedMotionEnabled,
     isMinimized,
     limitedMode,
@@ -1695,6 +1639,7 @@ export function useNewInputModalController({
     selectedOption,
     setShouldRenderRecordingNotesPanel,
     setStep,
+    stopVideoMeetingRecordingDraft,
     visible,
   ])
 
@@ -1708,7 +1653,7 @@ export function useNewInputModalController({
   const { retryRecordingAfterError } = useRecordingFlow({
     hasAutoStartedRecordingRef,
     hasAutoSubmittedRecordingRef,
-    isRealtimeModeActive,
+    isRealtimeModeActive: shouldUseRealtimeForRecording,
     isRealtimeTranscriberStarting,
     liveTranscriberRef,
     realtimeOperationIdRef,
@@ -1904,7 +1849,7 @@ export function useNewInputModalController({
       isUploadDragActive,
       isUploadStep,
       limitedMode,
-      liveWaveHeights: effectiveLiveWaveHeights,
+      liveWaveHeights,
       minimizeProgress,
       minimizeScaleX,
       minimizeScaleY,

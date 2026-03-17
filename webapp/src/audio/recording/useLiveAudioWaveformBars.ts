@@ -48,10 +48,10 @@ export function useLiveAudioWaveformBars({ mediaStream, barCount, isActive }: Va
     const timeDomainData = new Uint8Array(analyser.fftSize)
 
     const minimumHeight = 8
-    const maximumHeight = 220
-    const targetFrameMs = 33
+    const maximumHeight = 180
+    const targetFrameMs = 20
     const smoothing = 0.45
-    const gain = 3.6
+    const gain = 1.45
 
     const tick = () => {
       animationFrameRef.current = window.requestAnimationFrame(tick)
@@ -67,7 +67,7 @@ export function useLiveAudioWaveformBars({ mediaStream, barCount, isActive }: Va
         sumSquares += centered * centered
       }
       const rms = Math.sqrt(sumSquares / Math.max(1, timeDomainData.length))
-      const signalLevel = clamp(rms * 10, 0, 1)
+      const signalLevel = clamp(rms * 4.2, 0, 1)
       if (signalLevel < 0.01) {
         const silentBars = Array.from({ length: stableBarCount }, () => minimumHeight)
         previousBarsRef.current = silentBars
@@ -78,9 +78,6 @@ export function useLiveAudioWaveformBars({ mediaStream, barCount, isActive }: Va
       const nextBars: number[] = []
       const previousBars = previousBarsRef.current
       const binsPerBar = Math.max(1, Math.floor(binCount / stableBarCount))
-      const centerIndex = (stableBarCount - 1) / 2
-      const activeRadius = Math.max(1, Math.floor(stableBarCount * 0.35))
-
       for (let index = 0; index < stableBarCount; index++) {
         const start = index * binsPerBar
         const end = Math.min(binCount, start + binsPerBar)
@@ -88,11 +85,9 @@ export function useLiveAudioWaveformBars({ mediaStream, barCount, isActive }: Va
         for (let i = start; i < end; i++) sum += frequencyData[i] ?? 0
         const average = sum / Math.max(1, end - start)
         const normalized = clamp(average / 255, 0, 1)
-        const eased = Math.pow(normalized, 1.25)
-        const distanceFromCenter = Math.abs(index - centerIndex)
-        const centerWeight = clamp(1 - distanceFromCenter / activeRadius, 0, 1)
-        const boosted = clamp((signalLevel * 0.7 + eased * 0.9) * gain, 0, 1)
-        const height = minimumHeight + boosted * centerWeight * (maximumHeight - minimumHeight)
+        const eased = Math.pow(normalized, 1.35)
+        const boosted = clamp((signalLevel * 0.35 + eased * 0.7) * gain, 0, 1)
+        const height = minimumHeight + boosted * (maximumHeight - minimumHeight)
         const previous = previousBars[index] ?? minimumHeight
         const smoothed = previous * smoothing + height * (1 - smoothing)
         nextBars.push(smoothed)

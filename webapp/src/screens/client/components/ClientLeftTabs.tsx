@@ -1,5 +1,5 @@
 import React from 'react'
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
 import {
   ClientPageDocumentenIcon,
@@ -139,7 +139,11 @@ export function ClientLeftTabs({
                     <Text style={styles.emptyInputsText}>Geen items gevonden.</Text>
                   </View>
                 ) : null}
-                {filteredInputs.map((item) => (
+                {filteredInputs.map((item) => {
+                  const isSessionProcessing =
+                    item.rowType === 'session' &&
+                    (item.transcriptionStatus === 'transcribing' || item.transcriptionStatus === 'generating')
+                  return (
                   <Pressable
                     key={item.id}
                     onPress={() => onPressRow(item)}
@@ -160,6 +164,12 @@ export function ClientLeftTabs({
                         {item.title}
                       </Text>
                       <Text style={styles.tableInputSub}>{item.trajectoryLabel}</Text>
+                      {isSessionProcessing ? (
+                        <View style={styles.processingStateRow}>
+                          <ActivityIndicator size="small" color={colors.selected} />
+                          <Text style={styles.processingStateText}>Bezig met verwerken...</Text>
+                        </View>
+                      ) : null}
                     </View>
                     <View style={styles.tableDateCol}>
                       <Text style={styles.tableDateMain}>{item.dateLabel}</Text>
@@ -193,7 +203,8 @@ export function ClientLeftTabs({
                       <MoreOptionsIcon color="#656565" size={18} />
                     </Pressable>
                   </Pressable>
-                ))}
+                  )
+                })}
               </ScrollView>
             </>
           )}
@@ -357,6 +368,18 @@ const styles = StyleSheet.create({
   tableRowHovered: { backgroundColor: '#FAFAFA' },
   tableInputTitle: { fontSize: 16, lineHeight: 20, color: '#2C111F', paddingRight: 8 },
   tableInputSub: { marginTop: 4, fontSize: 14, lineHeight: 18, color: 'rgba(44,17,31,0.5)' },
+  processingStateRow: {
+    marginTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  processingStateText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.selected,
+    fontFamily: typography.fontFamilySemibold,
+  },
   tableDateMain: { fontSize: 14, lineHeight: 16, color: 'rgba(44,17,31,0.5)', fontFamily: typography.fontFamilySemibold },
   tableDateSub: { marginTop: 2, fontSize: 14, lineHeight: 16, color: 'rgba(44,17,31,0.5)' },
   tableDurationText: { fontSize: 14, lineHeight: 16, color: 'rgba(44,17,31,0.5)' },

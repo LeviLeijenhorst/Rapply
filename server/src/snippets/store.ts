@@ -1,6 +1,7 @@
 import { assertUserCanAccessClient } from "../access/clientAccess"
 import { execute, queryMany, queryOne } from "../db"
 import type { Snippet } from "../types/Snippet"
+import { sanitizeSnippetText } from "./sanitizeSnippetText"
 
 type SnippetRow = {
   id: string
@@ -9,6 +10,7 @@ type SnippetRow = {
   source_input_id: string | null
   snippet_type: string
   field_id: string | null
+  field_ids: string[] | null
   snippet_text: string
   snippet_date: number
   approval_status: "pending" | "approved" | "rejected"
@@ -16,15 +18,35 @@ type SnippetRow = {
   updated_at_unix_ms: number
 }
 
+function normalizeLabelList(values: unknown[]): string[] {
+  const labels: string[] = []
+  const seen = new Set<string>()
+  for (const value of values) {
+    const normalized = String(value || "").trim()
+    if (!normalized || seen.has(normalized)) continue
+    seen.add(normalized)
+    labels.push(normalized)
+  }
+  return labels
+}
+
+function resolveSnippetLabels(snippet: Pick<Snippet, "fieldIds" | "fieldId" | "snippetType">): string[] {
+  const labels = normalizeLabelList([...(Array.isArray(snippet.fieldIds) ? snippet.fieldIds : []), snippet.fieldId, snippet.snippetType])
+  return labels.length > 0 ? labels : ["general"]
+}
+
 function mapSnippetRow(row: SnippetRow): Snippet {
+  const fieldIds = normalizeLabelList([...(Array.isArray(row.field_ids) ? row.field_ids : []), row.field_id, row.snippet_type])
+  const primaryField = fieldIds[0] || "general"
   return {
     id: row.id,
     clientId: row.client_id,
     trajectoryId: row.trajectory_id ?? null,
     sourceSessionId: row.source_input_id ?? "",
     sourceInputId: row.source_input_id ?? null,
-    snippetType: row.snippet_type,
-    fieldId: row.field_id ?? row.snippet_type,
+    fieldIds,
+    snippetType: primaryField,
+    fieldId: primaryField,
     text: row.snippet_text,
     snippetDate: Number(row.snippet_date),
     approvalStatus: row.approval_status,
@@ -49,7 +71,7 @@ async function readSnippetClientId(id: string): Promise<string | null> {
 export async function listSnippets(userId: string): Promise<Snippet[]> {
   const rows = await queryMany<SnippetRow>(
     `
-    select s.id, s.client_id, s.trajectory_id, s.source_input_id, s.snippet_type, s.field_id, s.snippet_text, s.snippet_date, s.approval_status, s.created_at_unix_ms, s.updated_at_unix_ms
+    select s.id, s.client_id, s.trajectory_id, s.source_input_id, s.snippet_type, s.field_id, s.field_ids, s.snippet_text, s.snippet_date, s.approval_status, s.created_at_unix_ms, s.updated_at_unix_ms
     from public.snippets s
     join public.clients c on c.id = s.client_id
     left join public.organization_users ou
@@ -69,18 +91,22 @@ export async function listSnippets(userId: string): Promise<Snippet[]> {
 
 export async function createSnippet(userId: string, snippet: Snippet): Promise<void> {
   await assertUserCanAccessClient(userId, snippet.clientId)
+  const fieldIds = resolveSnippetLabels(snippet)
+  const primaryField = fieldIds[0]
+  const text = sanitizeSnippetText(snippet.text)
   await execute(
     `
     insert into public.snippets (
-      id, client_id, trajectory_id, source_input_id, created_by_user_id, snippet_type, field_id, snippet_text, snippet_date, approval_status, created_at_unix_ms, updated_at_unix_ms
+      id, client_id, trajectory_id, source_input_id, created_by_user_id, snippet_type, field_id, field_ids, snippet_text, snippet_date, approval_status, created_at_unix_ms, updated_at_unix_ms
     )
-    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    values ($1, $2, $3, $4, $5, $6, $7, $8::text[], $9, $10, $11, $12, $13)
     on conflict (id) do update
       set client_id = excluded.client_id,
           trajectory_id = excluded.trajectory_id,
           source_input_id = excluded.source_input_id,
           snippet_type = excluded.snippet_type,
           field_id = excluded.field_id,
+          field_ids = excluded.field_ids,
           snippet_text = excluded.snippet_text,
           snippet_date = excluded.snippet_date,
           approval_status = excluded.approval_status,
@@ -92,9 +118,10 @@ export async function createSnippet(userId: string, snippet: Snippet): Promise<v
       snippet.trajectoryId,
       snippet.sourceInputId ?? snippet.sourceSessionId ?? null,
       userId,
-      snippet.snippetType,
-      snippet.fieldId,
-      snippet.text,
+      primaryField,
+      primaryField,
+      fieldIds,
+      text,
       snippet.snippetDate,
       snippet.approvalStatus,
       snippet.createdAtUnixMs,
@@ -109,6 +136,7 @@ export async function updateSnippet(
     id: string
     snippetType?: string | null
     fieldId?: string | null
+    fieldIds?: string[] | null
     text?: string | null
     approvalStatus?: Snippet["approvalStatus"]
     updatedAtUnixMs: number
@@ -125,6 +153,19 @@ export async function updateSnippet(
   updates.push(`updated_at_unix_ms = $${index++}`)
   values.push(params.updatedAtUnixMs)
 
+  const nextFieldIds = Array.isArray(params.fieldIds) ? normalizeLabelList(params.fieldIds) : null
+  const explicitPrimaryField = typeof params.fieldId === "string" ? params.fieldId.trim() : typeof params.snippetType === "string" ? params.snippetType.trim() : ""
+  if (nextFieldIds && nextFieldIds.length > 0) {
+    updates.push(`field_ids = $${index++}::text[]`)
+    values.push(nextFieldIds)
+    if (!explicitPrimaryField) {
+      updates.push(`field_id = $${index++}`)
+      values.push(nextFieldIds[0])
+      updates.push(`snippet_type = $${index++}`)
+      values.push(nextFieldIds[0])
+    }
+  }
+
   if (typeof params.snippetType === "string") {
     updates.push(`snippet_type = $${index++}`)
     values.push(params.snippetType)
@@ -133,9 +174,13 @@ export async function updateSnippet(
     updates.push(`field_id = $${index++}`)
     values.push(params.fieldId)
   }
+  if ((!nextFieldIds || nextFieldIds.length === 0) && explicitPrimaryField) {
+    updates.push(`field_ids = $${index++}::text[]`)
+    values.push([explicitPrimaryField])
+  }
   if (typeof params.text === "string") {
     updates.push(`snippet_text = $${index++}`)
-    values.push(params.text)
+    values.push(sanitizeSnippetText(params.text))
   }
   if (params.approvalStatus !== undefined) {
     updates.push(`approval_status = $${index++}`)

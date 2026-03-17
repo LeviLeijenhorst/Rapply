@@ -672,6 +672,13 @@ export default function ConversationScreen() {
     })
   }, [summaryFocused])
 
+  useEffect(() => {
+    if (uiActiveTab !== "summary" || summaryFocused) return
+    requestAnimationFrame(() => {
+      summaryScrollRef.current?.scrollTo?.({ y: 0, animated: false })
+    })
+  }, [uiActiveTab, summaryFocused, summary])
+
   
 
   useEffect(() => {
@@ -1918,9 +1925,10 @@ export default function ConversationScreen() {
           )
         }
         if (b.type === "h3") {
+          const normalizedHeading = (b.text || "").trim().toLowerCase() === "sessie samenvatting" ? "Samenvatting" : (b.text || "")
           return (
-            <Text key={`h3-${idx}`} style={[styles.msgTextAssistant, styles.assistantHeader]}>
-              {renderBoldInline(b.text || "", styles.msgTextAssistant)}
+            <Text key={`h3-${idx}`} style={styles.assistantHeader}>
+              {renderBoldInline(normalizedHeading, styles.assistantHeader)}
             </Text>
           )
         }
@@ -2041,7 +2049,7 @@ export default function ConversationScreen() {
                   ref={summaryScrollRef}
                   style={{ flex: 1 }}
                   keyboardShouldPersistTaps="handled"
-                  contentContainerStyle={{ paddingBottom: 120 }}
+                  contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-start", paddingBottom: 120 }}
                 >
                   {(summary || "").trim() ? (
                     <View>{renderAssistantMessageText(summary)}</View>
@@ -3065,7 +3073,13 @@ const styles = StyleSheet.create({
   assistantListItemRow: { flexDirection: "row", alignItems: "flex-start" },
   assistantBullet: { marginRight: spacing.small },
   assistantListItemText: { flex: 1 },
-  assistantHeader: { marginTop: spacing.small, fontWeight: "700", fontSize: typography.textSize + 2 },
+  assistantHeader: {
+    marginTop: spacing.small,
+    fontFamily: typography.fontFamily,
+    fontSize: typography.textSize + 2,
+    color: colors.textPrimary,
+    fontWeight: "700",
+  },
   summaryPlaceholder: { fontFamily: typography.fontFamily, fontSize: typography.textSize, color: colors.textSecondary, paddingTop: spacing.small },
   replyPreview: { marginBottom: 6, paddingHorizontal: spacing.big, paddingVertical: 8, borderRadius: radius, backgroundColor: colors.backgroundLight },
   replyPreviewOnAssistant: { backgroundColor: "rgba(255,255,255,0.15)" },

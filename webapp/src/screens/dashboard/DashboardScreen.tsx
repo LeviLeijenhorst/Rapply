@@ -10,6 +10,7 @@ import { InputsThisWeekIcon } from '@/icons/InputsThisWeekIcon'
 import { NewClientAddIcon } from '@/icons/NewClientAddIcon'
 import { RecordSummaryIcon } from '@/icons/RecordSummaryIcon'
 import { RecordVideoCallIcon } from '@/icons/RecordVideoCallIcon'
+import { VerslagSchrijvenIcon } from '@/icons/VerslagSchrijvenIcon'
 import { Text } from '@/ui/Text'
 
 import { useDashboardScreenModel } from './DashboardScreen.logic'
@@ -24,6 +25,7 @@ import type {
 function renderQuickInputIcon(action: DashboardQuickInputAction): React.ReactNode {
   if (action.iconKey === 'record-session') return <ClientPageMicrophoneIcon size={18} />
   if (action.iconKey === 'record-summary') return <RecordSummaryIcon size={18} />
+  if (action.iconKey === 'write-report') return <VerslagSchrijvenIcon size={18} color="#FFFFFF" />
   if (action.iconKey === 'record-video') return <RecordVideoCallIcon size={18} />
   if (action.iconKey === 'import-audio') return <ImportAudioIcon size={18} />
   return <ImportDocumentIcon size={18} />

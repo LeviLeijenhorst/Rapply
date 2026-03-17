@@ -69,7 +69,7 @@ export default function NavigationBar() {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <Image
-              src="/group-820.svg"
+              src="/group-857.svg"
               alt="CoachScribe logo"
               width={261}
               height={132}

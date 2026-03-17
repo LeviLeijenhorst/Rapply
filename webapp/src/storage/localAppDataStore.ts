@@ -229,7 +229,12 @@ function normalizeSnippets(raw: unknown, fallback: Snippet[]): Snippet[] {
       const id = String(candidate.id ?? '').trim()
       const trajectoryId = nullableText(candidate.trajectoryId)
       const inputId = String(candidate.inputId ?? candidate.itemId ?? candidate.sourceInputId ?? candidate.sourceSessionId ?? '').trim()
-      const field = String(candidate.field ?? candidate.fieldId ?? '').trim()
+      const fields = normalizeSnippetLabels(candidate.fields ?? candidate.fieldIds, [
+        candidate.field,
+        candidate.fieldId,
+        candidate.snippetType,
+      ])
+      const field = fields[0] || ''
       if (!id || !inputId || !field) return null
       return {
         id,
@@ -239,6 +244,7 @@ function normalizeSnippets(raw: unknown, fallback: Snippet[]): Snippet[] {
         sourceInputId: nullableText(candidate.sourceInputId ?? inputId),
         sourceSessionId: nullableText(candidate.sourceSessionId ?? inputId),
         itemId: inputId,
+        fields,
         field,
         fieldId: field,
         text: String(candidate.text ?? ''),
@@ -268,12 +274,28 @@ function normalizeSnippetValue(value: unknown): string {
     .toLowerCase()
 }
 
-function createSnippetSemanticKey(snippet: Pick<Snippet, 'inputId' | 'field' | 'text'>): string {
+function normalizeSnippetLabels(raw: unknown, fallbackValues: unknown[] = []): string[] {
+  const labels: string[] = []
+  const seen = new Set<string>()
+  const values = [
+    ...(Array.isArray(raw) ? raw : []),
+    ...fallbackValues,
+  ]
+  for (const value of values) {
+    const normalized = String(value || '').trim()
+    if (!normalized || seen.has(normalized)) continue
+    seen.add(normalized)
+    labels.push(normalized)
+  }
+  return labels
+}
+
+function createSnippetSemanticKey(snippet: Pick<Snippet, 'inputId' | 'field' | 'text' | 'fields'>): string {
   const inputId = normalizeSnippetValue(snippet.inputId)
-  const field = normalizeSnippetValue(snippet.field)
+  const fields = normalizeSnippetLabels(snippet.fields, [snippet.field]).map((label) => normalizeSnippetValue(label)).filter(Boolean).sort()
   const text = normalizeSnippetValue(snippet.text)
-  if (!inputId || !field || !text) return ''
-  return `${inputId}::${field}::${text}`
+  if (!inputId || fields.length === 0 || !text) return ''
+  return `${inputId}::${fields.join('|')}::${text}`
 }
 
 function normalizeNotes(raw: unknown, fallback: Note[]): Note[] {
@@ -612,15 +634,28 @@ export function createSnippet(data: LocalAppData, snippet: Snippet): LocalAppDat
 export function updateSnippet(
   data: LocalAppData,
   snippetId: string,
-  values: { field?: string; text?: string; status?: SnippetStatus },
+  values: { field?: string; fields?: string[]; text?: string; status?: SnippetStatus },
 ): LocalAppData {
   return {
     ...data,
     snippets: data.snippets.map((snippet) => {
       if (snippet.id !== snippetId) return snippet
+      const nextFields =
+        values.fields !== undefined
+          ? normalizeSnippetLabels(values.fields, [])
+          : values.field !== undefined
+            ? normalizeSnippetLabels([], [values.field])
+            : undefined
+      const primaryField = nextFields && nextFields.length > 0 ? nextFields[0] : undefined
       return {
         ...snippet,
-        ...(values.field !== undefined ? { field: values.field, fieldId: values.field } : null),
+        ...(nextFields !== undefined
+          ? {
+              fields: nextFields,
+              field: primaryField ?? snippet.field,
+              fieldId: primaryField ?? snippet.fieldId ?? snippet.field,
+            }
+          : null),
         ...(values.text !== undefined ? { text: values.text } : null),
         ...(values.status !== undefined ? { status: values.status } : null),
         updatedAtUnixMs: Date.now(),

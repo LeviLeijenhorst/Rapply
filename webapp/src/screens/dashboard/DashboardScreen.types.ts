@@ -14,6 +14,7 @@ export type DashboardScreenProps = {
 export type QuickInputIconKey =
   | 'record-session'
   | 'record-summary'
+  | 'write-report'
   | 'record-video'
   | 'import-audio'
   | 'import-document'

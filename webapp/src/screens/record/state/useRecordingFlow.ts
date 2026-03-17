@@ -18,6 +18,7 @@ type RecorderState = {
   recordedBlob: Blob | null
   recordedMimeType: string | null
   recordedChunkDurationsSeconds: number[]
+  mediaStream: MediaStream | null
   start: () => void
   startWithCaptureMode?: (captureMode: 'microphone' | 'display-with-audio-fallback') => void
   stop: () => void
@@ -128,16 +129,20 @@ export function useRecordingFlow({
   }, [recorder, step, visible])
 
   useEffect(() => {
-    const shouldRunRealtime =
+    const shouldKeepRealtimeAlive =
       visible &&
-      step === 'recording' &&
-      recorder.status === 'recording' &&
+      isRecordingLikeStep &&
+      (recorder.status === 'recording' ||
+        recorder.status === 'paused' ||
+        recorder.status === 'stopping' ||
+        recorder.status === 'requesting') &&
       isRealtimeModeActive
 
-    if (!shouldRunRealtime) {
+    if (!shouldKeepRealtimeAlive) {
       void stopLiveTranscriber()
       return
     }
+    if (recorder.status !== 'recording') return
     if (liveTranscriberRef.current || isRealtimeTranscriberStarting) return
 
     let cancelled = false
@@ -146,6 +151,7 @@ export function useRecordingFlow({
 
     void startRealtimeTranscription({
       languageCode: 'nl',
+      mediaStream: recorder.mediaStream,
       onFinalSegment: (segment) => {
         if (cancelled) return
         const line = `${segment.speaker}: ${segment.text}`.trim()
@@ -181,8 +187,10 @@ export function useRecordingFlow({
   }, [
     isRealtimeModeActive,
     isRealtimeTranscriberStarting,
+    isRecordingLikeStep,
     liveTranscriberRef,
     recorder.status,
+    recorder.mediaStream,
     setIsRealtimeTranscriberStarting,
     setLiveTranscriptError,
     setLiveTranscriptText,

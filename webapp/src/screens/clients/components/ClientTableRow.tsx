@@ -5,7 +5,6 @@ import { colors } from '../../../design/theme/colors'
 import { ChevronRightIcon } from '../../../icons/ChevronRightIcon'
 import { Text } from '../../../ui/Text'
 import type { ClientListItem } from '../selectors/clientListSelectors'
-import { ClientStatusPill } from './ClientStatusPill'
 
 type Props = {
   item: ClientListItem
@@ -45,9 +44,6 @@ export function ClientTableRow({ item, onPress }: Props) {
         <Text isSemibold style={styles.numberText}>
           {item.reportCount}
         </Text>
-      </View>
-      <View style={[styles.cell, styles.statusCell]}>
-        <ClientStatusPill status={item.status} label={item.statusLabel} />
       </View>
       <View style={[styles.cell, styles.lastInputCell]}>
         <Text style={styles.lastInputText}>{item.lastInputLabel}</Text>
@@ -118,11 +114,8 @@ const styles = StyleSheet.create({
     width: 168,
     alignItems: 'flex-start',
   },
-  statusCell: {
-    width: 100,
-  },
   lastInputCell: {
-    width: 160,
+    width: 180,
   },
   chevronCell: {
     width: 24,

@@ -1,10 +1,10 @@
 import { completeAzureOpenAiChat } from "../ai/azureOpenAi"
 import { normalizeText } from "../ai/shared/normalize"
 import { estimateTokenCount } from "../ai/shared/textChunking"
-import { removeSpeakerLabelsFromOutput, stripJsonCodeFences } from "../ai/shared/textSanitization"
+import { stripJsonCodeFences } from "../ai/shared/textSanitization"
 import { env } from "../env"
 import { SnippetExtractionError } from "../errors/SnippetExtractionError"
-import { sanitizeMedicalContent } from "./sanitizeMedicalContent"
+import { sanitizeSnippetText } from "./sanitizeSnippetText"
 
 export type SnippetInputType = "transcript" | "spoken_recap" | "written_recap"
 
@@ -14,7 +14,7 @@ export type SnippetFieldQuestion = {
 }
 
 export type SnippetExtractionResult = {
-  field: string
+  fields: string[]
   text: string
 }
 
@@ -30,16 +30,6 @@ function ensureSentenceEnding(value: string): string {
   if (!trimmed) return ""
   if (/[.!?]$/.test(trimmed)) return trimmed
   return `${trimmed}.`
-}
-
-function sanitizeSnippetText(value: string): string {
-  const withoutSpeakerLabels = removeSpeakerLabelsFromOutput(String(value || ""))
-  const withoutTimestampPrefix = withoutSpeakerLabels
-    .replace(/^\s*\[\d{1,2}:\d{2}(?:\.\d+)?\]\s*/g, "")
-    .replace(/^\s*\d{1,2}:\d{2}(?:\.\d+)?\s*[-:]\s*/g, "")
-    .replace(/\s{2,}/g, " ")
-    .trim()
-  return sanitizeMedicalContent(withoutTimestampPrefix)
 }
 
 function toLowercaseFirst(value: string): string {
@@ -58,7 +48,7 @@ export function buildFallbackGeneralSnippet(transcript: string): SnippetExtracti
   const fallbackBody = sanitized.replace(/[.!?]+$/g, "").trim()
   const paraphrased = ensureSentenceEnding(`Coach geeft aan dat ${toLowercaseFirst(fallbackBody)}`)
   return {
-    field: "general",
+    fields: ["general"],
     text: paraphrased,
   }
 }
@@ -307,14 +297,13 @@ export function parseSnippetExtraction(rawText: string): SnippetExtractionResult
   for (const rawSnippet of rawSnippets) {
     const text = sanitizeSnippetText(String(rawSnippet?.text || ""))
     if (!text) continue
-    const fields = readSnippetFields(rawSnippet)
-    for (const field of fields) {
-      if (!snippetFieldSet.has(field)) continue
-      const dedupeKey = `${field.toLowerCase()}::${text.toLowerCase()}`
-      if (seen.has(dedupeKey)) continue
-      seen.add(dedupeKey)
-      snippets.push({ field, text })
-    }
+    const fields = readSnippetFields(rawSnippet).filter((field) => snippetFieldSet.has(field))
+    if (fields.length === 0) continue
+    const normalizedFields = Array.from(new Set(fields)).sort()
+    const dedupeKey = `${normalizedFields.join("|").toLowerCase()}::${text.toLowerCase()}`
+    if (seen.has(dedupeKey)) continue
+    seen.add(dedupeKey)
+    snippets.push({ fields: normalizedFields, text })
   }
 
   return snippets
@@ -385,8 +374,7 @@ export async function extractSnippets(params: {
 
   const inputType = normalizeSnippetInputType(params.sourceInputType || "")
   const chunks = splitTranscriptRecursively(transcript, maxChunkPromptTokens)
-  const merged: SnippetExtractionResult[] = []
-  const seenSnippetText = new Set<string>()
+  const mergedByText = new Map<string, SnippetExtractionResult>()
   const debugChunks: SnippetExtractionDebugChunk[] = []
 
   for (let index = 0; index < chunks.length; index += 1) {
@@ -395,10 +383,20 @@ export async function extractSnippets(params: {
     const extracted = await extractSnippetsForChunk({ prompt: promptUsed })
 
     for (const snippet of extracted.snippets) {
-      const dedupeKey = `${snippet.field.toLowerCase()}::${snippet.text.toLowerCase()}`
-      if (seenSnippetText.has(dedupeKey)) continue
-      seenSnippetText.add(dedupeKey)
-      merged.push(snippet)
+      const textKey = snippet.text.toLowerCase()
+      const existing = mergedByText.get(textKey)
+      if (!existing) {
+        mergedByText.set(textKey, {
+          text: snippet.text,
+          fields: Array.from(new Set(snippet.fields)).sort(),
+        })
+        continue
+      }
+      const mergedFields = Array.from(new Set([...existing.fields, ...snippet.fields])).sort()
+      mergedByText.set(textKey, {
+        text: existing.text,
+        fields: mergedFields,
+      })
     }
 
     if (params.includeDebug) {
@@ -410,6 +408,8 @@ export async function extractSnippets(params: {
       })
     }
   }
+
+  const merged = Array.from(mergedByText.values())
 
   if (merged.length === 0) {
     const fallbackSnippet = buildFallbackGeneralSnippet(transcript)

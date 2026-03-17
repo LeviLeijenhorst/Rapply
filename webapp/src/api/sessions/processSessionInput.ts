@@ -6,6 +6,16 @@ import { generateInputSummary } from '../summaries/generateInputSummaryFromTrans
 import { normalizeTranscript } from '../transcription/normalizeTranscript'
 import type { InputInput } from '../transcription/types'
 
+function readSnippetLabels(snippet: { fields?: string[]; field?: string }): string[] {
+  const labels = [
+    ...(Array.isArray(snippet.fields) ? snippet.fields : []),
+    String(snippet.field || '').trim(),
+  ]
+    .map((value) => String(value || '').trim())
+    .filter((value, index, values) => value.length > 0 && values.indexOf(value) === index)
+  return labels.length > 0 ? labels : ['general']
+}
+
 export async function processInputInput(params: {
   sessionId: string
   clientId: string
@@ -26,7 +36,7 @@ export async function processInputInput(params: {
     }),
   ])
   const approvedSnippets = extractedSnippets.filter((snippet) => snippet.status === 'approved')
-  const reportRelevantSnippets = approvedSnippets.filter((snippet) => classifySnippetType(snippet.field) === 'report')
+  const reportRelevantSnippets = approvedSnippets.filter((snippet) => readSnippetLabels(snippet).some((label) => classifySnippetType(label) === 'report'))
   const clientKnowledge = buildClientKnowledge(approvedSnippets)
   const reportDraft = params.reportTemplateName
     ? await generateReport({

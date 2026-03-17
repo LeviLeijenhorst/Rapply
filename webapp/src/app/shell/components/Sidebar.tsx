@@ -19,7 +19,7 @@ type Props = {
   usedMinutes?: number
   totalMinutes?: number
   userName?: string | null
-  userRole?: string
+  userRole?: string | null
   onSelectSidebarItem: (sidebarItemKey: SidebarItemKey) => void
   onOpenProfileSection: () => void
   onOpenSettingsMenu: (anchorPoint: AnchorPoint) => void
@@ -36,7 +36,7 @@ export function Sidebar({
   usedMinutes = 0,
   totalMinutes = 0,
   userName,
-  userRole = 'Re-integratiecoach',
+  userRole,
   onSelectSidebarItem,
   onOpenProfileSection,
   onOpenSettingsMenu,
@@ -46,7 +46,8 @@ export function Sidebar({
 
   const ratio = totalMinutes > 0 ? clamp(usedMinutes / totalMinutes, 0, 1) : 0
   const progressWidth = Math.round(192 * ratio)
-  const displayName = userName || 'Peter Dalman'
+  const displayName = String(userName || '').trim()
+  const displayRole = String(userRole || '').trim()
 
   function getMenuAnchorPoint(event: any): AnchorPoint {
     const rectFromCurrentTarget = event?.currentTarget?.getBoundingClientRect?.()
@@ -189,12 +190,16 @@ export function Sidebar({
             <ProfileCircleIcon size={28} />
           </View>
           <View style={styles.profileText}>
-            <Text isSemibold style={styles.profileName} numberOfLines={1}>
-              {displayName}
-            </Text>
-            <Text isSemibold style={styles.profileRole} numberOfLines={1}>
-              {userRole}
-            </Text>
+            {displayName ? (
+              <Text isSemibold style={styles.profileName} numberOfLines={1}>
+                {displayName}
+              </Text>
+            ) : null}
+            {displayRole ? (
+              <Text isSemibold style={styles.profileRole} numberOfLines={1}>
+                {displayRole}
+              </Text>
+            ) : null}
           </View>
         </View>
         <View style={styles.progressTrack}>

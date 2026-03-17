@@ -14,8 +14,16 @@ export function registerAudioRoutes(app: Express): void {
     asyncHandler(async (req, res) => {
       const user = await requireAuthenticatedUser(req)
       const mimeType = String(req.headers["content-type"] || "").trim() || "application/octet-stream"
-      const body = req.body
-      if (!Buffer.isBuffer(body) || body.length === 0) {
+      const rawBody = req.body
+      const body =
+        Buffer.isBuffer(rawBody)
+          ? rawBody
+          : rawBody instanceof Uint8Array
+            ? Buffer.from(rawBody)
+            : rawBody instanceof ArrayBuffer
+              ? Buffer.from(new Uint8Array(rawBody))
+              : null
+      if (!body || body.length === 0) {
         sendError(res, 400, "Missing audio bytes")
         return
       }
@@ -85,8 +93,16 @@ export function registerAudioRoutes(app: Express): void {
       const chunkIndex = readRequiredNumber(req.headers["x-chunk-index"], "chunkIndex")
       const startMilliseconds = readRequiredNumber(req.headers["x-start-milliseconds"], "startMilliseconds")
       const durationMilliseconds = readRequiredNumber(req.headers["x-duration-milliseconds"], "durationMilliseconds")
-      const body = req.body
-      if (!Buffer.isBuffer(body) || body.length === 0) {
+      const rawBody = req.body
+      const body =
+        Buffer.isBuffer(rawBody)
+          ? rawBody
+          : rawBody instanceof Uint8Array
+            ? Buffer.from(rawBody)
+            : rawBody instanceof ArrayBuffer
+              ? Buffer.from(new Uint8Array(rawBody))
+              : null
+      if (!body || body.length === 0) {
         sendError(res, 400, "Missing chunk bytes")
         return
       }

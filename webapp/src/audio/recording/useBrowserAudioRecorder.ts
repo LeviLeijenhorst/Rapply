@@ -62,6 +62,8 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
   const [liveChunkLevel, setLiveChunkLevel] = useState(0)
 
   const mediaStreamRef = useRef<MediaStream | null>(null)
+  const auxiliaryStreamsRef = useRef<MediaStream[]>([])
+  const mixingAudioContextRef = useRef<AudioContext | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const recordedChunksRef = useRef<Blob[]>([])
   const recordedChunkDurationsSecondsRef = useRef<number[]>([])
@@ -140,6 +142,18 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
     }
   }
 
+  function cleanupAuxiliaryCaptureResources() {
+    for (const stream of auxiliaryStreamsRef.current) {
+      stopStreamTracks(stream)
+    }
+    auxiliaryStreamsRef.current = []
+    const context = mixingAudioContextRef.current
+    mixingAudioContextRef.current = null
+    if (context) {
+      context.close().catch(() => undefined)
+    }
+  }
+
   function stopTracks() {
     const stream = mediaStreamRef.current
     stopStreamTracks(stream)
@@ -149,6 +163,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
     }
     mediaStreamRef.current = null
     setMediaStream(null)
+    cleanupAuxiliaryCaptureResources()
   }
 
   function logCaptureDevices() {
@@ -257,14 +272,62 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
           video: true,
           audio: true,
         })
-        if (displayStream.getAudioTracks().length > 0) {
+        let micStream: MediaStream | null = null
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            },
+          })
+        } catch (error) {
+          console.warn('[useBrowserAudioRecorder] Microphone fallback unavailable', error)
+        }
+
+        const displayAudioTracks = displayStream.getAudioTracks()
+        const micAudioTracks = micStream?.getAudioTracks() ?? []
+        if (displayAudioTracks.length === 0 && micAudioTracks.length === 0) {
           return displayStream
         }
-        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        for (const track of micStream.getAudioTracks()) {
-          displayStream.addTrack(track)
+
+        const AudioContextConstructor = (window as any).AudioContext || (window as any).webkitAudioContext
+        if (!AudioContextConstructor) {
+          if (displayAudioTracks.length > 0) return displayStream
+          if (micStream) {
+            for (const track of micAudioTracks) displayStream.addTrack(track)
+          }
+          return displayStream
         }
-        return displayStream
+
+        const audioContext: AudioContext = new AudioContextConstructor()
+        const destination = audioContext.createMediaStreamDestination()
+        const connectTrackGroup = (tracks: MediaStreamTrack[]) => {
+          if (tracks.length === 0) return
+          const sourceStream = new MediaStream(tracks)
+          const sourceNode = audioContext.createMediaStreamSource(sourceStream)
+          sourceNode.connect(destination)
+        }
+        connectTrackGroup(displayAudioTracks)
+        connectTrackGroup(micAudioTracks)
+        audioContext.resume().catch(() => undefined)
+
+        const mixedStream = new MediaStream()
+        for (const videoTrack of displayStream.getVideoTracks()) {
+          mixedStream.addTrack(videoTrack)
+        }
+        const mixedAudioTrack = destination.stream.getAudioTracks()[0]
+        if (mixedAudioTrack) {
+          mixedStream.addTrack(mixedAudioTrack)
+        } else if (displayAudioTracks[0]) {
+          mixedStream.addTrack(displayAudioTracks[0])
+        } else if (micAudioTracks[0]) {
+          mixedStream.addTrack(micAudioTracks[0])
+        }
+
+        auxiliaryStreamsRef.current = micStream ? [displayStream, micStream] : [displayStream]
+        mixingAudioContextRef.current = audioContext
+        return mixedStream
       })()
       mediaStreamRef.current = stream
       setMediaStream(stream)

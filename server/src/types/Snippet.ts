@@ -4,6 +4,7 @@ export type Snippet = {
   trajectoryId: string | null
   sourceSessionId: string
   sourceInputId?: string | null
+  fieldIds?: string[]
   snippetType: string
   fieldId: string
   text: string

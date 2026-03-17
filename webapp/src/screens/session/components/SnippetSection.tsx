@@ -36,13 +36,19 @@ export function SnippetSection({
   canRegenerate = false,
   isRegenerating = false,
   onRegenerate,
+  onCreateSnippet,
   onUpdateSnippetStatus,
+  onSaveSnippetLabels,
   onSaveSnippetText,
   onDeleteSnippet,
 }: SnippetSectionProps) {
   const [snippetIdPendingDelete, setSnippetIdPendingDelete] = useState<string | null>(null)
   const [snippetIdBeingEdited, setSnippetIdBeingEdited] = useState<string | null>(null)
+  const [snippetIdLabelBeingEdited, setSnippetIdLabelBeingEdited] = useState<string | null>(null)
+  const [isCreateSnippetModalOpen, setIsCreateSnippetModalOpen] = useState(false)
+  const [createSnippetDraftText, setCreateSnippetDraftText] = useState('')
   const [draftSnippetText, setDraftSnippetText] = useState('')
+  const [draftSnippetLabel, setDraftSnippetLabel] = useState('')
   const sortedSnippets = useMemo(
     () => [...snippets].sort((leftSnippet, rightSnippet) => leftSnippet.createdAtUnixMs - rightSnippet.createdAtUnixMs),
     [snippets],
@@ -56,11 +62,28 @@ export function SnippetSection({
     previousSnippetCountRef.current = sortedSnippets.length
   }, [sortedSnippets.length])
 
+  function readSnippetLabels(snippet: { fields?: string[]; field?: string; fieldId?: string }): string[] {
+    const labels = [
+      ...(Array.isArray(snippet.fields) ? snippet.fields : []),
+      String(snippet.field || '').trim(),
+      String(snippet.fieldId || '').trim(),
+    ]
+      .map((value) => String(value || '').trim())
+      .filter((value, index, array) => value.length > 0 && array.indexOf(value) === index)
+    return labels.length > 0 ? labels : ['general']
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text isBold style={styles.heading}>Selecteer wat bewaard blijft</Text>
         <View style={styles.headerActionsRow}>
+          <Pressable
+            onPress={() => setIsCreateSnippetModalOpen(true)}
+            style={({ hovered }) => [styles.headerActionButton, hovered ? styles.iconButtonHover : undefined]}
+          >
+            <Text style={styles.headerActionText}>Snippet toevoegen</Text>
+          </Pressable>
           {canRegenerate && !isLoading ? (
             sortedSnippets.length > 0 ? (
               <Pressable
@@ -132,12 +155,25 @@ export function SnippetSection({
             >
               <View style={styles.contentRow}>
                 <View style={styles.snippetTextWrap}>
+                  <View style={styles.labelRow}>
+                    <Text style={styles.labelKey}>Labels:</Text>
+                    <Text style={styles.labelValue}>{readSnippetLabels(snippet).join(', ')}</Text>
+                  </View>
                   <View style={styles.snippetTextInner}>
                     <Text style={[styles.snippetText, snippet.status === 'rejected' ? styles.snippetTextRejected : undefined]}>{snippet.text}</Text>
                     {snippet.status === 'rejected' ? <View pointerEvents="none" style={styles.snippetTextStrike} /> : null}
                   </View>
                 </View>
                 <View style={styles.actionsRow}>
+                  <Pressable
+                    onPress={() => {
+                      setSnippetIdLabelBeingEdited(snippet.id)
+                      setDraftSnippetLabel(readSnippetLabels(snippet).join(', '))
+                    }}
+                    style={({ hovered }) => [styles.labelActionButton, hovered ? styles.iconButtonHover : undefined]}
+                  >
+                    <Text style={styles.labelActionText}>Label wijzigen</Text>
+                  </Pressable>
                   <Pressable
                     onPress={() => {
                       setSnippetIdBeingEdited(snippet.id)
@@ -216,6 +252,118 @@ export function SnippetSection({
           >
             <Text isBold style={styles.modalSaveButtonText}>
               Opslaan
+            </Text>
+          </Pressable>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={Boolean(snippetIdLabelBeingEdited)}
+        onClose={() => setSnippetIdLabelBeingEdited(null)}
+        contentContainerStyle={styles.modalContainer}
+      >
+        <View style={styles.modalHeader}>
+          <Text isBold style={styles.modalTitle}>
+            Label wijzigen
+          </Text>
+          <Pressable onPress={() => setSnippetIdLabelBeingEdited(null)} style={({ hovered }) => [styles.modalCloseButton, hovered ? styles.modalCloseButtonHover : undefined]}>
+            <ModalCloseDarkIcon />
+          </Pressable>
+        </View>
+        <View style={styles.modalBody}>
+          <TextInput
+            value={draftSnippetLabel}
+            onChangeText={setDraftSnippetLabel}
+            placeholder="Bijv. general, rp_werkfit_5_1, er_werkfit_7_1"
+            placeholderTextColor={semanticColorTokens.light.textMuted}
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={styles.modalLabelInput}
+          />
+        </View>
+        <View style={styles.modalFooter}>
+          <Pressable onPress={() => setSnippetIdLabelBeingEdited(null)} style={({ hovered }) => [styles.modalCancelButton, hovered ? styles.modalCancelButtonHover : undefined]}>
+            <Text isBold style={styles.modalCancelButtonText}>
+              Annuleren
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              if (!snippetIdLabelBeingEdited) return
+              const nextLabels = draftSnippetLabel
+                .split(',')
+                .map((label) => label.trim())
+                .filter((label, index, labels) => label.length > 0 && labels.indexOf(label) === index)
+              if (nextLabels.length === 0) return
+              onSaveSnippetLabels(snippetIdLabelBeingEdited, nextLabels)
+              setSnippetIdLabelBeingEdited(null)
+            }}
+            style={({ hovered }) => [styles.modalSaveButton, hovered ? styles.modalSaveButtonHover : undefined]}
+          >
+            <Text isBold style={styles.modalSaveButtonText}>
+              Opslaan
+            </Text>
+          </Pressable>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={isCreateSnippetModalOpen}
+        onClose={() => {
+          setIsCreateSnippetModalOpen(false)
+          setCreateSnippetDraftText('')
+        }}
+        contentContainerStyle={styles.modalContainer}
+      >
+        <View style={styles.modalHeader}>
+          <Text isBold style={styles.modalTitle}>
+            Snippet toevoegen
+          </Text>
+          <Pressable
+            onPress={() => {
+              setIsCreateSnippetModalOpen(false)
+              setCreateSnippetDraftText('')
+            }}
+            style={({ hovered }) => [styles.modalCloseButton, hovered ? styles.modalCloseButtonHover : undefined]}
+          >
+            <ModalCloseDarkIcon />
+          </Pressable>
+        </View>
+        <View style={styles.modalBody}>
+          <TextInput
+            value={createSnippetDraftText}
+            onChangeText={setCreateSnippetDraftText}
+            placeholder="Schrijf de nieuwe snippet..."
+            placeholderTextColor={semanticColorTokens.light.textMuted}
+            multiline
+            textAlignVertical="top"
+            style={styles.modalEditorInput}
+          />
+        </View>
+        <View style={styles.modalFooter}>
+          <Pressable
+            onPress={() => {
+              setIsCreateSnippetModalOpen(false)
+              setCreateSnippetDraftText('')
+            }}
+            style={({ hovered }) => [styles.modalCancelButton, hovered ? styles.modalCancelButtonHover : undefined]}
+          >
+            <Text isBold style={styles.modalCancelButtonText}>
+              Annuleren
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              const nextSnippetText = createSnippetDraftText.trim()
+              if (!nextSnippetText) return
+              onCreateSnippet(nextSnippetText)
+              setIsCreateSnippetModalOpen(false)
+              setCreateSnippetDraftText('')
+            }}
+            style={({ hovered }) => [styles.modalSaveButton, hovered ? styles.modalSaveButtonHover : undefined]}
+          >
+            <Text isBold style={styles.modalSaveButtonText}>
+              Toevoegen
             </Text>
           </Pressable>
         </View>
@@ -375,6 +523,33 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     justifyContent: 'center',
     position: 'relative',
+    gap: spacing.xxs,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+  },
+  labelKey: {
+    color: semanticColorTokens.light.textMuted,
+    fontSize: fontSizes.xs,
+    lineHeight: 16,
+  },
+  labelValue: {
+    color: semanticColorTokens.light.textStrong,
+    fontSize: fontSizes.xs,
+    lineHeight: 16,
+  },
+  labelActionButton: {
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xxs,
+    backgroundColor: 'transparent',
+  },
+  labelActionText: {
+    fontSize: fontSizes.xs,
+    lineHeight: 16,
+    color: brandColors.primary,
   },
   snippetTextInner: {
     alignSelf: 'flex-start',
@@ -438,6 +613,18 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     fontSize: fontSizes.md,
     lineHeight: 24,
+    color: semanticColorTokens.light.textBody,
+  },
+  modalLabelInput: {
+    minHeight: 46,
+    borderRadius: radius.md,
+    borderWidth: borderWidths.hairline,
+    borderColor: semanticColorTokens.light.border,
+    backgroundColor: semanticColorTokens.light.pageBackground,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: fontSizes.md,
+    lineHeight: 22,
     color: semanticColorTokens.light.textBody,
   },
   modalBodyText: {

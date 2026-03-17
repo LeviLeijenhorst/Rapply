@@ -17,6 +17,19 @@ function normalizeText(value: unknown): string {
   return String(value || "").trim()
 }
 
+function readSnippetLabels(snippet: Snippet): string[] {
+  const labels: string[] = []
+  const seen = new Set<string>()
+  const candidates = [...(Array.isArray(snippet.fieldIds) ? snippet.fieldIds : []), snippet.fieldId, snippet.snippetType]
+  for (const candidate of candidates) {
+    const normalized = normalizeText(candidate)
+    if (!normalized || seen.has(normalized)) continue
+    seen.add(normalized)
+    labels.push(normalized)
+  }
+  return labels
+}
+
 export function selectEvidenceForReport(params: {
   inputs: Session[]
   notes: Note[]
@@ -45,8 +58,9 @@ export function selectEvidenceForReport(params: {
   }
 
   for (const snippet of approvedSnippets) {
-    const fieldId = normalizeText(snippet.fieldId ?? snippet.snippetType)
-    addEvidence(fieldId, snippet.text)
+    for (const fieldId of readSnippetLabels(snippet)) {
+      addEvidence(fieldId, snippet.text)
+    }
   }
 
   const noteEvidenceLines = selectedNotes.map((note) => `${normalizeText(note.title)}\n${normalizeText(note.text)}`.trim()).filter(Boolean)

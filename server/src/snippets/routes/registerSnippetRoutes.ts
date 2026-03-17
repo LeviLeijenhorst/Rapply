@@ -16,6 +16,7 @@ import {
 import { readOptionalSnippetStatus, readSnippet } from "../readSnippets"
 import { createSnippet, deleteSnippet, updateSnippet } from "../store"
 import { canUserAccessClient } from "../../access/clientAccess"
+import { sanitizeSnippetText } from "../sanitizeSnippetText"
 
 type RegisterSnippetRoutesParams = {
   rateLimitAi: RequestHandler
@@ -30,14 +31,27 @@ function resolveSnippetFieldContext(rawField: unknown): { field: string; questio
   return null
 }
 
+function readNormalizedLabelList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  const labels: string[] = []
+  const seen = new Set<string>()
+  for (const item of value) {
+    const normalized = normalizeText(item)
+    if (!normalized || seen.has(normalized)) continue
+    seen.add(normalized)
+    labels.push(normalized)
+  }
+  return labels
+}
+
 // Reads snippet text from strict JSON model output.
 function readSnippetTextFromModelResponse(rawText: string): string {
   const stripped = stripJsonCodeFences(rawText)
   if (!stripped) return ""
   try {
     const parsed = JSON.parse(stripped) as { text?: unknown; snippet?: { text?: unknown } }
-    if (typeof parsed?.text === "string") return normalizeText(parsed.text)
-    if (typeof parsed?.snippet?.text === "string") return normalizeText(parsed.snippet.text)
+    if (typeof parsed?.text === "string") return sanitizeSnippetText(parsed.text)
+    if (typeof parsed?.snippet?.text === "string") return sanitizeSnippetText(parsed.snippet.text)
   } catch {
     return ""
   }
@@ -93,6 +107,7 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
         updatedAtUnixMs,
         snippetType: readOptionalText(payload.snippetType ?? payload.field),
         fieldId: readOptionalText(payload.fieldId ?? payload.field),
+        fieldIds: readNormalizedLabelList(payload.fieldIds ?? payload.fields),
         text: readOptionalText(payload.text),
         approvalStatus: readOptionalSnippetStatus(payload.approvalStatus ?? payload.status),
       })
@@ -156,6 +171,7 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
         trajectoryId: string | null
         sourceSessionId: string
         sourceInputId: string
+        fieldIds: string[]
         snippetType: string
         fieldId: string
         text: string
@@ -166,15 +182,19 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
       }> = []
 
       for (const snippet of extracted.snippets) {
+        const labels = snippet.fields.length > 0 ? snippet.fields : ["general"]
+        const sanitizedText = sanitizeSnippetText(snippet.text)
+        if (!sanitizedText) continue
         const snippetRow = {
           id: `snippet-${crypto.randomUUID()}`,
           clientId,
           trajectoryId: resolvedTrajectoryId || null,
           sourceSessionId,
           sourceInputId: sourceSessionId,
-          snippetType: snippet.field,
-          fieldId: snippet.field,
-          text: snippet.text,
+          fieldIds: labels,
+          snippetType: labels[0],
+          fieldId: labels[0],
+          text: sanitizedText,
           snippetDate: itemDate,
           approvalStatus: "pending" as const,
           createdAtUnixMs: now,

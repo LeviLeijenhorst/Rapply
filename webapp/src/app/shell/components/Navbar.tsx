@@ -106,7 +106,7 @@ export function Navbar({
                 ]}
               >
                 <ClientPageMicrophoneIcon size={18} />
-                <Text style={styles.primaryButtonText}>Opnemen</Text>
+                <Text style={styles.primaryButtonText}>Nieuwe input</Text>
               </Pressable>
             </>
           ) : null}

@@ -28,7 +28,7 @@ import type { JsonValue, Report, ReportFieldType } from '@/storage/types'
 import { useToast } from '@/toast/ToastProvider'
 import { Text } from '@/ui/Text'
 
-type Props = { report: Report; templates: PipelineTemplate[]; onReportUpdated: (report: Report) => void }
+type Props = { report: Report; templates: PipelineTemplate[]; onReportUpdated: (report: Report) => void; showExportButton?: boolean }
 type ChatRow = { id: string; role: 'user' | 'assistant'; text: string }
 type RenderField = { key: string; sourceFieldId: string; numberKey: string; label: string; fieldType: ReportFieldType; variant: ReturnType<typeof readFieldVariant> }
 type RenderSection = { key: string; title: string; fields: RenderField[]; status: 'complete' | 'incomplete' }
@@ -70,7 +70,7 @@ function joinPostcodePlace(postcode: string, place: string): string {
   return `${p} ${String(place || '').trim()}`.trim()
 }
 
-export function ReportEditorPanel({ report, templates, onReportUpdated }: Props) {
+export function ReportEditorPanel({ report, templates, onReportUpdated, showExportButton = true }: Props) {
   const { showErrorToast, showToast } = useToast()
   const [draftByFieldId, setDraftByFieldId] = useState<Record<string, JsonValue>>({})
   const [collapsedBySectionKey, setCollapsedBySectionKey] = useState<Record<string, boolean>>({})
@@ -207,13 +207,15 @@ export function ReportEditorPanel({ report, templates, onReportUpdated }: Props)
 
   return (
     <View style={styles.root}>
-      <View style={styles.headerRow}>
-        <View style={styles.headerActions}>
-          <Pressable onPress={() => void handleExportWord()} style={({ hovered }) => [styles.exportButton, hovered ? styles.exportButtonHover : undefined]}>
-            {isExporting ? <ActivityIndicator size="small" color="#007ACF" /> : <View style={styles.exportButtonContent}><ReportUwvLogoIcon /><Text isSemibold style={styles.exportButtonText}>Exporteer naar Word</Text></View>}
-          </Pressable>
+      {showExportButton ? (
+        <View style={styles.headerRow}>
+          <View style={styles.headerActions}>
+            <Pressable onPress={() => void handleExportWord()} style={({ hovered }) => [styles.exportButton, hovered ? styles.exportButtonHover : undefined]}>
+              {isExporting ? <ActivityIndicator size="small" color="#007ACF" /> : <View style={styles.exportButtonContent}><ReportUwvLogoIcon /><Text isSemibold style={styles.exportButtonText}>Exporteer naar Word</Text></View>}
+            </Pressable>
+          </View>
         </View>
-      </View>
+      ) : null}
 
       <View style={styles.bodyRow}>
         <ScrollView style={styles.fieldsColumn} contentContainerStyle={styles.fieldsContent} showsVerticalScrollIndicator={false}>

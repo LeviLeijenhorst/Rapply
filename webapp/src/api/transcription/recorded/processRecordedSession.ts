@@ -19,6 +19,7 @@ import {
   markPendingPreviewAudioUploaded,
   setPendingPreviewProcessingState,
 } from '../../../audio/pendingPreviewStore'
+import { hasStructuredSummaryContent } from '../../../types/structuredSummary'
 import type { Input } from '../../../storage/types'
 import type { Snippet } from '../../../storage/types'
 
@@ -44,6 +45,52 @@ function normalizeWhitespace(value: string): string {
   return String(value || '').replace(/\s+/g, ' ').trim()
 }
 
+function removeSpeakerLabels(value: string): string {
+  return String(value || '')
+    .replace(/\bspeaker[_\s-]*\d+\b\s*:?\s*/gi, '')
+    .replace(/\bspreker[_\s-]*\d+\b\s*:?\s*/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+function sanitizeSnippetText(value: string): string {
+  const withoutSpeakerLabels = removeSpeakerLabels(String(value || ''))
+  return withoutSpeakerLabels
+    .replace(/^\s*\[\d{1,2}:\d{2}(?:\.\d+)?\]\s*/g, '')
+    .replace(/^\s*\d{1,2}:\d{2}(?:\.\d+)?\s*[-:]\s*/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+function looksLikeTranscript(value: string): boolean {
+  const text = String(value || '').trim()
+  if (!text) return false
+  const speakerLabelMatches = text.match(/\b(?:speaker[_\s-]*\d+|spreker[_\s-]*\d+)\s*:/gi) || []
+  if (speakerLabelMatches.length >= 1) return true
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+  if (lines.length === 0) return false
+  const transcriptLikeLines = lines.filter((line) => {
+    if (/^\[\d{1,2}:\d{2}(?:\.\d+)?\]/.test(line)) return true
+    if (/^\d{1,2}:\d{2}(?:\.\d+)?\s*[-:]/.test(line)) return true
+    if (/^(speaker[_\s-]*\d+|spreker\s*\d+|coach|client)\s*:/i.test(line)) return true
+    return false
+  }).length
+  return transcriptLikeLines >= Math.max(2, Math.ceil(lines.length * 0.4))
+}
+
+function sanitizeCreatedSnippets(snippets: Snippet[]): Snippet[] {
+  return snippets
+    .map((snippet) => {
+      const sanitizedText = sanitizeSnippetText(String(snippet.text || ''))
+      if (!sanitizedText) return null
+      return {
+        ...snippet,
+        text: sanitizedText,
+      }
+    })
+    .filter((snippet): snippet is Snippet => Boolean(snippet))
+}
+
 function readTranscriptLeadSentence(transcript: string): string {
   const normalized = normalizeWhitespace(transcript)
   if (!normalized) return ''
@@ -63,7 +110,7 @@ function buildFallbackStructuredSummary(transcript: string): NonNullable<Input['
 }
 
 function buildFallbackSnippet(params: { sessionId: string; trajectoryId: string | null | undefined; transcript: string; itemDate: number }): Snippet | null {
-  const text = readTranscriptLeadSentence(params.transcript)
+  const text = sanitizeSnippetText(readTranscriptLeadSentence(params.transcript))
   if (!text) return null
   const now = Date.now()
   return {
@@ -78,6 +125,16 @@ function buildFallbackSnippet(params: { sessionId: string; trajectoryId: string 
     createdAtUnixMs: now,
     updatedAtUnixMs: now,
   }
+}
+
+function isMissingAudioBytesError(error: unknown): boolean {
+  const message = String(error instanceof Error ? error.message : error || '').toLowerCase()
+  return message.includes('missing audio bytes') || message.includes('audio payload is empty')
+}
+
+function isNoSpeechDetectedError(error: unknown): boolean {
+  const message = String(error instanceof Error ? error.message : error || '').toLowerCase()
+  return message.includes('geen spraak gedetecteerd') || message.includes('no transcript returned')
 }
 
 async function maybeExtractSnippets(params: {
@@ -103,8 +160,9 @@ async function maybeExtractSnippets(params: {
       transcript,
       itemDate: params.itemDate,
     })
-    if (snippets.length > 0) {
-      params.onCreatedSnippets?.(snippets)
+    const sanitizedSnippets = sanitizeCreatedSnippets(snippets)
+    if (sanitizedSnippets.length > 0) {
+      params.onCreatedSnippets?.(sanitizedSnippets)
     }
   } catch (error) {
     console.warn('[processRecordedInput] snippet extraction failed', error)
@@ -165,31 +223,40 @@ export async function processRecordedInput(params: {
   activeProcessingInputIds.add(sessionId)
 
   const runId = startTranscriptionRun(sessionId)
+  const allowAudioSave = shouldSaveAudio
 
   let ensuredAudioBlobId = initialAudioBlobId
   let hasTranscriptResult = false
   let latestTranscriptForSnippetExtraction: string | null = null
   try {
-    if (shouldSaveAudio && !ensuredAudioBlobId) {
+    if (allowAudioSave && !ensuredAudioBlobId) {
       await setPendingPreviewProcessingState({ sessionId, processingState: 'encrypting', errorMessage: null })
       const encryptedBlob = await e2ee.encryptAudioBlobForStorage({ audioBlob, mimeType })
 
       await setPendingPreviewProcessingState({ sessionId, processingState: 'uploading', errorMessage: null })
       const storageMimeType = e2ee.shouldStoreAudioAsOctetStream ? 'application/octet-stream' : mimeType
-      const createdAudio = await createAudioBlobRemote({
-        audioBlob: encryptedBlob,
-        mimeType: storageMimeType,
-        timeoutMs: AUDIO_BLOB_SAVE_TIMEOUT_MS,
-      })
-      const nextId = String(createdAudio.audioBlobId || '').trim()
-      if (!nextId) {
-        throw new Error('Geen audio id teruggekregen van de server.')
+      try {
+        const createdAudio = await createAudioBlobRemote({
+          audioBlob: encryptedBlob,
+          mimeType: storageMimeType,
+          timeoutMs: AUDIO_BLOB_SAVE_TIMEOUT_MS,
+        })
+        const nextId = String(createdAudio.audioBlobId || '').trim()
+        if (!nextId) {
+          throw new Error('Geen audio id teruggekregen van de server.')
+        }
+        ensuredAudioBlobId = nextId
+        updateInput(sessionId, { audioBlobId: ensuredAudioBlobId })
+        await markPendingPreviewAudioUploaded({ sessionId, audioBlobId: ensuredAudioBlobId })
+        await clearPendingPreviewAudioIfEligible(sessionId)
+      } catch (error) {
+        if (!isMissingAudioBytesError(error)) throw error
+        console.warn('[processRecordedInput] Audio save failed, continuing without persisted audio', {
+          sessionId,
+          error: error instanceof Error ? error.message : String(error || ''),
+        })
       }
-      ensuredAudioBlobId = nextId
-      updateInput(sessionId, { audioBlobId: ensuredAudioBlobId })
-      await markPendingPreviewAudioUploaded({ sessionId, audioBlobId: ensuredAudioBlobId })
-      await clearPendingPreviewAudioIfEligible(sessionId)
-    } else if (shouldSaveAudio && ensuredAudioBlobId) {
+    } else if (allowAudioSave && ensuredAudioBlobId) {
       await markPendingPreviewAudioUploaded({ sessionId, audioBlobId: ensuredAudioBlobId })
       await clearPendingPreviewAudioIfEligible(sessionId)
     }
@@ -221,22 +288,10 @@ export async function processRecordedInput(params: {
         transcript: presetTranscript,
         signal: summaryAbortController.signal,
       })
-      console.log('[STRUCTURED_SUMMARY_RESULT]', generatedStructuredSummary)
       if (!isTranscriptionRunActive(sessionId, runId)) return
-      const transcriptionStatus: InputUpdate['transcriptionStatus'] = 'done'
-      if (transcriptionStatus === 'done') {
-        console.log('[SESSION_UPDATE_VALUES]', {
-          summaryStructured: generatedStructuredSummary,
-        })
-        updateInput(sessionId, {
-          summaryStructured: generatedStructuredSummary,
-          summary: null,
-          audioBlobId: null,
-          audioDurationSeconds: null,
-          transcriptionStatus,
-          transcriptionError: null,
-        })
-      }
+      const resolvedStructuredSummary = hasStructuredSummaryContent(generatedStructuredSummary)
+        ? generatedStructuredSummary
+        : buildFallbackStructuredSummary(presetTranscript)
       await maybeExtractSnippets({
         enabled: Boolean(snippetExtraction?.enabled),
         sessionId,
@@ -245,6 +300,14 @@ export async function processRecordedInput(params: {
         transcript: presetTranscript,
         itemDate: Number(snippetExtraction?.itemDate) || Date.now(),
         onCreatedSnippets: snippetExtraction?.onCreatedSnippets,
+      })
+      updateInput(sessionId, {
+        summaryStructured: resolvedStructuredSummary,
+        summary: null,
+        audioBlobId: null,
+        audioDurationSeconds: null,
+        transcriptionStatus: 'done',
+        transcriptionError: null,
       })
       await markPendingPreviewTranscriptionSucceeded(sessionId)
       await clearPendingPreviewAudioIfEligible(sessionId)
@@ -271,13 +334,11 @@ export async function processRecordedInput(params: {
     latestTranscriptForSnippetExtraction = transcript
 
     const cleanedSummary = String(summary || '').trim()
-    if (cleanedSummary) {
+    if (cleanedSummary && !looksLikeTranscript(cleanedSummary)) {
       updateInput(sessionId, {
         transcript,
         summary: cleanedSummary,
-        audioBlobId: null,
-        audioDurationSeconds: null,
-        transcriptionStatus: 'done',
+        transcriptionStatus: 'generating',
         transcriptionError: null,
       })
       await maybeExtractSnippets({
@@ -288,6 +349,12 @@ export async function processRecordedInput(params: {
         transcript,
         itemDate: Number(snippetExtraction?.itemDate) || Date.now(),
         onCreatedSnippets: snippetExtraction?.onCreatedSnippets,
+      })
+      updateInput(sessionId, {
+        audioBlobId: null,
+        audioDurationSeconds: null,
+        transcriptionStatus: 'done',
+        transcriptionError: null,
       })
       await markPendingPreviewTranscriptionSucceeded(sessionId)
       await clearPendingPreviewAudioIfEligible(sessionId)
@@ -307,22 +374,10 @@ export async function processRecordedInput(params: {
       transcript,
       signal: summaryAbortController.signal,
     })
-    console.log('[STRUCTURED_SUMMARY_RESULT]', generatedStructuredSummary)
     if (!isTranscriptionRunActive(sessionId, runId)) return
-    const transcriptionStatus: InputUpdate['transcriptionStatus'] = 'done'
-    if (transcriptionStatus === 'done') {
-      console.log('[SESSION_UPDATE_VALUES]', {
-        summaryStructured: generatedStructuredSummary,
-      })
-      updateInput(sessionId, {
-        summaryStructured: generatedStructuredSummary,
-        summary: null,
-        audioBlobId: null,
-        audioDurationSeconds: null,
-        transcriptionStatus,
-        transcriptionError: null,
-      })
-    }
+    const resolvedStructuredSummary = hasStructuredSummaryContent(generatedStructuredSummary)
+      ? generatedStructuredSummary
+      : buildFallbackStructuredSummary(transcript)
     await maybeExtractSnippets({
       enabled: Boolean(snippetExtraction?.enabled),
       sessionId,
@@ -331,6 +386,14 @@ export async function processRecordedInput(params: {
       transcript,
       itemDate: Number(snippetExtraction?.itemDate) || Date.now(),
       onCreatedSnippets: snippetExtraction?.onCreatedSnippets,
+    })
+    updateInput(sessionId, {
+      summaryStructured: resolvedStructuredSummary,
+      summary: null,
+      audioBlobId: null,
+      audioDurationSeconds: null,
+      transcriptionStatus: 'done',
+      transcriptionError: null,
     })
     await markPendingPreviewTranscriptionSucceeded(sessionId)
     await clearPendingPreviewAudioIfEligible(sessionId)
@@ -372,19 +435,37 @@ export async function processRecordedInput(params: {
       } catch (pendingStateError) {
         console.warn('[processRecordedInput] failed to update pending preview state after summary error', pendingStateError)
       }
-      if (!shouldSaveAudio) {
+      if (!allowAudioSave) {
         await clearPendingPreviewAudio(sessionId)
       }
       finishTranscriptionRun(sessionId, runId)
       return
     }
 
-    if (shouldSaveAudio && !ensuredAudioBlobId) {
+    if (allowAudioSave && !ensuredAudioBlobId) {
       await setPendingPreviewProcessingState({ sessionId, processingState: 'failed', errorMessage })
     }
-    if (!shouldSaveAudio) {
+    if (!allowAudioSave) {
       await setPendingPreviewProcessingState({ sessionId, processingState: 'failed', errorMessage })
       await clearPendingPreviewAudio(sessionId)
+    }
+
+    if (isNoSpeechDetectedError(error)) {
+      updateInput(sessionId, {
+        transcript: '',
+        summary: 'Er is geen spraak gedetecteerd in deze opname.',
+        summaryStructured: null,
+        transcriptionStatus: 'done',
+        transcriptionError: null,
+      })
+      try {
+        await markPendingPreviewTranscriptionSucceeded(sessionId)
+        await clearPendingPreviewAudioIfEligible(sessionId)
+      } catch (pendingStateError) {
+        console.warn('[processRecordedInput] failed to update pending preview state after no-speech completion', pendingStateError)
+      }
+      finishTranscriptionRun(sessionId, runId)
+      return
     }
 
     updateInput(sessionId, {

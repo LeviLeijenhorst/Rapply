@@ -35,7 +35,6 @@ export function InputScreen(props: InputScreenProps) {
   const {
     isInputMissing,
     resolvedInputId,
-    isWrittenInput,
     isUploadedDocument,
     summary,
     transcriptionStatus,
@@ -46,7 +45,9 @@ export function InputScreen(props: InputScreenProps) {
     isSnippetStateSettling,
     isRegeneratingSnippets,
     handleRegenerateInputSnippets,
+    handleCreateSnippet,
     handleUpdateSnippetStatus,
+    handleSaveSnippetLabels,
     handleSaveSnippetText,
     handleDeleteSnippet,
     handleSaveSummary,
@@ -79,18 +80,18 @@ export function InputScreen(props: InputScreenProps) {
               onPressEdit={!isUploadedDocument ? () => setIsSummaryEditModalOpen(true) : null}
             />
 
-            {!isWrittenInput ? (
-              <SnippetSection
-                snippets={sessionSnippets}
-                isLoading={((transcriptionStatus === 'transcribing' || transcriptionStatus === 'generating') && sessionSnippets.length === 0) || isSnippetStateSettling}
-                canRegenerate={canRegenerateSnippets}
-                isRegenerating={isRegeneratingSnippets}
-                onRegenerate={handleRegenerateInputSnippets}
-                onUpdateSnippetStatus={handleUpdateSnippetStatus}
-                onSaveSnippetText={handleSaveSnippetText}
-                onDeleteSnippet={handleDeleteSnippet}
-              />
-            ) : null}
+            <SnippetSection
+              snippets={sessionSnippets}
+              isLoading={((transcriptionStatus === 'transcribing' || transcriptionStatus === 'generating') && sessionSnippets.length === 0) || isSnippetStateSettling}
+              canRegenerate={canRegenerateSnippets}
+              isRegenerating={isRegeneratingSnippets}
+              onRegenerate={handleRegenerateInputSnippets}
+              onCreateSnippet={handleCreateSnippet}
+              onUpdateSnippetStatus={handleUpdateSnippetStatus}
+              onSaveSnippetLabels={handleSaveSnippetLabels}
+              onSaveSnippetText={handleSaveSnippetText}
+              onDeleteSnippet={handleDeleteSnippet}
+            />
           </ScrollView>
         </View>
 

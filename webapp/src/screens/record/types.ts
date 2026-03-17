@@ -3,6 +3,7 @@ export type NewInputStep = 'select' | 'consent' | 'upload' | 'recording' | 'reco
 export type NewInputQuickAction =
   | 'record-session'
   | 'record-summary'
+  | 'write-report'
   | 'record-video'
   | 'import-audio'
   | 'import-document'

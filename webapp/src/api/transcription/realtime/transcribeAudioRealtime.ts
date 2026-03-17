@@ -35,12 +35,14 @@ type RealtimeSegment = {
 
 type StartRealtimeTranscriberParams = {
   languageCode?: string
+  mediaStream?: MediaStream | null
   onFinalSegment: (segment: RealtimeSegment) => void
   onError?: (message: string) => void
 }
 
 type StartParams = {
   languageCode?: string
+  mediaStream?: MediaStream | null
   onFinalSegment: (segment: { speaker: string; text: string }) => void
   onError?: (message: string) => void
 }
@@ -190,7 +192,29 @@ async function startAzureRealtimeTranscriber(params: StartRealtimeTranscriberPar
     speechConfig.setProperty(sdk.PropertyId.SpeechServiceResponse_DiarizeIntermediateResults, 'true')
   }
 
-  const audioConfig = sdk.AudioConfig.fromDefaultMicrophoneInput()
+  let stopPcmStreamer: (() => Promise<void>) | null = null
+  let audioConfig: any = null
+  if (params.mediaStream) {
+    const format = sdk.AudioStreamFormat.getWaveFormatPCM(16000, 16, 1)
+    const pushStream = sdk.AudioInputStream.createPushStream(format)
+    const streamer = await startPcmStreamingFromMediaStream({
+      mediaStream: params.mediaStream,
+      onPcmChunk: (chunk) => {
+        try {
+          pushStream.write(chunk)
+        } catch {}
+      },
+    })
+    stopPcmStreamer = async () => {
+      await streamer.stop().catch(() => undefined)
+      try {
+        pushStream.close()
+      } catch {}
+    }
+    audioConfig = sdk.AudioConfig.fromStreamInput(pushStream)
+  } else {
+    audioConfig = sdk.AudioConfig.fromDefaultMicrophoneInput()
+  }
   const transcriber = new sdk.ConversationTranscriber(speechConfig, audioConfig)
 
   const speakerMap = new Map<string, string>()
@@ -236,6 +260,9 @@ async function startAzureRealtimeTranscriber(params: StartRealtimeTranscriberPar
         (error: unknown) => reject(new Error(toFriendlyRealtimeError(error))),
       )
     }).catch(() => undefined)
+    if (stopPcmStreamer) {
+      await stopPcmStreamer().catch(() => undefined)
+    }
     try {
       transcriber.close()
     } catch {}
@@ -254,21 +281,15 @@ async function startSpeechmaticsRealtimeTranscriber(params: StartRealtimeTranscr
   const wsUrl = buildWsUrl(realtimeUrl, jwt)
   const socket = new WebSocket(wsUrl)
 
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-  const AudioContextConstructor = window.AudioContext || (window as any).webkitAudioContext
-  if (!AudioContextConstructor) {
-    throw new Error('Realtime audio wordt niet ondersteund in deze browser.')
-  }
-
-  const audioContext = new AudioContextConstructor()
-  const source = audioContext.createMediaStreamSource(stream)
-  const processor = audioContext.createScriptProcessor(4096, 1, 1)
-  const sinkGain = audioContext.createGain()
-  sinkGain.gain.value = 0
-
-  source.connect(processor)
-  processor.connect(sinkGain)
-  sinkGain.connect(audioContext.destination)
+  const ownsStream = !params.mediaStream
+  const stream = params.mediaStream || (await navigator.mediaDevices.getUserMedia({ audio: true }))
+  const pcmStreamer = await startPcmStreamingFromMediaStream({
+    mediaStream: stream,
+    onPcmChunk: (chunk) => {
+      if (socket.readyState !== WebSocket.OPEN) return
+      socket.send(chunk)
+    },
+  })
 
   let openResolved = false
   const openPromise = new Promise<void>((resolve, reject) => {
@@ -301,7 +322,7 @@ async function startSpeechmaticsRealtimeTranscriber(params: StartRealtimeTranscr
 
   await openPromise
 
-  const sampleRate = Number.isFinite(audioContext.sampleRate) ? Math.floor(audioContext.sampleRate) : 16000
+  const sampleRate = Number.isFinite(pcmStreamer.sampleRate) ? Math.floor(pcmStreamer.sampleRate) : 16000
   socket.send(
     JSON.stringify({
       message: 'StartRecognition',
@@ -317,33 +338,18 @@ async function startSpeechmaticsRealtimeTranscriber(params: StartRealtimeTranscr
     }),
   )
 
-  processor.onaudioprocess = (event) => {
-    if (socket.readyState !== WebSocket.OPEN) return
-    const channel = event.inputBuffer.getChannelData(0)
-    const pcm16 = convertFloat32ToPcm16(channel)
-    socket.send(pcm16.buffer)
-  }
-
   const stop = async () => {
-    processor.onaudioprocess = null
+    await pcmStreamer.stop().catch(() => undefined)
     try {
       socket.send(JSON.stringify({ message: 'EndOfStream' }))
     } catch {}
-    try {
-      source.disconnect()
-    } catch {}
-    try {
-      processor.disconnect()
-    } catch {}
-    try {
-      sinkGain.disconnect()
-    } catch {}
-    stream.getTracks().forEach((track) => {
-      try {
-        track.stop()
-      } catch {}
-    })
-    await audioContext.close().catch(() => undefined)
+    if (ownsStream) {
+      stream.getTracks().forEach((track) => {
+        try {
+          track.stop()
+        } catch {}
+      })
+    }
     try {
       socket.close()
     } catch {}
@@ -359,6 +365,58 @@ export async function startRealtimeTranscriber(params: StartRealtimeTranscriberP
     return startSpeechmaticsRealtimeTranscriber(params, tokenResponse)
   }
   return startAzureRealtimeTranscriber(params, tokenResponse)
+}
+
+async function startPcmStreamingFromMediaStream(params: {
+  mediaStream: MediaStream
+  onPcmChunk: (chunk: ArrayBuffer) => void
+}): Promise<{ sampleRate: number; stop: () => Promise<void> }> {
+  const AudioContextConstructor = window.AudioContext || (window as any).webkitAudioContext
+  if (!AudioContextConstructor) {
+    throw new Error('Realtime audio wordt niet ondersteund in deze browser.')
+  }
+  if (params.mediaStream.getAudioTracks().length === 0) {
+    throw new Error('De gedeelde stream bevat geen audio. Zet "Share tab audio" aan en probeer opnieuw.')
+  }
+
+  const audioContext = new AudioContextConstructor()
+  const source = audioContext.createMediaStreamSource(params.mediaStream)
+  const processor = audioContext.createScriptProcessor(4096, 1, 1)
+  const sinkGain = audioContext.createGain()
+  sinkGain.gain.value = 0
+
+  source.connect(processor)
+  processor.connect(sinkGain)
+  sinkGain.connect(audioContext.destination)
+  await audioContext.resume().catch(() => undefined)
+
+  processor.onaudioprocess = (event) => {
+    if (event.inputBuffer.numberOfChannels <= 0) return
+    const channel = event.inputBuffer.getChannelData(0)
+    const pcm16 = convertFloat32ToPcm16(channel)
+    const pcmBuffer = new ArrayBuffer(pcm16.byteLength)
+    new Int16Array(pcmBuffer).set(pcm16)
+    params.onPcmChunk(pcmBuffer)
+  }
+
+  const stop = async () => {
+    processor.onaudioprocess = null
+    try {
+      source.disconnect()
+    } catch {}
+    try {
+      processor.disconnect()
+    } catch {}
+    try {
+      sinkGain.disconnect()
+    } catch {}
+    await audioContext.close().catch(() => undefined)
+  }
+
+  return {
+    sampleRate: Number.isFinite(audioContext.sampleRate) ? Math.floor(audioContext.sampleRate) : 16000,
+    stop,
+  }
 }
 
 export async function fetchRealtimeTranscriptionRuntime() {

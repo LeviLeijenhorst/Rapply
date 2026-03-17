@@ -6,6 +6,10 @@ export async function createAudioBlobRemote(params: {
   timeoutMs?: number
   signal?: AbortSignal
 }): Promise<{ audioBlobId: string }> {
+  const bytes = new Uint8Array(await params.audioBlob.arrayBuffer())
+  if (bytes.byteLength <= 0) {
+    throw new Error('Audio payload is empty')
+  }
   const response = await fetchSecureApi(
     '/audio-blobs',
     {
@@ -13,7 +17,7 @@ export async function createAudioBlobRemote(params: {
       headers: {
         'Content-Type': params.mimeType || 'application/octet-stream',
       },
-      body: params.audioBlob,
+      body: bytes,
       signal: params.signal,
     },
     { timeoutMs: params.timeoutMs, signal: params.signal },

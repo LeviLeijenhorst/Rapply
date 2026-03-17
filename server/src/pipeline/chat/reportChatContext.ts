@@ -23,6 +23,19 @@ function readSnippetInputId(snippet: Snippet): string {
   return normalizeText(snippet.sourceInputId ?? snippet.sourceSessionId)
 }
 
+function readSnippetLabels(snippet: Snippet): string[] {
+  const labels: string[] = []
+  const seen = new Set<string>()
+  const candidates = [...(Array.isArray(snippet.fieldIds) ? snippet.fieldIds : []), snippet.fieldId, snippet.snippetType]
+  for (const candidate of candidates) {
+    const normalized = normalizeText(candidate)
+    if (!normalized || seen.has(normalized)) continue
+    seen.add(normalized)
+    labels.push(normalized)
+  }
+  return labels
+}
+
 // Builds report-chat context from non-programmatic fields plus allowed notes/snippets only.
 export function buildReportChatContext(params: {
   reportId: string
@@ -50,7 +63,7 @@ export function buildReportChatContext(params: {
       return normalizeText(snippet.clientId) === reportClientId
     })
     .slice(0, 24)
-    .map((snippet) => `- [${normalizeText(snippet.fieldId || snippet.snippetType)}] ${normalizeText(snippet.text)}`)
+    .map((snippet) => `- [${readSnippetLabels(snippet).join(", ")}] ${normalizeText(snippet.text)}`)
 
   const allowedNotes = params.notes
     .filter((note) => {

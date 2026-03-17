@@ -1,0 +1,83 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - img [ref=e6]
+    - generic [ref=e10]:
+      - generic:
+        - img [ref=e11]
+        - generic [ref=e13]: Nieuwe rapportage
+      - generic [ref=e14] [cursor=pointer]:
+        - img [ref=e15]
+        - generic [ref=e18]: Opnemen
+  - generic [ref=e19]:
+    - generic [ref=e20]:
+      - generic [ref=e22]:
+        - generic [ref=e24] [cursor=pointer]:
+          - img [ref=e26]
+          - generic [ref=e28]: Dashboard
+        - generic [ref=e30] [cursor=pointer]:
+          - img [ref=e32]
+          - generic [ref=e39]: Clienten
+        - generic [ref=e41] [cursor=pointer]:
+          - img [ref=e43]
+          - generic [ref=e45]: Rapportages
+        - generic [ref=e47] [cursor=pointer]:
+          - img [ref=e49]
+          - generic [ref=e52]: Meldingen
+      - generic [ref=e54]:
+        - generic [ref=e56] [cursor=pointer]:
+          - img [ref=e58]
+          - generic [ref=e61]: Mijn organisatie
+        - generic [ref=e63] [cursor=pointer]:
+          - img [ref=e65]
+          - generic [ref=e67]: Instellingen
+      - generic [ref=e68]:
+        - generic [ref=e69]:
+          - img [ref=e71]
+          - generic [ref=e75]:
+            - generic [ref=e76]: Peter Dalman
+            - generic [ref=e77]: Re-integratiecoach
+        - generic [ref=e79]: 0 van de 0 minuten
+    - generic [ref=e115]:
+      - generic [ref=e116]:
+        - img [ref=e117]
+        - generic [ref=e119]:
+          - generic [ref=e120]: Privacy & AVG
+          - generic [ref=e121]: Alle clientgegevens worden versleuteld opgeslagen conform AVG-richtlijnen en uitsluitend gebruikt voor re-integratiedoeleinden.
+      - generic [ref=e122]:
+        - generic [ref=e123]:
+          - generic [ref=e124]: Persoonlijke gegevens
+          - generic [ref=e125]: Client opslaan
+        - generic [ref=e126]:
+          - generic [ref=e127]:
+            - img [ref=e129]
+            - generic [ref=e134] [cursor=pointer]: Profielfoto wijzigen
+          - generic [ref=e135]:
+            - generic [ref=e136]:
+              - generic [ref=e137]:
+                - generic [ref=e138]: Voornaam *
+                - textbox "Bijv. Jan" [ref=e140]
+              - generic [ref=e141]:
+                - generic [ref=e142]: Voorletters
+                - textbox "Bijv. J.K." [ref=e144]
+              - generic [ref=e145]:
+                - generic [ref=e146]: E-mailadres
+                - textbox "naam@email.nl" [ref=e148]
+              - generic [ref=e149]:
+                - generic [ref=e150]: Ordernummer
+                - textbox "Ordernummer" [ref=e152]
+            - generic [ref=e153]:
+              - generic [ref=e154]:
+                - generic [ref=e155]: Achternaam *
+                - textbox "Bijv. Jansen" [ref=e157]
+              - generic [ref=e158]:
+                - generic [ref=e159]: Telefoonnummer
+                - textbox "06 12345678" [ref=e161]
+              - generic [ref=e162]:
+                - generic [ref=e163]: BSN-nummer
+                - textbox "123456789" [ref=e165]
+              - generic [ref=e166]:
+                - generic [ref=e167]: Naam contactpersoon IRV
+                - textbox "Naam contactpersoon IRV" [ref=e169]
+          - generic [ref=e170]:
+            - generic [ref=e171]: Traject
+            - generic [ref=e173]: Werkfit maken

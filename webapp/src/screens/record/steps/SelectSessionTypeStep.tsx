@@ -106,7 +106,7 @@ export function SelectInputTypeStep({
           iconAccentTo="#1CB95C"
         />
         <InputOptionRow
-          label="Record video call"
+          label="Online meeting opnemen"
           subtitle="Neem een videocall op in je browser"
           isSelected={selectedOption === 'record-video'}
           onPress={() => onSelectOption('record-video')}
@@ -115,7 +115,7 @@ export function SelectInputTypeStep({
           iconAccentTo="#1CB95C"
         />
         <InputOptionRow
-          label="Audio bestanden uploaden"
+          label="Audiobestand uploaden"
           subtitle="Selecteer een audio file van je computer"
           isSelected={selectedOption === 'upload_audio'}
           onPress={() => onSelectOption('upload_audio')}
@@ -124,7 +124,7 @@ export function SelectInputTypeStep({
           iconAccentTo="#F1852F"
         />
         <InputOptionRow
-          label="Andere bestanden uploaden"
+          label="Ander bestand uploaden"
           subtitle="Selecteer een document van je computer"
           isSelected={selectedOption === 'upload_document'}
           onPress={() => onSelectOption('upload_document')}

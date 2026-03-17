@@ -1,10 +1,10 @@
-# Coachscribe — Product & System Overview
+# Relibra — Product & System Overview
 
-This document describes the functionality and domain model of the Coachscribe web application.
+This document describes the functionality and domain model of the Relibra web application.
 
 It combines the **product vision**, **core domain concepts**, and **system behavior**.
 
-Coachscribe is designed for reintegration and coaching professionals who need to manage client trajectories, document sessions, and generate formal reports while minimizing administrative overhead.
+Relibra is designed for reintegration professionals who need to manage client trajectories, document sessions, and generate formal reports while minimizing administrative overhead.
 
 All data processing and storage must occur inside the European Union.
 
@@ -12,13 +12,12 @@ All data processing and storage must occur inside the European Union.
 
 # 1. Product Overview
 
-Coachscribe helps reintegration coaches capture client interactions, build structured client knowledge, and generate formal reports with AI assistance.
+Relibra helps reintegration coaches capture client interactions, build structured client knowledge, and generate formal reports with AI assistance.
 
 The system focuses on:
 
 - reducing administrative work
 - generating reports faster
-- extracting insights from coaching sessions
 - maintaining a structured client trajectory
 - supporting collaboration between coaches
 
@@ -28,13 +27,13 @@ The system turns fragmented coaching notes, recordings, and documents into an or
 
 # 2. Core Workflow
 
-1. Input is added to a client (audio, recap, text, or document).
-2. If necessary, audio inputs are transcribed.
-3. AI extracts structured insights from the transcript or text.
+1. Input is added to a client (recorded conversation, uploaded audio, recorded recap, written recap or document).
+2. recorded conversations, uploaded audio, recorded recap and non textual documents are transcribed.
+3. AI extracts snippets from all inputs.
 4. Extracted insights become candidate knowledge items.
-5. Coaches review and approve insights.
-6. Approved insights accumulate across sessions.
-7. Reports, summaries, and AI interactions use the accumulated client knowledge.
+5. Coaches review and approve snippets.
+6. Approved snippets accumulate across sessions.
+7. Reports and AI interactions use the accumulated client knowledge.
 
 This workflow allows knowledge to build over time across multiple sessions.
 
@@ -49,13 +48,12 @@ A **client** represents a person receiving coaching or reintegration support.
 Each client contains:
 
 - personal information
-- sessions
+- inputs
 - notes
 - snippets
 - reports
-- documents (future)
 
-Multiple coaches may access and collaborate within the same client context.
+Multiple coaches may access and collaborate within the same client context. By default clients belong to one coach but clients can be shared, making them have multiple assigned coaches.
 
 The client record acts as the central container for all information related to a trajectory.
 

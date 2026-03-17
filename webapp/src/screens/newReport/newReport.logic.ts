@@ -32,6 +32,16 @@ type NormalizedNewReportScreenProps = {
   mode: RapportagePageMode
 }
 
+function readSnippetLabels(snippet: { fields?: string[]; field?: string }): string[] {
+  const labels = [
+    ...(Array.isArray(snippet.fields) ? snippet.fields : []),
+    String(snippet.field || '').trim(),
+  ]
+    .map((value) => String(value || '').trim())
+    .filter((value, index, values) => value.length > 0 && values.indexOf(value) === index)
+  return labels.length > 0 ? labels : ['general']
+}
+
 export function normalizeNewReportScreenProps(props: NewReportScreenProps): NormalizedNewReportScreenProps {
   return {
     initialCoacheeId: props.initialCoacheeId ?? props.initialClientId ?? null,
@@ -601,17 +611,17 @@ export function buildReportGenerationSourceText(params: {
     .filter((snippet: any) => {
       if (selectedTrajectory.id && snippet.trajectoryId !== selectedTrajectory.id) return false
       if (snippet.status !== 'approved') return false
-      if (classifySnippetType(snippet.field) !== 'report') return false
+      if (!readSnippetLabels(snippet).some((label) => classifySnippetType(label) === 'report')) return false
       return selectedSessionAndReportIds.has(snippet.itemId)
     })
     .sort((a: any, b: any) => a.date - b.date)
 
   const snippetLines = relevantSnippets
     .map((snippet: any) => {
-      const field = String(snippet.field || '').trim()
+      const fields = readSnippetLabels(snippet)
       const text = String(snippet.text || '').trim()
       const status = String(snippet.status || '').trim()
-      return field && text ? `SNIPPET_FIELD=${field} | STATUS=${status} | TEKST=${text}` : ''
+      return fields.length > 0 && text ? `SNIPPET_FIELDS=${fields.join(',')} | STATUS=${status} | TEKST=${text}` : ''
     })
     .filter(Boolean)
 

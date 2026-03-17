@@ -65,7 +65,9 @@ export type SnippetSectionProps = {
   canRegenerate?: boolean
   isRegenerating?: boolean
   onRegenerate?: () => void
+  onCreateSnippet: (text: string) => void
   onUpdateSnippetStatus: (snippetId: string, status: SnippetStatus) => void
+  onSaveSnippetLabels: (snippetId: string, labels: string[]) => void
   onSaveSnippetText: (snippetId: string, text: string) => void
   onDeleteSnippet: (snippetId: string) => void
 }

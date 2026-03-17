@@ -28,7 +28,8 @@ export function ClientRightTabs({
         <RightTabButton
           label="Status"
           icon={(color) => <ClientPageStatusIcon color={color} size={18} />}
-          isSelected={activeTabKey === 'status'}
+          isSelected={false}
+          isDisabled
           onPress={() => onSelectTab('status')}
         />
       </View>
@@ -57,24 +58,31 @@ export function ClientRightTabs({
 type RightTabButtonProps = {
   label: string
   isSelected: boolean
+  isDisabled?: boolean
   icon: (color: string) => React.ReactNode
   onPress: () => void
 }
 
-function RightTabButton({ label, isSelected, icon, onPress }: RightTabButtonProps) {
+function RightTabButton({ label, isSelected, isDisabled = false, icon, onPress }: RightTabButtonProps) {
+  const iconColor = isDisabled ? '#9AA0A6' : isSelected ? colors.selected : '#2C111F'
   return (
     <Pressable
-      onPress={onPress}
+      onPress={isDisabled ? undefined : onPress}
+      disabled={isDisabled}
       style={({ hovered }) => [
         styles.tabButton,
+        isDisabled ? styles.tabButtonDisabled : undefined,
         isSelected ? styles.tabButtonSelected : styles.tabButtonUnselected,
         isSelected ? styles.tabButtonConnected : undefined,
-        hovered && !isSelected ? styles.tabButtonHovered : undefined,
+        hovered && !isSelected && !isDisabled ? styles.tabButtonHovered : undefined,
       ]}
     >
       <View style={styles.tabButtonContent}>
-        <View style={styles.statusIconWrap}>{icon(isSelected ? colors.selected : '#2C111F')}</View>
-        <Text isSemibold style={[styles.tabText, isSelected ? styles.tabTextActive : undefined]}>
+        <View style={styles.statusIconWrap}>{icon(iconColor)}</View>
+        <Text
+          isSemibold
+          style={[styles.tabText, isSelected ? styles.tabTextActive : undefined, isDisabled ? styles.tabTextDisabled : undefined]}
+        >
           {label}
         </Text>
       </View>
@@ -115,6 +123,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderColor: '#DFE0E2',
   },
+  tabButtonDisabled: { backgroundColor: '#F3F4F6', borderColor: '#E5E7EB' },
   tabButtonConnected: {
     zIndex: 3,
   },
@@ -124,6 +133,7 @@ const styles = StyleSheet.create({
   statusIconWrap: { width: 18, height: 18, alignItems: 'center', justifyContent: 'center' },
   tabText: { fontSize: 16, lineHeight: 20, color: '#2C111F', fontFamily: typography.fontFamilySemibold },
   tabTextActive: { color: colors.selected },
+  tabTextDisabled: { color: '#9AA0A6' },
   card: {
     flex: 1,
     borderRadius: 12,

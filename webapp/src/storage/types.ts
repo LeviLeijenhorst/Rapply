@@ -72,6 +72,7 @@ export type Snippet = {
   sourceInputId?: string | null
   sourceSessionId?: string | null
   itemId?: string
+  fields?: string[]
   field: string
   fieldId?: string
   text: string

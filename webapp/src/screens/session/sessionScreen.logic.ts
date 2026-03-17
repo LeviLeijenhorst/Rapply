@@ -66,7 +66,6 @@ export function useInputScreen(props: InputScreenProps) {
   const transcriptionStatus = isWrittenInput ? 'idle' : (session?.transcriptionStatus || 'idle')
   const transcript = isWrittenInput ? null : (session?.transcript || null)
   const hasTranscript = Boolean(String(transcript || '').trim())
-  const visibleSessionSnippets = isWrittenInput ? [] : sessionSnippets
 
   useEffect(() => {
     if (isWrittenInput) {
@@ -158,8 +157,33 @@ export function useInputScreen(props: InputScreenProps) {
     deleteSnippet(snippetId)
   }
 
+  function handleCreateSnippet(text: string) {
+    if (!session) return
+    const snippetText = String(text || '').trim()
+    if (!snippetText) return
+    createSnippet({
+      trajectoryId: session.trajectoryId ?? null,
+      inputId: resolvedInputId,
+      itemId: resolvedInputId,
+      fields: ['general'],
+      field: 'general',
+      text: snippetText,
+      date: Number(session.createdAtUnixMs) || Date.now(),
+      status: 'pending',
+    })
+    showToast('Snippet toegevoegd.')
+  }
+
   function handleSaveSnippetText(snippetId: string, text: string) {
     updateSnippet(snippetId, { text: String(text || '') })
+  }
+
+  function handleSaveSnippetLabels(snippetId: string, labels: string[]) {
+    const nextFields = Array.isArray(labels)
+      ? labels.map((label) => String(label || '').trim()).filter((label, index, list) => label.length > 0 && list.indexOf(label) === index)
+      : []
+    if (nextFields.length === 0) return
+    updateSnippet(snippetId, { fields: nextFields })
   }
 
   function handleSaveSummary(nextSummary: string) {
@@ -181,11 +205,13 @@ export function useInputScreen(props: InputScreenProps) {
     transcript,
     canRegenerateSnippets,
     sessionNotes,
-    sessionSnippets: visibleSessionSnippets,
+    sessionSnippets,
     isSnippetStateSettling,
     isRegeneratingSnippets,
     handleRegenerateInputSnippets,
+    handleCreateSnippet,
     handleUpdateSnippetStatus,
+    handleSaveSnippetLabels,
     handleSaveSnippetText,
     handleDeleteSnippet,
     handleSaveSummary,

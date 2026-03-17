@@ -6,7 +6,7 @@ import { buildFallbackGeneralSnippet, parseSnippetExtraction } from "./extractSn
 test("buildFallbackGeneralSnippet returns a general snippet for non-empty transcript", () => {
   const snippet = buildFallbackGeneralSnippet("Het ging redelijk goed met de client vandaag")
   assert.ok(snippet)
-  assert.equal(snippet?.field, "general")
+  assert.deepEqual(snippet?.fields, ["general"])
   assert.match(String(snippet?.text || ""), /^Coach geeft aan dat /)
   assert.match(String(snippet?.text || "").toLowerCase(), /het ging redelijk goed/)
 })
@@ -25,7 +25,7 @@ test("buildFallbackGeneralSnippet strips speaker labels and timestamps", () => {
   assert.match(String(snippet?.text || "").toLowerCase(), /het gaat wel goed met de client/)
 })
 
-test("parseSnippetExtraction expands multi-field snippets into separate label entries", () => {
+test("parseSnippetExtraction keeps one snippet with multiple labels", () => {
   const parsed = parseSnippetExtraction(
     JSON.stringify({
       snippets: [
@@ -36,14 +36,11 @@ test("parseSnippetExtraction expands multi-field snippets into separate label en
       ],
     }),
   )
-  assert.equal(parsed.length, 2)
-  assert.deepEqual(
-    parsed.map((item) => item.field).sort(),
-    ["er_werkfit_7_1", "rp_werkfit_5_1"],
-  )
+  assert.equal(parsed.length, 1)
+  assert.deepEqual(parsed[0]?.fields, ["er_werkfit_7_1", "rp_werkfit_5_1"])
 })
 
-test("parseSnippetExtraction deduplicates overlapping field + fields outputs", () => {
+test("parseSnippetExtraction deduplicates overlapping field + fields outputs into one snippet", () => {
   const parsed = parseSnippetExtraction(
     JSON.stringify({
       snippets: [
@@ -55,7 +52,22 @@ test("parseSnippetExtraction deduplicates overlapping field + fields outputs", (
       ],
     }),
   )
-  assert.equal(parsed.length, 2)
-  assert.equal(parsed.filter((item) => item.field === "rp_werkfit_5_1").length, 1)
-  assert.equal(parsed.filter((item) => item.field === "er_werkfit_7_1").length, 1)
+  assert.equal(parsed.length, 1)
+  assert.deepEqual(parsed[0]?.fields, ["er_werkfit_7_1", "rp_werkfit_5_1"])
+})
+
+test("parseSnippetExtraction strips speaker labels from snippet text", () => {
+  const parsed = parseSnippetExtraction(
+    JSON.stringify({
+      snippets: [
+        {
+          field: "general",
+          text: "speaker_2: Ja, Het gaat best wel goed met de client.",
+        },
+      ],
+    }),
+  )
+  assert.equal(parsed.length, 1)
+  assert.doesNotMatch(String(parsed[0]?.text || "").toLowerCase(), /speaker_2/)
+  assert.match(String(parsed[0]?.text || "").toLowerCase(), /het gaat best wel goed met de client/)
 })

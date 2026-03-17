@@ -15,10 +15,10 @@ function capitalizeFirstLetter(value: string): string {
 }
 
 function placeholderForProfileLabel(label: string): string {
-  if (label === 'Naam contactpersoon') return 'Bijv. Jan de Vries'
-  if (label === 'Functie contactpersoon') return 'Bijv. Re-integratiecoach'
-  if (label === 'Telefoonnummer contactpersoon') return 'Bijv. 0612345678'
-  if (label === 'E-mailadres contactpersoon') return 'Bijv. naam@coachscribe.nl'
+  if (label === 'Naam') return 'Bijv. Jan de Vries'
+  if (label === 'Functie') return 'Bijv. Re-integratiecoach'
+  if (label === 'Telefoonnummer') return 'Bijv. 0612345678'
+  if (label === 'E-mailadres') return 'Bijv. naam@coachscribe.nl'
   return 'Typ uw antwoord'
 }
 
@@ -99,25 +99,25 @@ export function ProfileScreen() {
           <View style={styles.formCard}>
             <View style={styles.fieldGrid}>
               <LabeledInput
-                label="Naam contactpersoon"
+                label="Naam"
                 value={nameDraft}
                 onChangeText={(nextValue) => setNameDraft(capitalizeFirstLetter(nextValue))}
                 onBlur={() => persistName(nameDraft)}
               />
               <LabeledInput
-                label="Functie contactpersoon"
+                label="Functie"
                 value={roleDraft}
                 onChangeText={(nextValue) => setRoleDraft(capitalizeFirstLetter(nextValue))}
                 onBlur={() => persistRole(roleDraft)}
               />
               <LabeledInput
-                label="Telefoonnummer contactpersoon"
+                label="Telefoonnummer"
                 value={phoneDraft}
                 onChangeText={(nextValue) => setPhoneDraft(normalizePhoneValue(nextValue))}
                 onBlur={() => persistPhone(phoneDraft)}
               />
               <LabeledInput
-                label="E-mailadres contactpersoon"
+                label="E-mailadres"
                 value={emailDraft}
                 onChangeText={(nextValue) => setEmailDraft(normalizeEmailValue(nextValue))}
                 onBlur={() => persistEmail(emailDraft)}

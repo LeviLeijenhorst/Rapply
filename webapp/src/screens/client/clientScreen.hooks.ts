@@ -65,6 +65,16 @@ function readInputClientId(session: ClientInput): string {
   return String((session as any).clientId || '')
 }
 
+function readSnippetLabels(snippet: { fields?: string[]; field?: string }): string[] {
+  const labels = [
+    ...(Array.isArray(snippet.fields) ? snippet.fields : []),
+    String(snippet.field || '').trim(),
+  ]
+    .map((value) => String(value || '').trim())
+    .filter((value, index, values) => value.length > 0 && values.indexOf(value) === index)
+  return labels.length > 0 ? labels : ['general']
+}
+
 export function useClientChatbot({
   activeTrajectoryName,
   rightActiveTabKey,
@@ -106,7 +116,7 @@ export function useClientChatbot({
         const itemId = String((snippet as any).itemId || '')
         return itemId.length > 0 && clientInputs.some((session) => session.id === itemId)
       })
-      .map((snippet) => `${snippet.itemId}:${snippet.date}:${snippet.field}:${snippet.text}:${snippet.status}`)
+      .map((snippet) => `${snippet.itemId}:${snippet.date}:${readSnippetLabels(snippet).join('|')}:${snippet.text}:${snippet.status}`)
       .sort()
       .join('|')
     const summaryPart = inputSummaries
@@ -181,7 +191,7 @@ export function useClientChatbot({
             : Date.now()
         const current = snippetsByInput.get(snippet.itemId) || { inputDateUnixMs, snippets: [] }
         current.snippets.push({
-          field: String(snippet.field || '').trim(),
+          field: readSnippetLabels(snippet).join(', '),
           text: String(snippet.text || '').trim(),
         })
         snippetsByInput.set(snippet.itemId, current)

@@ -39,7 +39,6 @@ export function ReportsScreen({ onOpenReport }: Props) {
           <Text isSemibold style={[styles.headerText, styles.reportColumn]}>Rapportage</Text>
           <Text isSemibold style={[styles.headerText, styles.clientColumn]}>Client</Text>
           <Text isSemibold style={[styles.headerText, styles.createdColumn]}>Aangemaakt</Text>
-          <Text isSemibold style={[styles.headerText, styles.statusColumn]}>Status</Text>
           <Text isSemibold style={[styles.headerText, styles.updatedColumn]}>Laatst bewerkt</Text>
           <View style={styles.chevronColumn} />
         </View>
@@ -128,11 +127,8 @@ const styles = StyleSheet.create({
   createdColumn: {
     width: 160,
   },
-  statusColumn: {
-    width: 100,
-  },
   updatedColumn: {
-    width: 160,
+    width: 180,
   },
   chevronColumn: {
     width: 24,

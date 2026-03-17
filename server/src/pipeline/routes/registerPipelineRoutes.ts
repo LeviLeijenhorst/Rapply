@@ -75,6 +75,10 @@ function normalizeLabelList(values: unknown[]): string[] {
   return labels
 }
 
+function readSnippetLabels(snippet: { fieldIds?: string[]; fieldId?: string | null; snippetType?: string | null }): string[] {
+  return normalizeLabelList([...(Array.isArray(snippet.fieldIds) ? snippet.fieldIds : []), snippet.fieldId, snippet.snippetType])
+}
+
 function readChatMessages(value: unknown): ChatMessage[] {
   if (!Array.isArray(value)) return []
   return value
@@ -191,6 +195,7 @@ function buildSnippetRows(params: {
     trajectoryId: string | null
     sourceSessionId: string
     sourceInputId: string
+    fieldIds: string[]
     snippetType: string
     fieldId: string
     text: string
@@ -206,13 +211,14 @@ function buildSnippetRows(params: {
   }).then((result) => {
     const now = Date.now()
     return result.snippets.map((snippet) => ({
+      fieldIds: snippet.fields.length > 0 ? snippet.fields : ["general"],
       id: `snippet-${crypto.randomUUID()}`,
       clientId: params.clientId,
       trajectoryId: params.trajectoryId,
       sourceSessionId: params.inputId,
       sourceInputId: params.inputId,
-      snippetType: snippet.field,
-      fieldId: snippet.field,
+      snippetType: (snippet.fields.length > 0 ? snippet.fields[0] : "general"),
+      fieldId: (snippet.fields.length > 0 ? snippet.fields[0] : "general"),
       text: snippet.text,
       snippetDate: params.itemDate,
       approvalStatus: "pending" as const,
@@ -557,13 +563,13 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
           id: snippet.id,
           approvalStatus: snippet.approvalStatus,
           sourceInputId: normalizeText(snippet.sourceInputId ?? snippet.sourceSessionId),
-          fieldId: normalizeText(snippet.fieldId ?? snippet.snippetType),
+          fieldIds: readSnippetLabels(snippet),
           text: normalizeText(snippet.text),
         })),
         approvedSnippetsUsed: evidence.approvedSnippets.map((snippet) => ({
           id: snippet.id,
           sourceInputId: normalizeText(snippet.sourceInputId ?? snippet.sourceSessionId),
-          fieldId: normalizeText(snippet.fieldId ?? snippet.snippetType),
+          fieldIds: readSnippetLabels(snippet),
           text: normalizeText(snippet.text),
         })),
         evidenceByFieldId: evidenceByFieldIdEntries,
@@ -590,7 +596,7 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
             sourceType: mapSessionInputTypeToPromptSourceType(sourceInput?.inputType || ""),
             sourceTitle: normalizeText(sourceInput?.title) || `Input ${sourceInputId || "onbekend"}`,
             text: normalizeText(snippet.text),
-            labels: normalizeLabelList([snippet.fieldId, snippet.snippetType]),
+            labels: readSnippetLabels(snippet),
           }
         }),
         ...evidence.selectedInputs
