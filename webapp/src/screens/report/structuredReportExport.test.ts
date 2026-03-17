@@ -38,7 +38,7 @@ const report: StructuredReport = {
       fieldId: 'rp_werkfit_5_1',
       label: 'Hoofdactiviteiten',
       fieldType: 'ai',
-      answer: 'Cliënt volgt werkritme-opbouw.',
+      answer: { keuzes: [1, 3] },
       factualBasis: '',
       reasoning: '',
       confidence: 0.7,
@@ -49,7 +49,7 @@ const report: StructuredReport = {
       fieldId: 'rp_werkfit_5_3',
       label: 'Urenverdeling',
       fieldType: 'ai',
-      answer: 'Netwerk (2 uur); Sollicitatie (3 uur)',
+      answer: { activiteiten: [{ activiteit: 'Netwerk', uren: 2 }, { activiteit: 'Sollicitatie', uren: 3 }] },
       factualBasis: '',
       reasoning: '',
       confidence: 0.6,
@@ -60,7 +60,7 @@ const report: StructuredReport = {
       fieldId: 'rp_werkfit_8_2',
       label: 'Specialistische expertise',
       fieldType: 'ai',
-      answer: 'Aantal uren: 6. Motivering: extra jobcoach ondersteuning.',
+      answer: { uren: 6, motivering: 'extra jobcoach ondersteuning.' },
       factualBasis: '',
       reasoning: '',
       confidence: 0.5,
@@ -71,7 +71,7 @@ const report: StructuredReport = {
       fieldId: 'rp_werkfit_8_3',
       label: 'Specialistisch tarief',
       fieldType: 'ai',
-      answer: 'Uurtarief: 125. Motivatie: specialistisch arbeidsdeskundig advies.',
+      answer: { tarief: 125, motivering: 'specialistisch arbeidsdeskundig advies.' },
       factualBasis: '',
       reasoning: '',
       confidence: 0.5,
@@ -87,8 +87,8 @@ test('structured report export builds deterministic text and UWV placeholder con
   assert.match(reportText, /### 8\.3 Specialistisch tarief/)
 
   const context = buildStructuredExportContext(template, report)
-  assert.equal(context['5_1'], 'Cliënt volgt werkritme-opbouw.')
-  assert.equal(context['rp_werkfit_5_1'], 'Cliënt volgt werkritme-opbouw.')
+  assert.equal(context['5_1'], '{"keuzes":[1,3]}')
+  assert.equal(context['rp_werkfit_5_1'], '{"keuzes":[1,3]}')
   assert.equal(context['5_3_1_re_integratieactiviteit'], 'Netwerk')
   assert.equal(context['5_3_1_aantal_begeleidingsuren'], '2')
   assert.equal(context['5_3_2_re_integratieactiviteit'], 'Sollicitatie')

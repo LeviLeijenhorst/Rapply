@@ -19,6 +19,7 @@ type RecorderState = {
   recordedMimeType: string | null
   recordedChunkDurationsSeconds: number[]
   start: () => void
+  startWithCaptureMode?: (captureMode: 'microphone' | 'display-with-audio-fallback') => void
   stop: () => void
   reset: () => void
 }
@@ -38,7 +39,9 @@ type Params = {
   setLiveTranscriptError: (value: string | null) => void
   setLiveTranscriptText: (value: string | ((previous: string) => string)) => void
   setStep: (step: NewInputStep) => void
-  onRecordingReady?: () => void
+  onRecordingReady?: (payload: { blob: Blob; mimeType: string; durationSeconds: number }) => void
+  useDisplayCapture?: boolean
+  disableAutoStart?: boolean
   step: NewInputStep
   visible: boolean
 }
@@ -59,6 +62,8 @@ export function useRecordingFlow({
   setLiveTranscriptText,
   setStep,
   onRecordingReady,
+  useDisplayCapture = false,
+  disableAutoStart = false,
   step,
   visible,
 }: Params) {
@@ -87,6 +92,7 @@ export function useRecordingFlow({
   useEffect(() => {
     if (!visible) return
     if (step !== 'recording') return
+    if (disableAutoStart) return
     if (hasAutoStartedRecordingRef.current) return
     if (recorder.status !== 'idle') return
     if (isRealtimeModeActive) {
@@ -95,8 +101,13 @@ export function useRecordingFlow({
       setLiveTranscriptError(null)
     }
     hasAutoStartedRecordingRef.current = true
+    if (useDisplayCapture && recorder.startWithCaptureMode) {
+      recorder.startWithCaptureMode('display-with-audio-fallback')
+      return
+    }
     recorder.start()
   }, [
+    disableAutoStart,
     hasAutoStartedRecordingRef,
     isRealtimeModeActive,
     realtimeOperationIdRef,
@@ -104,6 +115,7 @@ export function useRecordingFlow({
     setLiveTranscriptError,
     setLiveTranscriptText,
     step,
+    useDisplayCapture,
     visible,
   ])
 
@@ -203,7 +215,11 @@ export function useRecordingFlow({
       })
       .catch(() => undefined)
     if (onRecordingReady) {
-      onRecordingReady()
+      onRecordingReady({
+        blob,
+        mimeType,
+        durationSeconds: fallbackDurationSeconds,
+      })
       return
     }
     setStep('recorded')
@@ -227,6 +243,10 @@ export function useRecordingFlow({
     }
     hasAutoStartedRecordingRef.current = true
     hasAutoSubmittedRecordingRef.current = false
+    if (useDisplayCapture && recorder.startWithCaptureMode) {
+      recorder.startWithCaptureMode('display-with-audio-fallback')
+      return
+    }
     recorder.start()
   }, [
     hasAutoStartedRecordingRef,
@@ -236,6 +256,7 @@ export function useRecordingFlow({
     recorder,
     setLiveTranscriptError,
     setLiveTranscriptText,
+    useDisplayCapture,
   ])
 
   return {

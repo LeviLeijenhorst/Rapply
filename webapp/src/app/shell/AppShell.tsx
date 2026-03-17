@@ -633,6 +633,10 @@ export function AppShell({ onLogout }: Props) {
                 navigateTo(routeFromSidebarItemKey(sidebarItemKey))
                 setIsSettingsMenuOpen(false)
               }}
+              onOpenProfileSection={() => {
+                navigateTo({ kind: 'mijn-profiel' })
+                setIsSettingsMenuOpen(false)
+              }}
               onOpenSettingsMenu={(anchorPoint) => {
                 setSettingsMenuAnchorPoint(anchorPoint)
                 setIsSettingsMenuOpen(true)
@@ -642,7 +646,13 @@ export function AppShell({ onLogout }: Props) {
             <View
               style={[
                 styles.mainContent,
-                isClientDetailPage || isNieuweRapportageOpen || isRecordPageOpen || isNewClientPageOpen || !!selectedSessieId || selectedSidebarItemKey === 'mijnPraktijk'
+                isClientDetailPage ||
+                isNieuweRapportageOpen ||
+                isRecordPageOpen ||
+                isNewClientPageOpen ||
+                !!selectedSessieId ||
+                selectedSidebarItemKey === 'mijnPraktijk' ||
+                selectedSidebarItemKey === 'mijnProfiel'
                   || selectedSidebarItemKey === 'dashboard'
                   ? styles.mainContentNoFrame
                   : undefined,

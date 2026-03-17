@@ -23,17 +23,15 @@ export function ChatbotTab({
   onOpenExpanded,
 }: ChatbotTabProps) {
   const isModalVariant = variant === 'modal'
-  const shouldShiftClearAction = isModalVariant && composerValue.trim().length > 0
 
   return (
     <View style={[styles.container, isModalVariant ? styles.containerModal : undefined]}>
       <View style={[styles.actionsRow, isModalVariant ? styles.actionsRowModal : undefined]}>
-        {messages.length > 0 ? (
+        {!isModalVariant && messages.length > 0 ? (
           <Pressable
             onPress={onClearChat}
             style={({ hovered }) => [
               styles.secondaryAction,
-              shouldShiftClearAction ? styles.secondaryActionShifted : undefined,
               hovered ? styles.secondaryActionHover : undefined,
             ]}
           >
@@ -52,10 +50,14 @@ export function ChatbotTab({
           <Text style={styles.emptyText}>Stel een vraag over deze sessie om AI-chat te starten.</Text>
         ) : (
           <>
-            {messages.map((message) => (
-              <ChatMessage key={message.id} role={message.role} text={message.text} />
-            ))}
-            {isSending ? <ChatMessage role="assistant" text="" isLoading /> : null}
+            {messages.map((message) => {
+              const isHiddenStreamingPlaceholder = message.role === 'assistant' && message.text.trim().length === 0
+              if (isHiddenStreamingPlaceholder) return null
+              return <ChatMessage key={message.id} role={message.role} text={message.text} />
+            })}
+            {isSending && !messages.some((message) => message.id.startsWith('assistant-stream-') && message.text.trim().length > 0)
+              ? <ChatMessage role="assistant" text="" isLoading />
+              : null}
           </>
         )}
       </ScrollView>
@@ -106,10 +108,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  secondaryActionShifted: {
-    marginRight: spacing.xs,
-    marginTop: -2,
-  },
   secondaryActionHover: {
     opacity: 0.7,
   },
@@ -132,7 +130,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   feedContent: {
-    paddingHorizontal: 0,
+    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     gap: spacing.sm,
   },

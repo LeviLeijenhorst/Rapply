@@ -3,9 +3,14 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
 import { listPipelineTemplates, readPipelineReport, readPipelineReportByInput, type PipelineTemplate } from '@/api/pipeline/pipelineApi'
 import { ReportEditorPanel } from '@/screens/report/ReportEditorPanel'
 import type { ReportScreenProps } from '@/screens/report/report.types'
+import { Header } from '@/screens/session/components/Header'
 import type { Report } from '@/storage/types'
 import { useToast } from '@/toast/ToastProvider'
 import { Text } from '@/ui/Text'
+
+function isNotAuthenticatedError(error: unknown): boolean {
+  return error instanceof Error && error.message === 'Not authenticated'
+}
 
 async function loadReportFromReference(referenceId: string): Promise<Report | null> {
   const trimmedReference = String(referenceId || '').trim()
@@ -13,14 +18,25 @@ async function loadReportFromReference(referenceId: string): Promise<Report | nu
   try {
     const report = await readPipelineReport(trimmedReference)
     if (report) return report
-  } catch {
-    // Continue with input lookup.
+  } catch (error) {
+    if (isNotAuthenticatedError(error)) throw error
+    // Continue with input lookup for non-auth failures.
   }
   try {
     const reportByInput = await readPipelineReportByInput(trimmedReference)
     if (reportByInput) return reportByInput
-  } catch {
-    // Continue with null fallback.
+  } catch (error) {
+    if (isNotAuthenticatedError(error)) throw error
+    // Continue with null fallback for non-auth failures.
+  }
+  return null
+}
+
+async function loadReportRobust(referenceId: string, fallbackReportId: string | null): Promise<Report | null> {
+  const candidates = [fallbackReportId, referenceId].filter((id): id is string => Boolean(String(id || '').trim()))
+  for (const candidate of candidates) {
+    const report = await loadReportFromReference(candidate)
+    if (report) return report
   }
   return null
 }
@@ -31,26 +47,36 @@ export function ReportScreen(props: ReportScreenProps) {
   const [templates, setTemplates] = useState<PipelineTemplate[]>([])
   const [report, setReport] = useState<Report | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [authRequired, setAuthRequired] = useState(false)
 
   const emptyMessage = useMemo(() => {
+    if (authRequired) return 'Je bent niet ingelogd. Log opnieuw in om het rapport te openen.'
     if (!referenceId) return 'Geen rapportreferentie ontvangen.'
     return 'Rapport niet gevonden voor deze selectie.'
-  }, [referenceId])
+  }, [authRequired, referenceId])
 
   useEffect(() => {
     let isCancelled = false
     setIsLoading(true)
     void (async () => {
       try {
-        const [loadedTemplates, loadedReport] = await Promise.all([
-          listPipelineTemplates(),
-          referenceId ? loadReportFromReference(referenceId) : Promise.resolve(null),
-        ])
+        setAuthRequired(false)
+        const loadedTemplates = await listPipelineTemplates().catch((error) => {
+          showErrorToast(error instanceof Error ? error.message : 'Templates laden mislukt.')
+          return [] as PipelineTemplate[]
+        })
+        const loadedReport = referenceId ? await loadReportRobust(referenceId, report?.id ?? null) : null
         if (isCancelled) return
         setTemplates(loadedTemplates)
         setReport(loadedReport)
       } catch (error) {
         if (isCancelled) return
+        if (isNotAuthenticatedError(error)) {
+          setAuthRequired(true)
+          setReport(null)
+          setTemplates([])
+          return
+        }
         showErrorToast(error instanceof Error ? error.message : 'Rapport laden mislukt.')
       } finally {
         if (isCancelled) return
@@ -66,9 +92,15 @@ export function ReportScreen(props: ReportScreenProps) {
     if (!referenceId) return
     setIsLoading(true)
     try {
-      const loadedReport = await loadReportFromReference(referenceId)
+      setAuthRequired(false)
+      const loadedReport = await loadReportRobust(referenceId, report?.id ?? null)
       setReport(loadedReport)
     } catch (error) {
+      if (isNotAuthenticatedError(error)) {
+        setAuthRequired(true)
+        setReport(null)
+        return
+      }
       showErrorToast(error instanceof Error ? error.message : 'Rapport opnieuw laden mislukt.')
     } finally {
       setIsLoading(false)
@@ -98,6 +130,12 @@ export function ReportScreen(props: ReportScreenProps) {
 
   return (
     <View style={styles.screenWrap}>
+      <Header
+        title={report.title || props.headerTitle || 'Rapportage'}
+        clientName={props.headerClientName || 'Cliënt'}
+        date=""
+        onBack={props.onBack || (() => {})}
+      />
       <ReportEditorPanel report={report} templates={templates} onReportUpdated={setReport} />
     </View>
   )
@@ -119,5 +157,6 @@ const styles = StyleSheet.create({
   },
   reloadButtonHover: { backgroundColor: '#FFF2F9' },
   reloadButtonText: { fontSize: 13, lineHeight: 16, color: '#BE0165' },
-  screenWrap: { flex: 1, backgroundColor: '#FFFFFF' },
+  screenWrap: { flex: 1, backgroundColor: '#F7F5F8', paddingHorizontal: 24, paddingTop: 8 },
 })
+

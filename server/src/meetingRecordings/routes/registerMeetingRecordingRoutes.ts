@@ -1,11 +1,14 @@
 import type { Express, RequestHandler } from "express"
+import express from "express"
 import { requireAuthenticatedUser } from "../../identity/auth"
 import { asyncHandler, sendError } from "../../http"
 import { readId, readOptionalId, readOptionalInteger, readOptionalText, readRequiredNumber, readText } from "../../routes/parsers/scalars"
+import { appendMeetingRecordingChunk } from "../appendMeetingRecordingChunk"
 import { cancelMeetingRecording } from "../cancelMeetingRecording"
 import { startMeetingRecording } from "../createMeetingRecording"
 import { readMeetingRecording } from "../readMeetingRecording"
 import { stopMeetingRecording } from "../stopMeetingRecording"
+import { isMeetingRecordingTokenValid } from "../store"
 
 function readOptionalSourceApp(value: unknown): string | null {
   const text = readOptionalText(value, true)
@@ -69,6 +72,57 @@ export function registerMeetingRecordingRoutes(app: Express, params: { rateLimit
         return
       }
       res.status(200).json({ meetingRecording: recording })
+    }),
+  )
+
+  app.post(
+    "/meeting-recordings/:id",
+    params.rateLimitTranscription,
+    express.raw({ type: "*/*", limit: "50mb" }),
+    asyncHandler(async (req, res) => {
+      const user = await requireAuthenticatedUser(req)
+      const id = readId(req.params?.id, "id")
+      const ingestToken = readText(req.headers["x-ingest-token"], "x-ingest-token")
+      const chunkIndex = readRequiredNumber(req.headers["x-chunk-index"], "chunkIndex")
+      const startMilliseconds = readRequiredNumber(req.headers["x-start-milliseconds"], "startMilliseconds")
+      const durationMilliseconds = readRequiredNumber(req.headers["x-duration-milliseconds"], "durationMilliseconds")
+      const body = req.body
+      if (!Buffer.isBuffer(body) || body.length <= 0) {
+        sendError(res, 400, "Missing chunk bytes")
+        return
+      }
+
+      const isValidToken = await isMeetingRecordingTokenValid({
+        userId: user.userId,
+        token: ingestToken,
+        meetingRecordingId: id,
+      })
+      if (!isValidToken) {
+        sendError(res, 401, "Invalid ingest token")
+        return
+      }
+
+      try {
+        const appended = await appendMeetingRecordingChunk({
+          userId: user.userId,
+          meetingRecordingId: id,
+          chunkIndex,
+          startMilliseconds,
+          durationMilliseconds,
+          bytes: body,
+        })
+        res.status(200).json(appended)
+      } catch (error) {
+        if (error instanceof Error && error.message === "Meeting recording not found") {
+          sendError(res, 404, error.message)
+          return
+        }
+        if (error instanceof Error && error.message === "Meeting recording already stopped") {
+          sendError(res, 409, error.message)
+          return
+        }
+        throw error
+      }
     }),
   )
 

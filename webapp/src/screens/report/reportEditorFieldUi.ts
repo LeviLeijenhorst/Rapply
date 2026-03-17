@@ -1,4 +1,4 @@
-import type { ReportFieldType } from '@/storage/types'
+import type { JsonValue, ReportFieldType } from '@/storage/types'
 
 export type FieldUiVariant =
   | 'plain_text'
@@ -10,6 +10,15 @@ export type FieldUiVariant =
   | 'multi_select'
   | 'repeatable_rows'
   | 'split_tariff'
+  | 'multi_select_numeric'
+  | 'activities_rows'
+  | 'single_choice_numeric'
+  | 'single_choice_with_custom_reason'
+  | 'activiteiten_en_keuzes'
+  | 'akkoord_met_toelichting'
+  | 'uren_motivering'
+  | 'tarief_motivering'
+  | 'maanden_object'
 
 export type RepeatableActivityRow = {
   hours: string
@@ -35,17 +44,64 @@ export const REINTEGRATIE_ACTIVITEITEN_OPTIES = [
 ] as const
 
 const sectionTitleOverrides: Record<string, string> = {
-  '1': 'Gegevens cli\u00EBnt',
+  '1': 'Gegevens cli\u00ebnt',
   '2': 'Gegevens UWV',
   '3': 'Gegevens re-integratiebedrijf',
+  '4': 'Wat is het ordernummer?',
+  '5': 'Re-integratieactiviteiten en begeleidingsuren',
+  '6': 'Doorlooptijd',
+  '7': 'Visie op dienstverlening',
+  '8': 'Specialistisch uurtarief',
 }
 
 const defaultCollapsedSectionTitles = new Set([
-  'Gegevens cli\u00EBnt',
+  'Gegevens cli\u00ebnt',
   'Gegevens UWV',
   'Gegevens re-integratiebedrijf',
-  'Ordernummer',
+  'Wat is het ordernummer?',
 ])
+
+export function asObject(value: JsonValue): Record<string, JsonValue> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  return value as Record<string, JsonValue>
+}
+
+export function asText(value: JsonValue): string {
+  if (typeof value === 'string') return value
+  if (value === null || typeof value === 'undefined') return ''
+  return JSON.stringify(value)
+}
+
+export function readSingleChoiceOptions(fieldId: string): Array<{ value: number; label: string }> {
+  const map: Record<string, Array<{ value: number; label: string }>> = {
+    rp_werkfit_8_1: [
+      { value: 1, label: 'Ja' },
+      { value: 2, label: 'Nee' },
+    ],
+    er_werkfit_4_2: [
+      { value: 1, label: "Beëindiging re-integratiedienst 'Werkfit maken' naar aanleiding van evaluatiemoment" },
+      { value: 2, label: 'Voortijdige terugmelding' },
+      { value: 3, label: "Beëindiging re-integratiedienst 'Werkfit maken'" },
+    ],
+    er_werkfit_6_1: [
+      { value: 1, label: 'Ziekte langer dan 4 weken (klant met een Ziektewet-uitkering)' },
+      { value: 2, label: 'Ziekte langer dan 13 weken (klant met een arbeidsongeschiktheidsuitkering)' },
+      { value: 3, label: 'Verhuizing van de klant' },
+      { value: 4, label: 'Overlijden van de klant' },
+      { value: 5, label: 'Bezwaar of beroep tegen het werkplan, Plan van aanpak of re-integratieplan' },
+      { value: 6, label: 'Anders' },
+    ],
+    er_werkfit_7_3: [
+      { value: 1, label: 'De klant is werkfit en kan aan het werk' },
+      { value: 2, label: 'De klant is niet werkfit' },
+    ],
+    er_werkfit_8_2: [
+      { value: 1, label: 'Ja' },
+      { value: 2, label: 'Nee' },
+    ],
+  }
+  return map[fieldId] || []
+}
 
 export function readDefaultSectionTitle(sectionKey: string, fallbackTitle: string): string {
   return sectionTitleOverrides[sectionKey] || fallbackTitle || `Rubriek ${sectionKey}`
@@ -129,7 +185,9 @@ export function decomposeNameField(fullName: string): { initials: string; surnam
     }
   }
   if (!firstToken.includes('.') && firstToken.length > 2) {
-    return { initials: '', surname: cleaned }
+    const nameParts = cleaned.split(' ').filter(Boolean)
+    const surnameOnly = nameParts.length > 1 ? nameParts.slice(1).join(' ') : cleaned
+    return { initials: '', surname: surnameOnly }
   }
   return {
     initials: firstToken,
@@ -259,8 +317,18 @@ export function deserializeAddressSplit(value: string): AddressSplitValue {
   }
 }
 
-export function readFieldVariant(params: { numberKey: string; fieldType: ReportFieldType }): FieldUiVariant {
-  const { numberKey, fieldType } = params
+export function readFieldVariant(params: { fieldId?: string; numberKey: string; fieldType: ReportFieldType }): FieldUiVariant {
+  const { fieldId = '', numberKey, fieldType } = params
+  if (fieldId === 'rp_werkfit_5_1') return 'multi_select_numeric'
+  if (fieldId === 'rp_werkfit_5_3') return 'activities_rows'
+  if (fieldId === 'rp_werkfit_8_1' || fieldId === 'er_werkfit_4_2' || fieldId === 'er_werkfit_7_3') return 'single_choice_numeric'
+  if (fieldId === 'er_werkfit_6_1') return 'single_choice_with_custom_reason'
+  if (fieldId === 'er_werkfit_7_1') return 'activiteiten_en_keuzes'
+  if (fieldId === 'er_werkfit_8_2') return 'akkoord_met_toelichting'
+  if (fieldId === 'rp_werkfit_8_2') return 'uren_motivering'
+  if (fieldId === 'rp_werkfit_8_3') return 'tarief_motivering'
+  if (fieldId === 'rp_werkfit_6_1') return 'maanden_object'
+
   if (numberKey === '1.1') return 'split_name'
   if (numberKey === '3.4') return 'split_address'
   if (numberKey === '5.1') return 'multi_select'
@@ -269,6 +337,4 @@ export function readFieldVariant(params: { numberKey: string; fieldType: ReportF
   if (fieldType === 'programmatic') return 'single_line'
   return 'plain_text'
 }
-
-
 

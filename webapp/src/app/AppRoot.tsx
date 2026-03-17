@@ -16,8 +16,6 @@ import { warmUpSecureApi } from '../api/secureApi'
 import { AppProviders } from './providers/AppProviders'
 import { getInitialAuthenticationState } from './bootstrap/authBootstrap'
 
-const DEV_AUTH_BYPASS = String(process.env.EXPO_PUBLIC_DEV_AUTH_BYPASS || '').trim().toLowerCase() === 'true'
-
 export function AppRoot() {
   const [areFontsLoaded] = useFonts({
     Catamaran_400Regular,
@@ -26,7 +24,7 @@ export function AppRoot() {
     Catamaran_700Bold,
   })
   const [isAuthenticated, setIsAuthenticated] = useState(() => getInitialAuthenticationState())
-  const isAppAuthenticated = isAuthenticated || DEV_AUTH_BYPASS
+  const isAppAuthenticated = isAuthenticated
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const logoutTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -61,9 +59,9 @@ export function AppRoot() {
                     if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current)
                     setIsLoggingOut(true)
                     setIsAuthenticated(false)
-                    if (!DEV_AUTH_BYPASS) navigate('/inloggen', { replace: true })
+                    navigate('/inloggen', { replace: true })
                     try {
-                      if (!DEV_AUTH_BYPASS) await signOutFromEntra()
+                      await signOutFromEntra()
                     } finally {
                       logoutTimeoutRef.current = setTimeout(() => setIsLoggingOut(false), 300)
                     }

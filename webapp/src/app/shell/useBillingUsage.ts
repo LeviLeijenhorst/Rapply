@@ -20,6 +20,10 @@ type BillingStatus = {
   nonExpiringUsedSeconds: number
 }
 
+function isNotAuthenticatedError(error: unknown): boolean {
+  return error instanceof Error && error.message === 'Not authenticated'
+}
+
 function buildBillingUsageMinutes(status: BillingStatus | null): BillingUsageMinutes {
   if (!status) {
     return { usedMinutes: 0, totalMinutes: 0 }
@@ -50,6 +54,11 @@ export function useBillingUsage(): BillingUsage {
         setTotalMinutes(usage.totalMinutes)
       } catch (error) {
         if (!isActive) return
+        if (isNotAuthenticatedError(error)) {
+          setUsedMinutes(0)
+          setTotalMinutes(0)
+          return
+        }
         console.error('[billing] failed to load status', error)
       } finally {
         if (!isActive) return

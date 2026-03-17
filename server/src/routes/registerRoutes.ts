@@ -20,6 +20,7 @@ import { registerUserSettingsRoutes } from "../userSettings/routes/registerUserS
 import { registerWorkspaceRoutes } from "../workspace/routes/registerWorkspaceRoutes"
 import { registerTrajectoryRoutes } from "../trajectories/routes/registerTrajectoryRoutes"
 import { registerPipelineRoutes } from "../pipeline/routes/registerPipelineRoutes"
+import { registerMeetingRecordingRoutes } from "../meetingRecordings/routes/registerMeetingRecordingRoutes"
 import { asyncHandler } from "../http"
 
 type RegisterRoutesParams = {
@@ -88,6 +89,7 @@ export function registerRoutes(app: Express, params: RegisterRoutesParams): void
   registerSummaryRoutes(app, { rateLimitAi: params.rateLimitAi })
   registerBillingRoutes(app, { rateLimitBilling: params.rateLimitBilling })
   registerTranscriptionRoutes(app, { rateLimitTranscription: params.rateLimitTranscription })
+  registerMeetingRecordingRoutes(app, { rateLimitTranscription: params.rateLimitTranscription })
 
   // Keep legacy endpoints stable while features are out of scope in the new schema.
   app.post(

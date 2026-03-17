@@ -208,6 +208,14 @@ export function applyRouteToShell(params: ApplyRouteParams): void {
     setInputOriginRoute(null)
     return
   }
+  if (route.kind === 'mijn-profiel') {
+    setSelectedSidebarItemKey('mijnProfiel')
+    setSelectedClientId(null)
+    setSelectedTrajectoryId(null)
+    setSelectedSessieId(null)
+    setInputOriginRoute(null)
+    return
+  }
   if (route.kind === 'sessie') {
     setSelectedSidebarItemKey('clients')
     setSelectedSessieId(route.sessieId)

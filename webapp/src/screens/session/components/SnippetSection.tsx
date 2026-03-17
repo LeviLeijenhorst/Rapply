@@ -21,9 +21,12 @@ if (Platform.OS === 'android' && (UIManager as any).setLayoutAnimationEnabledExp
   ;(UIManager as any).setLayoutAnimationEnabledExperimental(true)
 }
 
+const DASHBOARD_RECORD_VIDEO_GREEN = '#0F7E3A'
+const DASHBOARD_IMPORT_DOCUMENT_RED = '#9C0154'
+
 function resolveSnippetBorderColor(status: SnippetStatus): string {
-  if (status === 'rejected') return semanticColorTokens.light.danger
-  if (status === 'approved') return semanticColorTokens.light.success
+  if (status === 'rejected') return DASHBOARD_IMPORT_DOCUMENT_RED
+  if (status === 'approved') return DASHBOARD_RECORD_VIDEO_GREEN
   return semanticColorTokens.light.panelBorder
 }
 
@@ -119,9 +122,21 @@ export function SnippetSection({
       {sortedSnippets.length > 0 ? (
         <View style={styles.list}>
           {sortedSnippets.map((snippet) => (
-            <View key={snippet.id} style={[styles.snippetCard, { borderColor: resolveSnippetBorderColor(snippet.status) }]}> 
+            <View
+              key={snippet.id}
+              style={[
+                styles.snippetCard,
+                { borderColor: resolveSnippetBorderColor(snippet.status) },
+                snippet.status === 'rejected' ? styles.snippetCardRejected : undefined,
+              ]}
+            >
               <View style={styles.contentRow}>
-                <Text style={styles.snippetText}>{snippet.text}</Text>
+                <View style={styles.snippetTextWrap}>
+                  <View style={styles.snippetTextInner}>
+                    <Text style={[styles.snippetText, snippet.status === 'rejected' ? styles.snippetTextRejected : undefined]}>{snippet.text}</Text>
+                    {snippet.status === 'rejected' ? <View pointerEvents="none" style={styles.snippetTextStrike} /> : null}
+                  </View>
+                </View>
                 <View style={styles.actionsRow}>
                   <Pressable
                     onPress={() => {
@@ -324,6 +339,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     ...rnShadows.card,
   },
+  snippetCardRejected: {
+    opacity: 0.58,
+  },
   contentRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -347,11 +365,33 @@ const styles = StyleSheet.create({
     backgroundColor: semanticColorTokens.light.hoverAccent,
   },
   snippetText: {
-    flex: 1,
     alignSelf: 'center',
     color: semanticColorTokens.light.textBody,
     fontSize: fontSizes.sm,
     lineHeight: 20,
+  },
+  snippetTextWrap: {
+    flex: 1,
+    alignSelf: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  snippetTextInner: {
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    position: 'relative',
+  },
+  snippetTextRejected: {
+    textDecorationLine: 'none',
+  },
+  snippetTextStrike: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '50%',
+    height: 1,
+    backgroundColor: semanticColorTokens.light.textBody,
+    opacity: 0.72,
   },
   modalContainer: {
     width: 640,

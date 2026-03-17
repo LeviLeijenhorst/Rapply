@@ -1,4 +1,4 @@
-import type { LocalAppData, ReportFieldVersion, StructuredReport, StructuredReportField } from './types'
+import type { JsonValue, LocalAppData, ReportFieldVersion, StructuredReport, StructuredReportField } from './types'
 
 type TextDecryptor = {
   decryptText: (value: string) => Promise<string>
@@ -27,10 +27,19 @@ async function decryptNullableTextIfNeeded(value: string | null, decryptor: Text
   return decryptTextIfNeeded(value, decryptor)
 }
 
+async function decryptJsonValue(value: JsonValue, decryptor: TextDecryptor): Promise<JsonValue> {
+  if (typeof value === 'string') return decryptTextIfNeeded(value, decryptor)
+  if (value === null || typeof value === 'number' || typeof value === 'boolean') return value
+  if (Array.isArray(value)) return Promise.all(value.map((item) => decryptJsonValue(item, decryptor)))
+  const output: Record<string, JsonValue> = {}
+  for (const [key, child] of Object.entries(value)) output[key] = await decryptJsonValue(child, decryptor)
+  return output
+}
+
 async function decryptReportVersion(version: ReportFieldVersion, decryptor: TextDecryptor): Promise<ReportFieldVersion> {
   return {
     ...version,
-    answer: await decryptTextIfNeeded(version.answer, decryptor),
+    answer: await decryptJsonValue(version.answer, decryptor),
     factualBasis: await decryptTextIfNeeded(version.factualBasis, decryptor),
     reasoning: await decryptTextIfNeeded(version.reasoning, decryptor),
     prompt: await decryptNullableTextIfNeeded(version.prompt, decryptor),
@@ -41,7 +50,7 @@ async function decryptReportField(field: StructuredReportField, decryptor: TextD
   return {
     ...field,
     label: await decryptTextIfNeeded(field.label, decryptor),
-    answer: await decryptTextIfNeeded(field.answer, decryptor),
+    answer: await decryptJsonValue(field.answer, decryptor),
     factualBasis: await decryptTextIfNeeded(field.factualBasis, decryptor),
     reasoning: await decryptTextIfNeeded(field.reasoning, decryptor),
     versions: await Promise.all(field.versions.map((version) => decryptReportVersion(version, decryptor))),

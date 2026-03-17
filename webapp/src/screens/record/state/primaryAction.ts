@@ -41,7 +41,12 @@ export function runPrimaryFooterAction(params: Params) {
       void params.createAndOpenInput({ kind: 'upload' })
       return
     }
-    if (params.selectedOption === 'gesprek' || params.selectedOption === 'gespreksverslag' || params.selectedOption === 'intake') {
+    if (
+      params.selectedOption === 'gesprek' ||
+      params.selectedOption === 'gespreksverslag' ||
+      params.selectedOption === 'record-video' ||
+      params.selectedOption === 'intake'
+    ) {
       void params.createAndOpenInput(
         { kind: 'recording' },
         params.selectedOption === 'intake' ? { sessionKind: 'intake' } : undefined,
@@ -80,6 +85,11 @@ export function runPrimaryFooterAction(params: Params) {
   }
 
   if (params.selectedOption === 'gespreksverslag') {
+    params.setStep('recording')
+    return
+  }
+
+  if (params.selectedOption === 'record-video') {
     params.setStep('recording')
     return
   }

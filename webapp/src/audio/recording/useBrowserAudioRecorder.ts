@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 type RecorderStatus = 'idle' | 'requesting' | 'recording' | 'paused' | 'stopping' | 'ready' | 'error'
+type RecorderCaptureMode = 'microphone' | 'display-with-audio-fallback'
 const recordingChunkDurationMilliseconds = 250
 type ChunkHandler = (chunk: { blob: Blob; durationSeconds: number }) => void
 
@@ -16,11 +17,11 @@ function isSafariBrowser() {
   return agent.includes('safari') && !agent.includes('chrome') && !agent.includes('chromium') && !agent.includes('android')
 }
 
-function chooseMimeType() {
+function chooseMimeType(captureMode: RecorderCaptureMode) {
   if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') {
     return ''
   }
-  if (isSafariBrowser()) {
+  if (isSafariBrowser() && captureMode === 'microphone') {
     return ''
   }
   const canPlayMimeType = (mimeType: string) => {
@@ -30,13 +31,9 @@ function chooseMimeType() {
     return result === 'probably' || result === 'maybe'
   }
 
-  const candidates = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/ogg;codecs=opus',
-    'audio/ogg',
-    'audio/mp4',
-  ]
+  const candidates = captureMode === 'display-with-audio-fallback'
+    ? ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
+    : ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg', 'audio/mp4']
 
   for (const candidate of candidates) {
     if (MediaRecorder.isTypeSupported(candidate) && canPlayMimeType(candidate)) return candidate
@@ -62,6 +59,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([])
   const [recordedChunkDurationsSeconds, setRecordedChunkDurationsSeconds] = useState<number[]>([])
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null)
+  const [liveChunkLevel, setLiveChunkLevel] = useState(0)
 
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -80,6 +78,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
   const activeRecordingIdRef = useRef(0)
   const recordingStartedAtMillisecondsRef = useRef<number | null>(null)
   const requestDataTimerRef = useRef<number | null>(null)
+  const activeCaptureModeRef = useRef<RecorderCaptureMode>('microphone')
 
   const isSupported = useMemo(() => {
     if (typeof window === 'undefined') return false
@@ -87,7 +86,10 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
     return typeof MediaRecorder !== 'undefined' && hasMediaDevices
   }, [])
 
-  const chosenMimeType = useMemo(() => chooseMimeType(), [])
+  const isDisplayCaptureSupported = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    return typeof navigator !== 'undefined' && typeof navigator.mediaDevices?.getDisplayMedia === 'function'
+  }, [])
 
   useEffect(() => {
     onChunkRef.current = params?.onChunk ?? null
@@ -193,11 +195,11 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
       chunkCount: recordedChunksRef.current.length,
       totalChunkBytes,
       elapsedSeconds,
-      chosenMimeType,
+      chosenMimeType: chooseMimeType(activeCaptureModeRef.current),
       lastMimeType: lastMimeTypeRef.current || '(empty)',
     })
     const firstChunkMimeType = recordedChunksRef.current.find((chunk) => typeof chunk.type === 'string' && chunk.type.trim().length > 0)?.type || ''
-    const preferredMimeType = lastMimeTypeRef.current || firstChunkMimeType || chosenMimeType || ''
+    const preferredMimeType = lastMimeTypeRef.current || firstChunkMimeType || chooseMimeType(activeCaptureModeRef.current) || ''
     const mimeType = preferredMimeType || chooseFallbackRecordedMimeType()
     const blob = new Blob(recordedChunksRef.current, { type: mimeType })
     if (blob.size <= 0) {
@@ -219,7 +221,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
     setStatus('ready')
   }
 
-  async function beginRecording(shouldReset: boolean) {
+  async function beginRecording(shouldReset: boolean, captureMode: RecorderCaptureMode = 'microphone') {
     if (typeof window === 'undefined') return
     if (!isSupported) {
       setStatus('error')
@@ -240,12 +242,34 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
 
     setStatus('requesting')
     try {
+      activeCaptureModeRef.current = captureMode
       recordingSequenceRef.current += 1
       activeRecordingIdRef.current = recordingSequenceRef.current
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await (async () => {
+        if (captureMode === 'microphone') {
+          return navigator.mediaDevices.getUserMedia({ audio: true })
+        }
+        if (!navigator.mediaDevices?.getDisplayMedia) {
+          throw new Error('Schermopname wordt niet ondersteund in deze browser.')
+        }
+
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true,
+        })
+        if (displayStream.getAudioTracks().length > 0) {
+          return displayStream
+        }
+        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        for (const track of micStream.getAudioTracks()) {
+          displayStream.addTrack(track)
+        }
+        return displayStream
+      })()
       mediaStreamRef.current = stream
       setMediaStream(stream)
 
+      const chosenMimeType = chooseMimeType(captureMode)
       const recorder = chosenMimeType ? new MediaRecorder(stream, { mimeType: chosenMimeType }) : new MediaRecorder(stream)
       mediaRecorderRef.current = recorder
       lastMimeTypeRef.current = recorder.mimeType || chosenMimeType || ''
@@ -275,6 +299,9 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
         const lastTimestampMilliseconds = lastChunkTimestampMillisecondsRef.current ?? nowMilliseconds
         const elapsedSeconds = (nowMilliseconds - lastTimestampMilliseconds) / 1000
         const resolvedDurationSeconds = Math.max(0.1, elapsedSeconds)
+        const bytesPerSecond = Number(event.data.size || 0) / resolvedDurationSeconds
+        const normalizedLevel = Math.min(1, Math.max(0, bytesPerSecond / 20_000))
+        setLiveChunkLevel((previous) => previous * 0.6 + normalizedLevel * 0.4)
         lastChunkTimestampMillisecondsRef.current = nowMilliseconds
         recordedChunkDurationsSecondsRef.current.push(resolvedDurationSeconds)
         if (onChunkRef.current) {
@@ -323,6 +350,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
         const stopReason = stopReasonRef.current
         stopReasonRef.current = 'none'
         recordingStartedAtMillisecondsRef.current = null
+        setLiveChunkLevel(0)
         stopTimer()
         stopRequestDataTimer()
         stopTracks()
@@ -359,7 +387,11 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
   }
 
   async function start() {
-    await beginRecording(true)
+    await beginRecording(true, 'microphone')
+  }
+
+  async function startWithCaptureMode(captureMode: RecorderCaptureMode = 'microphone') {
+    await beginRecording(true, captureMode)
   }
 
   function pause() {
@@ -379,7 +411,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
 
   async function resume() {
     if (status !== 'paused') return
-    await beginRecording(false)
+    await beginRecording(false, activeCaptureModeRef.current)
   }
 
   function stop() {
@@ -432,9 +464,11 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
     recordingStartedAtMillisecondsRef.current = null
     stopReasonRef.current = 'none'
     lastMimeTypeRef.current = ''
+    activeCaptureModeRef.current = 'microphone'
     setElapsedSeconds(0)
     setRecordedBlob(null)
     setRecordedMimeType(null)
+    setLiveChunkLevel(0)
     setErrorMessage(null)
     setStatus('idle')
   }
@@ -454,6 +488,7 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
 
   return {
     isSupported,
+    isDisplayCaptureSupported,
     status,
     errorMessage,
     elapsedSeconds,
@@ -463,7 +498,9 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
     recordedChunks,
     recordedChunkDurationsSeconds,
     mediaStream,
+    liveChunkLevel,
     start,
+    startWithCaptureMode,
     stop,
     pause,
     resume,

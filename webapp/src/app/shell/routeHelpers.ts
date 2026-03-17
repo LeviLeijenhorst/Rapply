@@ -15,6 +15,7 @@ export type RouteState =
   | { kind: 'templates' }
   | { kind: 'nieuwe-rapportage' }
   | { kind: 'mijn-praktijk' }
+  | { kind: 'mijn-profiel' }
   | { kind: 'archief' }
   | { kind: 'admin' }
   | { kind: 'admin-contact' }
@@ -84,6 +85,7 @@ export function parseRouteFromPath(pathname: string): RouteState {
   if (parts[0] === 'templates') return { kind: 'templates' }
   if (parts[0] === 'nieuwe-rapportage') return { kind: 'nieuwe-rapportage' }
   if (parts[0] === 'mijn-praktijk') return { kind: 'mijn-praktijk' }
+  if (parts[0] === 'mijn-profiel') return { kind: 'mijn-profiel' }
   if (parts[0] === 'geschreven-verslag') return { kind: 'nieuwe-rapportage' }
   if (parts[0] === 'archief') return { kind: 'archief' }
   if (parts[0] === 'admin') return { kind: 'admin' }
@@ -111,6 +113,7 @@ export function buildPathFromRoute(routeInput: RouteState): string {
   if (route.kind === 'templates') return '/templates'
   if (route.kind === 'nieuwe-rapportage') return '/nieuwe-rapportage'
   if (route.kind === 'mijn-praktijk') return '/mijn-praktijk'
+  if (route.kind === 'mijn-profiel') return '/mijn-profiel'
   if (route.kind === 'admin') return '/admin'
   if (route.kind === 'admin-contact') return '/admin-contact'
   if (route.kind === 'admin-wachtlijst') return '/admin-wachtlijst'
@@ -125,6 +128,7 @@ export function routeFromSidebarItemKey(sidebarItemKey: SidebarItemKey): RouteSt
   if (sidebarItemKey === 'adminContact') return { kind: 'admin-contact' }
   if (sidebarItemKey === 'adminWachtlijst') return { kind: 'admin-wachtlijst' }
   if (sidebarItemKey === 'mijnPraktijk') return { kind: 'mijn-praktijk' }
+  if (sidebarItemKey === 'mijnProfiel') return { kind: 'mijn-profiel' }
   if (sidebarItemKey === 'archief') return { kind: 'archief' }
   return { kind: 'clients' }
 }

@@ -47,8 +47,8 @@ async function validateSessionOwnership(params: { userId: string; sessionId: str
   const row = await queryOne<{ id: string }>(
     `
     select id
-    from public.sessions
-    where owner_user_id = $1 and id = $2
+    from public.inputs
+    where created_by_user_id = $1 and id = $2
     `,
     [params.userId, params.sessionId],
   )

@@ -89,7 +89,14 @@ export function createCorsMiddleware(params: {
 
   const options: CorsOptions = {
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Authorization", "Content-Type"],
+    allowedHeaders: [
+      "Authorization",
+      "Content-Type",
+      "x-ingest-token",
+      "x-chunk-index",
+      "x-start-milliseconds",
+      "x-duration-milliseconds",
+    ],
     origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
       if (!origin) {
         callback(null, true)

@@ -19,6 +19,7 @@ import { buildReportChatContext } from "../chat/reportChatContext"
 import { extractDocumentText, isSupportedDocumentType } from "../inputs/extractDocumentText"
 import { selectEvidenceForReport } from "../reports/evidenceSelection"
 import { generateStructuredReport } from "../reports/generateReport"
+import type { PromptSource, PromptSourceType } from "../reports/generateReport"
 import { regenerateReportField } from "../reports/regenerateReportField"
 import {
   appendFieldVersion,
@@ -38,6 +39,13 @@ type ChatMessage = {
   text: string
 }
 
+type SseWriteableResponse = {
+  setHeader: (name: string, value: string) => void
+  flushHeaders?: () => void
+  write: (chunk: string) => void
+  end: () => void
+}
+
 function logPipelineDebug(label: string, payload: unknown): void {
   try {
     const serialized = JSON.stringify(payload)
@@ -45,6 +53,26 @@ function logPipelineDebug(label: string, payload: unknown): void {
   } catch {
     // Never let diagnostics break request handling.
   }
+}
+
+function mapSessionInputTypeToPromptSourceType(inputType: string): PromptSourceType {
+  const normalized = normalizeText(inputType)
+  if (normalized === "written_recap") return "Geschreven gespreksverslag"
+  if (normalized === "uploaded_document") return "Transcriptie van een gespreksverslag"
+  if (normalized === "intake") return "Transcriptie van een gesprek"
+  return "Transcriptie van een gesprek"
+}
+
+function normalizeLabelList(values: unknown[]): string[] {
+  const labels: string[] = []
+  const seen = new Set<string>()
+  for (const value of values) {
+    const normalized = normalizeText(value)
+    if (!normalized || seen.has(normalized)) continue
+    seen.add(normalized)
+    labels.push(normalized)
+  }
+  return labels
 }
 
 function readChatMessages(value: unknown): ChatMessage[] {
@@ -57,6 +85,95 @@ function readChatMessages(value: unknown): ChatMessage[] {
       return { role, text } as ChatMessage
     })
     .filter((item): item is ChatMessage => Boolean(item))
+}
+
+function wantsChatStreaming(req: any): boolean {
+  if (req?.body?.stream === true) return true
+  const acceptHeader = String(req?.headers?.accept || "").toLowerCase()
+  return acceptHeader.includes("text/event-stream")
+}
+
+function initSseResponse(res: SseWriteableResponse): void {
+  res.setHeader("Content-Type", "text/event-stream; charset=utf-8")
+  res.setHeader("Cache-Control", "no-cache, no-transform")
+  res.setHeader("Connection", "keep-alive")
+  res.setHeader("X-Accel-Buffering", "no")
+  res.flushHeaders?.()
+}
+
+function writeSseEvent(res: SseWriteableResponse, event: string, payload: unknown): void {
+  const serialized = JSON.stringify(payload ?? {})
+  res.write(`event: ${event}\n`)
+  res.write(`data: ${serialized}\n\n`)
+}
+
+function writeSseDeltaSmooth(res: SseWriteableResponse, delta: string): void {
+  const text = String(delta || "")
+  if (!text) return
+  const pieces = text.split(/(\s+)/).filter(Boolean)
+  for (const piece of pieces) {
+    writeSseEvent(res, "delta", { delta: piece })
+  }
+}
+
+function extractAnswerFromPartialJson(raw: string): string {
+  const source = String(raw || "")
+  const keyIndex = source.indexOf('"answer"')
+  if (keyIndex === -1) return ""
+  const colonIndex = source.indexOf(":", keyIndex + 8)
+  if (colonIndex === -1) return ""
+  let valueStart = colonIndex + 1
+  while (valueStart < source.length && /\s/.test(source[valueStart])) valueStart += 1
+  if (valueStart >= source.length || source[valueStart] !== '"') return ""
+  valueStart += 1
+
+  let output = ""
+  let isEscaped = false
+  for (let index = valueStart; index < source.length; index += 1) {
+    const char = source[index]
+    if (isEscaped) {
+      if (char === "n") output += "\n"
+      else if (char === "r") output += "\r"
+      else if (char === "t") output += "\t"
+      else output += char
+      isEscaped = false
+      continue
+    }
+    if (char === "\\") {
+      isEscaped = true
+      continue
+    }
+    if (char === '"') {
+      return output
+    }
+    output += char
+  }
+  return output
+}
+
+function createReportAnswerDeltaForwarder(res: SseWriteableResponse): (rawDelta: string) => void {
+  let rawBuffer = ""
+  let emittedAnswer = ""
+  return (rawDelta: string) => {
+    rawBuffer += String(rawDelta || "")
+    const currentAnswer = extractAnswerFromPartialJson(rawBuffer)
+    if (!currentAnswer || currentAnswer.length <= emittedAnswer.length) return
+    const nextDelta = currentAnswer.slice(emittedAnswer.length)
+    emittedAnswer = currentAnswer
+    writeSseDeltaSmooth(res, nextDelta)
+  }
+}
+
+function endSseSuccess(res: SseWriteableResponse, response: unknown): void {
+  writeSseEvent(res, "final", { response })
+  writeSseEvent(res, "done", {})
+  res.end()
+}
+
+function endSseError(res: SseWriteableResponse, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error || "Onbekende fout")
+  writeSseEvent(res, "error", { message })
+  res.end()
 }
 
 function buildSnippetRows(params: {
@@ -452,15 +569,54 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
         evidenceByFieldId: evidenceByFieldIdEntries,
       })
 
-      if (evidence.approvedSnippets.length === 0) {
-        sendError(res, 400, "Geen goedgekeurde snippets voor de geselecteerde evidence. Keur eerst snippets goed.")
-        return
-      }
-
       const trajectory =
         evidence.selectedInputs.find((input) => input.trajectoryId)?.trajectoryId
           ? trajectories.find((item) => item.id === evidence.selectedInputs.find((input) => input.trajectoryId)?.trajectoryId) ?? null
           : await ensureActiveTrajectoryForClient(user.userId, clientId)
+      const selectedInputById = new Map(evidence.selectedInputs.map((item) => [item.id, item]))
+      const promptSources: PromptSource[] = [
+        ...evidence.approvedSnippets
+          .filter((snippet) => {
+            const sourceInputId = normalizeText(snippet.sourceInputId ?? snippet.sourceSessionId)
+            const sourceInput = selectedInputById.get(sourceInputId)
+            return sourceInput?.inputType !== "written_recap"
+          })
+          .map((snippet) => {
+          const sourceInputId = normalizeText(snippet.sourceInputId ?? snippet.sourceSessionId)
+          const sourceInput = selectedInputById.get(sourceInputId)
+          return {
+            sourceId: sourceInputId || snippet.id,
+            dateUnixMs: Number.isFinite(snippet.snippetDate) ? snippet.snippetDate : sourceInput?.createdAtUnixMs ?? Date.now(),
+            sourceType: mapSessionInputTypeToPromptSourceType(sourceInput?.inputType || ""),
+            sourceTitle: normalizeText(sourceInput?.title) || `Input ${sourceInputId || "onbekend"}`,
+            text: normalizeText(snippet.text),
+            labels: normalizeLabelList([snippet.fieldId, snippet.snippetType]),
+          }
+        }),
+        ...evidence.selectedInputs
+          .filter((input) => input.inputType === "written_recap")
+          .map((input) => ({
+            sourceId: input.id,
+            dateUnixMs: input.createdAtUnixMs,
+            sourceType: "Geschreven gespreksverslag" as const,
+            sourceTitle: normalizeText(input.title) || `Input ${input.id}`,
+            text: normalizeText(input.sourceText || input.transcriptText || ""),
+            labels: normalizeLabelList(["general_notes"]),
+          }))
+          .filter((source) => source.text.length > 0),
+        ...evidence.selectedNotes.map((note) => ({
+          sourceId: note.id,
+          dateUnixMs: Number.isFinite(note.createdAtUnixMs) ? note.createdAtUnixMs : Date.now(),
+          sourceType: "Notitie" as const,
+          sourceTitle: normalizeText(note.title) || `Notitie ${note.id}`,
+          text: normalizeText(note.text),
+          labels: normalizeLabelList(["general_notes"]),
+        })),
+      ]
+      if (promptSources.length === 0) {
+        sendError(res, 400, "Geen bruikbare broninformatie gevonden voor rapportgeneratie.")
+        return
+      }
       const generated = await generateStructuredReport({
         template,
         client,
@@ -468,6 +624,7 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
         organizationSettings,
         userSettings,
         evidenceByFieldId: evidence.evidenceByFieldId,
+        promptSources,
       })
       const now = Date.now()
       const report = {
@@ -540,7 +697,7 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
       const user = await requireAuthenticatedUser(req)
       const reportId = normalizeText(req.body?.reportId)
       const fieldId = normalizeText(req.body?.fieldId)
-      const answer = normalizeText(req.body?.answer)
+      const answer = req.body?.answer
       if (!reportId || !fieldId) {
         sendError(res, 400, "Missing reportId or fieldId")
         return
@@ -559,7 +716,7 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
       const updatedField = appendFieldVersion({
         field: currentField,
         source: "manual_edit",
-        answer,
+        answer: answer ?? "",
         prompt: null,
       })
       const updatedFields = { ...report.reportStructuredJson.fields, [fieldId]: updatedField }
@@ -597,11 +754,22 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
         snippets,
         notes,
       })
-      const response = await completePipelineChat({
-        tool: "sendClientChatMessage",
-        context,
-        messages,
-      })
+      if (wantsChatStreaming(req)) {
+        initSseResponse(res)
+        try {
+          const response = await completePipelineChat({
+            tool: "sendClientChatMessage",
+            context,
+            messages,
+            onDelta: (delta) => writeSseDeltaSmooth(res, delta),
+          })
+          endSseSuccess(res, response)
+        } catch (error) {
+          endSseError(res, error)
+        }
+        return
+      }
+      const response = await completePipelineChat({ tool: "sendClientChatMessage", context, messages })
       res.status(200).json(response)
     }),
   )
@@ -631,11 +799,22 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
         snippets,
         notes,
       })
-      const response = await completePipelineChat({
-        tool: "sendInputChatMessage",
-        context,
-        messages,
-      })
+      if (wantsChatStreaming(req)) {
+        initSseResponse(res)
+        try {
+          const response = await completePipelineChat({
+            tool: "sendInputChatMessage",
+            context,
+            messages,
+            onDelta: (delta) => writeSseDeltaSmooth(res, delta),
+          })
+          endSseSuccess(res, response)
+        } catch (error) {
+          endSseError(res, error)
+        }
+        return
+      }
+      const response = await completePipelineChat({ tool: "sendInputChatMessage", context, messages })
       res.status(200).json(response)
     }),
   )
@@ -668,49 +847,71 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
         notes,
       })
 
+      const applyReportFieldUpdates = async (chat: Awaited<ReturnType<typeof completePipelineChat>>) => {
+        if (!chat.fieldUpdates || chat.fieldUpdates.length === 0) return chat
+        const updatedFields = { ...report.reportStructuredJson.fields }
+        const appliedFieldUpdates: Array<{ fieldId: string; answer: string }> = []
+        const answerToText = (value: unknown): string => {
+          if (typeof value === "string") return value
+          if (value === null || typeof value === "undefined") return ""
+          if (typeof value === "object") return JSON.stringify(value)
+          return String(value)
+        }
+        for (const fieldUpdate of chat.fieldUpdates) {
+          const existingField = updatedFields[fieldUpdate.fieldId]
+          if (!existingField) continue
+          if (existingField.fieldType !== "ai") continue
+          const nextField = appendFieldVersion({
+            field: existingField,
+            source: "chat_update",
+            answer: fieldUpdate.answer,
+            prompt: null,
+          })
+          updatedFields[fieldUpdate.fieldId] = nextField
+          appliedFieldUpdates.push({ fieldId: fieldUpdate.fieldId, answer: answerToText(nextField.answer) })
+        }
+        const updatedStructuredReport = updateStructuredReport({
+          report: report.reportStructuredJson,
+          fields: updatedFields,
+        })
+        const reportText = buildReportTextFromStructured(template, updatedStructuredReport.fields)
+        const updatedReport = {
+          ...report,
+          reportStructuredJson: updatedStructuredReport,
+          reportText,
+          updatedAtUnixMs: Date.now(),
+        }
+        await saveReport(user.userId, updatedReport)
+        return { ...chat, fieldUpdates: appliedFieldUpdates }
+      }
+
+      if (wantsChatStreaming(req)) {
+        initSseResponse(res)
+        try {
+          const forwardReportAnswerDelta = createReportAnswerDeltaForwarder(res)
+          const chat = await completePipelineChat({
+            tool: "sendReportChatMessage",
+            context,
+            messages,
+            allowFieldUpdates: true,
+            onDelta: (delta) => forwardReportAnswerDelta(delta),
+          })
+          const updatedChat = await applyReportFieldUpdates(chat)
+          endSseSuccess(res, updatedChat)
+        } catch (error) {
+          endSseError(res, error)
+        }
+        return
+      }
+
       const chat = await completePipelineChat({
         tool: "sendReportChatMessage",
         context,
         messages,
         allowFieldUpdates: true,
       })
-
-      if (!chat.fieldUpdates || chat.fieldUpdates.length === 0) {
-        res.status(200).json(chat)
-        return
-      }
-
-      const updatedFields = { ...report.reportStructuredJson.fields }
-      const appliedFieldUpdates: Array<{ fieldId: string; answer: string }> = []
-      for (const fieldUpdate of chat.fieldUpdates) {
-        const existingField = updatedFields[fieldUpdate.fieldId]
-        if (!existingField) continue
-        if (existingField.fieldType !== "ai") continue
-        const nextField = appendFieldVersion({
-          field: existingField,
-          source: "chat_update",
-          answer: fieldUpdate.answer,
-          prompt: null,
-        })
-        updatedFields[fieldUpdate.fieldId] = nextField
-        appliedFieldUpdates.push({ fieldId: fieldUpdate.fieldId, answer: nextField.answer })
-      }
-      const updatedStructuredReport = updateStructuredReport({
-        report: report.reportStructuredJson,
-        fields: updatedFields,
-      })
-      const reportText = buildReportTextFromStructured(template, updatedStructuredReport.fields)
-      const updatedReport = {
-        ...report,
-        reportStructuredJson: updatedStructuredReport,
-        reportText,
-        updatedAtUnixMs: Date.now(),
-      }
-      await saveReport(user.userId, updatedReport)
-      res.status(200).json({
-        ...chat,
-        fieldUpdates: appliedFieldUpdates,
-      })
+      const updatedChat = await applyReportFieldUpdates(chat)
+      res.status(200).json(updatedChat)
     }),
   )
 

@@ -353,35 +353,58 @@ export const styles = StyleSheet.create({
   },
   optionRow: {
     width: '100%',
-    minHeight: 84,
+    minHeight: 64,
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderWidth: 1,
+    borderColor: '#E5E6E7',
+    backgroundColor: '#F9FAFB',
     justifyContent: 'center',
   },
   optionRowSelected: {
     borderColor: colors.selected,
-    borderWidth: 2,
+    backgroundColor: '#FEF6FA',
   },
   optionRowUnselected: {
-    borderColor: colors.border,
+    borderColor: '#E5E6E7',
   },
   optionRowHovered: {
     backgroundColor: colors.hoverBackground,
   },
+  optionRowDisabled: {
+    opacity: 0.7,
+  },
   optionRowContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
+  },
+  optionRowIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  optionRowTextWrap: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
   },
   optionRowRightIcon: {
     marginLeft: 'auto',
   },
   optionRowText: {
     fontSize: 16,
-    lineHeight: 20,
+    lineHeight: 22,
     color: colors.textStrong,
+  },
+  optionRowSubtitle: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: 'rgba(44,17,31,0.55)',
   },
   optionGroupWrap: {
     position: 'relative',

@@ -45,6 +45,7 @@ export function useLiveAudioWaveformBars({ mediaStream, barCount, isActive }: Va
 
     const binCount = analyser.frequencyBinCount
     const frequencyData = new Uint8Array(binCount)
+    const timeDomainData = new Uint8Array(analyser.fftSize)
 
     const minimumHeight = 8
     const maximumHeight = 220
@@ -59,12 +60,15 @@ export function useLiveAudioWaveformBars({ mediaStream, barCount, isActive }: Va
       lastUpdateMsRef.current = now
 
       analyser.getByteFrequencyData(frequencyData)
-      let totalEnergy = 0
-      for (let i = 0; i < binCount; i++) {
-        totalEnergy += frequencyData[i] ?? 0
+      analyser.getByteTimeDomainData(timeDomainData)
+      let sumSquares = 0
+      for (let i = 0; i < timeDomainData.length; i++) {
+        const centered = ((timeDomainData[i] ?? 128) - 128) / 128
+        sumSquares += centered * centered
       }
-      const averageEnergy = totalEnergy / Math.max(1, binCount)
-      if (averageEnergy < 2) {
+      const rms = Math.sqrt(sumSquares / Math.max(1, timeDomainData.length))
+      const signalLevel = clamp(rms * 10, 0, 1)
+      if (signalLevel < 0.01) {
         const silentBars = Array.from({ length: stableBarCount }, () => minimumHeight)
         previousBarsRef.current = silentBars
         setBars(silentBars)
@@ -84,10 +88,10 @@ export function useLiveAudioWaveformBars({ mediaStream, barCount, isActive }: Va
         for (let i = start; i < end; i++) sum += frequencyData[i] ?? 0
         const average = sum / Math.max(1, end - start)
         const normalized = clamp(average / 255, 0, 1)
-        const eased = Math.pow(normalized, 1.4)
+        const eased = Math.pow(normalized, 1.25)
         const distanceFromCenter = Math.abs(index - centerIndex)
         const centerWeight = clamp(1 - distanceFromCenter / activeRadius, 0, 1)
-        const boosted = clamp(eased * gain, 0, 1)
+        const boosted = clamp((signalLevel * 0.7 + eased * 0.9) * gain, 0, 1)
         const height = minimumHeight + boosted * centerWeight * (maximumHeight - minimumHeight)
         const previous = previousBars[index] ?? minimumHeight
         const smoothed = previous * smoothing + height * (1 - smoothing)

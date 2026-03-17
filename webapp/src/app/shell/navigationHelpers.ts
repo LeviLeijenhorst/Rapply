@@ -68,6 +68,7 @@ export function getCurrentRouteFromSelection(params: CurrentRouteParams): RouteS
     return params.selectedClientId ? { kind: 'client', clientId: params.selectedClientId } : { kind: 'clients' }
   }
   if (params.selectedSidebarItemKey === 'mijnPraktijk') return { kind: 'mijn-praktijk' }
+  if (params.selectedSidebarItemKey === 'mijnProfiel') return { kind: 'mijn-profiel' }
   if (params.selectedSidebarItemKey === 'admin') return { kind: 'admin' }
   if (params.selectedSidebarItemKey === 'adminContact') return { kind: 'admin-contact' }
   if (params.selectedSidebarItemKey === 'adminWachtlijst') return { kind: 'admin-wachtlijst' }

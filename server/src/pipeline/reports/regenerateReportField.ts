@@ -2,19 +2,19 @@ import { completeAzureOpenAiChat } from "../../ai/azureOpenAi"
 import { normalizeText } from "../../ai/shared/normalize"
 import { stripJsonCodeFences } from "../../ai/shared/textSanitization"
 import { env } from "../../env"
-import type { StructuredReportField } from "../../types/Report"
+import type { JsonValue, StructuredReportField } from "../../types/Report"
 import { appendFieldVersion } from "./structuredReportTools"
 
 function readDeploymentOrEmpty(): string {
   return normalizeText(env.azureOpenAiReportDeployment || env.azureOpenAiChatDeployment || env.azureOpenAiSummaryDeployment)
 }
 
-function safeJsonAnswer(value: string): string {
+function safeJsonAnswer(value: string): JsonValue {
   const stripped = stripJsonCodeFences(String(value || ""))
   if (!stripped) return ""
   try {
     const parsed = JSON.parse(stripped) as { answer?: unknown }
-    return normalizeText(parsed.answer)
+    return (parsed.answer ?? "") as JsonValue
   } catch {
     return ""
   }

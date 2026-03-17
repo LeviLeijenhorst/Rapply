@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { sendInputPipelineChatMessage } from '@/api/pipeline/pipelineApi'
+import { streamInputPipelineChatMessage } from '@/api/pipeline/pipelineApi'
 import type { ChatbotMessage, UseChatbotTabLogicParams } from '@/screens/session/sessionScreen.types'
 
 export function useChatbotTabLogic({ inputId }: UseChatbotTabLogicParams) {
@@ -21,36 +21,46 @@ export function useChatbotTabLogic({ inputId }: UseChatbotTabLogicParams) {
     }
 
     const nextMessages = [...chatMessages, userMessage]
-    setChatMessages(nextMessages)
+    const assistantId = `assistant-stream-${Date.now()}`
+    const placeholderAssistant: ChatbotMessage = {
+      id: assistantId,
+      role: 'assistant',
+      text: '',
+      createdAtUnixMs: Date.now(),
+    }
+    setChatMessages([...nextMessages, placeholderAssistant])
     setChatComposerValue('')
     setIsChatSending(true)
 
     try {
-      const response = await sendInputPipelineChatMessage({
+      const response = await streamInputPipelineChatMessage({
         inputId,
         messages: nextMessages.map((message) => ({ role: message.role, text: message.text })),
+        onDelta: (delta) => {
+          setChatMessages((previousMessages) =>
+            previousMessages.map((message) =>
+              message.id === assistantId ? { ...message, text: `${message.text}${delta}` } : message,
+            ),
+          )
+        },
       })
 
-      setChatMessages((previousMessages) => [
-        ...previousMessages,
-        {
-          id: `assistant-${Date.now()}`,
-          role: 'assistant',
-          text: response.answer.trim() || 'Ik kon hier geen antwoord op genereren.',
-          createdAtUnixMs: Date.now(),
-        },
-      ])
+      setChatMessages((previousMessages) =>
+        previousMessages.map((message) =>
+          message.id === assistantId
+            ? { ...message, text: response.answer.trim() || 'Ik kon hier geen antwoord op genereren.' }
+            : message,
+        ),
+      )
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Onbekende fout'
-      setChatMessages((previousMessages) => [
-        ...previousMessages,
-        {
-          id: `assistant-error-${Date.now()}`,
-          role: 'assistant',
-          text: `Het versturen van uw vraag is mislukt: ${errorMessage}`,
-          createdAtUnixMs: Date.now(),
-        },
-      ])
+      setChatMessages((previousMessages) =>
+        previousMessages.map((message) =>
+          message.id === assistantId
+            ? { ...message, text: `Het versturen van uw vraag is mislukt: ${errorMessage}` }
+            : message,
+        ),
+      )
     } finally {
       setIsChatSending(false)
     }

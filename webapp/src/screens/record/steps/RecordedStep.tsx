@@ -54,7 +54,13 @@ export function RecordedStep({
         <View style={styles.mobileRecordedHeader}>
           <CoachscribeLogo />
           <Text isSemibold style={styles.mobileRecordedStatusText}>
-            {selectedOption === 'gespreksverslag' ? 'Verslag opgenomen...' : selectedOption === 'intake' ? 'Intake opgenomen...' : 'Gesprek opgenomen...'}
+            {selectedOption === 'gespreksverslag'
+              ? 'Verslag opgenomen...'
+              : selectedOption === 'record-video'
+                ? 'Video call opgenomen...'
+                : selectedOption === 'intake'
+                  ? 'Intake opgenomen...'
+                  : 'Gesprek opgenomen...'}
           </Text>
         </View>
       ) : null}

@@ -1,11 +1,19 @@
-import { callSecureApi } from '../secureApi'
-import type { Report, Snippet, StructuredReport, StructuredReportField } from '../../storage/types'
+import { callSecureApi, fetchSecureApi } from '../secureApi'
+import type { JsonValue, Report, Snippet, StructuredReport, StructuredReportField } from '../../storage/types'
 
 export type PipelineTemplateField = {
   fieldId: string
   label: string
   fieldType: 'programmatic' | 'ai' | 'manual'
   exportNumberKey: string
+  aiConfig?: {
+    vraag?: string
+    instructie?: string
+    antwoordType?: 'text' | 'multiple_choice' | 'structured'
+    opties?: Array<{ value: number; label: string }>
+    answerFormat?: string
+    voorbeeldAntwoord?: string
+  }
 }
 
 export type PipelineTemplate = {
@@ -29,6 +37,10 @@ export type PipelineChatResponse = {
   fieldUpdates?: Array<{ fieldId: string; answer: string }>
 }
 
+type PipelineChatStreamChunk = {
+  delta?: unknown
+}
+
 function normalizeText(value: unknown): string {
   return String(value ?? '').trim()
 }
@@ -47,6 +59,7 @@ function normalizeTemplateField(value: unknown): PipelineTemplateField | null {
     label,
     fieldType,
     exportNumberKey,
+    aiConfig: source.aiConfig && typeof source.aiConfig === 'object' ? (source.aiConfig as PipelineTemplateField['aiConfig']) : undefined,
   }
 }
 
@@ -68,6 +81,17 @@ function normalizeSnippetStatus(value: unknown): Snippet['status'] {
   const normalized = normalizeText(value)
   if (normalized === 'approved' || normalized === 'rejected') return normalized
   return 'pending'
+}
+
+function normalizeJsonValue(value: unknown): JsonValue {
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value as JsonValue
+  if (Array.isArray(value)) return value.map((item) => normalizeJsonValue(item))
+  if (value && typeof value === 'object') {
+    const output: Record<string, JsonValue> = {}
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) output[key] = normalizeJsonValue(child)
+    return output
+  }
+  return String(value ?? '')
 }
 
 function normalizeSnippet(value: unknown): Snippet | null {
@@ -111,7 +135,7 @@ function normalizeReportFieldVersion(value: unknown): StructuredReportField['ver
   return {
     id,
     source: sourceKind,
-    answer: normalizeText(source.answer),
+    answer: normalizeJsonValue(source.answer),
     factualBasis: normalizeText(source.factualBasis),
     reasoning: normalizeText(source.reasoning),
     confidence: Number.isFinite(Number(source.confidence)) ? Number(source.confidence) : null,
@@ -134,7 +158,7 @@ function normalizeStructuredReportField(value: unknown): StructuredReportField |
     fieldId,
     label,
     fieldType,
-    answer: normalizeText(source.answer),
+    answer: normalizeJsonValue(source.answer),
     factualBasis: normalizeText(source.factualBasis),
     reasoning: normalizeText(source.reasoning),
     confidence: fieldType === 'programmatic' ? null : normalizedConfidence,
@@ -214,6 +238,111 @@ function normalizeChatResponse(value: unknown): PipelineChatResponse {
         : null,
     fieldUpdates: fieldUpdates as Array<{ fieldId: string; answer: string }>,
   }
+}
+
+function parseSseChunk(block: string): { event: string; data: string } | null {
+  const lines = String(block || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+  if (lines.length === 0) return null
+  const eventLine = lines.find((line) => line.startsWith('event:'))
+  const dataLines = lines.filter((line) => line.startsWith('data:'))
+  if (!eventLine || dataLines.length === 0) return null
+  const event = eventLine.slice('event:'.length).trim()
+  const data = dataLines.map((line) => line.slice('data:'.length).trim()).join('\n')
+  if (!event) return null
+  return { event, data }
+}
+
+function readNextSseBlock(pending: string): { block: string; rest: string } | null {
+  const match = /\r?\n\r?\n/.exec(pending)
+  if (!match || typeof match.index !== 'number') return null
+  const separatorStart = match.index
+  const separatorLength = match[0].length
+  return {
+    block: pending.slice(0, separatorStart),
+    rest: pending.slice(separatorStart + separatorLength),
+  }
+}
+
+async function streamPipelineChatMessage(
+  endpoint: string,
+  body: unknown,
+  onDelta?: (delta: string) => void,
+): Promise<PipelineChatResponse> {
+  const response = await fetchSecureApi(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+    },
+    body: JSON.stringify({ ...(body as Record<string, unknown>), stream: true }),
+  })
+
+  if (!response.body) {
+    const fallback = await response.json()
+    return normalizeChatResponse(fallback)
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let pending = ''
+  let finalResponse: PipelineChatResponse | null = null
+
+  const processBlock = (rawBlock: string) => {
+    const chunk = parseSseChunk(rawBlock)
+    if (!chunk) return
+    if (chunk.event === 'delta') {
+      let payload: PipelineChatStreamChunk = {}
+      try {
+        payload = JSON.parse(chunk.data) as PipelineChatStreamChunk
+      } catch {
+        payload = {}
+      }
+      const delta = typeof payload.delta === 'string' ? payload.delta : ''
+      if (delta) onDelta?.(delta)
+      return
+    }
+    if (chunk.event === 'final') {
+      let payload: any = null
+      try {
+        payload = JSON.parse(chunk.data)
+      } catch {
+        payload = null
+      }
+      finalResponse = normalizeChatResponse(payload?.response ?? payload)
+      return
+    }
+    if (chunk.event === 'error') {
+      let payload: any = null
+      try {
+        payload = JSON.parse(chunk.data)
+      } catch {
+        payload = null
+      }
+      const message = typeof payload?.message === 'string' && payload.message.trim() ? payload.message.trim() : 'Chat mislukt.'
+      throw new Error(message)
+    }
+  }
+
+  while (true) {
+    const { value, done } = await reader.read()
+    if (done) break
+    pending += decoder.decode(value, { stream: true })
+    let parsedBlock = readNextSseBlock(pending)
+    while (parsedBlock) {
+      const block = parsedBlock.block
+      pending = parsedBlock.rest
+      processBlock(block)
+      parsedBlock = readNextSseBlock(pending)
+    }
+  }
+  pending += decoder.decode()
+  const trailing = pending.trim()
+  if (trailing) processBlock(trailing)
+  if (finalResponse) return finalResponse
+  throw new Error('Geen chat response ontvangen.')
 }
 
 export async function listPipelineTemplates(): Promise<PipelineTemplate[]> {
@@ -310,7 +439,7 @@ export async function regenerateReportField(params: {
 export async function saveReportFieldEdit(params: {
   reportId: string
   fieldId: string
-  answer: string
+  answer: JsonValue
 }): Promise<{ report: Report; field: StructuredReportField }> {
   const response = await callSecureApi<{ report?: unknown; field?: unknown }>(
     '/pipeline/save-report-field-edit',
@@ -330,6 +459,14 @@ export async function sendClientPipelineChatMessage(params: {
   return normalizeChatResponse(response)
 }
 
+export async function streamClientPipelineChatMessage(params: {
+  clientId: string
+  messages: PipelineChatMessage[]
+  onDelta?: (delta: string) => void
+}): Promise<PipelineChatResponse> {
+  return streamPipelineChatMessage('/pipeline/chat/client', { clientId: params.clientId, messages: params.messages }, params.onDelta)
+}
+
 export async function sendInputPipelineChatMessage(params: {
   inputId: string
   messages: PipelineChatMessage[]
@@ -338,12 +475,28 @@ export async function sendInputPipelineChatMessage(params: {
   return normalizeChatResponse(response)
 }
 
+export async function streamInputPipelineChatMessage(params: {
+  inputId: string
+  messages: PipelineChatMessage[]
+  onDelta?: (delta: string) => void
+}): Promise<PipelineChatResponse> {
+  return streamPipelineChatMessage('/pipeline/chat/input', { inputId: params.inputId, messages: params.messages }, params.onDelta)
+}
+
 export async function sendReportPipelineChatMessage(params: {
   reportId: string
   messages: PipelineChatMessage[]
 }): Promise<PipelineChatResponse> {
   const response = await callSecureApi('/pipeline/chat/report', params)
   return normalizeChatResponse(response)
+}
+
+export async function streamReportPipelineChatMessage(params: {
+  reportId: string
+  messages: PipelineChatMessage[]
+  onDelta?: (delta: string) => void
+}): Promise<PipelineChatResponse> {
+  return streamPipelineChatMessage('/pipeline/chat/report', { reportId: params.reportId, messages: params.messages }, params.onDelta)
 }
 
 export async function readPipelineReport(reportId: string): Promise<Report | null> {

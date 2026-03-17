@@ -4,7 +4,10 @@ import type { Snippet } from "../../types/Snippet"
 import type { UwvTemplate } from "../templates/uwvTemplates"
 
 function normalizeText(value: unknown): string {
-  return String(value || "").trim()
+  if (typeof value === "string") return value.trim()
+  if (value === null || typeof value === "undefined") return ""
+  if (typeof value === "object") return JSON.stringify(value)
+  return String(value).trim()
 }
 
 function formatFieldContextLine(field: StructuredReportField): string {

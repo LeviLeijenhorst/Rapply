@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ScrollView } from 'react-native'
 
 import { fetchBillingStatus } from '@/api/billing/billingApi'
-import { sendClientPipelineChatMessage } from '@/api/pipeline/pipelineApi'
+import { sendClientPipelineChatMessage, streamClientPipelineChatMessage } from '@/api/pipeline/pipelineApi'
 import { clearChatBotForClient, loadChatBotForClient, saveChatBotForClient } from '@/storage/chatBotStore'
 import { createChatMessageId, type ChatStateMessage } from '@/types/chatState'
 import type {
@@ -319,7 +319,8 @@ export function useClientChatbot({
 
     const nextUserMessage: ChatStateMessage = { id: createChatMessageId(), role: 'user', text: trimmedText }
     const nextChatMessages = [...chatMessages, nextUserMessage]
-    setChatMessages((previous) => [...previous, nextUserMessage])
+    const assistantId = `assistant-stream-${Date.now()}`
+    setChatMessages((previous) => [...previous, nextUserMessage, { id: assistantId, role: 'assistant', text: '' }])
     setComposerText('')
     setIsChatSending(true)
 
@@ -329,20 +330,33 @@ export function useClientChatbot({
         return
       }
 
-      const response = await sendClientPipelineChatMessage({
+      const response = await streamClientPipelineChatMessage({
         clientId,
         messages: nextChatMessages.map((message) => ({ role: message.role, text: message.text })),
+        onDelta: (delta) => {
+          setChatMessages((previous) =>
+            previous.map((message) =>
+              message.id === assistantId ? { ...message, text: `${message.text}${delta}` } : message,
+            ),
+          )
+        },
       })
 
-      setChatMessages((previous) => [
-        ...previous,
-        { id: createChatMessageId(), role: 'assistant', text: response.answer.trim() || 'Ik kon hier geen antwoord op geven.' },
-      ])
+      setChatMessages((previous) =>
+        previous.map((message) =>
+          message.id === assistantId
+            ? { ...message, text: response.answer.trim() || 'Ik kon hier geen antwoord op geven.' }
+            : message,
+        ),
+      )
     } catch {
-      setChatMessages((previous) => [
-        ...previous,
-        { id: createChatMessageId(), role: 'assistant', text: 'Er ging iets mis bij het ophalen van het antwoord. Probeer het opnieuw.' },
-      ])
+      setChatMessages((previous) =>
+        previous.map((message) =>
+          message.id === assistantId
+            ? { ...message, text: 'Er ging iets mis bij het ophalen van het antwoord. Probeer het opnieuw.' }
+            : message,
+        ),
+      )
     } finally {
       setIsChatSending(false)
     }

@@ -1,63 +1,26 @@
 import type { PipelineTemplate } from '@/api/pipeline/pipelineApi'
-import type { StructuredReport, StructuredReportField } from '@/storage/types'
+import type { JsonValue, StructuredReport, StructuredReportField } from '@/storage/types'
 
 function normalizeWhitespace(value: string): string {
   return String(value || '').replace(/\u00a0/g, ' ').trim()
 }
 
-function parseHours(value: string): string {
-  const match = normalizeWhitespace(value).match(/\b([0-9]+(?:[.,][0-9]+)?)\b/)
-  return String(match?.[1] || '').replace(',', '.')
+function answerToText(answer: JsonValue): string {
+  if (typeof answer === 'string') return normalizeWhitespace(answer)
+  if (answer === null || typeof answer === 'undefined') return ''
+  return JSON.stringify(answer)
 }
 
-function parseActivityDistribution(value: string): Array<{ activity: string; hours: string }> {
+function parseLegacyActivityDistribution(value: string): Array<{ activiteit: string; uren: number }> {
   return String(value || '')
     .split(/\s*;\s*/)
-    .map((part) => normalizeWhitespace(part))
+    .map((part) => String(part || '').trim())
     .filter(Boolean)
     .map((part) => {
       const match = part.match(/^(.*?)\s*\(\s*([0-9]+(?:[.,][0-9]+)?)\s*(?:uur|uren)?\s*\)\s*$/i)
-      if (match) {
-        return {
-          activity: normalizeWhitespace(match[1]),
-          hours: String(match[2] || '').replace(',', '.'),
-        }
-      }
-      const compactMatch = part.match(/^([0-9]+(?:[.,][0-9]+)?)\s*h(?:our|ours|uur|uren)?\s*:\s*(.*)$/i)
-      if (compactMatch) {
-        return {
-          activity: normalizeWhitespace(compactMatch[2]),
-          hours: String(compactMatch[1] || '').replace(',', '.'),
-        }
-      }
-      const hours = parseHours(part)
-      const activity = normalizeWhitespace(part.replace(/\(?\s*[0-9]+(?:[.,][0-9]+)?\s*(?:uur|uren)?\s*\)?/i, ''))
-      return { activity, hours }
+      if (!match) return { activiteit: part, uren: 0 }
+      return { activiteit: normalizeWhitespace(match[1]), uren: Number(String(match[2]).replace(',', '.')) || 0 }
     })
-    .filter((row) => row.activity || row.hours)
-}
-
-function parseSpecialistExpertise(value: string): { hours: string; motivation: string } {
-  const normalized = String(value || '')
-  const hoursMatch =
-    normalized.match(/aantal\s+uren\s*:\s*([0-9]+(?:[.,][0-9]+)?)/i) ||
-    normalized.match(/\b([0-9]+(?:[.,][0-9]+)?)\b/)
-  const motivationMatch = normalized.match(/(?:motivering|motivatie)\s*:\s*([\s\S]+)/i)
-  return {
-    hours: String(hoursMatch?.[1] || '').replace(',', '.').trim(),
-    motivation: normalizeWhitespace(String(motivationMatch?.[1] || '')),
-  }
-}
-
-function parseSpecialistTariff(value: string): { hourlyRate: string; motivation: string } {
-  const normalized = String(value || '')
-  const hourlyRateMatch =
-    normalized.match(/(?:uurtarief|tarief|eur)[^0-9]*([0-9]+(?:[.,][0-9]+)?)/i) || normalized.match(/\b([0-9]+(?:[.,][0-9]+)?)\b/)
-  const motivationMatch = normalized.match(/(?:motivering|motivatie)\s*:\s*([\s\S]+)/i) || normalized.match(/motivering?\s*-\s*([\s\S]+)/i)
-  return {
-    hourlyRate: String(hourlyRateMatch?.[1] || '').replace(',', '.').trim(),
-    motivation: normalizeWhitespace(String(motivationMatch?.[1] || '')),
-  }
 }
 
 function parseAddressComposite(value: string): {
@@ -71,27 +34,51 @@ function parseAddressComposite(value: string): {
   const visitPlace = normalized.match(/bezoek\s+plaats\s*:\s*([^;]+)/i)?.[1]?.trim() || ''
   const postalPostcode = normalized.match(/post\s+postcode\s*:\s*([^;]+)/i)?.[1]?.trim() || ''
   const postalPlace = normalized.match(/post\s+plaats\s*:\s*([^;]+)/i)?.[1]?.trim() || ''
-  if (visitPostcode || visitPlace || postalPostcode || postalPlace) {
-    return { visitPostcode, visitPlace, postalPostcode, postalPlace }
-  }
-  const fallbackPostcode = normalized.match(/\b\d{4}\s?[A-Za-z]{2}\b/)?.[0] || ''
-  const fallbackPlace = normalizeWhitespace(normalized.replace(fallbackPostcode, ''))
-  return {
-    visitPostcode: fallbackPostcode,
-    visitPlace: fallbackPlace,
-    postalPostcode: fallbackPostcode,
-    postalPlace: fallbackPlace,
-  }
+  return { visitPostcode, visitPlace, postalPostcode, postalPlace }
 }
 
-function readAnswer(fields: Record<string, StructuredReportField>, fieldId: string): string {
-  return normalizeWhitespace(String(fields[fieldId]?.answer || ''))
+function readAnswer(fields: Record<string, StructuredReportField>, fieldId: string): JsonValue {
+  return fields[fieldId]?.answer ?? ''
+}
+
+function asObject(value: JsonValue): Record<string, JsonValue> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  return value as Record<string, JsonValue>
+}
+
+function asArray(value: JsonValue): JsonValue[] {
+  return Array.isArray(value) ? value : []
+}
+
+function readNumericChoiceText(fieldId: string, value: number): string {
+  const mappings: Record<string, Record<number, string>> = {
+    rp_werkfit_8_1: { 1: 'Ja', 2: 'Nee' },
+    er_werkfit_4_2: {
+      1: "Beëindiging re-integratiedienst 'Werkfit maken' naar aanleiding van evaluatiemoment",
+      2: 'Voortijdige terugmelding',
+      3: "Beëindiging re-integratiedienst 'Werkfit maken'",
+    },
+    er_werkfit_6_1: {
+      1: 'Ziekte langer dan 4 weken (klant met een Ziektewet-uitkering)',
+      2: 'Ziekte langer dan 13 weken (klant met een arbeidsongeschiktheidsuitkering)',
+      3: 'Verhuizing van de klant',
+      4: 'Overlijden van de klant',
+      5: 'Bezwaar of beroep tegen het werkplan, Plan van aanpak of re-integratieplan',
+      6: 'Anders',
+    },
+    er_werkfit_7_3: {
+      1: 'De klant is werkfit en kan aan het werk',
+      2: 'De klant is niet werkfit',
+    },
+    er_werkfit_8_2: { 1: 'Ja', 2: 'Nee' },
+  }
+  return mappings[fieldId]?.[value] || String(value)
 }
 
 export function buildStructuredReportText(template: PipelineTemplate, report: StructuredReport): string {
   return template.fields
     .map((templateField) => {
-      const answer = readAnswer(report.fields, templateField.fieldId)
+      const answer = answerToText(readAnswer(report.fields, templateField.fieldId))
       if (!answer) return ''
       return `### ${templateField.exportNumberKey} ${templateField.label}\n${answer}`
     })
@@ -103,52 +90,73 @@ export function buildStructuredReportText(template: PipelineTemplate, report: St
 export function buildStructuredExportContext(template: PipelineTemplate, report: StructuredReport): Record<string, string> {
   const context: Record<string, string> = {}
   for (const field of template.fields) {
-    const answer = readAnswer(report.fields, field.fieldId)
-    if (!answer) continue
+    const raw = readAnswer(report.fields, field.fieldId)
+    const asText = answerToText(raw)
+    if (!asText) continue
     const numberKey = field.exportNumberKey.replace('.', '_')
-    context[numberKey] = answer
-    context[field.fieldId] = answer
+    context[numberKey] = asText
+    context[field.fieldId] = asText
   }
 
-  const activityDistribution = context['5_3']
-  if (activityDistribution) {
-    const rows = parseActivityDistribution(activityDistribution)
+  const rp53 = asObject(readAnswer(report.fields, 'rp_werkfit_5_3'))
+  const rp53Rows = rp53 ? asArray(rp53.activiteiten) : parseLegacyActivityDistribution(answerToText(readAnswer(report.fields, 'rp_werkfit_5_3')))
+  if (rp53Rows.length > 0) {
     let total = 0
     for (let index = 0; index < 5; index += 1) {
-      const row = rows[index]
-      const rowNumber = index + 1
-      context[`5_3_${rowNumber}_re_integratieactiviteit`] = row?.activity || ''
-      context[`5_3_${rowNumber}_aantal_begeleidingsuren`] = row?.hours || ''
-      const parsedHours = Number(row?.hours || '')
-      if (Number.isFinite(parsedHours)) total += parsedHours
+      const row = asObject(rp53Rows[index] ?? null)
+      const activiteit = row ? normalizeWhitespace(String(row.activiteit ?? '')) : normalizeWhitespace(String((rp53Rows[index] as any)?.activiteit ?? ''))
+      const uren = row ? Number(row.uren ?? 0) : Number((rp53Rows[index] as any)?.uren ?? 0)
+      context[`5_3_${index + 1}_re_integratieactiviteit`] = activiteit
+      context[`5_3_${index + 1}_aantal_begeleidingsuren`] = Number.isFinite(uren) && uren > 0 ? String(uren) : ''
+      if (Number.isFinite(uren)) total += uren
     }
     context['5_3_totaal_aantal_begeleidingsuren'] = total > 0 ? String(total).replace(/\.0$/, '') : ''
   }
 
-  const specialistExpertise = context['8_2']
-  if (specialistExpertise) {
-    const parsed = parseSpecialistExpertise(specialistExpertise)
-    context['8_2_aantal_uren'] = parsed.hours
-    context['8_2_motivering'] = parsed.motivation
+  const rp82 = asObject(readAnswer(report.fields, 'rp_werkfit_8_2'))
+  if (rp82) {
+    context['8_2_aantal_uren'] = String(rp82.uren ?? '')
+    context['8_2_motivering'] = normalizeWhitespace(String(rp82.motivering ?? ''))
+  } else {
+    const raw = answerToText(readAnswer(report.fields, 'rp_werkfit_8_2'))
+    const hoursMatch = raw.match(/\b([0-9]+(?:[.,][0-9]+)?)\b/)
+    const motivationMatch = raw.match(/(?:motivering|motivatie)\s*:\s*([\s\S]+)/i)
+    context['8_2_aantal_uren'] = String(hoursMatch?.[1] || '').replace(',', '.')
+    context['8_2_motivering'] = normalizeWhitespace(String(motivationMatch?.[1] || ''))
   }
 
-  const specialistTariff = context['8_3']
-  if (specialistTariff) {
-    const parsed = parseSpecialistTariff(specialistTariff)
-    context['8_3a'] = parsed.hourlyRate
-    context['8_3b'] = parsed.motivation
-    context['8_3_uurtarief_exclusief_btw'] = parsed.hourlyRate
-    context['8_3_motivering'] = parsed.motivation
+  const rp83 = asObject(readAnswer(report.fields, 'rp_werkfit_8_3'))
+  if (rp83) {
+    const tarief = String(rp83.tarief ?? '')
+    const motivering = normalizeWhitespace(String(rp83.motivering ?? ''))
+    context['8_3a'] = tarief
+    context['8_3b'] = motivering
+    context['8_3_uurtarief_exclusief_btw'] = tarief
+    context['8_3_motivering'] = motivering
+  } else {
+    const raw = answerToText(readAnswer(report.fields, 'rp_werkfit_8_3'))
+    const rateMatch = raw.match(/\b([0-9]+(?:[.,][0-9]+)?)\b/)
+    const motivationMatch = raw.match(/(?:motivering|motivatie)\s*:\s*([\s\S]+)/i)
+    context['8_3a'] = String(rateMatch?.[1] || '').replace(',', '.')
+    context['8_3b'] = normalizeWhitespace(String(motivationMatch?.[1] || ''))
+    context['8_3_uurtarief_exclusief_btw'] = context['8_3a']
+    context['8_3_motivering'] = context['8_3b']
   }
 
-  const compositeAddress = context['3_4']
-  if (compositeAddress) {
-    const parsed = parseAddressComposite(compositeAddress)
-    context['3_4_bezoek_postcode'] = parsed.visitPostcode
-    context['3_4_bezoek_plaats'] = parsed.visitPlace
-    context['3_4_post_postcode'] = parsed.postalPostcode
-    context['3_4_post_plaats'] = parsed.postalPlace
-  }
+  const er42 = asObject(readAnswer(report.fields, 'er_werkfit_4_2'))
+  if (er42 && typeof er42.keuze === 'number') context['er_werkfit_4_2_keuze_tekst'] = readNumericChoiceText('er_werkfit_4_2', er42.keuze)
+  const er61 = asObject(readAnswer(report.fields, 'er_werkfit_6_1'))
+  if (er61 && typeof er61.reden === 'number') context['er_werkfit_6_1_reden_tekst'] = readNumericChoiceText('er_werkfit_6_1', er61.reden)
+  const er73 = asObject(readAnswer(report.fields, 'er_werkfit_7_3'))
+  if (er73 && typeof er73.resultaat === 'number') context['er_werkfit_7_3_resultaat_tekst'] = readNumericChoiceText('er_werkfit_7_3', er73.resultaat)
+  const er82 = asObject(readAnswer(report.fields, 'er_werkfit_8_2'))
+  if (er82 && typeof er82.akkoord === 'number') context['er_werkfit_8_2_akkoord_tekst'] = readNumericChoiceText('er_werkfit_8_2', er82.akkoord)
+
+  const address = parseAddressComposite(answerToText(readAnswer(report.fields, 'rp_werkfit_3_4')))
+  context['3_4_bezoek_postcode'] = address.visitPostcode
+  context['3_4_bezoek_plaats'] = address.visitPlace
+  context['3_4_post_postcode'] = address.postalPostcode
+  context['3_4_post_plaats'] = address.postalPlace
 
   return context
 }

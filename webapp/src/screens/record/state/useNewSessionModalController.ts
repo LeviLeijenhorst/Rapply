@@ -11,6 +11,13 @@ import { setPendingPreviewAudio } from '../../../audio/pendingPreviewStore'
 import { createPipelineInput } from '../../../api/pipeline/pipelineApi'
 import { processRecordedInput } from '../../../api/transcription/recorded/processRecordedSession'
 import { fetchBillingStatus } from '../../../api/billing/billingApi'
+import {
+  appendMeetingRecordingChunkRemote,
+  cancelMeetingRecordingRemote,
+  MeetingRecordingApiError,
+  startMeetingRecordingRemote,
+  stopMeetingRecordingRemote,
+} from '../../../api/meetingRecordings/meetingRecordingsApi'
 import { clearSubscriptionReturnDraft, readAndClearSubscriptionReturnDraft, saveSubscriptionReturnDraft } from './subscriptionReturnDraft'
 import { fetchRealtimeTranscriptionRuntime } from '../../../api/transcription/realtime/transcribeAudioRealtime'
 import { useToast } from '../../../toast/ToastProvider'
@@ -52,6 +59,27 @@ const RECORDING_PANEL_GAP = 24
 const BASE_RECORDING_MODAL_HEIGHT = 862
 const MAX_DOCUMENT_UPLOAD_BYTES = 12 * 1024 * 1024
 type InputKind = 'recording' | 'upload' | 'intake'
+type ActiveMeetingRecording = {
+  meetingRecordingId: string
+  sessionId: string
+  ingestToken: string
+  nextChunkIndex: number
+  nextStartMilliseconds: number
+  uploadError: string | null
+}
+
+function mapMeetingRecordingErrorMessage(error: unknown): string {
+  if (error instanceof MeetingRecordingApiError) {
+    if (error.code === 'permission_denied') return 'Geen toegang tot opnemen. Log opnieuw in en probeer opnieuw.'
+    if (error.code === 'network_error') return 'Netwerkfout tijdens opnemen. Controleer je verbinding en probeer opnieuw.'
+    if (error.code === 'invalid_token') return 'De opname-token is ongeldig of verlopen. Start de opname opnieuw.'
+    if (error.code === 'already_stopped') return 'Deze opname was al gestopt.'
+    if (error.code === 'not_found') return 'De opname is niet gevonden op de server.'
+    return error.message
+  }
+  if (error instanceof Error) return error.message
+  return 'Video-opname mislukt. Probeer opnieuw.'
+}
 
 function draftOptionFromSelection({
   selectedOption,
@@ -104,8 +132,36 @@ export function useNewInputModalController({
   const isReducedMotionEnabled = useReducedMotion()
   const { data, createNote, createInput, createSnippet, updateInput, refreshAppData } = useLocalAppData()
   const e2ee = useE2ee()
-  const recorder = useBrowserAudioRecorder()
   const { showErrorToast } = useToast()
+  const activeMeetingRecordingRef = useRef<ActiveMeetingRecording | null>(null)
+  const isMeetingRecordingFinalizingRef = useRef(false)
+  const recorder = useBrowserAudioRecorder({
+    onChunk: async ({ blob, durationSeconds }) => {
+      const activeMeetingRecording = activeMeetingRecordingRef.current
+      if (!activeMeetingRecording) return
+      if (activeMeetingRecording.uploadError) return
+      const chunkIndex = activeMeetingRecording.nextChunkIndex
+      const startMilliseconds = activeMeetingRecording.nextStartMilliseconds
+      const durationMilliseconds = Math.max(1, Math.round(durationSeconds * 1000))
+      activeMeetingRecording.nextChunkIndex += 1
+      activeMeetingRecording.nextStartMilliseconds += durationMilliseconds
+      try {
+        const arrayBuffer = await blob.arrayBuffer()
+        await appendMeetingRecordingChunkRemote({
+          meetingRecordingId: activeMeetingRecording.meetingRecordingId,
+          ingestToken: activeMeetingRecording.ingestToken,
+          chunkIndex,
+          startMilliseconds,
+          durationMilliseconds,
+          chunkBytes: new Uint8Array(arrayBuffer),
+        })
+      } catch (error) {
+        const message = mapMeetingRecordingErrorMessage(error)
+        activeMeetingRecording.uploadError = message
+        showErrorToast(message, 'Uploaden van video-opname is mislukt.')
+      }
+    },
+  })
 
   const {
     audioDurationSeconds,
@@ -257,6 +313,8 @@ export function useNewInputModalController({
     recordingNotesRevealProgress.setValue(0)
     hasAutoStartedRecordingRef.current = false
     hasAutoSubmittedRecordingRef.current = false
+    activeMeetingRecordingRef.current = null
+    isMeetingRecordingFinalizingRef.current = false
   }, [initialTrajectoryId, visible])
 
   useEffect(() => {
@@ -295,6 +353,15 @@ export function useNewInputModalController({
       setSelectedOptionGroup('gespreksverslag')
       setOpenOptionGroup(null)
       setInputTitle(limitedMode ? buildDefaultInputTitle('gespreksverslag') : 'Voortgangsverslag')
+      setStep('recording')
+      return
+    }
+
+    if (initialQuickAction === 'record-video') {
+      setSelectedOption('record-video')
+      setSelectedOptionGroup('gesprek')
+      setOpenOptionGroup(null)
+      setInputTitle('Video call')
       setStep('recording')
       return
     }
@@ -624,6 +691,19 @@ export function useNewInputModalController({
     barCount: waveBarCount,
     isActive: step === 'recording' && (recorder.status === 'recording' || recorder.status === 'paused'),
   })
+  const effectiveLiveWaveHeights = useMemo(() => {
+    const hasRealWave = liveWaveHeights.some((value) => Number.isFinite(value) && value > 10)
+    if (hasRealWave) return liveWaveHeights
+    const level = Math.max(0, Math.min(1, Number((recorder as any).liveChunkLevel || 0)))
+    if (level <= 0.02) return liveWaveHeights
+    const centerIndex = (bars.length - 1) / 2
+    const activeRadius = Math.max(1, Math.floor(bars.length * 0.4))
+    return bars.map((index) => {
+      const distance = Math.abs(index - centerIndex)
+      const centerWeight = Math.max(0, 1 - distance / activeRadius)
+      return 8 + level * centerWeight * 140
+    })
+  }, [bars, liveWaveHeights, recorder, (recorder as any).liveChunkLevel])
   const isRecordingPaused = recorder.status === 'paused'
   const isRecordingInProgress = recorder.status === 'recording' || recorder.status === 'paused'
   const displayedRecordingElapsedSeconds = isRecordingInProgress || recorder.status === 'ready' ? recorder.elapsedSeconds + 1 : recorder.elapsedSeconds
@@ -679,6 +759,8 @@ export function useNewInputModalController({
             ? 'Opnemen'
             : selectedOption === 'gesprek'
               ? 'Gesprek opgenomen'
+              : selectedOption === 'record-video'
+                ? 'Video call opgenomen'
               : selectedOption === 'intake'
                 ? 'Intake opgenomen'
               : 'Verslag opgenomen'
@@ -694,9 +776,12 @@ export function useNewInputModalController({
   const gespreksverslagOptionLabel = 'Gespreksverslag opnemen'
   const isInputTitleEmpty = sessionTitle.trim().length === 0
   const selectedUploadIsDocument = selectedOption === 'upload_document' || isSupportedDocumentFile(selectedAudioFile)
+  const isVideoRecordingUnsupported = selectedOption === 'record-video' && (!recorder.isSupported || !recorder.isDisplayCaptureSupported)
   const isPrimaryActionDisabled =
     (step === 'upload' && (!selectedAudioFile || !!uploadFileDurationWarning)) ||
     (!selectedOption && step === 'select' && !limitedMode) ||
+    (step === 'select' && selectedOption === 'record-video' && !selectedClient?.id) ||
+    (step === 'select' && isVideoRecordingUnsupported) ||
     (step === 'consent' && !hasRecordingConsent) ||
     (step === 'recorded' && ((selectedUploadIsDocument ? false : !audioForTranscription) || isInputTitleEmpty)) ||
     isRecordingTransitioning
@@ -849,6 +934,13 @@ export function useNewInputModalController({
       if (limitedMode) {
         setStep('recording')
       }
+      return
+    }
+    if (option === 'record-video') {
+      setSelectedOptionGroup('gesprek')
+      setSelectedOption('record-video')
+      setOpenOptionGroup(null)
+      setInputTitle('Video call')
       return
     }
     if (option === 'schrijven') {
@@ -1118,6 +1210,9 @@ export function useNewInputModalController({
   }
 
   function handleClose() {
+    if (activeMeetingRecordingRef.current) {
+      void cancelVideoMeetingRecording()
+    }
     recorder.reset()
     setAudioPreviewUrl(null)
     setSelectedAudioFile(null)
@@ -1391,9 +1486,156 @@ export function useNewInputModalController({
     return createAndOpenInput({ kind: 'written' })
   }
 
+  const startVideoMeetingRecording = useCallback(async () => {
+    if (!selectedClient?.id) {
+      showErrorToast('Kies eerst een client voordat je een videogesprek opneemt.')
+      setStep('select')
+      return
+    }
+    const started = await startMeetingRecordingRemote({
+      sessionId: null,
+      clientId: selectedClient.id,
+      trajectoryId: selectedTrajectoryId ?? null,
+      title: sessionTitle,
+      languageCode: 'nl',
+      mimeType: 'video/webm',
+      sourceApp: 'web',
+      provider: 'browser',
+    })
+    activeMeetingRecordingRef.current = {
+      meetingRecordingId: started.meetingRecordingId,
+      sessionId: started.sessionId,
+      ingestToken: started.ingestToken,
+      nextChunkIndex: 0,
+      nextStartMilliseconds: 0,
+      uploadError: null,
+    }
+    hasAutoSubmittedRecordingRef.current = false
+    if (recorder.startWithCaptureMode) {
+      recorder.startWithCaptureMode('display-with-audio-fallback')
+      return
+    }
+    recorder.start()
+  }, [hasAutoSubmittedRecordingRef, recorder, selectedClient?.id, selectedTrajectoryId, sessionTitle, setStep, showErrorToast])
+
+  const finalizeVideoMeetingRecording = useCallback(async (recordingPayload?: { blob: Blob; mimeType: string; durationSeconds: number }) => {
+    if (isMeetingRecordingFinalizingRef.current) return
+    const activeMeetingRecording = activeMeetingRecordingRef.current
+    if (!activeMeetingRecording) return
+    isMeetingRecordingFinalizingRef.current = true
+    try {
+      if (activeMeetingRecording.uploadError) {
+        throw new Error(activeMeetingRecording.uploadError)
+      }
+      await stopMeetingRecordingRemote({
+        meetingRecordingId: activeMeetingRecording.meetingRecordingId,
+        endedAtUnixMs: Date.now(),
+        reason: 'user_stop',
+      })
+      const nextSessionId = activeMeetingRecording.sessionId
+      const recordedBlob = recordingPayload?.blob ?? recorder.recordedBlob
+      const recordedMimeType = recordingPayload?.mimeType ?? recorder.recordedMimeType ?? recorder.activeMimeType ?? 'video/webm'
+
+      await refreshAppData()
+      activeMeetingRecordingRef.current = null
+      onOpenInput(nextSessionId)
+      if (recordedBlob && recordedBlob.size > 0) {
+        updateInput(nextSessionId, {
+          transcriptionStatus: 'transcribing',
+          transcriptionError: null,
+          updatedAtUnixMs: Date.now(),
+        })
+        void processRecordedInput({
+          sessionId: nextSessionId,
+          audioBlob: recordedBlob,
+          mimeType: recordedMimeType,
+          shouldSaveAudio,
+          transcriptOverride: null,
+          realtimeCharge: null,
+          summaryTemplate: undefined,
+          initialAudioBlobId: null,
+          e2ee,
+          updateInput,
+          snippetExtraction: {
+            enabled: true,
+            clientId: selectedClient?.id ?? null,
+            trajectoryId: selectedTrajectoryId ?? null,
+            itemDate: Date.now(),
+            onCreatedSnippets: (snippets) => {
+              for (const snippet of snippets) {
+                createSnippet({
+                  id: snippet.id,
+                  trajectoryId: snippet.trajectoryId,
+                  inputId: snippet.inputId,
+                  itemId: snippet.itemId ?? snippet.inputId,
+                  field: snippet.field,
+                  text: snippet.text,
+                  date: snippet.date,
+                  status: snippet.status,
+                  createdAtUnixMs: snippet.createdAtUnixMs,
+                  updatedAtUnixMs: snippet.updatedAtUnixMs,
+                })
+              }
+            },
+          },
+        }).catch((error) => {
+          console.error('[NewInputModal] Video input processing failed', { sessionId: nextSessionId, error })
+        })
+      } else {
+        updateInput(nextSessionId, {
+          transcriptionStatus: 'error',
+          transcriptionError: 'Opname bevat geen bruikbare audio.',
+          updatedAtUnixMs: Date.now(),
+        })
+      }
+      void clearSubscriptionReturnDraft()
+      handleClose()
+    } catch (error) {
+      const message = mapMeetingRecordingErrorMessage(error)
+      showErrorToast(message, 'Stoppen van video-opname is mislukt.')
+      setStep('select')
+      activeMeetingRecordingRef.current = null
+    } finally {
+      isMeetingRecordingFinalizingRef.current = false
+    }
+  }, [
+    clearSubscriptionReturnDraft,
+    createSnippet,
+    e2ee,
+    handleClose,
+    onOpenInput,
+    recorder.activeMimeType,
+    recorder.recordedBlob,
+    recorder.recordedMimeType,
+    refreshAppData,
+    selectedClient?.id,
+    selectedTrajectoryId,
+    setStep,
+    shouldSaveAudio,
+    showErrorToast,
+    updateInput,
+  ])
+
+  const cancelVideoMeetingRecording = useCallback(async () => {
+    const activeMeetingRecording = activeMeetingRecordingRef.current
+    if (!activeMeetingRecording) return
+    try {
+      await cancelMeetingRecordingRemote({ meetingRecordingId: activeMeetingRecording.meetingRecordingId })
+    } catch (error) {
+      const message = mapMeetingRecordingErrorMessage(error)
+      showErrorToast(message, 'Annuleren van video-opname is mislukt.')
+    } finally {
+      activeMeetingRecordingRef.current = null
+    }
+  }, [showErrorToast])
+
   const recordingFinishTransitionRef = useRef(0)
 
-  const handleRecordingReady = useCallback(() => {
+  const handleRecordingReady = useCallback((payload: { blob: Blob; mimeType: string; durationSeconds: number }) => {
+    if (selectedOption === 'record-video') {
+      void finalizeVideoMeetingRecording(payload)
+      return
+    }
     const transitionToken = recordingFinishTransitionRef.current + 1
     recordingFinishTransitionRef.current = transitionToken
 
@@ -1443,12 +1685,14 @@ export function useNewInputModalController({
       finalizeToRecorded()
     })
   }, [
+    finalizeVideoMeetingRecording,
     isReducedMotionEnabled,
     isMinimized,
     limitedMode,
     recordingExpandProgress,
     recordingNotesRevealProgress,
     recordingShiftProgress,
+    selectedOption,
     setShouldRenderRecordingNotesPanel,
     setStep,
     visible,
@@ -1477,9 +1721,27 @@ export function useNewInputModalController({
     setLiveTranscriptText,
     setStep,
     onRecordingReady: handleRecordingReady,
+    useDisplayCapture: selectedOption === 'record-video',
+    disableAutoStart: selectedOption === 'record-video',
     step,
     visible,
   })
+
+  useEffect(() => {
+    if (!visible) return
+    if (step !== 'recording') return
+    if (selectedOption !== 'record-video') return
+    if (hasAutoStartedRecordingRef.current) return
+    if (recorder.status !== 'idle') return
+    hasAutoStartedRecordingRef.current = true
+    void startVideoMeetingRecording().catch((error) => {
+      hasAutoStartedRecordingRef.current = false
+      activeMeetingRecordingRef.current = null
+      const message = mapMeetingRecordingErrorMessage(error)
+      showErrorToast(message, 'Starten van video-opname is mislukt.')
+      setStep('select')
+    })
+  }, [hasAutoStartedRecordingRef, recorder.status, selectedOption, setStep, showErrorToast, startVideoMeetingRecording, step, visible])
 
   useEffect(() => {
     if (!visible) return
@@ -1515,6 +1777,9 @@ export function useNewInputModalController({
 
   const handleCancelRecording = () => {
     if (isRecordingTransitioning) return
+    if (selectedOption === 'record-video') {
+      void cancelVideoMeetingRecording()
+    }
     recorder.reset()
     setEditingRecordingNoteId(null)
     if (limitedMode || isReducedMotionEnabled) {
@@ -1639,7 +1904,7 @@ export function useNewInputModalController({
       isUploadDragActive,
       isUploadStep,
       limitedMode,
-      liveWaveHeights,
+      liveWaveHeights: effectiveLiveWaveHeights,
       minimizeProgress,
       minimizeScaleX,
       minimizeScaleY,

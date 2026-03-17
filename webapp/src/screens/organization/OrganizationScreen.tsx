@@ -15,9 +15,7 @@ import { useLocalAppData } from '../../storage/LocalAppDataProvider'
 import { colors } from '../../design/theme/colors'
 import {
   capitalizeFirstLetter,
-  normalizeEmailValue,
   normalizeHouseNumberValue,
-  normalizePhoneValue,
   normalizePostalCodeValue,
 } from './viewModels/inputFormatters'
 
@@ -66,11 +64,6 @@ function placeholderForOrganizationLabel(label: string): string {
   if (label === 'Postadres huisnummer' || label === 'Bezoekadres huisnummer') return 'Bijv. 12A'
   if (label === 'Postadres postcode' || label === 'Bezoekadres postcode') return 'Bijv. 1234 AB'
   if (label === 'Postadres plaats' || label === 'Bezoekadres plaats') return 'Bijv. Utrecht'
-  if (label === 'Naam contactpersoon') return 'Bijv. Jan de Vries'
-  if (label === 'Naam contactpersoon re-integratiebedrijf') return 'Bijv. Jan de Vries'
-  if (label === 'Functie contactpersoon') return 'Bijv. Re-integratiecoach'
-  if (label === 'Telefoonnummer contactpersoon') return 'Bijv. 0612345678'
-  if (label === 'E-mailadres contactpersoon') return 'Bijv. naam@organisatie.nl'
   return 'Typ uw antwoord'
 }
 
@@ -85,16 +78,11 @@ async function readFileAsDataUrl(file: File): Promise<string> {
 
 export function OrganizationScreen() {
   const { width } = useWindowDimensions()
-  const { data, updateOrganizationSettings, updateUserSettings } = useLocalAppData()
+  const { data, updateOrganizationSettings } = useLocalAppData()
   const settings = data.organizationSettings
-  const userSettings = data.userSettings
   const useStackedBrandLayout = width < 1360
   const initialPostalCodeCity = splitPostalCodeCity(settings.postalCodeCity)
   const initialVisitPostalCodeCity = splitPostalCodeCity(settings.visitPostalCodeCity || settings.postalCodeCity)
-  const initialContactName = String(userSettings.name || settings.contactName || '')
-  const initialContactRole = String(userSettings.role || settings.contactRole || '')
-  const initialContactPhone = String(userSettings.phone || settings.contactPhone || '')
-  const initialContactEmail = String(userSettings.email || settings.contactEmail || '')
 
   const [practiceNameDraft, setPracticeNameDraft] = useState(settings.practiceName)
   const [visitStreetDraft, setVisitStreetDraft] = useState(splitStreetAndHouseNumber(settings.visitAddress).street)
@@ -105,11 +93,6 @@ export function OrganizationScreen() {
   const [postCityDraft, setPostCityDraft] = useState(initialPostalCodeCity.city)
   const [visitPostalCodeDraft, setVisitPostalCodeDraft] = useState(initialVisitPostalCodeCity.postalCode)
   const [visitCityDraft, setVisitCityDraft] = useState(initialVisitPostalCodeCity.city)
-  const [contactNameDraft, setContactNameDraft] = useState(initialContactName)
-  const [contactRoleDraft, setContactRoleDraft] = useState(initialContactRole)
-  const [contactPhoneDraft, setContactPhoneDraft] = useState(initialContactPhone)
-  const [contactEmailDraft, setContactEmailDraft] = useState(initialContactEmail)
-  const [activeTab, setActiveTab] = useState<'mijn-organisatie' | 'mijn-profiel'>('mijn-organisatie')
   const [tintColorDraft, setTintColorDraft] = useState(normalizeHexColor(settings.tintColor || '#BE0165'))
   const [isDragActive, setIsDragActive] = useState(false)
   const [isLogoHovered, setIsLogoHovered] = useState(false)
@@ -223,22 +206,6 @@ export function OrganizationScreen() {
     const combined = [postalCode, city].filter(Boolean).join(' ').trim()
     updateOrganizationSettings({ visitPostalCodeCity: combined })
   }
-  function persistContactName(nextValue: string) {
-    updateUserSettings({ name: nextValue })
-    updateOrganizationSettings({ contactName: nextValue })
-  }
-  function persistContactRole(nextValue: string) {
-    updateUserSettings({ role: nextValue })
-    updateOrganizationSettings({ contactRole: nextValue })
-  }
-  function persistContactPhone(nextValue: string) {
-    updateUserSettings({ phone: nextValue })
-    updateOrganizationSettings({ contactPhone: nextValue })
-  }
-  function persistContactEmail(nextValue: string) {
-    updateUserSettings({ email: nextValue })
-    updateOrganizationSettings({ contactEmail: nextValue })
-  }
 
   function persistTintColor(nextColor: string) {
     const normalized = normalizeHexColor(nextColor)
@@ -264,195 +231,118 @@ export function OrganizationScreen() {
       <View style={styles.container}>
         <View style={styles.headerTop}>
           <Text isSemibold style={styles.headerTitle}>
-            Mijn praktijk
+            Mijn organisatie
           </Text>
-          <View style={styles.tabBar}>
-            <Pressable
-              style={[styles.tabButton, activeTab === 'mijn-organisatie' ? styles.tabButtonActive : undefined]}
-              onPress={() => setActiveTab('mijn-organisatie')}
-            >
-              <Text isSemibold style={[styles.tabLabel, activeTab === 'mijn-organisatie' ? styles.tabLabelActive : undefined]}>
-                Mijn organisatie
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[styles.tabButton, activeTab === 'mijn-profiel' ? styles.tabButtonActive : undefined]}
-              onPress={() => setActiveTab('mijn-profiel')}
-            >
-              <Text isSemibold style={[styles.tabLabel, activeTab === 'mijn-profiel' ? styles.tabLabelActive : undefined]}>
-                Mijn profiel
-              </Text>
-            </Pressable>
-          </View>
         </View>
 
         <View style={styles.formSection}>
           <View style={styles.formCard}>
-            <Text isSemibold style={styles.formCardTitle}>
-              {activeTab === 'mijn-organisatie' ? 'Gegevens re-integratiebedrijf' : 'Mijn profiel'}
-            </Text>
-            {activeTab === 'mijn-organisatie' ? (
-              <>
-                <View style={styles.fieldGrid}>
+            <View style={styles.fieldGrid}>
+              <LabeledInput
+                label="Naam organisatie"
+                value={practiceNameDraft}
+                onChangeText={(nextValue) => {
+                  setPracticeNameDraft(capitalizeFirstLetter(nextValue))
+                }}
+                onBlur={() => {
+                  const normalized = capitalizeFirstLetter(practiceNameDraft)
+                  setPracticeNameDraft(normalized)
+                  persistPracticeName(normalized)
+                }}
+              />
+            </View>
+            <View style={styles.addressSectionsWrap}>
+              <View style={styles.addressSection}>
+                <Text isSemibold style={styles.addressSectionTitle}>Postadres</Text>
+                <View style={styles.addressSectionGrid}>
                   <LabeledInput
-                    label="Naam organisatie"
-                    value={practiceNameDraft}
+                    label="Postadres straatnaam"
+                    value={postStreetDraft}
                     onChangeText={(nextValue) => {
-                      setPracticeNameDraft(capitalizeFirstLetter(nextValue))
+                      setPostStreetDraft(capitalizeFirstLetter(nextValue))
+                    }}
+                    onBlur={() => persistPostalAddress(postStreetDraft, postHouseNumberDraft)}
+                  />
+                  <LabeledInput
+                    label="Postadres huisnummer"
+                    value={postHouseNumberDraft}
+                    onChangeText={(nextValue) => {
+                      setPostHouseNumberDraft(normalizeHouseNumberValue(nextValue))
                     }}
                     onBlur={() => {
-                      const normalized = capitalizeFirstLetter(practiceNameDraft)
-                      setPracticeNameDraft(normalized)
-                      persistPracticeName(normalized)
+                      const normalized = normalizeHouseNumberValue(postHouseNumberDraft)
+                      setPostHouseNumberDraft(normalized)
+                      persistPostalAddress(postStreetDraft, normalized)
                     }}
                   />
+                  <LabeledInput
+                    label="Postadres postcode"
+                    value={postPostalCodeDraft}
+                    onChangeText={(nextValue) => {
+                      setPostPostalCodeDraft(normalizePostalCodeValue(nextValue))
+                    }}
+                    onBlur={() => {
+                      const normalized = normalizePostalCodeValue(postPostalCodeDraft)
+                      setPostPostalCodeDraft(normalized)
+                      persistPostalCodeAndCity(normalized, postCityDraft)
+                    }}
+                  />
+                  <LabeledInput
+                    label="Postadres plaats"
+                    value={postCityDraft}
+                    onChangeText={(nextValue) => {
+                      setPostCityDraft(capitalizeFirstLetter(nextValue))
+                    }}
+                    onBlur={() => persistPostalCodeAndCity(postPostalCodeDraft, postCityDraft)}
+                  />
                 </View>
-                <View style={styles.addressSectionsWrap}>
-                  <View style={styles.addressSection}>
-                    <Text isSemibold style={styles.addressSectionTitle}>Postadres</Text>
-                    <View style={styles.addressSectionGrid}>
-                      <LabeledInput
-                        label="Postadres straatnaam"
-                        value={postStreetDraft}
-                        onChangeText={(nextValue) => {
-                          setPostStreetDraft(capitalizeFirstLetter(nextValue))
-                        }}
-                        onBlur={() => persistPostalAddress(postStreetDraft, postHouseNumberDraft)}
-                      />
-                      <LabeledInput
-                        label="Postadres huisnummer"
-                        value={postHouseNumberDraft}
-                        onChangeText={(nextValue) => {
-                          setPostHouseNumberDraft(normalizeHouseNumberValue(nextValue))
-                        }}
-                        onBlur={() => {
-                          const normalized = normalizeHouseNumberValue(postHouseNumberDraft)
-                          setPostHouseNumberDraft(normalized)
-                          persistPostalAddress(postStreetDraft, normalized)
-                        }}
-                      />
-                      <LabeledInput
-                        label="Postadres postcode"
-                        value={postPostalCodeDraft}
-                        onChangeText={(nextValue) => {
-                          setPostPostalCodeDraft(normalizePostalCodeValue(nextValue))
-                        }}
-                        onBlur={() => {
-                          const normalized = normalizePostalCodeValue(postPostalCodeDraft)
-                          setPostPostalCodeDraft(normalized)
-                          persistPostalCodeAndCity(normalized, postCityDraft)
-                        }}
-                      />
-                      <LabeledInput
-                        label="Postadres plaats"
-                        value={postCityDraft}
-                        onChangeText={(nextValue) => {
-                          setPostCityDraft(capitalizeFirstLetter(nextValue))
-                        }}
-                        onBlur={() => persistPostalCodeAndCity(postPostalCodeDraft, postCityDraft)}
-                      />
-                    </View>
-                  </View>
-                  <View style={styles.addressSection}>
-                    <Text isSemibold style={styles.addressSectionTitle}>Bezoekadres</Text>
-                    <View style={styles.addressSectionGrid}>
-                      <LabeledInput
-                        label="Bezoekadres straatnaam"
-                        value={visitStreetDraft}
-                        onChangeText={(nextValue) => {
-                          setVisitStreetDraft(capitalizeFirstLetter(nextValue))
-                        }}
-                        onBlur={() => persistVisitAddress(visitStreetDraft, visitHouseNumberDraft)}
-                      />
-                      <LabeledInput
-                        label="Bezoekadres huisnummer"
-                        value={visitHouseNumberDraft}
-                        onChangeText={(nextValue) => {
-                          setVisitHouseNumberDraft(normalizeHouseNumberValue(nextValue))
-                        }}
-                        onBlur={() => {
-                          const normalized = normalizeHouseNumberValue(visitHouseNumberDraft)
-                          setVisitHouseNumberDraft(normalized)
-                          persistVisitAddress(visitStreetDraft, normalized)
-                        }}
-                      />
-                      <LabeledInput
-                        label="Bezoekadres postcode"
-                        value={visitPostalCodeDraft}
-                        onChangeText={(nextValue) => {
-                          setVisitPostalCodeDraft(normalizePostalCodeValue(nextValue))
-                        }}
-                        onBlur={() => {
-                          const normalized = normalizePostalCodeValue(visitPostalCodeDraft)
-                          setVisitPostalCodeDraft(normalized)
-                          persistVisitPostalCodeAndCity(normalized, visitCityDraft)
-                        }}
-                      />
-                      <LabeledInput
-                        label="Bezoekadres plaats"
-                        value={visitCityDraft}
-                        onChangeText={(nextValue) => {
-                          setVisitCityDraft(capitalizeFirstLetter(nextValue))
-                        }}
-                        onBlur={() => persistVisitPostalCodeAndCity(visitPostalCodeDraft, visitCityDraft)}
-                      />
-                    </View>
-                  </View>
-                </View>
-              </>
-            ) : (
-              <View style={styles.fieldGrid}>
-                <LabeledInput
-                  label="Naam contactpersoon"
-                  value={contactNameDraft}
-                  onChangeText={(nextValue) => {
-                    setContactNameDraft(capitalizeFirstLetter(nextValue))
-                  }}
-                  onBlur={() => {
-                    const normalized = capitalizeFirstLetter(contactNameDraft)
-                    setContactNameDraft(normalized)
-                    persistContactName(normalized)
-                  }}
-                />
-                <LabeledInput
-                  label="Functie contactpersoon"
-                  value={contactRoleDraft}
-                  onChangeText={(nextValue) => {
-                    setContactRoleDraft(capitalizeFirstLetter(nextValue))
-                  }}
-                  onBlur={() => {
-                    const normalized = capitalizeFirstLetter(contactRoleDraft)
-                    setContactRoleDraft(normalized)
-                    persistContactRole(normalized)
-                  }}
-                />
-                <LabeledInput
-                  label="Telefoonnummer contactpersoon"
-                  value={contactPhoneDraft}
-                  onChangeText={(nextValue) => {
-                    const normalized = normalizePhoneValue(nextValue)
-                    setContactPhoneDraft(normalized)
-                  }}
-                  onBlur={() => {
-                    const normalized = normalizePhoneValue(contactPhoneDraft)
-                    setContactPhoneDraft(normalized)
-                    persistContactPhone(normalized)
-                  }}
-                />
-                <LabeledInput
-                  label="E-mailadres contactpersoon"
-                  value={contactEmailDraft}
-                  onChangeText={(nextValue) => {
-                    setContactEmailDraft(nextValue)
-                  }}
-                  onBlur={() => {
-                    const normalized = normalizeEmailValue(contactEmailDraft)
-                    setContactEmailDraft(normalized)
-                    persistContactEmail(normalized)
-                  }}
-                />
               </View>
-            )}
+              <View style={styles.addressSection}>
+                <Text isSemibold style={styles.addressSectionTitle}>Bezoekadres</Text>
+                <View style={styles.addressSectionGrid}>
+                  <LabeledInput
+                    label="Bezoekadres straatnaam"
+                    value={visitStreetDraft}
+                    onChangeText={(nextValue) => {
+                      setVisitStreetDraft(capitalizeFirstLetter(nextValue))
+                    }}
+                    onBlur={() => persistVisitAddress(visitStreetDraft, visitHouseNumberDraft)}
+                  />
+                  <LabeledInput
+                    label="Bezoekadres huisnummer"
+                    value={visitHouseNumberDraft}
+                    onChangeText={(nextValue) => {
+                      setVisitHouseNumberDraft(normalizeHouseNumberValue(nextValue))
+                    }}
+                    onBlur={() => {
+                      const normalized = normalizeHouseNumberValue(visitHouseNumberDraft)
+                      setVisitHouseNumberDraft(normalized)
+                      persistVisitAddress(visitStreetDraft, normalized)
+                    }}
+                  />
+                  <LabeledInput
+                    label="Bezoekadres postcode"
+                    value={visitPostalCodeDraft}
+                    onChangeText={(nextValue) => {
+                      setVisitPostalCodeDraft(normalizePostalCodeValue(nextValue))
+                    }}
+                    onBlur={() => {
+                      const normalized = normalizePostalCodeValue(visitPostalCodeDraft)
+                      setVisitPostalCodeDraft(normalized)
+                      persistVisitPostalCodeAndCity(normalized, visitCityDraft)
+                    }}
+                  />
+                  <LabeledInput
+                    label="Bezoekadres plaats"
+                    value={visitCityDraft}
+                    onChangeText={(nextValue) => {
+                      setVisitCityDraft(capitalizeFirstLetter(nextValue))
+                    }}
+                    onBlur={() => persistVisitPostalCodeAndCity(visitPostalCodeDraft, visitCityDraft)}
+                  />
+                </View>
+              </View>
+            </View>
           </View>
 
           {false ? (
@@ -618,37 +508,12 @@ const styles = StyleSheet.create({
   headerTop: {
     gap: 12,
   },
-  tabBar: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  tabButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#DFE0E2',
-    backgroundColor: '#FFFFFF',
-  },
-  tabButtonActive: {
-    borderColor: '#BE0165',
-    backgroundColor: '#FCEFF5',
-  },
-  tabLabel: {
-    fontSize: 13,
-    lineHeight: 16,
-    color: '#5B5158',
-  },
-  tabLabelActive: {
-    color: '#BE0165',
-  },
   formSection: {
     width: '100%',
     ...( { maxWidth: 'min(1280px, 100%)' } as any ),
     gap: 14,
   },
   formCard: { borderRadius: 12, borderWidth: 1, borderColor: '#DFE0E2', backgroundColor: '#FFFFFF', padding: 16, gap: 12, ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ) },
-  formCardTitle: { flex: 1, fontSize: 16, lineHeight: 20, color: '#2C111F' },
   fieldGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   fieldItem: { width: '48.5%', gap: 6 },
   fieldLabelText: { fontSize: 14, lineHeight: 18, color: '#2C111F' },

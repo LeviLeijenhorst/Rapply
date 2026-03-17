@@ -4,83 +4,174 @@ import { stripJsonCodeFences } from "../../ai/shared/textSanitization"
 import { env } from "../../env"
 import type { Client } from "../../types/Client"
 import type { OrganizationSettings } from "../../types/OrganizationSettings"
-import type { StructuredReport, StructuredReportField } from "../../types/Report"
+import type { JsonValue, StructuredReport, StructuredReportField } from "../../types/Report"
 import type { Trajectory } from "../../types/Trajectory"
 import type { UserSettings } from "../../types/UserSettings"
 import type { UwvTemplate } from "../templates/uwvTemplates"
-import { buildReportTextFromStructured, createStructuredField, createStructuredReport, normalizeConfidence } from "./structuredReportTools"
+import { listAiTemplateFields } from "../templates/uwvTemplates"
+import { buildReportTextFromStructured, createStructuredField, createStructuredReport } from "./structuredReportTools"
 
 type EvidenceByFieldId = Map<string, string[]>
 
-type ReasoningField = {
-  fieldId: string
-  factualBasis: string
-  reasoning: string
-  confidence: number | null
+export type PromptSourceType =
+  | "Transcriptie van een gesprek"
+  | "Transcriptie van een gespreksverslag"
+  | "Geschreven gespreksverslag"
+  | "Notitie"
+
+export type PromptSource = {
+  sourceId: string
+  dateUnixMs: number
+  sourceType: PromptSourceType
+  sourceTitle: string
+  text: string
+  labels: string[]
 }
 
-type AnswerField = {
+type SingleStepField = {
   fieldId: string
-  answer: string
+  factualBasis: string
+  answer: JsonValue
 }
 
 function logReportPrompt(label: string, prompt: string): void {
   try {
     console.log(`[ai:${label}:prompt]\n${prompt}`)
   } catch {
-    // Never let diagnostics break report generation.
+    // Ignore diagnostics failures.
   }
 }
 
-export function buildReasoningPrompt(params: {
-  template: UwvTemplate
-  evidenceByFieldId: Map<string, string[]>
-}): string {
-  const fieldEvidenceLines = params.template.fields.map((field) => {
-    const evidence = params.evidenceByFieldId.get(field.fieldId) ?? []
-    const notes = params.evidenceByFieldId.get("general_notes") ?? []
-    const merged = [...evidence, ...notes].slice(0, 8)
-    return `${field.fieldId}\n${merged.length > 0 ? merged.map((line) => `- ${line}`).join("\n") : "- GEEN_DIRECT_BEWIJS"}`
-  })
+function formatDateKey(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return "Onbekende datum"
+  return new Date(value).toISOString().slice(0, 10)
+}
 
+function readDeploymentOrEmpty(): string {
+  return normalizeText(env.azureOpenAiReportDeployment || env.azureOpenAiChatDeployment || env.azureOpenAiSummaryDeployment)
+}
+
+function valueToComparable(value: JsonValue): string {
+  if (value === null || typeof value === "undefined") return ""
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value)
+  return JSON.stringify(value)
+}
+
+function matchesExpectedSkipValue(answer: JsonValue, expected: JsonValue): boolean {
+  if (typeof answer !== "object" || answer === null || Array.isArray(answer)) {
+    return valueToComparable(answer) === valueToComparable(expected)
+  }
+  for (const value of Object.values(answer)) {
+    if (valueToComparable(value as JsonValue) === valueToComparable(expected)) return true
+  }
+  return false
+}
+
+function buildSystemPrompt(template: UwvTemplate): string {
   return [
-    "U bent een redeneringsstap voor UWV-rapportvelden.",
-    "Gebruik alleen de aangeleverde evidence. Geen externe kennis.",
-    "Voor elk fieldId: bepaal factualBasis, korte reasoning, confidence (0-1).",
-    "Als er geen direct bewijs is: factualBasis leeg laten en expliciet benoemen dat het antwoord leeg moet blijven.",
-    'Antwoord uitsluitend als JSON: {"fields":[{"fieldId":"string","factualBasis":"string","reasoning":"string","confidence":0.0}]}',
+    'OUTPUTFORMAT (verplicht, exact): {"fields":[{"fieldId":"string","factualBasis":"string","answer":"string|object"}]}',
     "",
-    `Template: ${params.template.name}`,
+    "Context:",
+    "Je genereert antwoorden voor UWV-rapportvelden binnen re-flow, een softwareproduct voor re-integratiecoaches.",
+    "Je krijgt precies één actief template.",
+    "Per vraag krijg je: fieldId, vraag, antwoordType, instructie, eventueel opties, eventueel answerFormat, voorbeeldAntwoord en skipLogica.",
+    "Geselecteerde transcripties en transcripties van gespreksverslagen worden als snippets aangeleverd.",
+    "Geselecteerde geschreven gespreksverslagen en notities worden als volledige tekst aangeleverd.",
+    "Gebruik alleen informatie uit de aangeleverde broninformatie.",
+    "factualBasis moet feitelijk en herleidbaar zijn, bedoeld voor latere hergeneratie als de gebruiker niet tevreden is met het antwoord.",
+    "Volg de meegegeven skipLogica expliciet.",
+    "Geef alleen velden terug waarvoor je een bruikbaar antwoord kunt opstellen.",
     "",
-    ...fieldEvidenceLines,
+    "Regels:",
+    "- Geen feiten verzinnen.",
+    "- Als answerType 'multiple_choice' of 'structured' is, moet answer exact het opgegeven objectformat volgen.",
+    "- Als informatie onvoldoende is: veld niet teruggeven.",
+    "- Geef uitsluitend geldige JSON terug zonder markdown.",
+    "",
+    `Actief template: ${template.name} (${template.id})`,
   ].join("\n")
 }
 
-export function buildAnswerPrompt(params: {
-  template: UwvTemplate
-  reasoningByFieldId: Map<string, ReasoningField>
-}): string {
-  const reasoningLines = params.template.fields
-    .filter((field) => field.fieldType === "ai")
+function buildFieldPromptBlock(template: UwvTemplate): string {
+  return listAiTemplateFields(template)
     .map((field) => {
-      const reasoning = params.reasoningByFieldId.get(field.fieldId)
+      const config = field.aiConfig
+      if (!config) return ""
+      const optionsLines = (config.opties || []).map((option) => `  - ${option.value} = ${option.label}`)
+      const skipLines = (config.skipLogica || []).flatMap((rule) => {
+        const matchValue = typeof rule.when.equals === "object" ? JSON.stringify(rule.when.equals) : String(rule.when.equals)
+        return [`  - als ${rule.when.fieldId} gelijk is aan ${matchValue}, sla over: ${rule.skipFieldIds.join(", ")}`]
+      })
       return [
-        `fieldId=${field.fieldId}`,
-        `label=${field.label}`,
-        `factualBasis=${reasoning?.factualBasis || "GEEN_DIRECT_BEWIJS"}`,
+        `fieldId: ${field.fieldId}`,
+        `vraag: ${config.vraag}`,
+        `antwoordType: ${config.antwoordType}`,
+        `instructie: ${config.instructie}`,
+        ...(optionsLines.length > 0 ? ["opties:", ...optionsLines] : []),
+        ...(config.answerFormat ? [`answerFormat: ${config.answerFormat}`] : []),
+        `voorbeeldAntwoord: ${config.voorbeeldAntwoord}`,
+        ...(skipLines.length > 0 ? ["skipLogica:", ...skipLines] : []),
       ].join("\n")
     })
+    .filter(Boolean)
+    .join("\n\n")
+}
 
+function normalizeLabelList(labels: string[]): string[] {
+  const seen = new Set<string>()
+  const output: string[] = []
+  for (const label of labels) {
+    const normalized = normalizeText(label)
+    if (!normalized || seen.has(normalized)) continue
+    seen.add(normalized)
+    output.push(normalized)
+  }
+  return output
+}
+
+function buildChronologicalSources(promptSources: PromptSource[]): string {
+  if (promptSources.length === 0) return "- Geen geselecteerde broninformatie."
+
+  const grouped = new Map<string, PromptSource[]>()
+  const order: string[] = []
+  for (const source of [...promptSources].sort((a, b) => a.dateUnixMs - b.dateUnixMs)) {
+    const key = normalizeText(source.sourceId) || `${source.sourceTitle}-${source.dateUnixMs}`
+    if (!grouped.has(key)) {
+      grouped.set(key, [])
+      order.push(key)
+    }
+    grouped.get(key)?.push(source)
+  }
+
+  return order
+    .map((key) => {
+      const items = grouped.get(key) || []
+      const first = items[0]
+      const lines: string[] = [
+        formatDateKey(first.dateUnixMs),
+        `Bron: ${normalizeText(first.sourceTitle) || "Onbekende bron"}`,
+        `Type: ${first.sourceType}`,
+      ]
+      for (const item of items) {
+        const labels = normalizeLabelList(item.labels)
+        lines.push(`- ${normalizeText(item.text)}${labels.length > 0 ? ` [labels: ${labels.join(", ")}]` : ""}`)
+      }
+      return lines.join("\n")
+    })
+    .join("\n\n")
+}
+
+function buildUserPrompt(params: { template: UwvTemplate; promptSources: PromptSource[] }): string {
   return [
-    "U schrijft antwoorden voor UWV-rapportvelden.",
-    "Gebruik alleen factualBasis per fieldId; geen extra aannames.",
-    "Schrijf kort, zakelijk Nederlands, 1-4 zinnen per veld.",
-    "Als factualBasis ontbreekt of GEEN_DIRECT_BEWIJS bevat: geef exact een lege string als answer.",
-    'Antwoord uitsluitend als JSON: {"fields":[{"fieldId":"string","answer":"string"}]}',
-    "",
     `Template: ${params.template.name}`,
     "",
-    ...reasoningLines,
+    "Vragen van het actieve template:",
+    buildFieldPromptBlock(params.template),
+    "",
+    "Chronologische broninformatie:",
+    buildChronologicalSources(params.promptSources),
+    "",
+    "Genereer output in het afgesproken JSON-format.",
   ].join("\n")
 }
 
@@ -104,14 +195,11 @@ export function createTemplateFieldIdResolver(template: UwvTemplate): (rawFieldI
   return (rawFieldId: unknown): string => {
     const raw = normalizeText(rawFieldId).toLowerCase()
     if (!raw) return ""
-
     const candidates = new Set<string>()
     candidates.add(raw)
     candidates.add(raw.replace(/^fieldid\s*[:=]\s*/i, ""))
-
     const fieldIdMatch = raw.match(/[a-z]{2}_[a-z0-9_]+/i)
     if (fieldIdMatch?.[0]) candidates.add(fieldIdMatch[0])
-
     const exportNumberMatch = raw.match(/\b\d{1,2}[._]\d{1,2}\b/)
     if (exportNumberMatch?.[0]) candidates.add(exportNumberMatch[0].replace("_", "."))
 
@@ -121,31 +209,8 @@ export function createTemplateFieldIdResolver(template: UwvTemplate): (rawFieldI
       const loose = looseMap.get(candidate.replace(/[^a-z0-9]/g, ""))
       if (loose) return loose
     }
-
     return ""
   }
-}
-
-function hasDirectEvidence(factualBasis: string): boolean {
-  const normalized = normalizeText(factualBasis).toUpperCase()
-  if (!normalized) return false
-  if (normalized === "GEEN_DIRECT_BEWIJS") return false
-  if (normalized === "- GEEN_DIRECT_BEWIJS") return false
-  return !normalized
-    .split(/\s+/)
-    .every((part) => part === "-" || part === "GEEN_DIRECT_BEWIJS")
-}
-
-function readReasoningDeploymentOrEmpty(): string {
-  return normalizeText(env.azureOpenAiReasoningDeployment || env.azureOpenAiReportDeployment || env.azureOpenAiChatDeployment || env.azureOpenAiSummaryDeployment)
-}
-
-function readReportDeploymentOrEmpty(): string {
-  return normalizeText(env.azureOpenAiReportDeployment || env.azureOpenAiChatDeployment || env.azureOpenAiSummaryDeployment)
-}
-
-function readLegacyDeploymentOrEmpty(): string {
-  return normalizeText(env.azureOpenAiSummaryDeployment || env.azureOpenAiChatDeployment)
 }
 
 function safeJsonParse<T>(value: string): T | null {
@@ -158,6 +223,26 @@ function safeJsonParse<T>(value: string): T | null {
   }
 }
 
+function parseModelFields(params: { template: UwvTemplate; raw: string }): SingleStepField[] {
+  const resolveFieldId = createTemplateFieldIdResolver(params.template)
+  const parsed = safeJsonParse<{ fields?: Array<Record<string, unknown>> }>(params.raw)
+  const fields = Array.isArray(parsed?.fields) ? parsed.fields : []
+  const output: SingleStepField[] = []
+  for (const item of fields) {
+    const fieldId = resolveFieldId(item.fieldId)
+    if (!fieldId) continue
+    const factualBasis = normalizeText(item.factualBasis)
+    if (!factualBasis) continue
+    if (!("answer" in item)) continue
+    output.push({
+      fieldId,
+      factualBasis,
+      answer: (item as any).answer as JsonValue,
+    })
+  }
+  return output
+}
+
 function readProgrammaticValue(params: {
   field: { fieldId: string; label: string }
   client: Client | null
@@ -168,11 +253,7 @@ function readProgrammaticValue(params: {
   const label = params.field.label.toLowerCase()
   if (label.includes("naam client") || label.includes("naam cliënt")) return normalizeText(params.client?.name)
   if (label.includes("voorletters en achternaam")) return normalizeText(params.client?.name)
-  if (label === "bsn") {
-    const match = String(params.client?.clientDetails || "").match(/\b\d{8,9}\b/)
-    return normalizeText(match?.[0] ?? "")
-  }
-  if (label.includes("burgerservicenummer")) {
+  if (label === "bsn" || label.includes("burgerservicenummer")) {
     const match = String(params.client?.clientDetails || "").match(/\b\d{8,9}\b/)
     return normalizeText(match?.[0] ?? "")
   }
@@ -189,137 +270,18 @@ function readProgrammaticValue(params: {
   return ""
 }
 
-function createFallbackReasoning(template: UwvTemplate, evidenceByFieldId: EvidenceByFieldId): ReasoningField[] {
-  return template.fields.map((field) => {
-    const evidence = evidenceByFieldId.get(field.fieldId) ?? []
-    const notes = evidenceByFieldId.get("general_notes") ?? []
-    const factualBasis = [...evidence, ...notes].slice(0, 6).join("\n- ").trim()
-    return {
-      fieldId: field.fieldId,
-      factualBasis: factualBasis ? `- ${factualBasis}` : "",
-      reasoning: factualBasis
-        ? "Feiten zijn direct afgeleid uit geselecteerde snippets en notities."
-        : "Geen direct bewijs beschikbaar; laat antwoord leeg.",
-      confidence: factualBasis ? 0.68 : 0.28,
+function applySkipRules(template: UwvTemplate, aiOutputByFieldId: Map<string, SingleStepField>): Set<string> {
+  const hidden = new Set<string>()
+  for (const field of listAiTemplateFields(template)) {
+    const rules = field.aiConfig?.skipLogica || []
+    for (const rule of rules) {
+      const source = aiOutputByFieldId.get(rule.when.fieldId)
+      if (!source) continue
+      if (!matchesExpectedSkipValue(source.answer, rule.when.equals)) continue
+      for (const skipFieldId of rule.skipFieldIds) hidden.add(skipFieldId)
     }
-  })
-}
-
-async function runReasoningCall(params: {
-  template: UwvTemplate
-  evidenceByFieldId: EvidenceByFieldId
-}): Promise<ReasoningField[]> {
-  const resolveFieldId = createTemplateFieldIdResolver(params.template)
-  const fallbackByFieldId = new Map(
-    createFallbackReasoning(params.template, params.evidenceByFieldId).map((field) => [field.fieldId, field]),
-  )
-  const deployment = readReasoningDeploymentOrEmpty() || readLegacyDeploymentOrEmpty()
-  if (!deployment) return Array.from(fallbackByFieldId.values())
-
-  const prompt = buildReasoningPrompt({
-    template: params.template,
-    evidenceByFieldId: params.evidenceByFieldId,
-  })
-  logReportPrompt("report-generation:reasoning", prompt)
-
-  const raw = await completeAzureOpenAiChat({
-    deployment,
-    debugLogLabel: "report-generation:reasoning",
-    messages: [
-      { role: "system", content: "U geeft alleen geldige JSON terug zonder markdown." },
-      { role: "user", content: prompt },
-    ],
-  })
-  const parsed = safeJsonParse<{ fields?: Array<Record<string, unknown>> }>(raw)
-  const parsedFields = Array.isArray(parsed?.fields) ? parsed.fields : []
-  if (parsedFields.length === 0) return Array.from(fallbackByFieldId.values())
-
-  const output: ReasoningField[] = []
-  for (const rawField of parsedFields) {
-    const fieldId = resolveFieldId(rawField.fieldId)
-    if (!fieldId) continue
-    output.push({
-      fieldId,
-      factualBasis: normalizeText(rawField.factualBasis),
-      reasoning: normalizeText(rawField.reasoning),
-      confidence: normalizeConfidence(rawField.confidence),
-    })
   }
-  for (const field of output) {
-    fallbackByFieldId.set(field.fieldId, field)
-  }
-  return params.template.fields.map((field) => fallbackByFieldId.get(field.fieldId)!)
-}
-
-function createFallbackAnswers(params: { template: UwvTemplate; reasoningByFieldId: Map<string, ReasoningField> }): AnswerField[] {
-  return params.template.fields
-    .filter((field) => field.fieldType === "ai")
-    .map((field) => {
-      const reasoning = params.reasoningByFieldId.get(field.fieldId)
-      if (!hasDirectEvidence(reasoning?.factualBasis || "")) {
-        return {
-          fieldId: field.fieldId,
-          answer: "",
-        }
-      }
-      return {
-        fieldId: field.fieldId,
-        answer: (reasoning?.factualBasis || "").replace(/^- /g, "").slice(0, 1200),
-      }
-    })
-}
-
-async function runAnswerCall(params: {
-  template: UwvTemplate
-  reasoningByFieldId: Map<string, ReasoningField>
-}): Promise<AnswerField[]> {
-  const resolveFieldId = createTemplateFieldIdResolver(params.template)
-  const fallbackByFieldId = new Map(
-    createFallbackAnswers(params).map((field) => [field.fieldId, field.answer]),
-  )
-  const deployment = readReportDeploymentOrEmpty() || readLegacyDeploymentOrEmpty()
-  if (!deployment) {
-    return params.template.fields
-      .filter((field) => field.fieldType === "ai")
-      .map((field) => ({ fieldId: field.fieldId, answer: fallbackByFieldId.get(field.fieldId) ?? "" }))
-  }
-
-  const prompt = buildAnswerPrompt({
-    template: params.template,
-    reasoningByFieldId: params.reasoningByFieldId,
-  })
-  logReportPrompt("report-generation:answer", prompt)
-
-  const raw = await completeAzureOpenAiChat({
-    deployment,
-    temperature: 0.2,
-    debugLogLabel: "report-generation:answer",
-    messages: [
-      { role: "system", content: "U geeft alleen geldige JSON terug zonder markdown." },
-      { role: "user", content: prompt },
-    ],
-  })
-  const parsed = safeJsonParse<{ fields?: Array<Record<string, unknown>> }>(raw)
-  const parsedFields = Array.isArray(parsed?.fields) ? parsed.fields : []
-  if (parsedFields.length === 0) {
-    return params.template.fields
-      .filter((field) => field.fieldType === "ai")
-      .map((field) => ({ fieldId: field.fieldId, answer: fallbackByFieldId.get(field.fieldId) ?? "" }))
-  }
-
-  const output: AnswerField[] = []
-  for (const rawField of parsedFields) {
-    const fieldId = resolveFieldId(rawField.fieldId)
-    const answer = normalizeText(rawField.answer)
-    if (!fieldId) continue
-    output.push({ fieldId, answer })
-  }
-  for (const field of output) {
-    fallbackByFieldId.set(field.fieldId, field.answer)
-  }
-  return params.template.fields
-    .filter((field) => field.fieldType === "ai")
-    .map((field) => ({ fieldId: field.fieldId, answer: fallbackByFieldId.get(field.fieldId) ?? "" }))
+  return hidden
 }
 
 export async function generateStructuredReport(params: {
@@ -329,21 +291,38 @@ export async function generateStructuredReport(params: {
   organizationSettings: OrganizationSettings
   userSettings: UserSettings
   evidenceByFieldId: EvidenceByFieldId
+  promptSources?: PromptSource[]
 }): Promise<{ structuredReport: StructuredReport; reportText: string }> {
   const now = Date.now()
-  const reasoningFields = await runReasoningCall({
-    template: params.template,
-    evidenceByFieldId: params.evidenceByFieldId,
-  })
-  const reasoningByFieldId = new Map(reasoningFields.map((field) => [field.fieldId, field]))
+  const deployment = readDeploymentOrEmpty()
+  const aiFields = listAiTemplateFields(params.template)
+  void params.evidenceByFieldId
+  let aiOutputByFieldId = new Map<string, SingleStepField>()
 
-  const answerFields = await runAnswerCall({
-    template: params.template,
-    reasoningByFieldId,
-  })
-  const answerByFieldId = new Map(answerFields.map((field) => [field.fieldId, field.answer]))
+  if (deployment) {
+    const systemPrompt = buildSystemPrompt(params.template)
+    const userPrompt = buildUserPrompt({
+      template: params.template,
+      promptSources: params.promptSources ?? [],
+    })
+    logReportPrompt("report-generation:single-step:system", systemPrompt)
+    logReportPrompt("report-generation:single-step:user", userPrompt)
 
+    const raw = await completeAzureOpenAiChat({
+      deployment,
+      temperature: 0.2,
+      debugLogLabel: "report-generation:single-step",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    })
+    aiOutputByFieldId = new Map(parseModelFields({ template: params.template, raw }).map((field) => [field.fieldId, field]))
+  }
+
+  const hiddenFields = applySkipRules(params.template, aiOutputByFieldId)
   const structuredFields: Record<string, StructuredReportField> = {}
+
   for (const field of params.template.fields) {
     if (field.fieldType === "programmatic") {
       const answer = readProgrammaticValue({
@@ -380,15 +359,28 @@ export async function generateStructuredReport(params: {
       continue
     }
 
-    const reasoning = reasoningByFieldId.get(field.fieldId)
-    const hasEvidence = hasDirectEvidence(reasoning?.factualBasis || "")
-    const answer = hasEvidence ? answerByFieldId.get(field.fieldId) ?? "" : ""
+    const aiField = aiOutputByFieldId.get(field.fieldId)
+    const shouldSkip = hiddenFields.has(field.fieldId)
     structuredFields[field.fieldId] = createStructuredField({
       field,
-      answer,
-      factualBasis: reasoning?.factualBasis || "",
-      reasoning: reasoning?.reasoning || "",
-      confidence: reasoning?.confidence ?? null,
+      answer: shouldSkip || !aiField ? "" : aiField.answer,
+      factualBasis: shouldSkip || !aiField ? "" : aiField.factualBasis,
+      reasoning: shouldSkip ? "Overgeslagen op basis van skiplogica." : aiField ? "Antwoord gebaseerd op aangeleverde broninformatie." : "",
+      confidence: aiField ? 1 : 0,
+      source: "ai_generation",
+      prompt: null,
+      createdAtUnixMs: now,
+    })
+  }
+
+  for (const field of aiFields) {
+    if (structuredFields[field.fieldId]) continue
+    structuredFields[field.fieldId] = createStructuredField({
+      field,
+      answer: "",
+      factualBasis: "",
+      reasoning: "",
+      confidence: null,
       source: "ai_generation",
       prompt: null,
       createdAtUnixMs: now,
@@ -401,9 +393,5 @@ export async function generateStructuredReport(params: {
     createdAtUnixMs: now,
   })
   const reportText = buildReportTextFromStructured(params.template, structuredReport.fields)
-
-  return {
-    structuredReport,
-    reportText,
-  }
+  return { structuredReport, reportText }
 }

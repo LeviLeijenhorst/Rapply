@@ -9,6 +9,9 @@ export type ReportScreenProps = {
   initialSessionId?: string | null
   initialClientId?: string | null
   initialInputId?: string | null
+  headerTitle?: string | null
+  headerClientName?: string | null
+  onBack?: () => void
   mode?: RapportagePageMode
 }
 

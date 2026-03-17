@@ -15,14 +15,14 @@ export function Header({ title, clientName, date, onBack }: HeaderProps) {
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        <View style={styles.titlePill}>
-          <Pressable onPress={onBack} style={({ hovered }) => [styles.backButton, hovered ? styles.backButtonHover : undefined]}>
-            <ChevronLeftIcon color={semanticColorTokens.light.textHeading} size={24} />
-          </Pressable>
+        <Pressable onPress={onBack} style={({ hovered }) => [styles.titlePill, hovered ? styles.titlePillHover : undefined]}>
+          <View style={styles.backIconWrap}>
+            <ChevronLeftIcon color={semanticColorTokens.light.textHeading} size={18} />
+          </View>
           <Text isBold style={styles.title} numberOfLines={1}>
             {title}
           </Text>
-        </View>
+        </Pressable>
 
         <View style={styles.metaRow}>
           <View style={styles.metaPill}>
@@ -67,21 +67,21 @@ const styles = StyleSheet.create({
     maxWidth: 560,
     flexShrink: 1,
   },
-  backButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+  titlePillHover: {
+    backgroundColor: semanticColorTokens.light.hoverAccent,
+  },
+  backIconWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backButtonHover: {
-    backgroundColor: semanticColorTokens.light.hoverAccent,
   },
   title: {
     flexShrink: 1,
     color: semanticColorTokens.light.textHeading,
-    fontSize: fontSizes.lg,
-    lineHeight: 24,
+    fontSize: fontSizes.md,
+    lineHeight: 20,
   },
   metaRow: {
     flexDirection: 'row',

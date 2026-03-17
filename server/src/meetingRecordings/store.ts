@@ -235,3 +235,23 @@ export async function consumeMeetingRecordingToken(params: {
   )
   return !!row?.token
 }
+
+export async function isMeetingRecordingTokenValid(params: {
+  userId: string
+  token: string
+  meetingRecordingId: string
+}): Promise<boolean> {
+  const row = await queryOne<{ token: string }>(
+    `
+    select token
+    from public.meeting_recording_tokens
+    where token = $1
+      and owner_user_id = $2
+      and meeting_recording_id = $3
+      and used_at is null
+      and expires_at > now()
+    `,
+    [params.token, params.userId, params.meetingRecordingId],
+  )
+  return !!row?.token
+}

@@ -1,6 +1,6 @@
 import { buildUntitledInputTitle, type UntitledInputKind } from '../../utils/text/buildUntitledTitle'
 
-export type OptionKey = 'gesprek' | 'gespreksverslag' | 'upload_audio' | 'upload_document' | 'schrijven' | 'intake'
+export type OptionKey = 'gesprek' | 'gespreksverslag' | 'record-video' | 'upload_audio' | 'upload_document' | 'schrijven' | 'intake'
 export type DraftOptionKey = 'spoken_recap' | 'written_recap' | 'uploaded_audio' | 'recorded_session'
 
 export const maxRecordingSeconds = 1 * 60 * 60 + 54 * 60 + 59
@@ -41,7 +41,7 @@ export function formatTimeLabel(totalSeconds: number): string {
 }
 
 function getUntitledInputKindForOption(option: OptionKey | null): UntitledInputKind {
-  if (option === 'gesprek' || option === 'upload_audio' || option === 'upload_document') return 'gesprek'
+  if (option === 'gesprek' || option === 'record-video' || option === 'upload_audio' || option === 'upload_document') return 'gesprek'
   return 'verslag'
 }
 

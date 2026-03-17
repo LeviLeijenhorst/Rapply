@@ -81,14 +81,7 @@ function getQuickInputActions(onOpenRecord: DashboardScreenProps['onOpenRecord']
   return [
     create('record-session', 'record-session', 'Record sessie', 'Neem een volledige sessie op', '#6E22B7', '#8E32E8'),
     create('record-summary', 'record-summary', 'Record samenvatting', 'Maak een spraakopname over een sessie', '#1B4EC2', '#2A6DFF'),
-    {
-      id: 'record-video',
-      iconKey: 'record-video',
-      title: 'Record video call',
-      subtitle: 'Binnenkort beschikbaar',
-      accentFrom: '#0F7E3A',
-      accentTo: '#1CB95C',
-    },
+    create('record-video', 'record-video', 'Record video call', 'Neem een videocall op in je browser', '#0F7E3A', '#1CB95C'),
     create('import-audio', 'import-audio', 'Importeer audio', 'Selecteer een audio file van je computer', '#C75D10', '#F1852F'),
     create('import-document', 'import-document', 'Importeer document', 'Selecteer een document van je computer', '#9C0154', '#D51477'),
   ]

@@ -1,4 +1,4 @@
-import { completeAzureOpenAiChat } from "../../ai/azureOpenAi"
+import { completeAzureOpenAiChat, streamAzureOpenAiChat } from "../../ai/azureOpenAi"
 import { normalizeText } from "../../ai/shared/normalize"
 import { stripJsonCodeFences } from "../../ai/shared/textSanitization"
 import { env } from "../../env"
@@ -56,6 +56,7 @@ export async function completePipelineChat(params: {
   context: string
   messages: ChatMessage[]
   allowFieldUpdates?: boolean
+  onDelta?: (delta: string) => void
 }): Promise<PipelineChatResponse> {
   const deployment = readDeploymentOrEmpty()
   const normalizedMessages = params.messages
@@ -79,21 +80,31 @@ export async function completePipelineChat(params: {
     "Schrijf in natuurlijk, professioneel Nederlands in volledige zinnen.",
     params.allowFieldUpdates
       ? 'Als de gebruiker vraagt om een rapportveld te herschrijven, geef updates terug. Output JSON: {"answer":"string","updates":[{"fieldId":"string","answer":"string"}]}.'
-      : 'Output JSON: {"answer":"string"}.',
+      : "Geef alleen platte tekst als antwoord. Geef geen JSON, labels of metadata.",
     "Gebruik nooit letterlijke placeholderwaarden zoals 'string' of 'antwoord' als inhoud.",
     "",
     "Context:",
     params.context,
   ].join("\n")
 
-  const raw = await completeAzureOpenAiChat({
-    deployment,
-    temperature: 0.2,
-    messages: [
-      { role: "system", content: prompt },
-      ...normalizedMessages,
-    ],
-  })
+  const raw = params.onDelta
+    ? await streamAzureOpenAiChat({
+        deployment,
+        temperature: 0.2,
+        messages: [
+          { role: "system", content: prompt },
+          ...normalizedMessages,
+        ],
+        onDelta: params.onDelta,
+      })
+    : await completeAzureOpenAiChat({
+        deployment,
+        temperature: 0.2,
+        messages: [
+          { role: "system", content: prompt },
+          ...normalizedMessages,
+        ],
+      })
 
   const parsed = safeJsonParse(raw)
   const answer = resolveAnswerText({ raw, parsedAnswer: parsed?.answer })

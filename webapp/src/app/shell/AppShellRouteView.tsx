@@ -9,6 +9,7 @@ import { InputScreen } from '../../screens/session/InputScreen'
 import { NewReportScreen } from '../../screens/newReport/NewReportScreen'
 import { ReportScreen } from '../../screens/report/ReportScreen'
 import { OrganizationScreen } from '../../screens/organization/OrganizationScreen'
+import { ProfileScreen } from '../../screens/profile/ProfileScreen'
 import { ReportsScreen } from '../../screens/reports/ReportsScreen'
 import { NewClientScreen } from '../../screens/newClient/NewClientScreen'
 import { DashboardScreen } from '../../screens/dashboard/DashboardScreen'
@@ -52,7 +53,7 @@ type Props = {
   onSetRapportageEditInputId: (sessionId: string | null) => void
   onSetRapportageOnlyInputId: (sessionId: string | null) => void
   onSetRapportageScreenMode: (mode: 'controleren' | 'bewerken') => void
-  onSetSelectedSidebarItemKey: (key: 'clients' | 'reports') => void
+  onSetSelectedSidebarItemKey: (key: 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'admin' | 'adminContact' | 'adminWachtlijst' | 'archief') => void
   onSetInputIdPendingTemplatePicker: (sessionId: string | null) => void
   onSetInputOriginRoute: (route: RouteState | null) => void
   onToggleE2eePage: (open: boolean) => void
@@ -61,7 +62,7 @@ type Props = {
   rapportageOnlyInputId: string | null
   rapportageScreenMode: 'controleren' | 'bewerken'
   selectedClientId: string | null
-  selectedSidebarItemKey: 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'archief' | 'admin' | 'adminContact' | 'adminWachtlijst'
+  selectedSidebarItemKey: 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'admin' | 'adminContact' | 'adminWachtlijst' | 'archief'
   selectedSessieId: string | null
   selectedTrajectoryId: string | null
   sessionIdPendingTemplatePicker: string | null
@@ -104,10 +105,16 @@ export function AppShellRouteView(props: Props) {
 
   if (props.isNieuweRapportageOpen) {
     if (props.rapportageEditInputId) {
+      const selectedInput = props.data.inputs.find((item) => item.id === props.rapportageEditInputId) ?? null
+      const headerTitle = selectedInput?.title || 'Rapportage'
+      const headerClientName = getClientDisplayName(props.data.clients, selectedInput?.clientId ?? props.selectedClientId)
       return (
         <ReportScreen
           initialClientId={props.selectedClientId}
           initialInputId={props.rapportageEditInputId}
+          headerTitle={headerTitle}
+          headerClientName={headerClientName}
+          onBack={props.goBack}
           mode={props.rapportageScreenMode}
         />
       )
@@ -216,11 +223,10 @@ export function AppShellRouteView(props: Props) {
 
   if (props.selectedSidebarItemKey === 'dashboard') {
     return (
-      <DashboardScreen
+        <DashboardScreen
         onSelectClient={(clientId) => props.navigateTo({ kind: 'client', clientId: clientId })}
         onOpenNewClientPage={() => props.navigateTo({ kind: 'new-client' })}
         onOpenRecord={(action) => {
-          if (action === 'record-video') return
           props.onOpenNewInputModal(null, null, null, action)
         }}
         onOpenClientsPage={() => props.navigateTo({ kind: 'clients' })}
@@ -233,6 +239,10 @@ export function AppShellRouteView(props: Props) {
 
   if (props.selectedSidebarItemKey === 'mijnPraktijk') {
     return <OrganizationScreen />
+  }
+
+  if (props.selectedSidebarItemKey === 'mijnProfiel') {
+    return <ProfileScreen />
   }
 
   return <Text style={props.mainContentTextStyle}>{props.selectedSidebarItemKey}</Text>

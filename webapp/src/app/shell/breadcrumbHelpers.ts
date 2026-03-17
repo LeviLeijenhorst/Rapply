@@ -16,7 +16,7 @@ type Params = {
   rapportageScreenMode: 'controleren' | 'bewerken'
   selectedClientId: string | null
   selectedSessieId: string | null
-  selectedSidebarItemKey: 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'archief' | 'admin' | 'adminContact' | 'adminWachtlijst'
+  selectedSidebarItemKey: 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'archief' | 'admin' | 'adminContact' | 'adminWachtlijst'
   selectedTrajectoryId: string | null
   navigateTo: (route: RouteState) => void
 }
@@ -99,6 +99,7 @@ export function buildBreadcrumbItems(params: Params): BreadcrumbItem[] {
   if (selectedSidebarItemKey === 'dashboard') return [{ label: 'Dashboard', onPress: () => navigateTo({ kind: 'dashboard' }) }]
   if (selectedSidebarItemKey === 'reports') return [{ label: 'Rapportages', onPress: () => navigateTo({ kind: 'reports' }) }]
   if (selectedSidebarItemKey === 'mijnPraktijk') return [{ label: 'Mijn organisatie', onPress: () => navigateTo({ kind: 'mijn-praktijk' }) }]
+  if (selectedSidebarItemKey === 'mijnProfiel') return [{ label: 'Mijn profiel', onPress: () => navigateTo({ kind: 'mijn-profiel' }) }]
   if (selectedSidebarItemKey === 'admin') return [{ label: 'Admin', onPress: () => navigateTo({ kind: 'admin' }) }]
   if (selectedSidebarItemKey === 'adminContact') return [{ label: 'Contactberichten', onPress: () => navigateTo({ kind: 'admin-contact' }) }]
   if (selectedSidebarItemKey === 'adminWachtlijst') return [{ label: 'Wachtlijst', onPress: () => navigateTo({ kind: 'admin-wachtlijst' }) }]

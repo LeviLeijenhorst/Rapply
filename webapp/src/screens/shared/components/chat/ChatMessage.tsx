@@ -846,71 +846,69 @@ export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, e
             </View>
           ) : (
             <>
-              <View style={styles.bubble}>
-                <View style={styles.formattedLines}>
-                  {lines.map((line, lineIndex) => {
-                    if (line.kind === 'empty') return <View key={`line-${lineIndex}`} style={styles.emptyLine} />
-                    if (line.kind === 'divider') {
-                      return (
-                        <View key={`line-${lineIndex}`} style={styles.dividerRow}>
-                          <View style={styles.dividerLine} />
-                        </View>
-                      )
-                    }
-                    if (line.kind === 'headingTwo' || line.kind === 'headingThree') {
-                      return (
-                        <View key={`line-${lineIndex}`}>
-                          {renderInlineSegments({
-                            segments: line.segments,
-                            textStyle: styles.headerText,
-                            boldStyle: styles.headerTextBold,
-                            onTranscriptMentionPress,
-                          })}
-                        </View>
-                      )
-                    }
-                    if (line.kind === 'bullet') {
-                      return (
-                        <View key={`line-${lineIndex}`} style={styles.bulletRow}>
-                          <View style={styles.bulletDot} />
-                          <View style={styles.bulletText}>
-                            {renderInlineSegments({ segments: line.segments, textStyle: styles.messageText, onTranscriptMentionPress })}
-                          </View>
-                        </View>
-                      )
-                    }
-                    if (line.kind === 'numbered') {
-                      return (
-                        <View key={`line-${lineIndex}`} style={styles.bulletRow}>
-                          <Text style={styles.numberedPrefix}>{`${line.number}.`}</Text>
-                          <View style={styles.bulletText}>
-                            {renderInlineSegments({ segments: line.segments, textStyle: styles.messageText, onTranscriptMentionPress })}
-                          </View>
-                        </View>
-                      )
-                    }
-                    if (line.kind === 'quote') {
-                      return (
-                        <View key={`line-${lineIndex}`} style={styles.quoteRow}>
-                          {renderInlineSegments({
-                            segments: line.segments,
-                            textStyle: styles.quoteText,
-                            onTranscriptMentionPress,
-                          })}
-                        </View>
-                      )
-                    }
+              <View style={styles.formattedLines}>
+                {lines.map((line, lineIndex) => {
+                  if (line.kind === 'empty') return <View key={`line-${lineIndex}`} style={styles.emptyLine} />
+                  if (line.kind === 'divider') {
+                    return (
+                      <View key={`line-${lineIndex}`}>
+                        <View style={styles.dividerLine} />
+                      </View>
+                    )
+                  }
+                  if (line.kind === 'headingTwo' || line.kind === 'headingThree') {
                     return (
                       <View key={`line-${lineIndex}`}>
                         {renderInlineSegments({
                           segments: line.segments,
-                          textStyle: styles.messageText,
+                          textStyle: styles.headerText,
+                          boldStyle: styles.headerTextBold,
                           onTranscriptMentionPress,
                         })}
                       </View>
                     )
-                  })}
-                </View>
+                  }
+                  if (line.kind === 'bullet') {
+                    return (
+                      <View key={`line-${lineIndex}`} style={styles.bulletRow}>
+                        <View style={styles.bulletDot} />
+                        <View style={styles.bulletText}>
+                          {renderInlineSegments({ segments: line.segments, textStyle: styles.messageText, onTranscriptMentionPress })}
+                        </View>
+                      </View>
+                    )
+                  }
+                  if (line.kind === 'numbered') {
+                    return (
+                      <View key={`line-${lineIndex}`} style={styles.bulletRow}>
+                        <Text style={styles.numberedPrefix}>{`${line.number}.`}</Text>
+                        <View style={styles.bulletText}>
+                          {renderInlineSegments({ segments: line.segments, textStyle: styles.messageText, onTranscriptMentionPress })}
+                        </View>
+                      </View>
+                    )
+                  }
+                  if (line.kind === 'quote') {
+                    return (
+                      <View key={`line-${lineIndex}`} style={styles.quoteRow}>
+                        {renderInlineSegments({
+                          segments: line.segments,
+                          textStyle: styles.quoteText,
+                          onTranscriptMentionPress,
+                        })}
+                      </View>
+                    )
+                  }
+                  return (
+                    <View key={`line-${lineIndex}`}>
+                      {renderInlineSegments({
+                        segments: line.segments,
+                        textStyle: styles.messageText,
+                        onTranscriptMentionPress,
+                      })}
+                    </View>
+                  )
+                })}
               </View>
 
               <View style={styles.messageActionsRow}>
@@ -1033,7 +1031,6 @@ const styles = StyleSheet.create({
   assistantRow: { width: '100%', flexDirection: 'row', alignItems: 'flex-start' },
   assistantRowLoading: { alignItems: 'center' },
   assistantContent: { flex: 1 },
-  bubble: { backgroundColor: colors.assistantBubble, borderRadius: 12, padding: 16, gap: 12 },
   exportButton: { height: 32, borderRadius: 8, padding: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   exportButtonHovered: { backgroundColor: colors.hoverBackground },
   exportButtonText: { fontSize: 12, lineHeight: 16, color: colors.textSecondary },
@@ -1048,12 +1045,12 @@ const styles = StyleSheet.create({
   quoteRow: { borderLeftWidth: 2, borderLeftColor: colors.border, paddingLeft: 10 },
   quoteText: { fontSize: 14, lineHeight: 20, color: colors.textSecondary },
   dividerRow: { width: '100%', paddingVertical: 6 },
-  dividerLine: { width: '100%', height: 1, backgroundColor: colors.border },
+  dividerLine: { width: '100%', height: 1, backgroundColor: colors.border, marginVertical: 6 },
   emptyLine: { height: 8 },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   loadingText: { fontSize: 14, lineHeight: 20, color: colors.textSecondary },
   messageText: { fontSize: 14, lineHeight: 20, color: colors.text },
-  messageActionsRow: { marginTop: 8, flexDirection: 'row', alignItems: 'center', marginLeft: 12, gap: 8 },
+  messageActionsRow: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
   actionButton: { width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   actionButtonHovered: { backgroundColor: colors.hoverBackground },
   copyNotification: { alignItems: 'center' },

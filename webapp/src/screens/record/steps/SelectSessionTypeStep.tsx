@@ -4,9 +4,12 @@ import { Image, Pressable, ScrollView, View } from 'react-native'
 import { Text } from '../../../ui/Text'
 import { CoachscribeLogo } from '../../../components/brand/CoachscribeLogo'
 import { MonitorIcon } from '../../../icons/MonitorIcon'
-import { MicrophoneSmallIcon } from '../../../icons/MicrophoneSmallIcon'
-import { Mp3UploadIcon } from '../../../icons/Mp3UploadIcon'
-import { colors } from '../../../design/theme/colors'
+import { ClientPageMicrophoneIcon } from '../../../icons/ClientPageSvgIcons'
+import { ImportAudioIcon } from '../../../icons/ImportAudioIcon'
+import { ImportDocumentIcon } from '../../../icons/ImportDocumentIcon'
+import { RecordSummaryIcon } from '../../../icons/RecordSummaryIcon'
+import { RecordVideoCallIcon } from '../../../icons/RecordVideoCallIcon'
+import { VerslagSchrijvenIcon } from '../../../icons/VerslagSchrijvenIcon'
 import { InputOptionRow } from '../components/InputOptionRow'
 import { styles } from '../styles'
 import type { OptionKey } from '../utils'
@@ -77,33 +80,57 @@ export function SelectInputTypeStep({
       <View style={styles.selectList}>
         <InputOptionRow
           label={gesprekOptionLabel}
+          subtitle="Neem een volledige sessie op"
           isSelected={selectedOption === 'gesprek'}
           onPress={() => onSelectOption('gesprek')}
-          leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
+          leftIcon={<ClientPageMicrophoneIcon size={18} />}
+          iconAccentFrom="#6E22B7"
+          iconAccentTo="#8E32E8"
         />
         <InputOptionRow
           label={gespreksverslagOptionLabel}
+          subtitle="Maak een spraakopname over een sessie"
           isSelected={selectedOption === 'gespreksverslag'}
           onPress={() => onSelectOption('gespreksverslag')}
-          leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
+          leftIcon={<RecordSummaryIcon size={18} />}
+          iconAccentFrom="#1B4EC2"
+          iconAccentTo="#2A6DFF"
         />
         <InputOptionRow
           label="Gespreksverslag schrijven"
+          subtitle="Werk je verslag handmatig uit"
           isSelected={selectedOption === 'schrijven'}
           onPress={() => onSelectOption('schrijven')}
-          leftIcon={<MicrophoneSmallIcon color={colors.textStrong} size={20} />}
+          leftIcon={<VerslagSchrijvenIcon size={18} color="#FFFFFF" />}
+          iconAccentFrom="#0F7E3A"
+          iconAccentTo="#1CB95C"
+        />
+        <InputOptionRow
+          label="Record video call"
+          subtitle="Neem een videocall op in je browser"
+          isSelected={selectedOption === 'record-video'}
+          onPress={() => onSelectOption('record-video')}
+          leftIcon={<RecordVideoCallIcon size={18} />}
+          iconAccentFrom="#0F7E3A"
+          iconAccentTo="#1CB95C"
         />
         <InputOptionRow
           label="Audio bestanden uploaden"
+          subtitle="Selecteer een audio file van je computer"
           isSelected={selectedOption === 'upload_audio'}
           onPress={() => onSelectOption('upload_audio')}
-          leftIcon={<Mp3UploadIcon />}
+          leftIcon={<ImportAudioIcon size={18} />}
+          iconAccentFrom="#C75D10"
+          iconAccentTo="#F1852F"
         />
         <InputOptionRow
           label="Andere bestanden uploaden"
+          subtitle="Selecteer een document van je computer"
           isSelected={selectedOption === 'upload_document'}
           onPress={() => onSelectOption('upload_document')}
-          leftIcon={<Mp3UploadIcon />}
+          leftIcon={<ImportDocumentIcon size={18} />}
+          iconAccentFrom="#9C0154"
+          iconAccentTo="#D51477"
         />
       </View>
     </ScrollView>

@@ -1,8 +1,7 @@
-import React from 'react'
-import { Pressable, StyleSheet, TextInput, View } from 'react-native'
+import React, { useEffect, useRef } from 'react'
+import { StyleSheet, TextInput, View } from 'react-native'
 
 import { colors } from '../../../design/theme/colors'
-import { ClientAvatarIcon } from '../../../icons/ClientAvatarIcon'
 import type { ClientUpsertValues } from '../../../types/clientProfile'
 import { Text } from '../../../ui/Text'
 
@@ -20,6 +19,10 @@ type FieldProps = {
   onChange: (value: string) => void
   placeholder: string
   required?: boolean
+  autoFocus?: boolean
+  keyboardType?: 'default' | 'number-pad' | 'decimal-pad' | 'numeric' | 'email-address' | 'phone-pad' | 'url'
+  inputMode?: 'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url'
+  inputRef?: React.RefObject<TextInput | null>
 }
 
 function capitalizeFirstLetter(value: string): string {
@@ -46,7 +49,14 @@ function sanitizeBsn(value: string): string {
   return String(value || '').replace(/\D/g, '').slice(0, 9)
 }
 
-function Field({ label, value, onChange, placeholder, required = false }: FieldProps) {
+function sanitizePhone(value: string): string {
+  const compact = String(value || '').replace(/\s+/g, '')
+  const hasLeadingPlus = compact.startsWith('+')
+  const digits = compact.replace(/\D/g, '')
+  return `${hasLeadingPlus ? '+' : ''}${digits}`
+}
+
+function Field({ label, value, onChange, placeholder, required = false, autoFocus = false, keyboardType = 'default', inputMode = 'text', inputRef }: FieldProps) {
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>
@@ -55,10 +65,14 @@ function Field({ label, value, onChange, placeholder, required = false }: FieldP
       </Text>
       <View style={styles.inputWrap}>
         <TextInput
+          ref={inputRef}
           value={value}
           onChangeText={onChange}
           placeholder={placeholder}
           placeholderTextColor="#95888F"
+          autoFocus={autoFocus}
+          keyboardType={keyboardType}
+          inputMode={inputMode}
           style={[styles.input, inputWebStyle]}
         />
       </View>
@@ -67,52 +81,81 @@ function Field({ label, value, onChange, placeholder, required = false }: FieldP
 }
 
 export function NewClientForm({ values, trajectoryLabel, onChange }: Props) {
+  const firstNameInputRef = useRef<TextInput | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const timeoutId = window.setTimeout(() => {
+      firstNameInputRef.current?.focus()
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
+  }, [])
+
   return (
     <View style={styles.container}>
-      <View style={styles.personalHeaderRow}>
-        <View style={styles.avatarWrap}>
-          <ClientAvatarIcon color={colors.textStrong} size={30} />
-        </View>
-        <Pressable style={({ hovered }) => [styles.changePhotoButton, hovered ? styles.changePhotoButtonHovered : undefined]}>
-          <Text style={styles.changePhotoText}>Profielfoto wijzigen</Text>
-        </Pressable>
-      </View>
-
       <View style={styles.grid}>
-        <View style={styles.column}>
-          <Field
-            label="Voornaam"
-            value={values.firstName}
-            onChange={(value) => onChange('firstName', capitalizeFirstLetter(value))}
-            placeholder="Bijv. Jan"
-            required
-          />
-          <Field
-            label="Voorletters"
-            value={values.initials}
-            onChange={(value) => onChange('initials', sanitizeInitialsOnChange(values.initials, value))}
-            placeholder="Bijv. J.K."
-          />
-          <Field label="E-mailadres" value={values.clientEmail} onChange={(value) => onChange('clientEmail', value)} placeholder="naam@email.nl" />
-          <Field label="Ordernummer" value={values.orderNumber} onChange={(value) => onChange('orderNumber', value)} placeholder="Ordernummer" />
+        <View style={styles.row}>
+          <View style={styles.cell}>
+            <Field
+              label="Voornaam"
+              value={values.firstName}
+              onChange={(value) => onChange('firstName', capitalizeFirstLetter(value))}
+              placeholder="Bijv. Jan"
+              required
+              autoFocus
+              inputRef={firstNameInputRef}
+            />
+          </View>
+          <View style={styles.cell}>
+            <Field
+              label="Achternaam"
+              value={values.lastName}
+              onChange={(value) => onChange('lastName', capitalizeFirstLetter(value))}
+              placeholder="Bijv. Jansen"
+              required
+            />
+          </View>
         </View>
-
-        <View style={styles.column}>
-          <Field
-            label="Achternaam"
-            value={values.lastName}
-            onChange={(value) => onChange('lastName', capitalizeFirstLetter(value))}
-            placeholder="Bijv. Jansen"
-            required
-          />
-          <Field label="Telefoonnummer" value={values.clientPhone} onChange={(value) => onChange('clientPhone', value)} placeholder="06 12345678" />
-          <Field label="BSN-nummer" value={values.bsn} onChange={(value) => onChange('bsn', sanitizeBsn(value))} placeholder="123456789" />
-          <Field
-            label="Naam contactpersoon IRV"
-            value={values.uwvContactName}
-            onChange={(value) => onChange('uwvContactName', capitalizeFirstLetter(value))}
-            placeholder="Naam contactpersoon IRV"
-          />
+        <View style={styles.row}>
+          <View style={styles.cell}>
+            <Field
+              label="Voorletters"
+              value={values.initials}
+              onChange={(value) => onChange('initials', sanitizeInitialsOnChange(values.initials, value))}
+              placeholder="Bijv. J.K."
+            />
+          </View>
+          <View style={styles.cell}>
+            <Field
+              label="Telefoonnummer"
+              value={values.clientPhone}
+              onChange={(value) => onChange('clientPhone', sanitizePhone(value))}
+              placeholder="+31612345678"
+              keyboardType="phone-pad"
+              inputMode="tel"
+            />
+          </View>
+        </View>
+        <View style={styles.row}>
+          <View style={styles.cell}>
+            <Field label="E-mailadres" value={values.clientEmail} onChange={(value) => onChange('clientEmail', value)} placeholder="naam@email.nl" keyboardType="email-address" inputMode="email" />
+          </View>
+          <View style={styles.cell}>
+            <Field label="BSN-nummer" value={values.bsn} onChange={(value) => onChange('bsn', sanitizeBsn(value))} placeholder="123456789" />
+          </View>
+        </View>
+        <View style={styles.row}>
+          <View style={styles.cell}>
+            <Field label="Ordernummer" value={values.orderNumber} onChange={(value) => onChange('orderNumber', value)} placeholder="Ordernummer" />
+          </View>
+          <View style={styles.cell}>
+            <Field
+              label="Naam contactpersoon IRV"
+              value={values.uwvContactName}
+              onChange={(value) => onChange('uwvContactName', capitalizeFirstLetter(value))}
+              placeholder="Naam contactpersoon IRV"
+            />
+          </View>
         </View>
       </View>
 
@@ -130,43 +173,17 @@ const styles = StyleSheet.create({
   container: {
     gap: 18,
   },
-  personalHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  avatarWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#CCD0D6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  changePhotoButton: {
-    height: 32,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  changePhotoButtonHovered: {
-    backgroundColor: '#FCEFF6',
-  },
-  changePhotoText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.selected,
-  },
   grid: {
+    gap: 12,
+  },
+  row: {
     flexDirection: 'row',
     gap: 16,
     flexWrap: 'wrap',
   },
-  column: {
+  cell: {
     flex: 1,
     minWidth: 280,
-    gap: 12,
   },
   field: {
     gap: 6,

@@ -19,7 +19,7 @@ export type AudioStreamManifest = {
 export async function createAudioStream(params: { userId: string; mimeType: string; createdAtUnixMilliseconds: number }): Promise<{ id: string }> {
   const id = crypto.randomUUID()
   await execute(
-    "insert into public.audio_streams (id, user_id, mime_type, created_at_unix_milliseconds) values ($1, $2, $3, $4)",
+    "insert into public.audio_streams (id, owner_user_id, mime_type, created_at_unix_milliseconds) values ($1, $2, $3, $4)",
     [id, params.userId, params.mimeType, params.createdAtUnixMilliseconds],
   )
   return { id }
@@ -33,7 +33,7 @@ export async function updateAudioStreamDetails(params: {
   chunkCount: number
 }): Promise<void> {
   await execute(
-    "update public.audio_streams set total_duration_milliseconds = $1, chunk_count = $2 where id = $3 and user_id = $4",
+    "update public.audio_streams set total_duration_milliseconds = $1, chunk_count = $2 where id = $3 and owner_user_id = $4",
     [params.totalDurationMilliseconds, params.chunkCount, params.id, params.userId],
   )
 }
@@ -68,7 +68,7 @@ export async function readAudioStreamManifest(params: { userId: string; id: stri
     mime_type: string
     total_duration_milliseconds: number | null
     chunk_count: number | null
-  }>("select id, mime_type, total_duration_milliseconds, chunk_count from public.audio_streams where user_id = $1 and id = $2", [
+  }>("select id, mime_type, total_duration_milliseconds, chunk_count from public.audio_streams where owner_user_id = $1 and id = $2", [
     params.userId,
     params.id,
   ])
@@ -101,7 +101,7 @@ export async function readAudioStreamManifest(params: { userId: string; id: stri
 // Intent: readAudioStreamChunk
 export async function readAudioStreamChunk(params: { userId: string; id: string; chunkIndex: number }): Promise<{ bytes: Buffer } | null> {
   const row = await queryOne<{ bytes: Buffer }>(
-    "select chunks.bytes from public.audio_stream_chunks as chunks join public.audio_streams as streams on streams.id = chunks.audio_stream_id where chunks.audio_stream_id = $1 and chunks.chunk_index = $2 and streams.user_id = $3",
+    "select chunks.bytes from public.audio_stream_chunks as chunks join public.audio_streams as streams on streams.id = chunks.audio_stream_id where chunks.audio_stream_id = $1 and chunks.chunk_index = $2 and streams.owner_user_id = $3",
     [params.id, params.chunkIndex, params.userId],
   )
   if (!row) return null

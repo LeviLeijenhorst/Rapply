@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleSheet, useWindowDimensions, View } from 'react-native'
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 
 import { colors } from '../../../design/theme/colors'
@@ -8,7 +8,7 @@ import { Text } from '../../../ui/Text'
 import { SidebarItem } from './SidebarItem'
 import { ProfileCircleIcon } from '../../../icons/ProfileCircleIcon'
 
-export type SidebarItemKey = 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'archief' | 'admin' | 'adminContact' | 'adminWachtlijst'
+export type SidebarItemKey = 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'archief' | 'admin' | 'adminContact' | 'adminWachtlijst'
 
 type AnchorPoint = { x: number; y: number }
 
@@ -21,6 +21,7 @@ type Props = {
   userName?: string | null
   userRole?: string
   onSelectSidebarItem: (sidebarItemKey: SidebarItemKey) => void
+  onOpenProfileSection: () => void
   onOpenSettingsMenu: (anchorPoint: AnchorPoint) => void
 }
 
@@ -37,6 +38,7 @@ export function Sidebar({
   userName,
   userRole = 'Re-integratiecoach',
   onSelectSidebarItem,
+  onOpenProfileSection,
   onOpenSettingsMenu,
 }: Props) {
   const { width } = useWindowDimensions()
@@ -178,7 +180,10 @@ export function Sidebar({
         </View>
       </View>
 
-      <View style={styles.profileSection}>
+      <Pressable
+        onPress={onOpenProfileSection}
+        style={({ hovered }) => [styles.profileSection, hovered ? styles.profileSectionHovered : undefined]}
+      >
         <View style={styles.profileRow}>
           <View style={styles.avatar}>
             <ProfileCircleIcon size={28} />
@@ -196,7 +201,7 @@ export function Sidebar({
           <View style={[styles.progressFill, { width: progressWidth }]} />
         </View>
         <Text style={styles.usageText}>{`${usedMinutes} van de ${totalMinutes} minuten`}</Text>
-      </View>
+      </Pressable>
     </View>
   )
 }
@@ -242,6 +247,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingTop: 16,
     paddingBottom: 20,
+  },
+  profileSectionHovered: {
+    backgroundColor: '#F9F9FA',
   },
   profileRow: {
     flexDirection: 'row',

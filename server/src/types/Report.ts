@@ -1,9 +1,17 @@
 export type ReportFieldType = "programmatic" | "ai" | "manual"
 
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: JsonValue }
+  | JsonValue[]
+
 export type ReportFieldVersion = {
   id: string
   source: "ai_generation" | "ai_regeneration" | "manual_edit" | "chat_update"
-  answer: string
+  answer: JsonValue
   factualBasis: string
   reasoning: string
   confidence: number | null
@@ -15,7 +23,7 @@ export type StructuredReportField = {
   fieldId: string
   label: string
   fieldType: ReportFieldType
-  answer: string
+  answer: JsonValue
   factualBasis: string
   reasoning: string
   confidence: number | null

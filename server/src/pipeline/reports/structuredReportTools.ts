@@ -1,4 +1,4 @@
-import type { StructuredReport, StructuredReportField, ReportFieldVersion } from "../../types/Report"
+import type { JsonValue, StructuredReport, StructuredReportField, ReportFieldVersion } from "../../types/Report"
 import type { UwvTemplate, UwvTemplateField } from "../templates/uwvTemplates"
 
 function nowUnixMs(): number {
@@ -17,7 +17,7 @@ export function normalizeConfidence(value: unknown): number | null {
 
 export function createFieldVersion(params: {
   source: ReportFieldVersion["source"]
-  answer: string
+  answer: JsonValue
   factualBasis: string
   reasoning: string
   confidence: number | null
@@ -27,7 +27,7 @@ export function createFieldVersion(params: {
   return {
     id: createVersionId(),
     source: params.source,
-    answer: String(params.answer || "").trim(),
+    answer: params.answer,
     factualBasis: String(params.factualBasis || "").trim(),
     reasoning: String(params.reasoning || "").trim(),
     confidence: params.confidence,
@@ -38,7 +38,7 @@ export function createFieldVersion(params: {
 
 export function createStructuredField(params: {
   field: UwvTemplateField
-  answer: string
+  answer: JsonValue
   factualBasis: string
   reasoning: string
   confidence: number | null
@@ -72,7 +72,7 @@ export function createStructuredField(params: {
 export function appendFieldVersion(params: {
   field: StructuredReportField
   source: ReportFieldVersion["source"]
-  answer: string
+  answer: JsonValue
   factualBasis?: string
   reasoning?: string
   confidence?: number | null
@@ -128,9 +128,14 @@ export function updateStructuredReport(params: {
 }
 
 export function buildReportTextFromStructured(template: UwvTemplate, fields: Record<string, StructuredReportField>): string {
+  const asDisplayText = (value: JsonValue): string => {
+    if (typeof value === "string") return value.trim()
+    if (value === null || typeof value === "undefined") return ""
+    return JSON.stringify(value)
+  }
   return template.fields
     .map((templateField) => {
-      const answer = String(fields[templateField.fieldId]?.answer || "").trim()
+      const answer = asDisplayText(fields[templateField.fieldId]?.answer)
       if (!answer) return ""
       return `### ${templateField.exportNumberKey} ${templateField.label}\n${answer}`
     })
@@ -138,4 +143,3 @@ export function buildReportTextFromStructured(template: UwvTemplate, fields: Rec
     .join("\n\n")
     .trim()
 }
-

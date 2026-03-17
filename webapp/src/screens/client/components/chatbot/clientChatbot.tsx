@@ -33,12 +33,11 @@ export function ClientChatbot({
   return (
     <View style={[styles.chatTab, isModal ? styles.chatTabModal : undefined]}>
       <View style={[styles.chatTopActions, isModal ? styles.chatTopActionsModal : undefined]}>
-        {chatMessages.length > 0 ? (
+        {!isModal && chatMessages.length > 0 ? (
           <Pressable
             onPress={onShowClearChatConfirm}
             style={({ hovered }) => [
               styles.chatTopTextAction,
-              isModal ? styles.chatTopTextActionModal : undefined,
               hovered ? styles.chatTopTextActionHovered : undefined,
             ]}
           >
@@ -73,10 +72,14 @@ export function ClientChatbot({
           </View>
         ) : (
           <>
-            {chatMessages.map((message) => (
-              <ChatMessage key={message.id} role={message.role} text={message.text} />
-            ))}
-            {isChatSending ? <ChatMessage role="assistant" text="" isLoading /> : null}
+            {chatMessages.map((message) => {
+              const isHiddenStreamingPlaceholder = message.role === 'assistant' && message.text.trim().length === 0
+              if (isHiddenStreamingPlaceholder) return null
+              return <ChatMessage key={message.id} role={message.role} text={message.text} />
+            })}
+            {isChatSending && !chatMessages.some((message) => message.id.startsWith('assistant-stream-') && message.text.trim().length > 0)
+              ? <ChatMessage role="assistant" text="" isLoading />
+              : null}
           </>
         )}
       </ScrollView>
@@ -150,13 +153,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   chatTopTextAction: { height: 28, justifyContent: 'center', alignItems: 'center' },
-  chatTopTextActionModal: { marginTop: -7, minWidth: 68, paddingHorizontal: 8 },
   chatTopTextActionHovered: { opacity: 0.7 },
   chatTopTextActionText: { fontSize: 14, lineHeight: 16, color: '#2C111F' },
   chatTopIconAction: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   chatTopIconActionHovered: { backgroundColor: colors.hoverBackground },
   chatArea: { flex: 1, minHeight: 0 },
-  chatAreaContent: { gap: 12, paddingBottom: 8 },
+  chatAreaContent: { gap: 12, paddingHorizontal: 10, paddingBottom: 8 },
   chatAreaContentCentered: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingBottom: 8 },
   chatBottom: { marginHorizontal: 12, marginVertical: 12 },
   chatBottomModal: { marginTop: 8, marginBottom: 4 },
@@ -188,4 +190,3 @@ const styles = StyleSheet.create({
   noMinutesCtaCloseButtonHovered: { backgroundColor: colors.hoverBackground },
   noMinutesCtaText: { fontSize: 13, lineHeight: 18, color: colors.textSecondary },
 })
-
