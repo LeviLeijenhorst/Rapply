@@ -27,6 +27,7 @@ type Params = {
   handleClose: () => void
   onOpenGeschrevenGespreksverslag: (clientId: string | null) => void
   saveSelectedFileToAudioStore: () => Promise<void>
+  startVideoMeetingRecordingFromConsent: () => void
   setHasRecordingConsent: (value: boolean) => void
   setStep: (step: NewInputStep) => void
   clearSubscriptionReturnDraft: () => Promise<void>
@@ -64,6 +65,10 @@ export function runPrimaryFooterAction(params: Params) {
 
   if (params.step === 'consent') {
     if (!params.selectedOption || !params.hasRecordingConsent) return
+    if (params.selectedOption === 'record-video') {
+      params.startVideoMeetingRecordingFromConsent()
+      return
+    }
     if (!params.limitedMode && (params.selectedOption === 'upload_audio' || params.selectedOption === 'upload_document')) {
       params.setStep('upload')
       return
@@ -90,7 +95,8 @@ export function runPrimaryFooterAction(params: Params) {
   }
 
   if (params.selectedOption === 'record-video') {
-    params.setStep('recording')
+    params.setHasRecordingConsent(false)
+    params.setStep('consent')
     return
   }
 

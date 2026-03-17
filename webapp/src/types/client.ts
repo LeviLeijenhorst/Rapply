@@ -11,7 +11,7 @@ export type Client = {
   updatedAt: number
 }
 
-export const unassignedClientLabel = 'Ongekoppelde client'
+export const unassignedClientLabel = 'Niet toegewezen'
 
 type NamedItem = { id: string; name: string }
 

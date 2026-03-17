@@ -57,13 +57,20 @@ export function buildGroupedClientKnowledgeContext(params: {
       .filter((snippet) => readSnippetInputId(snippet) === input.id)
       .map((snippet) => `- ${normalizeText(snippet.text)}`)
       .filter(Boolean)
+    const fullDocumentText = input.inputType === "uploaded_document" ? normalizeText(input.transcriptText || input.sourceText || "") : ""
+    const documentLines = fullDocumentText
+      ? [
+          `- Documenttitel: ${normalizeText(input.title) || "Document"}`,
+          `- Volledige documenttekst:\n${fullDocumentText}`,
+        ]
+      : []
 
-    if (approvedSnippetLines.length === 0) continue
+    if (approvedSnippetLines.length === 0 && documentLines.length === 0) continue
 
     groups.push({
       sortUnixMs: Number(input.createdAtUnixMs) || 0,
       heading: `${formatInputTypeLabel(input.inputType)} op ${formatDutchDate(input.createdAtUnixMs)}`,
-      lines: approvedSnippetLines,
+      lines: [...documentLines, ...approvedSnippetLines],
     })
   }
 

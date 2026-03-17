@@ -1,3 +1,5 @@
+import type { Report } from '@/storage/types'
+
 export type RapportagePageMode = 'controleren' | 'bewerken'
 export type InputTabKey = 'sessies' | 'rapportages' | 'notities'
 export type ViewMode = 'setup' | 'edit'
@@ -11,6 +13,7 @@ export type ReportScreenProps = {
   initialInputId?: string | null
   headerTitle?: string | null
   headerClientName?: string | null
+  initialReport?: Report | null
   onBack?: () => void
   mode?: RapportagePageMode
 }

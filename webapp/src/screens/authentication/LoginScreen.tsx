@@ -6,6 +6,7 @@ import { AuthEntryScreen } from './internal/screens/AuthEntryScreen'
 import { clearAuthIntent, getAuthIntent, getValidAccessToken, handleAuthCallback, signInWithEntra } from './internal/entraAuth'
 import { navigate, usePathname } from './internal/router/webRouter'
 import { toUserFriendlyErrorMessage } from '../../utils/text/userFriendlyError'
+import { consumeSubscriptionReturnPath } from '../record/state/subscriptionReturnDraft'
 
 type Props = {
   onAuthenticated: () => void
@@ -17,6 +18,48 @@ export function LoginScreen({ onAuthenticated }: Props) {
   const [isProcessingCallback, setIsProcessingCallback] = useState(false)
   const hasHandledCallback = useRef(false)
   const hasStartedDirectSignIn = useRef(false)
+  const postAuthPathRef = useRef<string | null>(null)
+
+  function sanitizeReturnPath(path: string | null | undefined): string | null {
+    const trimmed = String(path || '').trim()
+    if (!trimmed.startsWith('/')) return null
+    if (trimmed.startsWith('//')) return null
+    return trimmed
+  }
+
+  function resolvePostAuthPath(): string {
+    if (postAuthPathRef.current) return postAuthPathRef.current
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const fromQuery = sanitizeReturnPath(params.get('returnTo'))
+      if (fromQuery) {
+        postAuthPathRef.current = fromQuery
+        return fromQuery
+      }
+
+      const fromDraft = consumeSubscriptionReturnPath()
+      if (fromDraft) {
+        postAuthPathRef.current = fromDraft
+        return fromDraft
+      }
+
+      const currentPath = `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`
+      const sanitizedCurrentPath = sanitizeReturnPath(currentPath)
+      if (
+        sanitizedCurrentPath &&
+        !sanitizedCurrentPath.startsWith('/inloggen') &&
+        !sanitizedCurrentPath.startsWith('/registreren') &&
+        !sanitizedCurrentPath.startsWith('/auth/callback')
+      ) {
+        postAuthPathRef.current = sanitizedCurrentPath
+        return sanitizedCurrentPath
+      }
+    }
+
+    postAuthPathRef.current = '/sessies'
+    return '/sessies'
+  }
 
   useEffect(() => {
     if (pathname === '/') {
@@ -33,7 +76,7 @@ export function LoginScreen({ onAuthenticated }: Props) {
     handleAuthCallback()
       .then(() => {
         onAuthenticated()
-        navigate('/sessies', { replace: true })
+        navigate(resolvePostAuthPath(), { replace: true })
       })
       .catch((error) => {
         console.error('[AuthFlow] Entra callback failed', error)
@@ -59,7 +102,7 @@ export function LoginScreen({ onAuthenticated }: Props) {
       if (!isActive) return
       if (token) {
         onAuthenticated()
-        navigate('/sessies', { replace: true })
+        navigate(resolvePostAuthPath(), { replace: true })
       }
     })()
 

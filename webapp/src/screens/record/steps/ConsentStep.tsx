@@ -41,7 +41,7 @@ export function ConsentStep({
               {hasRecordingConsent ? <CheckmarkIcon color={colors.selected} width={14} height={12} /> : null}
             </View>
             <Text style={styles.mobileConsentCheckboxLabel}>
-              De client gaat er mee akkoord dat de sessie wordt opgenomen
+              De cliënt gaat ermee akkoord dat de sessie wordt opgenomen
             </Text>
           </Pressable>
         </View>
@@ -56,10 +56,10 @@ export function ConsentStep({
           <MicrophoneSmallIcon color={colors.textStrong} size={28} />
         </View>
         <Text isBold style={[styles.consentTitle, isCompactConsent ? styles.consentTitleCompact : undefined]}>
-          Ik heb expliciete toestemming van mijn cli?nt
+          Ik heb expliciete toestemming van mijn cliënt
         </Text>
         <Text style={[styles.consentDescription, isCompactConsent ? styles.consentDescriptionCompact : undefined]}>
-          Door verder te gaan bevestig je dat alle deelnemers vooraf zijn ge?nformeerd over de opname en vrijwillig toestemming hebben gegeven.
+          Door verder te gaan bevestig je dat alle deelnemers vooraf zijn geïnformeerd over de opname en vrijwillig toestemming hebben gegeven.
         </Text>
         <Pressable
           onPress={onToggleConsent}

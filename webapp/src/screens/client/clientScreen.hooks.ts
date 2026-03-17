@@ -3,6 +3,7 @@ import type { ScrollView } from 'react-native'
 
 import { fetchBillingStatus } from '@/api/billing/billingApi'
 import { sendClientPipelineChatMessage, streamClientPipelineChatMessage } from '@/api/pipeline/pipelineApi'
+import { createTypewriterStream } from '@/screens/shared/components/chat/createTypewriterStream'
 import { clearChatBotForClient, loadChatBotForClient, saveChatBotForClient } from '@/storage/chatBotStore'
 import { createChatMessageId, type ChatStateMessage } from '@/types/chatState'
 import type {
@@ -333,9 +334,19 @@ export function useClientChatbot({
     setChatMessages((previous) => [...previous, nextUserMessage, { id: assistantId, role: 'assistant', text: '' }])
     setComposerText('')
     setIsChatSending(true)
+    const typewriter = createTypewriterStream({
+      appendChar: (nextChar) => {
+        setChatMessages((previous) =>
+          previous.map((message) =>
+            message.id === assistantId ? { ...message, text: `${message.text}${nextChar}` } : message,
+          ),
+        )
+      },
+    })
 
     try {
       if (!(await ensureSufficientChatMinutes())) {
+        typewriter.dispose()
         setIsChatSending(false)
         return
       }
@@ -344,13 +355,11 @@ export function useClientChatbot({
         clientId,
         messages: nextChatMessages.map((message) => ({ role: message.role, text: message.text })),
         onDelta: (delta) => {
-          setChatMessages((previous) =>
-            previous.map((message) =>
-              message.id === assistantId ? { ...message, text: `${message.text}${delta}` } : message,
-            ),
-          )
+          typewriter.pushDelta(delta)
         },
       })
+      await typewriter.waitUntilIdle()
+      typewriter.dispose()
 
       setChatMessages((previous) =>
         previous.map((message) =>
@@ -367,6 +376,7 @@ export function useClientChatbot({
             : message,
         ),
       )
+      typewriter.dispose()
     } finally {
       setIsChatSending(false)
     }

@@ -125,32 +125,31 @@ export function MinimizedRecordingLayer({
           <Text style={styles.closeWarningText}>
             Als je sluit, gaat je huidige opname of invoer verloren.
           </Text>
-          <View style={styles.closeWarningActions}>
-            <Pressable
-              onPress={onCloseWarningCancel}
-              style={({ hovered }) => [
-                styles.closeWarningButton,
-                styles.closeWarningButtonSecondary,
-                hovered ? styles.closeWarningButtonSecondaryHovered : undefined,
-              ]}
-            >
-              <Text isBold style={styles.closeWarningButtonSecondaryText}>
-                Annuleren
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={onCloseWarningConfirm}
-              style={({ hovered }) => [
-                styles.closeWarningButton,
-                styles.closeWarningButtonPrimary,
-                hovered ? styles.closeWarningButtonPrimaryHovered : undefined,
-              ]}
-            >
-              <Text isBold style={styles.closeWarningButtonPrimaryText}>
-                Sluiten
-              </Text>
-            </Pressable>
-          </View>
+        </View>
+        <View style={styles.recordedCloseWarningFooter}>
+          <Pressable
+            onPress={onCloseWarningCancel}
+            style={({ hovered }) => [
+              styles.recordedCloseWarningSecondaryButton,
+              styles.cancelButtonNoBottomLeftRadius,
+              hovered ? styles.recordedCloseWarningSecondaryButtonHovered : undefined,
+            ]}
+          >
+            <Text isBold style={styles.recordedCloseWarningSecondaryButtonText}>
+              Annuleren
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={onCloseWarningConfirm}
+            style={({ hovered }) => [
+              styles.recordedCloseWarningPrimaryButton,
+              hovered ? styles.recordedCloseWarningPrimaryButtonHovered : undefined,
+            ]}
+          >
+            <Text isBold style={styles.recordedCloseWarningPrimaryButtonText}>
+              Sluiten
+            </Text>
+          </Pressable>
         </View>
       </Modal>
     </>

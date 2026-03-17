@@ -263,6 +263,20 @@ export function useNewInputModalController({
     return (standardTemplate ?? reportTypeTemplates[0])?.id ?? null
   }, [reportTypeTemplates])
   const [editingRecordingNoteId, setEditingRecordingNoteId] = useState<string | null>(null)
+  const [isVideoTabSelectionPending, setIsVideoTabSelectionPending] = useState(false)
+  const shouldAnimateRecordingLayoutRef = useRef(true)
+
+  const enterRecordingStep = useCallback(() => {
+    shouldAnimateRecordingLayoutRef.current = true
+    if (!limitedMode) {
+      setShouldRenderRecordingNotesPanel(true)
+      recordingExpandProgress.setValue(0)
+      recordingShiftProgress.setValue(0)
+      recordingNotesRevealProgress.setValue(0)
+    }
+    setStep('recording')
+  }, [limitedMode, recordingExpandProgress, recordingNotesRevealProgress, recordingShiftProgress, setShouldRenderRecordingNotesPanel, setStep])
+
   useEffect(() => {
     if (!recorder.errorMessage) return
     showErrorToast(recorder.errorMessage, 'Opnemen is mislukt. Probeer het opnieuw.')
@@ -307,10 +321,12 @@ export function useNewInputModalController({
     setRecordingNotes([])
     setRecordingNoteDraft('')
     setEditingRecordingNoteId(null)
+    setIsVideoTabSelectionPending(false)
     setShouldRenderRecordingNotesPanel(false)
     recordingExpandProgress.setValue(0)
     recordingShiftProgress.setValue(0)
     recordingNotesRevealProgress.setValue(0)
+    shouldAnimateRecordingLayoutRef.current = true
     hasAutoStartedRecordingRef.current = false
     hasAutoSubmittedRecordingRef.current = false
     activeMeetingRecordingRef.current = null
@@ -325,14 +341,14 @@ export function useNewInputModalController({
     setSelectedOption(initialOption)
     setInputTitle(buildDefaultInputTitle(initialOption))
     if (initialOption === 'gespreksverslag') {
-      setStep('recording')
+      enterRecordingStep()
       setSelectedOptionGroup('gespreksverslag')
       return
     }
     setSelectedOptionGroup('gesprek')
     setHasRecordingConsent(false)
     setStep('consent')
-  }, [initialOption, limitedMode, restoreDraftFromSubscriptionReturn, visible])
+  }, [enterRecordingStep, initialOption, limitedMode, restoreDraftFromSubscriptionReturn, visible])
   useEffect(() => {
     if (!visible) return
     if (!initialQuickAction) return
@@ -353,7 +369,7 @@ export function useNewInputModalController({
       setSelectedOptionGroup('gespreksverslag')
       setOpenOptionGroup(null)
       setInputTitle(limitedMode ? buildDefaultInputTitle('gespreksverslag') : 'Voortgangsverslag')
-      setStep('recording')
+      enterRecordingStep()
       return
     }
 
@@ -361,8 +377,8 @@ export function useNewInputModalController({
       setSelectedOption('schrijven')
       setSelectedOptionGroup(null)
       setOpenOptionGroup(null)
-      setInputTitle('Gespreksverslag')
-      setStep('select')
+      setInputTitle('Samenvatting')
+      void createAndOpenWrittenInput()
       return
     }
 
@@ -371,7 +387,8 @@ export function useNewInputModalController({
       setSelectedOptionGroup('gesprek')
       setOpenOptionGroup(null)
       setInputTitle('Video call')
-      setStep('select')
+      setHasRecordingConsent(false)
+      setStep('consent')
       return
     }
 
@@ -391,7 +408,7 @@ export function useNewInputModalController({
       setInputTitle('Document uploaden')
       setStep('upload')
     }
-  }, [initialQuickAction, limitedMode, restoreDraftFromSubscriptionReturn, setHasRecordingConsent, setInputTitle, setOpenOptionGroup, setSelectedOption, setSelectedOptionGroup, setStep, visible])
+  }, [enterRecordingStep, initialQuickAction, limitedMode, restoreDraftFromSubscriptionReturn, setHasRecordingConsent, setInputTitle, setOpenOptionGroup, setSelectedOption, setSelectedOptionGroup, setStep, visible])
 
   useEffect(() => {
     if (!visible) return
@@ -442,7 +459,7 @@ export function useNewInputModalController({
     const isDocumentMode = selectedOption === 'upload_document'
     if (isDocumentMode) {
       if (!isSupportedDocumentFile(file)) {
-        showErrorToast('Alleen PDF en DOCX worden ondersteund.')
+        showErrorToast('Alleen PDF, DOC en DOCX worden ondersteund.')
         return
       }
       setSelectedAudioFile(file)
@@ -786,7 +803,7 @@ export function useNewInputModalController({
   const isCompactFooter = limitedMode || windowWidth <= 520
   const isCompactConsent = limitedMode || (step === 'consent' && windowWidth <= 520)
   const gesprekOptionLabel = 'Gesprek opnemen'
-  const gespreksverslagOptionLabel = 'Gespreksverslag opnemen'
+  const gespreksverslagOptionLabel = 'Samenvatting opnemen'
   const isInputTitleEmpty = sessionTitle.trim().length === 0
   const selectedUploadIsDocument = selectedOption === 'upload_document' || isSupportedDocumentFile(selectedAudioFile)
   const isVideoRecordingUnsupported = selectedOption === 'record-video' && (!recorder.isSupported || !recorder.isDisplayCaptureSupported)
@@ -794,6 +811,7 @@ export function useNewInputModalController({
     (step === 'upload' && (!selectedAudioFile || !!uploadFileDurationWarning)) ||
     (!selectedOption && step === 'select' && !limitedMode) ||
     (step === 'select' && selectedOption === 'record-video' && !selectedClient?.id) ||
+    (step === 'consent' && selectedOption === 'record-video' && isVideoTabSelectionPending) ||
     (step === 'select' && isVideoRecordingUnsupported) ||
     (step === 'consent' && !hasRecordingConsent) ||
     (step === 'recorded' && ((selectedUploadIsDocument ? false : !audioForTranscription) || isInputTitleEmpty)) ||
@@ -814,7 +832,6 @@ export function useNewInputModalController({
   const minimizeScaleY = 40 / Math.max(1, modalHeight)
   const dropdownSafeBottom = 12
   const defaultDropdownMaxHeight = Math.max(120, windowHeight - modalTop - 72 - dropdownSafeBottom)
-
   useEffect(() => {
     if (!visible || limitedMode) return
     if (isReducedMotionEnabled) {
@@ -825,63 +842,47 @@ export function useNewInputModalController({
       return
     }
     if (isDesktopRecordingStep) {
-      setShouldRenderRecordingNotesPanel(false)
+      if (!shouldAnimateRecordingLayoutRef.current) {
+        recordingShiftProgress.setValue(1)
+        recordingExpandProgress.setValue(1)
+        recordingNotesRevealProgress.setValue(1)
+        setShouldRenderRecordingNotesPanel(true)
+        shouldAnimateRecordingLayoutRef.current = true
+        return
+      }
       recordingShiftProgress.stopAnimation()
       recordingExpandProgress.stopAnimation()
       recordingNotesRevealProgress.stopAnimation()
       recordingShiftProgress.setValue(0)
       recordingExpandProgress.setValue(0)
       recordingNotesRevealProgress.setValue(0)
-      Animated.timing(recordingShiftProgress, {
-        toValue: 1,
-        duration: 220,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }).start(({ finished }) => {
-        if (!finished) return
-        setShouldRenderRecordingNotesPanel(true)
-        Animated.parallel([
-          Animated.timing(recordingExpandProgress, {
-            toValue: 1,
-            duration: 220,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: false,
-          }),
-          Animated.timing(recordingNotesRevealProgress, {
-            toValue: 1,
-            duration: 240,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: false,
-          }),
-        ]).start()
-      })
+      setShouldRenderRecordingNotesPanel(true)
+      Animated.parallel([
+        Animated.timing(recordingShiftProgress, {
+          toValue: 1,
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+        Animated.timing(recordingExpandProgress, {
+          toValue: 1,
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+        Animated.timing(recordingNotesRevealProgress, {
+          toValue: 1,
+          duration: 240,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+      ]).start()
       return
     }
-
-    Animated.sequence([
-      Animated.timing(recordingNotesRevealProgress, {
-        toValue: 0,
-        duration: 120,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: false,
-      }),
-      Animated.parallel([
-        Animated.timing(recordingExpandProgress, {
-          toValue: 0,
-          duration: 220,
-          easing: Easing.inOut(Easing.cubic),
-          useNativeDriver: false,
-        }),
-        Animated.timing(recordingShiftProgress, {
-          toValue: 0,
-          duration: 220,
-          easing: Easing.inOut(Easing.cubic),
-          useNativeDriver: false,
-        }),
-      ]),
-    ]).start(() => {
-      setShouldRenderRecordingNotesPanel(false)
-    })
+    recordingShiftProgress.setValue(0)
+    recordingExpandProgress.setValue(0)
+    recordingNotesRevealProgress.setValue(0)
+    setShouldRenderRecordingNotesPanel(false)
   }, [
     isDesktopRecordingStep,
     isReducedMotionEnabled,
@@ -945,7 +946,7 @@ export function useNewInputModalController({
       setOpenOptionGroup(null)
       setInputTitle(limitedMode ? buildDefaultInputTitle('gespreksverslag') : 'Voortgangsverslag')
       if (limitedMode) {
-        setStep('recording')
+        enterRecordingStep()
       }
       return
     }
@@ -960,7 +961,7 @@ export function useNewInputModalController({
       setSelectedOption('schrijven')
       setSelectedOptionGroup(null)
       setOpenOptionGroup(null)
-      setInputTitle('Gespreksverslag')
+      setInputTitle('Samenvatting')
       return
     }
     if (option === 'upload_audio') {
@@ -978,6 +979,20 @@ export function useNewInputModalController({
     }
   }
 
+  function startVideoMeetingRecordingFromConsent() {
+    if (isVideoTabSelectionPending) return
+    setIsVideoTabSelectionPending(true)
+    hasAutoStartedRecordingRef.current = true
+    void startVideoMeetingRecording().catch((error) => {
+      setIsVideoTabSelectionPending(false)
+      hasAutoStartedRecordingRef.current = false
+      activeMeetingRecordingRef.current = null
+      const message = mapMeetingRecordingErrorMessage(error)
+      showErrorToast(message, 'Starten van video-opname is mislukt.')
+      setStep('select')
+    })
+  }
+
   function handlePrimaryActionPress() {
     runPrimaryFooterAction({
       hasRecordingConsent,
@@ -993,8 +1008,15 @@ export function useNewInputModalController({
       handleClose,
       onOpenGeschrevenGespreksverslag,
       saveSelectedFileToAudioStore,
+      startVideoMeetingRecordingFromConsent,
       setHasRecordingConsent: (value) => setHasRecordingConsent(value),
-      setStep,
+      setStep: (nextStep) => {
+        if (nextStep === 'recording') {
+          enterRecordingStep()
+          return
+        }
+        setStep(nextStep)
+      },
       clearSubscriptionReturnDraft,
     })
   }
@@ -1034,7 +1056,7 @@ export function useNewInputModalController({
         }
       }
       setIsInsufficientMinutesWarningVisible(false)
-      onOpenMySubscription()
+      onOpenMySubscription({ returnClientId: selectedClient?.id ?? selectedClientId })
     })()
   }
 
@@ -1114,7 +1136,7 @@ export function useNewInputModalController({
     input.type = 'file'
     const isDocumentMode = selectedOption === 'upload_document'
     input.accept = isDocumentMode
-      ? '.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ? '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
       : 'audio/*,.mp3,.m4a,.mp4,.aac,.wav,.ogg,.opus,.webm,.flac'
     input.onchange = () => {
       const file = input.files?.[0]
@@ -1226,6 +1248,7 @@ export function useNewInputModalController({
     if (activeMeetingRecordingRef.current) {
       void cancelVideoMeetingRecording()
     }
+    setIsVideoTabSelectionPending(false)
     recorder.reset()
     setAudioPreviewUrl(null)
     setSelectedAudioFile(null)
@@ -1308,7 +1331,6 @@ export function useNewInputModalController({
         updatedAtUnixMs: now,
       })
       await refreshAppData()
-      onOpenInput(response.inputId)
       void clearSubscriptionReturnDraft()
       handleClose()
       return true
@@ -1381,12 +1403,15 @@ export function useNewInputModalController({
       options?.sessionKind === 'intake' || values.kind === 'recording' || values.kind === 'upload'
 
     if (values.kind === 'recording' && recordingNotes.length > 0) {
-      for (const note of recordingNotes) {
-        createNote(createdInputId, {
-          title: formatTimeLabel(note.seconds),
-          text: note.text,
-        })
-      }
+      const bundledNotesText = [...recordingNotes]
+        .sort((left, right) => left.seconds - right.seconds)
+        .map((note) => `[${formatTimeLabel(note.seconds)}] ${note.text}`)
+        .join('\n\n')
+      const recordingName = sessionTitle.trim() || 'de opname'
+      createNote(createdInputId, {
+        title: `Notities tijdens ${recordingName}`,
+        text: bundledNotesText,
+      })
     }
 
     try {
@@ -1487,13 +1512,11 @@ export function useNewInputModalController({
       1,
       Math.ceil(values.kind === 'recording' ? resolvedRecordingDurationSeconds : audioDurationSeconds || 0),
     )
-    if (values.kind !== 'recording') {
-      const remainingSeconds = await readRemainingSecondsBeforeStart()
-      if (remainingSeconds !== null && remainingSeconds < requiredSeconds) {
-        setInsufficientMinutesContext({ kind: values.kind, remainingSeconds, requiredSeconds })
-        setIsInsufficientMinutesWarningVisible(true)
-        return false
-      }
+    const remainingSeconds = await readRemainingSecondsBeforeStart()
+    if (remainingSeconds !== null && remainingSeconds < requiredSeconds) {
+      setInsufficientMinutesContext({ kind: values.kind, remainingSeconds, requiredSeconds })
+      setIsInsufficientMinutesWarningVisible(true)
+      return false
     }
     return createAndOpenInputInternal(values, { ...options, audioForTranscription: resolvedAudioForTranscription })
   }
@@ -1573,6 +1596,38 @@ export function useNewInputModalController({
     }
   }, [showErrorToast])
 
+  const animateRecordingLayoutExit = useCallback((onComplete: () => void) => {
+    shouldAnimateRecordingLayoutRef.current = false
+    recordingNotesRevealProgress.stopAnimation()
+    recordingExpandProgress.stopAnimation()
+    recordingShiftProgress.stopAnimation()
+
+    Animated.parallel([
+      Animated.timing(recordingNotesRevealProgress, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: false,
+      }),
+      Animated.timing(recordingExpandProgress, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: false,
+      }),
+      Animated.timing(recordingShiftProgress, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: false,
+      }),
+    ]).start(({ finished }) => {
+      if (!finished) return
+      setShouldRenderRecordingNotesPanel(false)
+      onComplete()
+    })
+  }, [recordingExpandProgress, recordingNotesRevealProgress, recordingShiftProgress, setShouldRenderRecordingNotesPanel])
+
   const recordingFinishTransitionRef = useRef(0)
 
   const handleRecordingReady = useCallback((_payload: { blob: Blob; mimeType: string; durationSeconds: number }) => {
@@ -1598,46 +1653,16 @@ export function useNewInputModalController({
       return
     }
 
-    recordingNotesRevealProgress.stopAnimation()
-    recordingExpandProgress.stopAnimation()
-    recordingShiftProgress.stopAnimation()
-
-    Animated.sequence([
-      Animated.timing(recordingNotesRevealProgress, {
-        toValue: 0,
-        duration: 120,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: false,
-      }),
-      Animated.parallel([
-        Animated.timing(recordingExpandProgress, {
-          toValue: 0,
-          duration: 220,
-          easing: Easing.inOut(Easing.cubic),
-          useNativeDriver: false,
-        }),
-        Animated.timing(recordingShiftProgress, {
-          toValue: 0,
-          duration: 220,
-          easing: Easing.inOut(Easing.cubic),
-          useNativeDriver: false,
-        }),
-      ]),
-    ]).start(({ finished }) => {
-      if (!finished) return
+    animateRecordingLayoutExit(() => {
       if (recordingFinishTransitionRef.current !== transitionToken) return
-      setShouldRenderRecordingNotesPanel(false)
       finalizeToRecorded()
     })
   }, [
+    animateRecordingLayoutExit,
     isReducedMotionEnabled,
     isMinimized,
     limitedMode,
-    recordingExpandProgress,
-    recordingNotesRevealProgress,
-    recordingShiftProgress,
     selectedOption,
-    setShouldRenderRecordingNotesPanel,
     setStep,
     stopVideoMeetingRecordingDraft,
     visible,
@@ -1671,6 +1696,27 @@ export function useNewInputModalController({
     step,
     visible,
   })
+
+  useEffect(() => {
+    if (!visible) return
+    if (!isVideoTabSelectionPending) return
+    if (selectedOption !== 'record-video') {
+      setIsVideoTabSelectionPending(false)
+      return
+    }
+    if (step !== 'consent') return
+    if (recorder.status === 'recording') {
+      setIsVideoTabSelectionPending(false)
+      enterRecordingStep()
+      return
+    }
+    if (recorder.status === 'error') {
+      setIsVideoTabSelectionPending(false)
+      hasAutoStartedRecordingRef.current = false
+      void cancelVideoMeetingRecording()
+      setStep('select')
+    }
+  }, [cancelVideoMeetingRecording, enterRecordingStep, isVideoTabSelectionPending, recorder.status, selectedOption, setStep, step, visible])
 
   useEffect(() => {
     if (!visible) return
@@ -1736,17 +1782,7 @@ export function useNewInputModalController({
       return
     }
     setStep('recording_canceling')
-    recordingNotesRevealProgress.stopAnimation()
-    recordingExpandProgress.stopAnimation()
-    recordingShiftProgress.stopAnimation()
-    Animated.timing(recordingNotesRevealProgress, {
-      toValue: 0,
-      duration: 120,
-      easing: Easing.in(Easing.cubic),
-      useNativeDriver: false,
-    }).start(({ finished }) => {
-      if (!finished) return
-      setShouldRenderRecordingNotesPanel(false)
+    animateRecordingLayoutExit(() => {
       setStep('select')
     })
   }
@@ -1775,6 +1811,7 @@ export function useNewInputModalController({
       requestClose()
       return
     }
+    setIsVideoTabSelectionPending(false)
     setHasRecordingConsent(false)
     setStep('select')
   }

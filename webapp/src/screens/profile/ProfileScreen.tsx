@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
+import { Pressable } from 'react-native'
 
 import { Text } from '../../ui/Text'
 import { TextInput } from '../../ui/inputs/TextInput'
@@ -7,6 +8,8 @@ import { useLocalAppData } from '../../storage/LocalAppDataProvider'
 import { colors } from '../../design/theme/colors'
 import { fontSizes } from '../../design/tokens/fontSizes'
 import { normalizeEmailValue, normalizePhoneValue } from '../organization/viewModels/inputFormatters'
+import { LogoutIcon } from '../../icons/LogoutIcon'
+import { TrashIcon } from '../../icons/TrashIcon'
 
 function capitalizeFirstLetter(value: string): string {
   const raw = String(value || '')
@@ -18,7 +21,7 @@ function placeholderForProfileLabel(label: string): string {
   if (label === 'Naam') return 'Bijv. Jan de Vries'
   if (label === 'Functie') return 'Bijv. Re-integratiecoach'
   if (label === 'Telefoonnummer') return 'Bijv. 0612345678'
-  if (label === 'E-mailadres') return 'Bijv. naam@coachscribe.nl'
+  if (label === 'E-mailadres') return 'jan@voorbeeld.nl'
   return 'Typ uw antwoord'
 }
 
@@ -49,9 +52,24 @@ function LabeledInput({ label, value, onChangeText, onBlur }: LabeledInputProps)
   )
 }
 
-export function ProfileScreen() {
+type ProfileScreenProps = {
+  accountName?: string | null
+  accountEmail?: string | null
+  onLogout?: () => void
+  onDeleteAccount?: () => void
+  isDeleteAccountBusy?: boolean
+}
+
+export function ProfileScreen({
+  accountName = null,
+  accountEmail = null,
+  onLogout,
+  onDeleteAccount,
+  isDeleteAccountBusy = false,
+}: ProfileScreenProps) {
   const { data, updateUserSettings } = useLocalAppData()
   const userSettings = data.userSettings
+  const accountIdentity = String(accountName || '').trim() || String(accountEmail || '').trim() || 'Onbekend account'
 
   const [nameDraft, setNameDraft] = useState(String(userSettings.name || ''))
   const [roleDraft, setRoleDraft] = useState(String(userSettings.role || ''))
@@ -93,7 +111,7 @@ export function ProfileScreen() {
     <ScrollView style={styles.screenScroll} contentContainerStyle={styles.screenScrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.container}>
         <Text isSemibold style={styles.headerTitle}>
-          Mijn profiel
+          Mijn account
         </Text>
         <View style={styles.formSection}>
           <View style={styles.formCard}>
@@ -122,6 +140,35 @@ export function ProfileScreen() {
                 onChangeText={(nextValue) => setEmailDraft(normalizeEmailValue(nextValue))}
                 onBlur={() => persistEmail(emailDraft)}
               />
+            </View>
+          </View>
+          <View style={styles.accountCard}>
+            <Text isSemibold style={styles.accountTitle}>Ingelogd als</Text>
+            <Text isBold style={styles.accountIdentity}>{accountIdentity}</Text>
+            {accountName && accountEmail ? <Text style={styles.accountEmail}>{accountEmail}</Text> : null}
+            <View style={styles.accountActions}>
+              <Pressable onPress={onLogout} style={({ hovered }) => [styles.secondaryWideButton, hovered ? styles.secondaryWideButtonHovered : undefined]}>
+                <View style={styles.secondaryWideButtonContent}>
+                  <LogoutIcon size={18} color={colors.textStrong} />
+                  <Text isSemibold style={styles.secondaryWideButtonText}>Uitloggen</Text>
+                </View>
+              </Pressable>
+              <Pressable
+                onPress={onDeleteAccount}
+                style={({ hovered }) => [
+                  styles.dangerWideButton,
+                  hovered ? styles.dangerWideButtonHovered : undefined,
+                  isDeleteAccountBusy ? styles.actionButtonDisabled : undefined,
+                ]}
+                disabled={isDeleteAccountBusy}
+              >
+                <View style={styles.dangerWideButtonContent}>
+                  <TrashIcon color={colors.selected} size={18} />
+                  <Text isSemibold style={styles.dangerWideButtonText}>
+                    {isDeleteAccountBusy ? 'Account verwijderen...' : 'Account verwijderen'}
+                  </Text>
+                </View>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -162,6 +209,89 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
     ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ),
+  },
+  accountCard: {
+    width: '100%',
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    gap: 10,
+  },
+  accountTitle: {
+    fontSize: 13,
+    lineHeight: 17,
+    color: colors.textSecondary,
+  },
+  accountIdentity: {
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.textStrong,
+  },
+  accountEmail: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.text,
+  },
+  accountActions: {
+    width: '100%',
+    maxWidth: 360,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 8,
+    marginTop: 6,
+  },
+  actionButtonDisabled: {
+    opacity: 0.6,
+  },
+  secondaryWideButton: {
+    width: '100%',
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryWideButtonHovered: {
+    backgroundColor: colors.hoverBackground,
+  },
+  secondaryWideButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  secondaryWideButtonText: {
+    fontSize: 13,
+    lineHeight: 16,
+    color: colors.textStrong,
+  },
+  dangerWideButton: {
+    width: '100%',
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#FCE3F2',
+    borderWidth: 1,
+    borderColor: '#F2BBD9',
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dangerWideButtonHovered: {
+    backgroundColor: '#F8D2EA',
+  },
+  dangerWideButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dangerWideButtonText: {
+    fontSize: 13,
+    lineHeight: 16,
+    color: colors.selected,
   },
   fieldGrid: {
     flexDirection: 'row',

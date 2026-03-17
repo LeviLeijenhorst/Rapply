@@ -49,7 +49,7 @@ const report: StructuredReport = {
       fieldId: 'rp_werkfit_5_3',
       label: 'Urenverdeling',
       fieldType: 'ai',
-      answer: { activiteiten: [{ activiteit: 'Netwerk', uren: 2 }, { activiteit: 'Sollicitatie', uren: 3 }] },
+      answer: { activiteiten: [{ activiteit: 'Netwerk', uren: 12.5 }, { activiteit: 'Sollicitatie', uren: 12.55 }] },
       factualBasis: '',
       reasoning: '',
       confidence: 0.6,
@@ -90,12 +90,31 @@ test('structured report export builds deterministic text and UWV placeholder con
   assert.equal(context['5_1'], '{"keuzes":[1,3]}')
   assert.equal(context['rp_werkfit_5_1'], '{"keuzes":[1,3]}')
   assert.equal(context['5_3_1_re_integratieactiviteit'], 'Netwerk')
-  assert.equal(context['5_3_1_aantal_begeleidingsuren'], '2')
+  assert.equal(context['5_3_1_aantal_begeleidingsuren'], '12.5')
   assert.equal(context['5_3_2_re_integratieactiviteit'], 'Sollicitatie')
-  assert.equal(context['5_3_2_aantal_begeleidingsuren'], '3')
-  assert.equal(context['5_3_totaal_aantal_begeleidingsuren'], '5')
+  assert.equal(context['5_3_2_aantal_begeleidingsuren'], '12.55')
+  assert.equal(context['5_3_totaal_aantal_begeleidingsuren'], '25.05')
   assert.equal(context['8_2_aantal_uren'], '6')
   assert.match(context['8_3b'], /specialistisch arbeidsdeskundig advies/i)
   assert.equal(context['3_4_bezoek_postcode'], '1011AB')
   assert.equal(context['3_4_post_plaats'], 'Rotterdam')
+})
+
+test('structured export parses address composite fields with mixed casing and spacing', () => {
+  const reportWithSpacedAddress: StructuredReport = {
+    ...report,
+    fields: {
+      ...report.fields,
+      rp_werkfit_3_4: {
+        ...report.fields.rp_werkfit_3_4,
+        answer: 'bezoek postcode: 1111AA ; bezoek plaats: Utrecht ; post postcode: 2222BB ; post plaats: Den Haag',
+      },
+    },
+  }
+
+  const context = buildStructuredExportContext(template, reportWithSpacedAddress)
+  assert.equal(context['3_4_bezoek_postcode'], '1111AA')
+  assert.equal(context['3_4_bezoek_plaats'], 'Utrecht')
+  assert.equal(context['3_4_post_postcode'], '2222BB')
+  assert.equal(context['3_4_post_plaats'], 'Den Haag')
 })

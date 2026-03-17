@@ -47,7 +47,6 @@ export function InputScreen(props: InputScreenProps) {
     handleRegenerateInputSnippets,
     handleCreateSnippet,
     handleUpdateSnippetStatus,
-    handleSaveSnippetLabels,
     handleSaveSnippetText,
     handleDeleteSnippet,
     handleSaveSummary,
@@ -88,7 +87,6 @@ export function InputScreen(props: InputScreenProps) {
               onRegenerate={handleRegenerateInputSnippets}
               onCreateSnippet={handleCreateSnippet}
               onUpdateSnippetStatus={handleUpdateSnippetStatus}
-              onSaveSnippetLabels={handleSaveSnippetLabels}
               onSaveSnippetText={handleSaveSnippetText}
               onDeleteSnippet={handleDeleteSnippet}
             />

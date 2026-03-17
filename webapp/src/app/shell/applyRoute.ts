@@ -15,7 +15,7 @@ type ApplyRouteSetters = {
   setIsAdminScreenOpen: Dispatch<SetStateAction<boolean>>
   setIsAdminContactScreenOpen: Dispatch<SetStateAction<boolean>>
   setIsAdminWachtlijstScreenOpen: Dispatch<SetStateAction<boolean>>
-  setOverlayScreenKey: Dispatch<SetStateAction<'archief' | null>>
+  setOverlayScreenKey: Dispatch<SetStateAction<null>>
   setSelectedSessieId: Dispatch<SetStateAction<string | null>>
   setInputIdPendingTemplatePicker: Dispatch<SetStateAction<string | null>>
   setSelectedClientId: Dispatch<SetStateAction<string | null>>
@@ -55,24 +55,6 @@ export function applyRouteToShell(params: ApplyRouteParams): void {
   if (route.kind !== 'nieuwe-rapportage' && route.kind !== 'rapportage') {
     setRapportageScreenMode('controleren')
     setRapportageEditInputId(null)
-  }
-
-  if (route.kind === 'archief') {
-    setIsNieuweRapportageOpen(false)
-    setIsRecordPageOpen(false)
-    setIsNewClientPageOpen(false)
-    setIsEndToEndEncryptiePageOpen(false)
-    setSelectedSidebarItemKey('archief')
-    setIsAdminScreenOpen(false)
-    setIsAdminContactScreenOpen(false)
-    setIsAdminWachtlijstScreenOpen(false)
-    setOverlayScreenKey('archief')
-    setSelectedSessieId(null)
-    setInputIdPendingTemplatePicker(null)
-    setSelectedClientId(null)
-    setSelectedTrajectoryId(null)
-    setInputOriginRoute(null)
-    return
   }
 
   if (route.kind === 'admin' || route.kind === 'admin-contact' || route.kind === 'admin-wachtlijst') {

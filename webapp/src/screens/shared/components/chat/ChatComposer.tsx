@@ -17,6 +17,7 @@ type Props = {
   onPressEscape?: () => void
   showDisclaimer?: boolean
   sendIconVariant?: 'send' | 'arrow'
+  focusTrigger?: number
 }
 
 const tabAutocompleteSuggestions = [
@@ -46,6 +47,7 @@ export function ChatComposer({
   onPressEscape,
   showDisclaimer = true,
   sendIconVariant = 'send',
+  focusTrigger,
 }: Props) {
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
   const [isScrollable, setIsScrollable] = useState(false)
@@ -103,9 +105,15 @@ export function ChatComposer({
 
   useEffect(() => {
     if (!shouldAutoFocus) return
-    const id = setTimeout(() => inputRef.current?.focus(), 120)
-    return () => clearTimeout(id)
+    const timeouts = [0, 120, 260].map((delay) => setTimeout(() => inputRef.current?.focus(), delay))
+    return () => timeouts.forEach((id) => clearTimeout(id))
   }, [autoFocusKey, shouldAutoFocus])
+
+  useEffect(() => {
+    if (typeof focusTrigger !== 'number') return
+    const id = setTimeout(() => inputRef.current?.focus(), 0)
+    return () => clearTimeout(id)
+  }, [focusTrigger])
 
   function getExplicitLineCount(rawValue: string): number {
     return Math.max(1, String(rawValue || '').split('\n').length)

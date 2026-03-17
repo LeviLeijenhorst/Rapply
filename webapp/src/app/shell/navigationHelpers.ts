@@ -9,7 +9,7 @@ type MainContentKeyParams = {
   rapportageScreenMode: 'controleren' | 'bewerken'
   isRecordPageOpen: boolean
   isNewClientPageOpen: boolean
-  overlayScreenKey: 'archief' | null
+  overlayScreenKey: null
   selectedClientId: string | null
   selectedSessieId: string | null
   selectedSidebarItemKey: SidebarItemKey
@@ -40,7 +40,7 @@ type CurrentRouteParams = {
   isNieuweRapportageOpen: boolean
   isRecordPageOpen: boolean
   isNewClientPageOpen: boolean
-  overlayScreenKey: 'archief' | null
+  overlayScreenKey: null
   selectedClientId: string | null
   selectedSessieId: string | null
   selectedSidebarItemKey: SidebarItemKey
@@ -48,7 +48,6 @@ type CurrentRouteParams = {
 }
 
 export function getCurrentRouteFromSelection(params: CurrentRouteParams): RouteState {
-  if (params.overlayScreenKey === 'archief') return { kind: 'archief' }
   if (params.isAdminScreenOpen) return { kind: 'admin' }
   if (params.isAdminContactScreenOpen) return { kind: 'admin-contact' }
   if (params.isAdminWachtlijstScreenOpen) return { kind: 'admin-wachtlijst' }

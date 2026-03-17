@@ -10,19 +10,22 @@ function createInput(params: {
   clientId: string
   inputType: Session["inputType"]
   createdAtUnixMs: number
+  title?: string
+  sourceText?: string | null
+  transcriptText?: string | null
 }): Session {
   return {
     id: params.id,
     clientId: params.clientId,
     trajectoryId: "trajectory-1",
-    title: "Input",
+    title: params.title ?? "Input",
     inputType: params.inputType,
-    sourceText: null,
+    sourceText: params.sourceText ?? null,
     sourceMimeType: null,
     audioUploadId: null,
     audioDurationSeconds: null,
     uploadFileName: null,
-    transcriptText: null,
+    transcriptText: params.transcriptText ?? null,
     summaryText: null,
     summaryStructured: null,
     transcriptionStatus: "done",
@@ -90,4 +93,27 @@ test("buildGroupedClientKnowledgeContext groups approved snippets by input type/
   assert.match(context, /Coach noteert voortgang\./)
   assert.match(context, /Extra context/)
   assert.doesNotMatch(context, /Niet tonen\./)
+})
+
+test("buildGroupedClientKnowledgeContext includes full uploaded document text without approved snippets", () => {
+  const context = buildGroupedClientKnowledgeContext({
+    clientId: "client-1",
+    inputs: [
+      createInput({
+        id: "input-doc-1",
+        clientId: "client-1",
+        inputType: "uploaded_document",
+        createdAtUnixMs: Date.parse("2026-03-10T09:00:00Z"),
+        title: "Arbeidsdeskundig Onderzoek",
+        transcriptText: "Pagina 1\nConclusie: client kan starten met opbouw in passend werk.",
+      }),
+    ],
+    snippets: [],
+    notes: [],
+  })
+
+  assert.match(context, /Ge.*pload document op/)
+  assert.match(context, /Documenttitel: Arbeidsdeskundig Onderzoek/)
+  assert.match(context, /Volledige documenttekst:/)
+  assert.match(context, /Conclusie: client kan starten met opbouw in passend werk\./)
 })

@@ -67,7 +67,6 @@ export type SnippetSectionProps = {
   onRegenerate?: () => void
   onCreateSnippet: (text: string) => void
   onUpdateSnippetStatus: (snippetId: string, status: SnippetStatus) => void
-  onSaveSnippetLabels: (snippetId: string, labels: string[]) => void
   onSaveSnippetText: (snippetId: string, text: string) => void
   onDeleteSnippet: (snippetId: string) => void
 }
@@ -100,6 +99,7 @@ export type ChatbotTabProps = {
   messages: ChatbotMessage[]
   composerValue: string
   isSending: boolean
+  shouldAutoFocus?: boolean
   onChangeComposerValue: (value: string) => void
   onSendMessage: () => void
   onClearChat: () => void

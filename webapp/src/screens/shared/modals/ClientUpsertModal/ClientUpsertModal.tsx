@@ -9,7 +9,7 @@ import { styles } from './ClientUpsertModal.styles'
 import type { ClientUpsertModalProps } from './ClientUpsertModal.types'
 import { capitalizeFirstCharacter, normalizeInitialsInput, sanitizePhoneInput } from './ClientUpsertModal.logic'
 
-export function ClientUpsertModal({ visible, mode, initialValues, trajectoryOptions = [], onClose, onSave }: ClientUpsertModalProps) {
+export function ClientUpsertModal({ visible, mode, initialValues, trajectoryOptions = [], onClose, onSave, onDelete }: ClientUpsertModalProps) {
   const [values, setValues] = useState<ClientUpsertValues>(initialValues)
 
   const containerRef = useRef<View | null>(null)
@@ -41,6 +41,7 @@ export function ClientUpsertModal({ visible, mode, initialValues, trajectoryOpti
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
   const title = mode === 'create' ? 'Client toevoegen' : 'Client bewerken'
   const primaryLabel = mode === 'create' ? 'Toevoegen' : 'Opslaan'
+  const canDelete = mode === 'edit' && typeof onDelete === 'function'
   const trimmedBsn = values.bsn.trim()
   const isBsnValid = trimmedBsn.length === 0 || /^\d{8,9}$/.test(trimmedBsn)
   const isSaveDisabled = values.firstName.trim().length === 0 || values.lastName.trim().length === 0 || !isBsnValid
@@ -135,24 +136,35 @@ export function ClientUpsertModal({ visible, mode, initialValues, trajectoryOpti
         </ScrollView>
 
         <View style={styles.footer}>
-          <Pressable onPress={onClose} style={({ hovered }) => [styles.footerSecondaryButton, hovered ? styles.footerSecondaryButtonHovered : undefined]}>
-            <Text isBold style={styles.footerSecondaryButtonText}>
-              Annuleren
-            </Text>
-          </Pressable>
-          <Pressable
-            disabled={isSaveDisabled}
-            onPress={() => onSave(values)}
-            style={({ hovered }) => [
-              styles.footerPrimaryButton,
-              isSaveDisabled ? styles.footerPrimaryButtonDisabled : undefined,
-              hovered && !isSaveDisabled ? styles.footerPrimaryButtonHovered : undefined,
-            ]}
-          >
-            <Text isBold style={styles.footerPrimaryButtonText}>
-              {primaryLabel}
-            </Text>
-          </Pressable>
+          {canDelete ? (
+            <Pressable onPress={onDelete} style={({ hovered }) => [styles.footerDeleteButton, hovered ? styles.footerDeleteButtonHovered : undefined]}>
+              <Text isBold style={styles.footerDeleteButtonText}>
+                Verwijderen
+              </Text>
+            </Pressable>
+          ) : (
+            <View />
+          )}
+          <View style={styles.footerActions}>
+            <Pressable onPress={onClose} style={({ hovered }) => [styles.footerSecondaryButton, hovered ? styles.footerSecondaryButtonHovered : undefined]}>
+              <Text isBold style={styles.footerSecondaryButtonText}>
+                Annuleren
+              </Text>
+            </Pressable>
+            <Pressable
+              disabled={isSaveDisabled}
+              onPress={() => onSave(values)}
+              style={({ hovered }) => [
+                styles.footerPrimaryButton,
+                isSaveDisabled ? styles.footerPrimaryButtonDisabled : undefined,
+                hovered && !isSaveDisabled ? styles.footerPrimaryButtonHovered : undefined,
+              ]}
+            >
+              <Text isBold style={styles.footerPrimaryButtonText}>
+                {primaryLabel}
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </Modal>

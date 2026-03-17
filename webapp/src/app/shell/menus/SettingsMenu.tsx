@@ -1,10 +1,8 @@
 import React from 'react'
 
 import { ActionMenu } from '../../../ui/overlays/ActionMenu'
-import { MijnAccountIcon } from '../../../icons/MijnAccountIcon'
 import { DeelCoachScribeIcon } from '../../../icons/DeelCoachScribeIcon'
 import { PrivacyIcon } from '../../../icons/PrivacyIcon'
-import { ArchiefMenuIcon } from '../../../icons/ArchiefMenuIcon'
 import { FeedbackIcon } from '../../../icons/FeedbackIcon'
 import { ContactIcon } from '../../../icons/ContactIcon'
 import { colors } from '../../../design/theme/colors'
@@ -15,9 +13,7 @@ type Props = {
   visible: boolean
   anchorPoint: AnchorPoint | null
   onClose: () => void
-  onOpenAccount: () => void
   onOpenSubscription: () => void
-  onOpenArchive: () => void
   onOpenFeedback: () => void
   onOpenContact: () => void
   onOpenShare: () => void
@@ -29,9 +25,7 @@ export function SettingsMenu({
   visible,
   anchorPoint,
   onClose,
-  onOpenAccount,
   onOpenSubscription,
-  onOpenArchive,
   onOpenFeedback,
   onOpenContact,
   onOpenShare,
@@ -43,39 +37,6 @@ export function SettingsMenu({
   void showSubscriptionItem
 
   const items = [
-    {
-      key: 'account',
-      label: 'Account',
-      icon: <MijnAccountIcon color={menuIconColor} />,
-      onPress: onOpenAccount,
-    },
-    // Tijdelijk uitgezet:
-    // ...(showSubscriptionItem
-    //   ? [
-    //       {
-    //         key: 'subscription',
-    //         label: 'Mijn abonnement',
-    //         icon: <MijnAbonnementIcon color={menuIconColor} />,
-    //         onPress: onOpenSubscription,
-    //       },
-    //     ]
-    //   : []),
-    // {
-    //   key: 'theme',
-    //   label: 'Donkere modus',
-    //   icon: <SettingsIcon color={menuIconColor} size={18} />,
-    //   badgeLabel: themeBadgeLabel,
-    //   onPress: () => {
-    //     toggleMode()
-    //     onClose()
-    //   },
-    // },
-    {
-      key: 'archive',
-      label: 'Archief',
-      icon: <ArchiefMenuIcon color={menuIconColor} strokeWidth={1.25} />,
-      onPress: onOpenArchive,
-    },
     {
       key: 'feedback',
       label: 'Feedback',

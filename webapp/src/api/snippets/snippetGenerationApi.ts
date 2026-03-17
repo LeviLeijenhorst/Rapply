@@ -9,6 +9,10 @@ type SnippetTextResponse = {
   text?: string
 }
 
+type SnippetFieldClassificationResponse = {
+  fields?: unknown[]
+}
+
 type RemoteSnippet = {
   id?: unknown
   clientId?: unknown
@@ -105,6 +109,20 @@ export async function extractSnippets(params: {
     transcript: params.transcript,
     itemDate: params.itemDate,
   })
+}
+
+export async function classifySnippetFields(params: {
+  snippetText: string
+  sourceInputType?: string
+}): Promise<string[]> {
+  const response = await callSecureApi<SnippetFieldClassificationResponse>('/ai/snippet-classify-fields', {
+    transcript: params.snippetText,
+    ...(params.sourceInputType ? { sourceInputType: params.sourceInputType } : {}),
+  })
+  const fields = Array.isArray(response?.fields) ? response.fields : []
+  return fields
+    .map((value) => String(value || '').trim())
+    .filter((value, index, array) => value.length > 0 && array.indexOf(value) === index)
 }
 
 export async function aiEditSnippetText(params: {

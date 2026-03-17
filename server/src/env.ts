@@ -81,6 +81,8 @@ export const env = {
   azureOpenAiReportDeployment: optionalString("AZURE_OPENAI_REPORT_DEPLOYMENT") || "",
   azureOpenAiChatDeployment: optionalString("AZURE_OPENAI_CHAT_DEPLOYMENT") || "",
   azureOpenAiSummaryDeployment: optionalString("AZURE_OPENAI_SUMMARY_DEPLOYMENT") || "",
+  azureDocumentIntelligenceEndpoint: optionalString("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT") || "",
+  azureDocumentIntelligenceKey: optionalString("AZURE_DOCUMENT_INTELLIGENCE_KEY") || "",
   azureSpeechKey: optionalString("AZURE_SPEECH_KEY") || "",
   azureSpeechRegion: optionalString("AZURE_SPEECH_REGION") || "",
   speechmaticsApiKey: optionalString("SPEECHMATICS_API_KEY") || "",

@@ -19,8 +19,19 @@ function parseLegacyActivityDistribution(value: string): Array<{ activiteit: str
     .map((part) => {
       const match = part.match(/^(.*?)\s*\(\s*([0-9]+(?:[.,][0-9]+)?)\s*(?:uur|uren)?\s*\)\s*$/i)
       if (!match) return { activiteit: part, uren: 0 }
-      return { activiteit: normalizeWhitespace(match[1]), uren: Number(String(match[2]).replace(',', '.')) || 0 }
+      return { activiteit: normalizeWhitespace(match[1]), uren: parseNormalizedDecimal(match[2]) }
     })
+}
+
+function parseNormalizedDecimal(value: unknown): number {
+  const numeric = typeof value === 'number' ? value : Number(String(value ?? '').replace(',', '.'))
+  if (!Number.isFinite(numeric)) return 0
+  return Math.round(numeric * 100) / 100
+}
+
+function formatNormalizedDecimal(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return ''
+  return String(value.toFixed(2)).replace(/\.?0+$/, '')
 }
 
 function parseAddressComposite(value: string): {
@@ -54,9 +65,9 @@ function readNumericChoiceText(fieldId: string, value: number): string {
   const mappings: Record<string, Record<number, string>> = {
     rp_werkfit_8_1: { 1: 'Ja', 2: 'Nee' },
     er_werkfit_4_2: {
-      1: "Beëindiging re-integratiedienst 'Werkfit maken' naar aanleiding van evaluatiemoment",
+      1: "Be\u00ebindiging re-integratiedienst 'Werkfit maken' naar aanleiding van het evaluatiemoment",
       2: 'Voortijdige terugmelding',
-      3: "Beëindiging re-integratiedienst 'Werkfit maken'",
+      3: "Be\u00ebindiging re-integratiedienst 'Werkfit maken'",
     },
     er_werkfit_6_1: {
       1: 'Ziekte langer dan 4 weken (klant met een Ziektewet-uitkering)',
@@ -105,23 +116,23 @@ export function buildStructuredExportContext(template: PipelineTemplate, report:
     for (let index = 0; index < 5; index += 1) {
       const row = asObject(rp53Rows[index] ?? null)
       const activiteit = row ? normalizeWhitespace(String(row.activiteit ?? '')) : normalizeWhitespace(String((rp53Rows[index] as any)?.activiteit ?? ''))
-      const uren = row ? Number(row.uren ?? 0) : Number((rp53Rows[index] as any)?.uren ?? 0)
+      const uren = row ? parseNormalizedDecimal(row.uren ?? 0) : parseNormalizedDecimal((rp53Rows[index] as any)?.uren ?? 0)
       context[`5_3_${index + 1}_re_integratieactiviteit`] = activiteit
-      context[`5_3_${index + 1}_aantal_begeleidingsuren`] = Number.isFinite(uren) && uren > 0 ? String(uren) : ''
+      context[`5_3_${index + 1}_aantal_begeleidingsuren`] = formatNormalizedDecimal(uren)
       if (Number.isFinite(uren)) total += uren
     }
-    context['5_3_totaal_aantal_begeleidingsuren'] = total > 0 ? String(total).replace(/\.0$/, '') : ''
+    context['5_3_totaal_aantal_begeleidingsuren'] = formatNormalizedDecimal(parseNormalizedDecimal(total))
   }
 
   const rp82 = asObject(readAnswer(report.fields, 'rp_werkfit_8_2'))
   if (rp82) {
-    context['8_2_aantal_uren'] = String(rp82.uren ?? '')
+    context['8_2_aantal_uren'] = formatNormalizedDecimal(parseNormalizedDecimal(rp82.uren ?? ''))
     context['8_2_motivering'] = normalizeWhitespace(String(rp82.motivering ?? ''))
   } else {
     const raw = answerToText(readAnswer(report.fields, 'rp_werkfit_8_2'))
     const hoursMatch = raw.match(/\b([0-9]+(?:[.,][0-9]+)?)\b/)
     const motivationMatch = raw.match(/(?:motivering|motivatie)\s*:\s*([\s\S]+)/i)
-    context['8_2_aantal_uren'] = String(hoursMatch?.[1] || '').replace(',', '.')
+    context['8_2_aantal_uren'] = formatNormalizedDecimal(parseNormalizedDecimal(hoursMatch?.[1] || ''))
     context['8_2_motivering'] = normalizeWhitespace(String(motivationMatch?.[1] || ''))
   }
 

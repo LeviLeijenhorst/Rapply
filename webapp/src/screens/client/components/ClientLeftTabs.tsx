@@ -121,93 +121,88 @@ export function ClientLeftTabs({
         </View>
 
         <MainContainer contentKey={`client-list-${activeTabKey}`}>
-          {isDocumentsTab ? (
-            <View style={styles.documentsPlaceholder}>
-              <Text style={styles.documentsPlaceholderText}>Documenten worden hier binnenkort toegevoegd.</Text>
+          <>
+            <View style={styles.tableHeaderRow}>
+              <Text style={[styles.tableHeaderText, styles.tableInputCol]}>{tableFirstColumnLabel}</Text>
+              <View style={styles.tableStatusCol} />
+              <Text style={[styles.tableHeaderText, styles.tableDateCol]}>Datum</Text>
+              {showsDurationColumn ? <Text style={[styles.tableHeaderText, styles.tableDurationCol]}>Duur</Text> : null}
             </View>
-          ) : (
-            <>
-              <View style={styles.tableHeaderRow}>
-                <Text style={[styles.tableHeaderText, styles.tableInputCol]}>{tableFirstColumnLabel}</Text>
-                <Text style={[styles.tableHeaderText, styles.tableDateCol]}>Datum</Text>
-                {showsDurationColumn ? <Text style={[styles.tableHeaderText, styles.tableDurationCol]}>Duur</Text> : null}
-              </View>
 
-              <ScrollView style={styles.inputsScroll} contentContainerStyle={styles.inputsScrollContent} showsVerticalScrollIndicator={false}>
-                {filteredInputs.length === 0 ? (
-                  <View style={styles.emptyTableState}>
-                    <Text style={styles.emptyInputsText}>Geen items gevonden.</Text>
-                  </View>
-                ) : null}
-                {filteredInputs.map((item) => {
-                  const isSessionProcessing =
-                    item.rowType === 'session' &&
-                    (item.transcriptionStatus === 'transcribing' || item.transcriptionStatus === 'generating')
-                  return (
-                  <Pressable
-                    key={item.id}
-                    onPress={() => onPressRow(item)}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      item.rowType === 'note'
-                        ? `Open notitie ${item.title}`
-                        : item.rowType === 'report'
-                          ? `Open rapportage ${item.title}`
+            <ScrollView style={styles.inputsScroll} contentContainerStyle={styles.inputsScrollContent} showsVerticalScrollIndicator={false}>
+              {filteredInputs.length === 0 ? (
+                <View style={styles.emptyTableState}>
+                  <Text style={styles.emptyInputsText}>Geen items gevonden.</Text>
+                </View>
+              ) : null}
+              {filteredInputs.map((item) => {
+                const isSessionProcessing =
+                  (item.rowType === 'session' || item.rowType === 'document') &&
+                  (item.transcriptionStatus === 'transcribing' || item.transcriptionStatus === 'generating')
+                const isPressableRow = item.rowType !== 'document'
+                return (
+                <Pressable
+                  key={item.id}
+                  onPress={isPressableRow ? () => onPressRow(item) : undefined}
+                  accessibilityRole={isPressableRow ? 'button' : undefined}
+                  accessibilityLabel={
+                    item.rowType === 'note'
+                      ? `Open notitie ${item.title}`
+                      : item.rowType === 'report'
+                        ? `Open rapportage ${item.title}`
+                        : item.rowType === 'document'
+                          ? `Document ${item.title}`
                           : `Open sessie ${item.title}`
+                  }
+                  onHoverIn={() => setHoveredItemId(item.id)}
+                  onHoverOut={() => setHoveredItemId((previous) => (previous === item.id ? null : previous))}
+                  style={({ hovered }) => [styles.tableRow, hovered ? styles.tableRowHovered : undefined, !isPressableRow ? styles.tableRowStatic : undefined]}
+                >
+                  <View style={styles.tableInputCol}>
+                    <Text isSemibold style={styles.tableInputTitle}>
+                      {item.title}
+                    </Text>
+                    <Text style={styles.tableInputSub}>{item.trajectoryLabel}</Text>
+                  </View>
+                  <View style={styles.tableStatusCol}>
+                    {isSessionProcessing ? <ActivityIndicator size="small" color={colors.selected} /> : null}
+                  </View>
+                  <View style={styles.tableDateCol}>
+                    <Text style={styles.tableDateMain}>{item.dateLabel}</Text>
+                    {!item.isReport ? <Text style={styles.tableDateSub}>{item.timeLabel}</Text> : null}
+                  </View>
+                  {showsDurationColumn ? (
+                    <View style={styles.tableDurationCol}>
+                      <Text style={styles.tableDurationText}>{item.durationLabel || '-'}</Text>
+                    </View>
+                  ) : null}
+                  <Pressable
+                    pointerEvents={
+                      hoveredItemId === item.id || hoveredMenuItemId === item.id || menuInputId === item.id
+                        ? 'auto'
+                        : 'none'
                     }
-                    onHoverIn={() => setHoveredItemId(item.id)}
-                    onHoverOut={() => setHoveredItemId((previous) => (previous === item.id ? null : previous))}
-                    style={({ hovered }) => [styles.tableRow, hovered ? styles.tableRowHovered : undefined]}
+                    onHoverIn={() => setHoveredMenuItemId(item.id)}
+                    onHoverOut={() => setHoveredMenuItemId((previous) => (previous === item.id ? null : previous))}
+                    onPress={(event) => {
+                      ;(event as any)?.stopPropagation?.()
+                      onOpenRowMenu(item, event)
+                    }}
+                    style={({ hovered }) => [
+                      styles.rowMenuButton,
+                      hoveredItemId === item.id || hoveredMenuItemId === item.id || menuInputId === item.id
+                        ? undefined
+                        : styles.rowMenuButtonHidden,
+                      hovered ? styles.rowMenuButtonHovered : undefined,
+                    ]}
                   >
-                    <View style={styles.tableInputCol}>
-                      <Text isSemibold style={styles.tableInputTitle}>
-                        {item.title}
-                      </Text>
-                      <Text style={styles.tableInputSub}>{item.trajectoryLabel}</Text>
-                      {isSessionProcessing ? (
-                        <View style={styles.processingStateRow}>
-                          <ActivityIndicator size="small" color={colors.selected} />
-                          <Text style={styles.processingStateText}>Bezig met verwerken...</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                    <View style={styles.tableDateCol}>
-                      <Text style={styles.tableDateMain}>{item.dateLabel}</Text>
-                      {!item.isReport ? <Text style={styles.tableDateSub}>{item.timeLabel}</Text> : null}
-                    </View>
-                    {showsDurationColumn ? (
-                      <View style={styles.tableDurationCol}>
-                        <Text style={styles.tableDurationText}>{item.durationLabel || '-'}</Text>
-                      </View>
-                    ) : null}
-                    <Pressable
-                      pointerEvents={
-                        hoveredItemId === item.id || hoveredMenuItemId === item.id || menuInputId === item.id
-                          ? 'auto'
-                          : 'none'
-                      }
-                      onHoverIn={() => setHoveredMenuItemId(item.id)}
-                      onHoverOut={() => setHoveredMenuItemId((previous) => (previous === item.id ? null : previous))}
-                      onPress={(event) => {
-                        ;(event as any)?.stopPropagation?.()
-                        onOpenRowMenu(item, event)
-                      }}
-                      style={({ hovered }) => [
-                        styles.rowMenuButton,
-                        hoveredItemId === item.id || hoveredMenuItemId === item.id || menuInputId === item.id
-                          ? undefined
-                          : styles.rowMenuButtonHidden,
-                        hovered ? styles.rowMenuButtonHovered : undefined,
-                      ]}
-                    >
-                      <MoreOptionsIcon color="#656565" size={18} />
-                    </Pressable>
+                    <MoreOptionsIcon color="#656565" size={18} />
                   </Pressable>
-                  )
-                })}
-              </ScrollView>
-            </>
-          )}
+                </Pressable>
+                )
+              })}
+            </ScrollView>
+          </>
         </MainContainer>
       </View>
     </View>
@@ -353,6 +348,12 @@ const styles = StyleSheet.create({
   },
   tableHeaderText: { fontSize: 16, lineHeight: 20, color: 'rgba(44,17,31,0.5)' },
   tableInputCol: { flex: 1.45, minWidth: 0 },
+  tableStatusCol: {
+    width: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+  },
   tableDateCol: { width: 170 },
   tableDurationCol: { width: 90 },
   tableRow: {
@@ -368,18 +369,6 @@ const styles = StyleSheet.create({
   tableRowHovered: { backgroundColor: '#FAFAFA' },
   tableInputTitle: { fontSize: 16, lineHeight: 20, color: '#2C111F', paddingRight: 8 },
   tableInputSub: { marginTop: 4, fontSize: 14, lineHeight: 18, color: 'rgba(44,17,31,0.5)' },
-  processingStateRow: {
-    marginTop: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  processingStateText: {
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.selected,
-    fontFamily: typography.fontFamilySemibold,
-  },
   tableDateMain: { fontSize: 14, lineHeight: 16, color: 'rgba(44,17,31,0.5)', fontFamily: typography.fontFamilySemibold },
   tableDateSub: { marginTop: 2, fontSize: 14, lineHeight: 16, color: 'rgba(44,17,31,0.5)' },
   tableDurationText: { fontSize: 14, lineHeight: 16, color: 'rgba(44,17,31,0.5)' },
@@ -400,8 +389,9 @@ const styles = StyleSheet.create({
   inputsScrollContent: { gap: 0, paddingBottom: 0 },
   emptyTableState: { paddingVertical: 24, alignItems: 'center', justifyContent: 'center' },
   emptyInputsText: { fontSize: 14, lineHeight: 20, color: colors.textSecondary, textAlign: 'center' },
-  documentsPlaceholder: { borderTopWidth: 1, borderTopColor: '#DFE0E2', paddingHorizontal: 24, paddingVertical: 28 },
-  documentsPlaceholderText: { fontSize: 15, lineHeight: 22, color: 'rgba(44,17,31,0.6)' },
+  tableRowStatic: {
+    ...({ cursor: 'default' } as any),
+  },
 })
 
 

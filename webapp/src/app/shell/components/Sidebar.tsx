@@ -8,7 +8,7 @@ import { Text } from '../../../ui/Text'
 import { SidebarItem } from './SidebarItem'
 import { ProfileCircleIcon } from '../../../icons/ProfileCircleIcon'
 
-export type SidebarItemKey = 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'archief' | 'admin' | 'adminContact' | 'adminWachtlijst'
+export type SidebarItemKey = 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'admin' | 'adminContact' | 'adminWachtlijst'
 
 type AnchorPoint = { x: number; y: number }
 
@@ -135,7 +135,8 @@ export function Sidebar({
             label="Meldingen"
             isSelected={false}
             onPress={() => undefined}
-            icon={<NotificationIcon color="#2C111F" />}
+            icon={<NotificationIcon color="#8E8480" />}
+            disabled
           />
           {isAdminUser ? (
             <SidebarItem

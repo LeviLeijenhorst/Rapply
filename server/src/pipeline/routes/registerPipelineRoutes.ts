@@ -12,7 +12,7 @@ import { extractSnippets } from "../../snippets/extractSnippets"
 import { createSnippet, listSnippets, updateSnippet } from "../../snippets/store"
 import { readUserSettings } from "../../userSettings/store"
 import { ensureActiveTrajectoryForClient, listTrajectories } from "../../trajectories/store"
-import type { Report } from "../../types/Report"
+import type { JsonValue, Report } from "../../types/Report"
 import { completePipelineChat } from "../chat/completePipelineChat"
 import { buildGroupedClientKnowledgeContext } from "../chat/clientKnowledgeContext"
 import { buildReportChatContext } from "../chat/reportChatContext"
@@ -117,54 +117,6 @@ function writeSseDeltaSmooth(res: SseWriteableResponse, delta: string): void {
   const pieces = text.split(/(\s+)/).filter(Boolean)
   for (const piece of pieces) {
     writeSseEvent(res, "delta", { delta: piece })
-  }
-}
-
-function extractAnswerFromPartialJson(raw: string): string {
-  const source = String(raw || "")
-  const keyIndex = source.indexOf('"answer"')
-  if (keyIndex === -1) return ""
-  const colonIndex = source.indexOf(":", keyIndex + 8)
-  if (colonIndex === -1) return ""
-  let valueStart = colonIndex + 1
-  while (valueStart < source.length && /\s/.test(source[valueStart])) valueStart += 1
-  if (valueStart >= source.length || source[valueStart] !== '"') return ""
-  valueStart += 1
-
-  let output = ""
-  let isEscaped = false
-  for (let index = valueStart; index < source.length; index += 1) {
-    const char = source[index]
-    if (isEscaped) {
-      if (char === "n") output += "\n"
-      else if (char === "r") output += "\r"
-      else if (char === "t") output += "\t"
-      else output += char
-      isEscaped = false
-      continue
-    }
-    if (char === "\\") {
-      isEscaped = true
-      continue
-    }
-    if (char === '"') {
-      return output
-    }
-    output += char
-  }
-  return output
-}
-
-function createReportAnswerDeltaForwarder(res: SseWriteableResponse): (rawDelta: string) => void {
-  let rawBuffer = ""
-  let emittedAnswer = ""
-  return (rawDelta: string) => {
-    rawBuffer += String(rawDelta || "")
-    const currentAnswer = extractAnswerFromPartialJson(rawBuffer)
-    if (!currentAnswer || currentAnswer.length <= emittedAnswer.length) return
-    const nextDelta = currentAnswer.slice(emittedAnswer.length)
-    emittedAnswer = currentAnswer
-    writeSseDeltaSmooth(res, nextDelta)
   }
 }
 
@@ -331,7 +283,7 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
       const user = await requireAuthenticatedUser(req)
       const inputId = normalizeText(req.body?.inputId) || `input-${crypto.randomUUID()}`
       const clientId = normalizeText(req.body?.clientId)
-      const title = normalizeText(req.body?.title) || "Nieuw input-item"
+      let title = normalizeText(req.body?.title) || "Nieuw input-item"
       const inputType = normalizeText(req.body?.inputType) || "spoken_recap"
       const requestedTrajectoryId = normalizeText(req.body?.trajectoryId) || null
       const uploadFileName = normalizeText(req.body?.uploadFileName) || null
@@ -356,7 +308,7 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
       let detectedInputType = inputType
       if (documentBase64) {
         if (!isSupportedDocumentType({ fileName: uploadFileName || "", mimeType: sourceMimeType || "" })) {
-          sendError(res, 400, "Uploaded documents must be PDF or DOCX")
+          sendError(res, 400, "Uploaded documents must be PDF, DOC or DOCX")
           return
         }
         const extracted = await extractDocumentText({
@@ -365,6 +317,7 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
           base64Content: documentBase64,
         })
         sourceText = extracted.extractedText
+        title = normalizeText(extracted.suggestedTitle) || title
         detectedInputType = "uploaded_document"
       }
 
@@ -841,21 +794,145 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
         sendError(res, 404, "Structured report not found")
         return
       }
-      const template = readSupportedUwvTemplate(report.reportStructuredJson.templateId)
+      const structuredReport = report.reportStructuredJson
+      const template = readSupportedUwvTemplate(structuredReport.templateId)
       const [snippets, notes] = await Promise.all([listSnippets(user.userId), listNotes(user.userId)])
       const context = buildReportChatContext({
         reportId,
         template,
-        fields: report.reportStructuredJson.fields,
+        fields: structuredReport.fields,
         clientId: report.clientId,
         sourceInputId: report.sourceSessionId,
         snippets,
         notes,
       })
 
+      const parseJsonLikeAnswer = (value: JsonValue): JsonValue => {
+        if (typeof value !== "string") return value
+        const trimmed = normalizeText(value)
+        if (!trimmed) return ""
+        const looksJson = (trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))
+        if (!looksJson) return value
+        try {
+          return JSON.parse(trimmed) as JsonValue
+        } catch {
+          return value
+        }
+      }
+
+      const normalizeFieldUpdateAnswer = (fieldId: string, rawAnswer: JsonValue): JsonValue | null => {
+        const templateField = template.fields.find((field) => field.fieldId === fieldId)
+        const variant = templateField?.aiConfig?.frontendVariant
+        const normalized = parseJsonLikeAnswer(rawAnswer)
+        if (!variant) return normalized
+
+        const asObject = (value: JsonValue): Record<string, JsonValue> | null => {
+          if (!value || typeof value !== "object" || Array.isArray(value)) return null
+          return value as Record<string, JsonValue>
+        }
+        const asNumber = (value: JsonValue): number | null => {
+          if (typeof value === "number" && Number.isFinite(value)) return value
+          if (typeof value !== "string") return null
+          const parsed = Number(value)
+          return Number.isFinite(parsed) ? parsed : null
+        }
+        const normalizeActivities = (value: JsonValue): Array<{ activiteit: string; uren: number }> => {
+          if (!Array.isArray(value)) return []
+          return value
+            .map((item) => {
+              if (!item || typeof item !== "object" || Array.isArray(item)) return null
+              const row = item as Record<string, JsonValue>
+              const activiteit = normalizeText(row.activiteit)
+              const uren = asNumber(row.uren)
+              if (!activiteit && (uren === null || uren <= 0)) return null
+              return { activiteit, uren: uren ?? 0 }
+            })
+            .filter((item): item is { activiteit: string; uren: number } => Boolean(item))
+        }
+
+        if (variant === "single_choice_numeric") {
+          const keyMap: Record<string, string> = {
+            rp_werkfit_8_1: "keuze",
+            er_werkfit_4_2: "keuze",
+            er_werkfit_7_3: "resultaat",
+          }
+          const key = keyMap[fieldId] || "keuze"
+          const objectValue = asObject(normalized)
+          const selected = objectValue ? asNumber(objectValue[key]) : null
+          if (!objectValue || selected === null) return null
+          return { ...objectValue, [key]: selected }
+        }
+
+        if (variant === "single_choice_with_custom_reason") {
+          const objectValue = asObject(normalized)
+          const reden = objectValue ? asNumber(objectValue.reden) : null
+          if (!objectValue || reden === null) return null
+          const customReason = normalizeText(objectValue.customReason)
+          if (reden === 6 && !customReason) return null
+          return {
+            ...objectValue,
+            reden,
+            customReason: reden === 6 ? customReason : "",
+          }
+        }
+
+        if (variant === "akkoord_met_toelichting") {
+          const objectValue = asObject(normalized)
+          const akkoord = objectValue ? asNumber(objectValue.akkoord) : null
+          if (!objectValue || akkoord === null) return null
+          const toelichting = normalizeText(objectValue.toelichting)
+          if (akkoord === 2 && !toelichting) return null
+          return { ...objectValue, akkoord, toelichting }
+        }
+
+        if (variant === "activities_rows") {
+          const objectValue = asObject(normalized)
+          if (!objectValue) return null
+          return { activiteiten: normalizeActivities(objectValue.activiteiten ?? []) }
+        }
+
+        if (variant === "activiteiten_en_keuzes") {
+          const objectValue = asObject(normalized)
+          if (!objectValue) return null
+          const keuzesRaw = Array.isArray(objectValue.keuzes) ? objectValue.keuzes : []
+          const keuzes = keuzesRaw
+            .map((item) => asNumber(item))
+            .filter((item): item is number => item !== null)
+          return {
+            keuzes,
+            activiteiten: normalizeActivities(objectValue.activiteiten ?? []),
+          }
+        }
+
+        if (variant === "maanden_object") {
+          const objectValue = asObject(normalized)
+          const maanden = objectValue ? asNumber(objectValue.maanden) : null
+          if (!objectValue || maanden === null) return null
+          return { maanden }
+        }
+
+        if (variant === "uren_motivering") {
+          const objectValue = asObject(normalized)
+          const uren = objectValue ? asNumber(objectValue.uren) : null
+          const motivering = objectValue ? normalizeText(objectValue.motivering) : ""
+          if (!objectValue || uren === null || !motivering) return null
+          return { uren, motivering }
+        }
+
+        if (variant === "tarief_motivering") {
+          const objectValue = asObject(normalized)
+          const tarief = objectValue ? asNumber(objectValue.tarief) : null
+          const motivering = objectValue ? normalizeText(objectValue.motivering) : ""
+          if (!objectValue || tarief === null || !motivering) return null
+          return { tarief, motivering }
+        }
+
+        return normalized
+      }
+
       const applyReportFieldUpdates = async (chat: Awaited<ReturnType<typeof completePipelineChat>>) => {
         if (!chat.fieldUpdates || chat.fieldUpdates.length === 0) return chat
-        const updatedFields = { ...report.reportStructuredJson.fields }
+        const updatedFields = { ...structuredReport.fields }
         const appliedFieldUpdates: Array<{ fieldId: string; answer: string }> = []
         const answerToText = (value: unknown): string => {
           if (typeof value === "string") return value
@@ -867,17 +944,19 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
           const existingField = updatedFields[fieldUpdate.fieldId]
           if (!existingField) continue
           if (existingField.fieldType !== "ai") continue
+          const normalizedAnswer = normalizeFieldUpdateAnswer(fieldUpdate.fieldId, fieldUpdate.answer)
+          if (normalizedAnswer === null) continue
           const nextField = appendFieldVersion({
             field: existingField,
             source: "chat_update",
-            answer: fieldUpdate.answer,
+            answer: normalizedAnswer,
             prompt: null,
           })
           updatedFields[fieldUpdate.fieldId] = nextField
           appliedFieldUpdates.push({ fieldId: fieldUpdate.fieldId, answer: answerToText(nextField.answer) })
         }
         const updatedStructuredReport = updateStructuredReport({
-          report: report.reportStructuredJson,
+          report: structuredReport,
           fields: updatedFields,
         })
         const reportText = buildReportTextFromStructured(template, updatedStructuredReport.fields)
@@ -894,13 +973,11 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
       if (wantsChatStreaming(req)) {
         initSseResponse(res)
         try {
-          const forwardReportAnswerDelta = createReportAnswerDeltaForwarder(res)
           const chat = await completePipelineChat({
             tool: "sendReportChatMessage",
             context,
             messages,
             allowFieldUpdates: true,
-            onDelta: (delta) => forwardReportAnswerDelta(delta),
           })
           const updatedChat = await applyReportFieldUpdates(chat)
           endSseSuccess(res, updatedChat)

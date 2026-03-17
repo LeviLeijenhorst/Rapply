@@ -28,7 +28,7 @@ export function RightPanel({
   onUpdateNote,
   onDeleteNote,
 }: RightPanelProps) {
-  const [activeTabKey, setActiveTabKey] = useState<RightTabKey>('notes')
+  const [activeTabKey, setActiveTabKey] = useState<RightTabKey>('chatbot')
   const [noteComposerValue, setNoteComposerValue] = useState('')
   const [editingNote, setEditingNote] = useState<InputNoteItem | null>(null)
   const [pendingDeleteNote, setPendingDeleteNote] = useState<InputNoteItem | null>(null)
@@ -72,6 +72,7 @@ export function RightPanel({
               messages={chatbotState.chatMessages}
               composerValue={chatbotState.chatComposerValue}
               isSending={chatbotState.isChatSending}
+              shouldAutoFocus={activeTabKey === 'chatbot'}
               onChangeComposerValue={chatbotState.setChatComposerValue}
               onSendMessage={chatbotState.handleSendChatMessage}
               onClearChat={() => chatbotState.setIsClearChatModalVisible(true)}
@@ -89,6 +90,8 @@ export function RightPanel({
               showDisclaimer={false}
               sendIconVariant="arrow"
               isSendDisabled={noteComposerValue.trim().length === 0}
+              shouldAutoFocus={activeTabKey === 'notes'}
+              autoFocusKey={`session-notes-${inputId}-${activeTabKey}`}
             />
           </View>
         ) : null}
@@ -102,6 +105,7 @@ export function RightPanel({
           messages={chatbotState.chatMessages}
           composerValue={chatbotState.chatComposerValue}
           isSending={chatbotState.isChatSending}
+          shouldAutoFocus
           onChangeComposerValue={chatbotState.setChatComposerValue}
           onSendMessage={chatbotState.handleSendChatMessage}
           onClearChat={() => chatbotState.setIsClearChatModalVisible(true)}

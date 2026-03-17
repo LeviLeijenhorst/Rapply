@@ -61,7 +61,7 @@ export function ClientChatbot({
         contentContainerStyle={chatMessages.length === 0 ? styles.chatAreaContentCentered : styles.chatAreaContent}
         showsVerticalScrollIndicator={false}
       >
-        {chatMessages.length === 0 ? (
+        {chatMessages.length === 0 && !isChatSending ? (
           <View style={styles.clientIntentWrap}>
             <ChatStarter
               templates={clientIntentTemplates}
@@ -75,7 +75,8 @@ export function ClientChatbot({
             {chatMessages.map((message) => {
               const isHiddenStreamingPlaceholder = message.role === 'assistant' && message.text.trim().length === 0
               if (isHiddenStreamingPlaceholder) return null
-              return <ChatMessage key={message.id} role={message.role} text={message.text} />
+              const isStreamingMessage = isChatSending && message.id.startsWith('assistant-stream-')
+              return <ChatMessage key={message.id} role={message.role} text={message.text} isStreaming={isStreamingMessage} />
             })}
             {isChatSending && !chatMessages.some((message) => message.id.startsWith('assistant-stream-') && message.text.trim().length > 0)
               ? <ChatMessage role="assistant" text="" isLoading />
@@ -109,7 +110,7 @@ export function ClientChatbot({
           isSendDisabled={
             isChatSending || isCheckingChatMinutes || isChatMinutesBlocked || composerText.trim().length === 0
           }
-          shouldAutoFocus={isModal}
+          shouldAutoFocus
           autoFocusKey={`${clientId}-${autoFocusKey}-${isModal ? 'modal' : 'panel'}-${
             isAssistantFullscreen ? 'open' : 'closed'
           }`}

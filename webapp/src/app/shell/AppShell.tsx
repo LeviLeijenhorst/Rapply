@@ -11,7 +11,6 @@ import { NewInputModal } from '../../screens/record/NewSessionModal'
 import type { NewInputQuickAction } from '../../screens/record/types'
 import { FeedbackModal } from './modals/FeedbackModal'
 import { SettingsMenu } from './menus/SettingsMenu'
-import { MyAccountModal } from './modals/MyAccountModal'
 import { MySubscriptionModal } from './modals/MySubscriptionModal'
 import { ShareCoachscribeModal } from './modals/ShareCoachscribeModal'
 import { ContactModal } from './modals/ContactModal'
@@ -29,7 +28,11 @@ import { useAudioUploadQueue } from '../../audio/upload/useAudioUploadQueue'
 import { useE2ee } from '../../security/providers/E2eeProvider'
 import { toUserFriendlyErrorMessage } from '../../utils/text/userFriendlyError'
 import { useToast } from '../../toast/ToastProvider'
-import { consumeSubscriptionReturnResumeRequest, requestSubscriptionReturnResumeIfDraftAvailable } from '../../screens/record/state/subscriptionReturnDraft'
+import {
+  consumeSubscriptionReturnResumeRequest,
+  requestSubscriptionReturnResumeIfDraftAvailable,
+  setSubscriptionReturnPath,
+} from '../../screens/record/state/subscriptionReturnDraft'
 import { createMollieExtraMinutesCheckout } from '../../api/billing/billingApi'
 import { CoachscribeLogo } from '../../components/brand/CoachscribeLogo'
 import { MonitorIcon } from '../../icons/MonitorIcon'
@@ -47,7 +50,6 @@ import { applyRouteToShell } from './applyRoute'
 import { buildBreadcrumbItems } from './breadcrumbHelpers'
 
 type AnchorPoint = { x: number; y: number }
-type OverlayScreenKey = 'archief'
 
 type Props = {
   onLogout: () => void
@@ -89,7 +91,7 @@ export function AppShell({ onLogout }: Props) {
   const [isNieuweRapportageOpen, setIsNieuweRapportageOpen] = useState(false)
   const [isRecordPageOpen, setIsRecordPageOpen] = useState(false)
   const [isNewClientPageOpen, setIsNewClientPageOpen] = useState(false)
-  const [overlayScreenKey, setOverlayScreenKey] = useState<OverlayScreenKey | null>(null)
+  const [overlayScreenKey, setOverlayScreenKey] = useState<null>(null)
   const [isAdminScreenOpen, setIsAdminScreenOpen] = useState(false)
   const [isAdminContactScreenOpen, setIsAdminContactScreenOpen] = useState(false)
   const [isAdminWachtlijstScreenOpen, setIsAdminWachtlijstScreenOpen] = useState(false)
@@ -103,7 +105,6 @@ export function AppShell({ onLogout }: Props) {
   const [settingsMenuAnchorPoint, setSettingsMenuAnchorPoint] = useState<AnchorPoint | null>(null)
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
 
-  const [isMyAccountModalOpen, setIsMyAccountModalOpen] = useState(false)
   const [isMySubscriptionModalOpen, setIsMySubscriptionModalOpen] = useState(false)
   const [canOpenSubscription, setCanOpenSubscription] = useState(false)
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null)
@@ -151,7 +152,10 @@ export function AppShell({ onLogout }: Props) {
     void Linking.openURL(checkoutUrl)
   }, [])
 
-  const startExtraMinutesCheckout = useCallback(async () => {
+  const startExtraMinutesCheckout = useCallback(async (params?: { returnClientId?: string | null }) => {
+    const normalizedClientId = String(params?.returnClientId || '').trim()
+    const returnPath = normalizedClientId ? buildPathFromRoute({ kind: 'client', clientId: normalizedClientId }) : '/clienten'
+    setSubscriptionReturnPath(returnPath)
     const checkoutTab = typeof window !== 'undefined' ? window.open('about:blank', '_blank') : null
     if (checkoutTab) {
       try {
@@ -489,7 +493,6 @@ export function AppShell({ onLogout }: Props) {
       setIsDeletingAccount(true)
       await requestDeleteAccount()
       setIsDeleteAccountConfirmModalOpen(false)
-      setIsMyAccountModalOpen(false)
       onLogout()
     } catch (error) {
       console.error('[AppShell] Account verwijderen mislukt', error)
@@ -536,7 +539,7 @@ export function AppShell({ onLogout }: Props) {
             onPress={() => openMobileLimitedInput('gespreksverslag')}
             style={({ hovered }) => [styles.mobileLimitedPrimaryButton, hovered ? styles.mobileLimitedPrimaryButtonHovered : undefined]}
           >
-            <Text isBold style={styles.mobileLimitedPrimaryButtonText}>Verslag opnemen</Text>
+            <Text isBold style={styles.mobileLimitedPrimaryButtonText}>Samenvatting opnemen</Text>
           </Pressable>
         </View>
 
@@ -560,8 +563,8 @@ export function AppShell({ onLogout }: Props) {
             setNewInputTrajectoryId(null)
               setNewInputInitialQuickAction(null)
             }}
-          onOpenMySubscription={() => {
-            void startExtraMinutesCheckout()
+          onOpenMySubscription={(params) => {
+            void startExtraMinutesCheckout(params)
           }}
           onOpenNewClient={() => {
               setIsNewInputModalOpen(false)
@@ -717,6 +720,13 @@ export function AppShell({ onLogout }: Props) {
                   sessionIdPendingTemplatePicker={sessionIdPendingTemplatePicker}
                   currentUserGivenName={currentUserGivenName}
                   currentUserName={currentUserName}
+                  currentUserEmail={currentUserEmail}
+                  onLogout={onLogout}
+                  onOpenDeleteAccountConfirm={() => {
+                    if (isDeletingAccount) return
+                    setIsDeleteAccountConfirmModalOpen(true)
+                  }}
+                  isDeleteAccountBusy={isDeletingAccount}
                 />
               </MainContainer>
             </View>
@@ -729,21 +739,11 @@ export function AppShell({ onLogout }: Props) {
               setIsSettingsMenuOpen(false)
               setSettingsMenuAnchorPoint(null)
             }}
-            onOpenAccount={() => {
-              setIsSettingsMenuOpen(false)
-              setSettingsMenuAnchorPoint(null)
-              setIsMyAccountModalOpen(true)
-            }}
             onOpenSubscription={() => {
               if (!canOpenSubscription) return
               setIsSettingsMenuOpen(false)
               setSettingsMenuAnchorPoint(null)
               setIsMySubscriptionModalOpen(true)
-            }}
-            onOpenArchive={() => {
-              setIsSettingsMenuOpen(false)
-              setSettingsMenuAnchorPoint(null)
-              navigateTo({ kind: 'archief' })
             }}
             onOpenFeedback={() => {
               setIsSettingsMenuOpen(false)
@@ -801,8 +801,8 @@ export function AppShell({ onLogout }: Props) {
               setNewInputTrajectoryId(null)
               setNewInputInitialQuickAction(null)
             }}
-            onOpenMySubscription={() => {
-              void startExtraMinutesCheckout()
+            onOpenMySubscription={(params) => {
+              void startExtraMinutesCheckout(params)
             }}
             onOpenNewClient={() => {
               setIsNewInputModalOpen(false)
@@ -829,22 +829,6 @@ export function AppShell({ onLogout }: Props) {
               setInputOriginRoute(null)
               navigateTo(nextRoute)
             }}
-          />
-
-          <MyAccountModal
-            visible={isMyAccountModalOpen}
-            accountName={currentUserName}
-            accountEmail={currentUserEmail}
-            onClose={() => setIsMyAccountModalOpen(false)}
-            onLogout={() => {
-              setIsMyAccountModalOpen(false)
-              onLogout()
-            }}
-            onDeleteAccount={() => {
-              if (isDeletingAccount) return
-              setIsDeleteAccountConfirmModalOpen(true)
-            }}
-            isDeleteAccountBusy={isDeletingAccount}
           />
 
           <DeleteAccountConfirmModal

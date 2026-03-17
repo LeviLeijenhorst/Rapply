@@ -9,12 +9,13 @@ import {
 } from '@/screens/newReport/newReportPipelineLogic'
 import { ReportEditorPanel } from '@/screens/report/ReportEditorPanel'
 import type { NewReportScreenProps } from '@/screens/newReport/newReport.types'
+import { Header } from '@/screens/session/components/Header'
 import { useLocalAppData } from '@/storage/LocalAppDataProvider'
 import type { Input, Note, Report } from '@/storage/types'
 import { useToast } from '@/toast/ToastProvider'
 import { Text } from '@/ui/Text'
-import { ProfileCircleIcon } from '@/icons/ProfileCircleIcon'
 import { ClientPageDocumentenIcon, ClientPageNotesIcon, ClientPageSessiesIcon } from '@/icons/ClientPageSvgIcons'
+import { MainContainer } from '@/ui/animated/MainContainer'
 
 function areStringArraysEqual(left: string[], right: string[]): boolean {
   if (left.length !== right.length) return false
@@ -65,6 +66,10 @@ export function NewReportScreen(props: NewReportScreenProps) {
     () => activeClients.find((client) => client.id === selectedClientId) ?? null,
     [activeClients, selectedClientId],
   )
+  const activeReportClientName = useMemo(() => {
+    if (!activeReport?.clientId) return selectedClient?.name || 'Cliënt'
+    return data.clients.find((client) => client.id === activeReport.clientId)?.name || selectedClient?.name || 'Cliënt'
+  }, [activeReport?.clientId, data.clients, selectedClient?.name])
 
   useEffect(() => {
     if (isClientLocked) {
@@ -253,7 +258,17 @@ export function NewReportScreen(props: NewReportScreenProps) {
 
   if (activeReport) {
     return (
-      <View style={styles.page}>
+      <View style={styles.generatedReportWrap}>
+        <View style={styles.generatedHeaderRow}>
+          <View style={styles.generatedHeaderWrap}>
+            <Header
+              title={activeReport.title || selectedTemplate?.name || 'Rapportage'}
+              clientName={activeReportClientName}
+              date=""
+              onBack={() => setActiveReport(null)}
+            />
+          </View>
+        </View>
         <ReportEditorPanel report={activeReport} templates={templates} onReportUpdated={setActiveReport} />
       </View>
     )
@@ -263,18 +278,13 @@ export function NewReportScreen(props: NewReportScreenProps) {
     <View style={styles.page}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.topBar}>
-          <View style={styles.header}>
-            <View style={styles.headerRow}>
-              <View style={styles.titlePill}>
-                <Text isBold style={styles.title}>Nieuwe rapportage</Text>
-              </View>
-              <View style={styles.metaPill}>
-                <ProfileCircleIcon size={22} />
-                <Text isSemibold style={styles.metaText} numberOfLines={1}>
-                  {selectedClient?.name || 'Onbekende client'}
-                </Text>
-              </View>
-            </View>
+          <View style={styles.headerWrap}>
+            <Header
+              title="Nieuwe rapportage"
+              clientName={selectedClient?.name || 'Cliënt'}
+              date=""
+              onBack={props.onBack || (() => {})}
+            />
           </View>
           <Pressable
             onPress={() => {
@@ -349,17 +359,47 @@ export function NewReportScreen(props: NewReportScreenProps) {
               })}
             </View>
 
-            <View style={styles.listWrap}>
-              {activeTab === 'notities' ? (
-                clientNotes.length === 0 ? (
-                  <Text style={styles.emptyStateText}>Geen notities beschikbaar.</Text>
+            <MainContainer contentKey={`new-report-tab-${activeTab}`} style={styles.listAnimatedContainer}>
+              <View style={styles.listWrap}>
+                {activeTab === 'notities' ? (
+                  clientNotes.length === 0 ? (
+                    <Text style={styles.emptyStateText}>Geen notities beschikbaar.</Text>
+                  ) : (
+                    clientNotes.map((note) => {
+                      const selected = selectedNoteIds.includes(note.id)
+                      return (
+                        <Pressable
+                          key={note.id}
+                          onPress={() => toggleNoteSelection(note.id)}
+                          style={({ hovered }) => [
+                            styles.rowCard,
+                            selected ? styles.rowCardSelected : undefined,
+                            hovered ? styles.rowCardHover : undefined,
+                          ]}
+                        >
+                          <View style={[styles.checkbox, selected ? styles.checkboxSelected : undefined]} />
+                          <View style={styles.rowMain}>
+                            <Text isSemibold style={styles.rowTitle}>{note.title || 'Notitie'}</Text>
+                            <Text style={styles.rowDate}>{formatDate(note.updatedAtUnixMs)}</Text>
+                          </View>
+                        </Pressable>
+                      )
+                    })
+                  )
+                ) : activeRows.length === 0 ? (
+                  <Text style={styles.emptyStateText}>
+                    {activeTab === 'documenten' ? 'Geen documenten beschikbaar voor deze client.' : 'Geen sessies beschikbaar voor deze client.'}
+                  </Text>
                 ) : (
-                  clientNotes.map((note) => {
-                    const selected = selectedNoteIds.includes(note.id)
+                  (activeRows as Input[]).map((input) => {
+                    const selected = selectedInputIds.includes(input.id)
+                    const approvedSnippets = approvedSnippetCountByInputId.get(input.id) || 0
+                    const linkedNoteCount = noteCountByInputId.get(input.id) || 0
+                    const isSessionTab = activeTab === 'sessies'
                     return (
                       <Pressable
-                        key={note.id}
-                        onPress={() => toggleNoteSelection(note.id)}
+                        key={input.id}
+                        onPress={() => toggleInputSelection(input.id)}
                         style={({ hovered }) => [
                           styles.rowCard,
                           selected ? styles.rowCardSelected : undefined,
@@ -368,46 +408,18 @@ export function NewReportScreen(props: NewReportScreenProps) {
                       >
                         <View style={[styles.checkbox, selected ? styles.checkboxSelected : undefined]} />
                         <View style={styles.rowMain}>
-                          <Text isSemibold style={styles.rowTitle}>{note.title || 'Notitie'}</Text>
-                          <Text style={styles.rowDate}>{formatDate(note.updatedAtUnixMs)}</Text>
+                          <Text isSemibold style={styles.rowTitle}>{input.title}</Text>
+                          <Text style={styles.rowDate}>{formatDate(input.createdAtUnixMs)}</Text>
                         </View>
+                        <Text style={styles.rowRightMeta}>
+                          {isSessionTab ? `${linkedNoteCount} ${linkedNoteCount === 1 ? 'notitie' : 'notities'}` : `${approvedSnippets} snippets`}
+                        </Text>
                       </Pressable>
                     )
                   })
-                )
-              ) : activeRows.length === 0 ? (
-                <Text style={styles.emptyStateText}>
-                  {activeTab === 'documenten' ? 'Geen documenten beschikbaar voor deze client.' : 'Geen sessies beschikbaar voor deze client.'}
-                </Text>
-              ) : (
-                (activeRows as Input[]).map((input) => {
-                  const selected = selectedInputIds.includes(input.id)
-                  const approvedSnippets = approvedSnippetCountByInputId.get(input.id) || 0
-                  const linkedNoteCount = noteCountByInputId.get(input.id) || 0
-                  const isSessionTab = activeTab === 'sessies'
-                  return (
-                    <Pressable
-                      key={input.id}
-                      onPress={() => toggleInputSelection(input.id)}
-                      style={({ hovered }) => [
-                        styles.rowCard,
-                        selected ? styles.rowCardSelected : undefined,
-                        hovered ? styles.rowCardHover : undefined,
-                      ]}
-                    >
-                      <View style={[styles.checkbox, selected ? styles.checkboxSelected : undefined]} />
-                      <View style={styles.rowMain}>
-                        <Text isSemibold style={styles.rowTitle}>{input.title}</Text>
-                        <Text style={styles.rowDate}>{formatDate(input.createdAtUnixMs)}</Text>
-                      </View>
-                      <Text style={styles.rowRightMeta}>
-                        {isSessionTab ? `${linkedNoteCount} ${linkedNoteCount === 1 ? 'notitie' : 'notities'}` : `${approvedSnippets} snippets`}
-                      </Text>
-                    </Pressable>
-                  )
-                })
-              )}
-            </View>
+                )}
+              </View>
+            </MainContainer>
           </View>
 
           <View style={styles.rightPanel}>
@@ -470,22 +482,13 @@ export function NewReportScreen(props: NewReportScreenProps) {
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#F6F4F7' },
+  generatedReportWrap: { flex: 1, backgroundColor: '#F6F4F7', paddingHorizontal: 24, paddingTop: 8 },
+  generatedHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  generatedHeaderWrap: { flex: 1, minWidth: 0 },
   scroll: { flex: 1 },
   content: { padding: 24, gap: 12, paddingBottom: 24 },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },
-  header: { flex: 1, minWidth: 260, justifyContent: 'center' },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, flexWrap: 'wrap' },
-  titlePill: { height: 48, justifyContent: 'center', paddingHorizontal: 8, borderRadius: 8 },
-  title: { fontSize: 20, lineHeight: 24, color: '#2C111F' },
-  metaPill: {
-    height: 48,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  metaText: { fontSize: 16, lineHeight: 20, color: '#2C111F' },
+  headerWrap: { flex: 1, minWidth: 260, justifyContent: 'center' },
   mainLayout: { flexDirection: 'row', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' },
   leftPanel: { flex: 1, minWidth: 680, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#DFE0E2', padding: 0, gap: 0 },
   rightPanel: { width: 437, minWidth: 330, gap: 14, flex: 1 },
@@ -496,10 +499,7 @@ const styles = StyleSheet.create({
   tabsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, borderTopWidth: 1, borderTopColor: '#DFE0E2', paddingTop: 12, paddingHorizontal: 24, paddingBottom: 10 },
   tabButton: {
     height: 48,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
+    borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -508,12 +508,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 8,
   },
-  tabButtonActive: { backgroundColor: '#FFFFFF', borderColor: '#DFE0E2', borderBottomWidth: 0 },
-  tabButtonInactive: { backgroundColor: '#F9FAFB', borderColor: '#DFE0E2', borderBottomWidth: 1 },
+  tabButtonActive: { backgroundColor: '#FFFFFF', borderColor: '#DFE0E2' },
+  tabButtonInactive: { backgroundColor: '#F9FAFB', borderColor: '#DFE0E2' },
   tabButtonHover: { backgroundColor: '#FAFBFD' },
   tabIconWrap: { width: 18, height: 18, alignItems: 'center', justifyContent: 'center' },
   tabButtonText: { fontSize: 16, lineHeight: 20, color: '#2C111F' },
   tabButtonTextActive: { color: '#BE0165' },
+  listAnimatedContainer: { flex: 0 },
   listWrap: { gap: 10, paddingHorizontal: 24, paddingBottom: 16 },
   rowCard: {
     minHeight: 76,
@@ -554,7 +555,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  templateOptionSelected: { borderColor: '#BE0165', backgroundColor: '#FCF2F7' },
+  templateOptionSelected: { borderColor: '#DFE0E2', backgroundColor: '#FFFFFF' },
   templateOptionHover: { backgroundColor: '#FAFBFD' },
   radio: { width: 16, height: 16, borderRadius: 999, borderWidth: 1, borderColor: '#767676', marginTop: 2, backgroundColor: '#FFFFFF' },
   radioSelected: { borderColor: '#BE0165', borderWidth: 2, backgroundColor: '#BE0165' },

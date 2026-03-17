@@ -15,6 +15,10 @@ function isNotAuthenticatedError(error: unknown): boolean {
   return error instanceof Error && error.message === 'Not authenticated'
 }
 
+function isNotFoundApiError(error: unknown): boolean {
+  return error instanceof Error && error.message.startsWith('API error: 404')
+}
+
 async function loadReportFromReference(referenceId: string): Promise<Report | null> {
   const trimmedReference = String(referenceId || '').trim()
   if (!trimmedReference) return null
@@ -23,6 +27,7 @@ async function loadReportFromReference(referenceId: string): Promise<Report | nu
     if (report) return report
   } catch (error) {
     if (isNotAuthenticatedError(error)) throw error
+    if (!isNotFoundApiError(error)) throw error
     // Continue with input lookup for non-auth failures.
   }
   try {
@@ -30,6 +35,7 @@ async function loadReportFromReference(referenceId: string): Promise<Report | nu
     if (reportByInput) return reportByInput
   } catch (error) {
     if (isNotAuthenticatedError(error)) throw error
+    if (!isNotFoundApiError(error)) throw error
     // Continue with null fallback for non-auth failures.
   }
   return null
@@ -48,7 +54,7 @@ export function ReportScreen(props: ReportScreenProps) {
   const referenceId = props.initialInputId ?? props.initialSessionId ?? null
   const { showErrorToast, showToast } = useToast()
   const [templates, setTemplates] = useState<PipelineTemplate[]>([])
-  const [report, setReport] = useState<Report | null>(null)
+  const [report, setReport] = useState<Report | null>(props.initialReport ?? null)
   const [isLoading, setIsLoading] = useState(true)
   const [authRequired, setAuthRequired] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
@@ -73,9 +79,10 @@ export function ReportScreen(props: ReportScreenProps) {
           return [] as PipelineTemplate[]
         })
         const loadedReport = referenceId ? await loadReportRobust(referenceId, report?.id ?? null) : null
+        const fallbackReport = props.initialReport ?? null
         if (isCancelled) return
         setTemplates(loadedTemplates)
-        setReport(loadedReport)
+        setReport(loadedReport ?? fallbackReport)
       } catch (error) {
         if (isCancelled) return
         if (isNotAuthenticatedError(error)) {
@@ -93,7 +100,7 @@ export function ReportScreen(props: ReportScreenProps) {
     return () => {
       isCancelled = true
     }
-  }, [referenceId, showErrorToast])
+  }, [props.initialReport, referenceId, showErrorToast])
 
   async function handleReload() {
     if (!referenceId) return
@@ -102,8 +109,9 @@ export function ReportScreen(props: ReportScreenProps) {
     try {
       setAuthRequired(false)
       const loadedReport = await loadReportRobust(referenceId, report?.id ?? null)
-      setReport(loadedReport)
-      if (loadedReport) setHideNotFoundMessage(false)
+      const fallbackReport = props.initialReport ?? null
+      setReport(loadedReport ?? fallbackReport)
+      if (loadedReport ?? fallbackReport) setHideNotFoundMessage(false)
     } catch (error) {
       if (isNotAuthenticatedError(error)) {
         setAuthRequired(true)
@@ -196,11 +204,11 @@ const styles = StyleSheet.create({
   },
   reloadButtonHover: { backgroundColor: '#FFF2F9' },
   reloadButtonText: { fontSize: 13, lineHeight: 16, color: '#BE0165' },
-  screenWrap: { flex: 1, backgroundColor: '#F7F5F8', paddingHorizontal: 24, paddingTop: 8 },
+  screenWrap: { flex: 1, backgroundColor: '#F7F5F8', paddingHorizontal: 24, paddingTop: 8, paddingBottom: 0 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerWrap: { flex: 1, minWidth: 0 },
   exportButton: {
-    minHeight: 40,
+    minHeight: 48,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#007ACF',

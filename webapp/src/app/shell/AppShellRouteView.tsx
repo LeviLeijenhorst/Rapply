@@ -16,6 +16,7 @@ import { DashboardScreen } from '../../screens/dashboard/DashboardScreen'
 import { getClientDisplayName } from '../../types/client'
 import type { ClientLeftTabKey } from '../../screens/client/clientScreen.types'
 import type { NewInputQuickAction } from '../../screens/record/types'
+import type { Report } from '../../storage/types'
 import type { RouteState } from './routeHelpers'
 
 type Props = {
@@ -32,6 +33,7 @@ type Props = {
       kind: string
     }>
     trajectories: Array<{ id: string; clientId: string; name: string }>
+    reports: Report[]
   }
   goBack: () => void
   isAdminContactScreenOpen: boolean
@@ -53,21 +55,25 @@ type Props = {
   onSetRapportageEditInputId: (sessionId: string | null) => void
   onSetRapportageOnlyInputId: (sessionId: string | null) => void
   onSetRapportageScreenMode: (mode: 'controleren' | 'bewerken') => void
-  onSetSelectedSidebarItemKey: (key: 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'admin' | 'adminContact' | 'adminWachtlijst' | 'archief') => void
+  onSetSelectedSidebarItemKey: (key: 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'admin' | 'adminContact' | 'adminWachtlijst') => void
   onSetInputIdPendingTemplatePicker: (sessionId: string | null) => void
   onSetInputOriginRoute: (route: RouteState | null) => void
   onToggleE2eePage: (open: boolean) => void
-  overlayScreenKey: 'archief' | null
+  overlayScreenKey: null
   rapportageEditInputId: string | null
   rapportageOnlyInputId: string | null
   rapportageScreenMode: 'controleren' | 'bewerken'
   selectedClientId: string | null
-  selectedSidebarItemKey: 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'admin' | 'adminContact' | 'adminWachtlijst' | 'archief'
+  selectedSidebarItemKey: 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'admin' | 'adminContact' | 'adminWachtlijst'
   selectedSessieId: string | null
   selectedTrajectoryId: string | null
   sessionIdPendingTemplatePicker: string | null
   currentUserGivenName: string | null
   currentUserName: string | null
+  currentUserEmail: string | null
+  onLogout: () => void
+  onOpenDeleteAccountConfirm: () => void
+  isDeleteAccountBusy: boolean
 }
 
 export function AppShellRouteView(props: Props) {
@@ -86,10 +92,6 @@ export function AppShellRouteView(props: Props) {
   if (props.isAdminWachtlijstScreenOpen) {
     return <EmptyPageMessage message="Wachtlijstbeheer is niet meer beschikbaar." onGoHome={() => props.navigateTo({ kind: 'clients' })} />
   }
-  if (props.overlayScreenKey === 'archief') {
-    return <EmptyPageMessage message="Archief komt binnenkort beschikbaar" onGoHome={() => props.navigateTo({ kind: 'clients' })} />
-  }
-
   if (props.isRecordPageOpen) {
     return <EmptyPageMessage message="Opnemen opent direct vanuit 'Nieuw item'." onGoHome={() => props.navigateTo({ kind: 'clients' })} />
   }
@@ -106,14 +108,16 @@ export function AppShellRouteView(props: Props) {
   if (props.isNieuweRapportageOpen) {
     if (props.rapportageEditInputId) {
       const selectedInput = props.data.inputs.find((item) => item.id === props.rapportageEditInputId) ?? null
-      const headerTitle = selectedInput?.title || 'Rapportage'
-      const headerClientName = getClientDisplayName(props.data.clients, selectedInput?.clientId ?? props.selectedClientId)
+      const selectedReport = props.data.reports.find((item) => item.id === props.rapportageEditInputId) ?? null
+      const headerTitle = selectedReport?.title || selectedInput?.title || 'Rapportage'
+      const headerClientName = getClientDisplayName(props.data.clients, selectedReport?.clientId ?? selectedInput?.clientId ?? props.selectedClientId)
       return (
         <ReportScreen
           initialClientId={props.selectedClientId}
           initialInputId={props.rapportageEditInputId}
           headerTitle={headerTitle}
           headerClientName={headerClientName}
+          initialReport={selectedReport}
           onBack={props.goBack}
           mode={props.rapportageScreenMode}
         />
@@ -122,6 +126,7 @@ export function AppShellRouteView(props: Props) {
     return (
       <NewReportScreen
         initialClientId={props.selectedClientId}
+        onBack={props.goBack}
       />
     )
   }
@@ -242,7 +247,15 @@ export function AppShellRouteView(props: Props) {
   }
 
   if (props.selectedSidebarItemKey === 'mijnProfiel') {
-    return <ProfileScreen />
+    return (
+      <ProfileScreen
+        accountName={props.currentUserName}
+        accountEmail={props.currentUserEmail}
+        onLogout={props.onLogout}
+        onDeleteAccount={props.onOpenDeleteAccountConfirm}
+        isDeleteAccountBusy={props.isDeleteAccountBusy}
+      />
+    )
   }
 
   return <Text style={props.mainContentTextStyle}>{props.selectedSidebarItemKey}</Text>

@@ -13,7 +13,7 @@ export type NewInputModalArgs = {
   onClose: () => void
   onRecordingBusyChange?: (isBusy: boolean) => void
   onOpenGeschrevenGespreksverslag: (clientId: string | null) => void
-  onOpenMySubscription: () => void
+  onOpenMySubscription: (params?: { returnClientId?: string | null }) => void
   restoreDraftFromSubscriptionReturn?: boolean
   onRestoreDraftHandled?: () => void
   onOpenInput: (sessionId: string) => void

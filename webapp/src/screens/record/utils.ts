@@ -29,6 +29,7 @@ const knownAudioMimeByExtension: Record<string, string> = {
 
 const knownDocumentMimeByExtension: Record<string, string> = {
   pdf: 'application/pdf',
+  doc: 'application/msword',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 }
 
@@ -186,9 +187,10 @@ export function isSupportedDocumentFile(file: File | null): boolean {
   if (!file) return false
   const normalizedMimeType = String(file.type || '').toLowerCase()
   if (normalizedMimeType === knownDocumentMimeByExtension.pdf) return true
+  if (normalizedMimeType === knownDocumentMimeByExtension.doc) return true
   if (normalizedMimeType === knownDocumentMimeByExtension.docx) return true
   const extension = getFileExtension(file.name)
-  return extension === 'pdf' || extension === 'docx'
+  return extension === 'pdf' || extension === 'doc' || extension === 'docx'
 }
 
 export function getDocumentMimeTypeFromFile(file: File): string {

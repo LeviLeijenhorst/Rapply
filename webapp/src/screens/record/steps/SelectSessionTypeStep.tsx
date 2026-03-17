@@ -64,7 +64,7 @@ export function SelectInputTypeStep({
             onPress={() => onSelectOption('gespreksverslag')}
             style={({ hovered }) => [styles.mobilePrimaryButton, hovered ? styles.mobilePrimaryButtonHovered : undefined]}
           >
-            <Text isBold style={styles.mobilePrimaryButtonText}>Verslag opnemen</Text>
+            <Text isBold style={styles.mobilePrimaryButtonText}>Samenvatting opnemen</Text>
           </Pressable>
         </View>
       </View>
@@ -97,8 +97,8 @@ export function SelectInputTypeStep({
           iconAccentTo="#2A6DFF"
         />
         <InputOptionRow
-          label="Gespreksverslag schrijven"
-          subtitle="Werk je verslag handmatig uit"
+          label="Samenvatting schrijven"
+          subtitle="Werk je samenvatting handmatig uit"
           isSelected={selectedOption === 'schrijven'}
           onPress={() => onSelectOption('schrijven')}
           leftIcon={<VerslagSchrijvenIcon size={18} color="#FFFFFF" />}

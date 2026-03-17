@@ -7,6 +7,7 @@ export type ClientUpsertModalProps = {
   trajectoryOptions?: Array<{ id: string; label: string }>
   onClose: () => void
   onSave: (values: ClientUpsertValues) => void
+  onDelete?: () => void
 }
 
 export type CalendarCell = {

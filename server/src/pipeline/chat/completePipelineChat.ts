@@ -2,6 +2,7 @@ import { completeAzureOpenAiChat, streamAzureOpenAiChat } from "../../ai/azureOp
 import { normalizeText } from "../../ai/shared/normalize"
 import { stripJsonCodeFences } from "../../ai/shared/textSanitization"
 import { env } from "../../env"
+import type { JsonValue } from "../../types/Report"
 import { createPipelineChatResponse, type PipelineChatFieldUpdate, type PipelineChatResponse } from "./chatContract"
 
 type ChatMessage = {
@@ -13,13 +14,59 @@ function readDeploymentOrEmpty(): string {
   return normalizeText(env.azureOpenAiReportDeployment || env.azureOpenAiChatDeployment || env.azureOpenAiSummaryDeployment)
 }
 
+function extractFirstJsonObjectOrArray(value: string): string | null {
+  const text = String(value || "")
+  let startIndex = -1
+  let opening = ""
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index]
+    if (char === "{" || char === "[") {
+      startIndex = index
+      opening = char
+      break
+    }
+  }
+  if (startIndex < 0) return null
+
+  const closing = opening === "{" ? "}" : "]"
+  let depth = 0
+  let inString = false
+  let isEscaped = false
+  for (let index = startIndex; index < text.length; index += 1) {
+    const char = text[index]
+    if (isEscaped) {
+      isEscaped = false
+      continue
+    }
+    if (char === "\\") {
+      isEscaped = true
+      continue
+    }
+    if (char === "\"") {
+      inString = !inString
+      continue
+    }
+    if (inString) continue
+    if (char === opening) depth += 1
+    if (char === closing) depth -= 1
+    if (depth === 0) return text.slice(startIndex, index + 1).trim()
+  }
+  return null
+}
+
 function safeJsonParse(value: string): { answer?: unknown; updates?: unknown[] } | null {
   const stripped = stripJsonCodeFences(String(value || ""))
   if (!stripped) return null
   try {
     return JSON.parse(stripped) as { answer?: unknown; updates?: unknown[] }
   } catch {
-    return null
+    const embedded = extractFirstJsonObjectOrArray(stripped)
+    if (!embedded) return null
+    try {
+      return JSON.parse(embedded) as { answer?: unknown; updates?: unknown[] }
+    } catch {
+      return null
+    }
   }
 }
 
@@ -40,12 +87,45 @@ export function resolveAnswerText(params: { raw: string; parsedAnswer: unknown }
   return raw
 }
 
+function toJsonValueOrNull(value: unknown): JsonValue | null {
+  if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    if (typeof value === "string") {
+      const normalized = normalizeText(value)
+      if (!normalized) return null
+      if ((normalized.startsWith("{") && normalized.endsWith("}")) || (normalized.startsWith("[") && normalized.endsWith("]"))) {
+        try {
+          return JSON.parse(normalized) as JsonValue
+        } catch {
+          // Keep original string when it is not valid JSON.
+        }
+      }
+    }
+    return value as JsonValue
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => {
+      const normalized = toJsonValueOrNull(item)
+      return normalized === null ? "" : normalized
+    }) as JsonValue
+  }
+  if (value && typeof value === "object") {
+    const output: Record<string, JsonValue> = {}
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      const normalizedChild = toJsonValueOrNull(child)
+      if (normalizedChild === null) continue
+      output[key] = normalizedChild
+    }
+    return output as JsonValue
+  }
+  return null
+}
+
 function readFieldUpdates(value: unknown[]): PipelineChatFieldUpdate[] {
   const updates: PipelineChatFieldUpdate[] = []
   for (const raw of value) {
     const fieldId = normalizeText((raw as { fieldId?: unknown })?.fieldId)
-    const answer = normalizeText((raw as { answer?: unknown })?.answer)
-    if (!fieldId || !answer) continue
+    const answer = toJsonValueOrNull((raw as { answer?: unknown })?.answer)
+    if (!fieldId || answer === null) continue
     updates.push({ fieldId, answer })
   }
   return updates
@@ -78,9 +158,11 @@ export async function completePipelineChat(params: {
     "U bent de Coachscribe assistent voor re-integratiecoaches.",
     "Gebruik alleen de context hieronder.",
     "Schrijf in natuurlijk, professioneel Nederlands in volledige zinnen.",
+    "Houd de toon formeel maar menselijk en cliëntgericht; vermijd afstandelijke standaardzinnen als directere formulering mogelijk is.",
     params.allowFieldUpdates
-      ? 'Als de gebruiker vraagt om een rapportveld te herschrijven, geef updates terug. Output JSON: {"answer":"string","updates":[{"fieldId":"string","answer":"string"}]}.'
+      ? 'Als de gebruiker vraagt om een rapportveld te herschrijven, geef updates terug. Output JSON: {"answer":"string","updates":[{"fieldId":"string","answer":"string|object"}]}. Geef alleen updates als ze geldig en toepasbaar zijn. Als je niets valide kunt aanpassen, geef updates: [] en zeg expliciet dat er niets is gewijzigd.'
       : "Geef alleen platte tekst als antwoord. Geef geen JSON, labels of metadata.",
+    "Zeg alleen dat iets is gewijzigd als er daadwerkelijk updates worden teruggegeven.",
     "Gebruik nooit letterlijke placeholderwaarden zoals 'string' of 'antwoord' als inhoud.",
     "",
     "Context:",

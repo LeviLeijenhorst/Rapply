@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { extractSnippets } from '@/api/snippets/snippetGenerationApi'
+import { classifySnippetFields, extractSnippets } from '@/api/snippets/snippetGenerationApi'
 import type { InputDataItem, InputNoteItem, InputScreenProps, InputSnippetItem } from '@/screens/session/sessionScreen.types'
 import { resolveInputSummaryText } from '@/screens/session/sessionSummary'
 import { useLocalAppData } from '@/storage/LocalAppDataProvider'
@@ -15,6 +15,12 @@ function selectSnippetsForInput(snippets: InputSnippetItem[], inputId: string): 
 function isWrittenInputType(value: unknown): boolean {
   const normalizedType = String(value || '').trim()
   return normalizedType === 'written' || normalizedType === 'written-recap'
+}
+
+function resolveSourceInputType(value: unknown): string {
+  if (isWrittenInputType(value)) return 'written_recap'
+  if (value === 'uploaded-document') return 'uploaded_document'
+  return 'recording'
 }
 
 export function useInputScreen(props: InputScreenProps) {
@@ -157,11 +163,12 @@ export function useInputScreen(props: InputScreenProps) {
     deleteSnippet(snippetId)
   }
 
-  function handleCreateSnippet(text: string) {
+  async function handleCreateSnippet(text: string) {
     if (!session) return
     const snippetText = String(text || '').trim()
     if (!snippetText) return
-    createSnippet({
+
+    const snippetId = createSnippet({
       trajectoryId: session.trajectoryId ?? null,
       inputId: resolvedInputId,
       itemId: resolvedInputId,
@@ -171,19 +178,31 @@ export function useInputScreen(props: InputScreenProps) {
       date: Number(session.createdAtUnixMs) || Date.now(),
       status: 'pending',
     })
+
+    void classifySnippetFields({
+      snippetText,
+      sourceInputType: resolveSourceInputType(session.type),
+    })
+      .then((matchedFields) => {
+        if (!Array.isArray(matchedFields) || matchedFields.length === 0) return
+        const normalizedFields = matchedFields
+          .map((field) => String(field || '').trim())
+          .filter((field, index, fields) => field.length > 0 && fields.indexOf(field) === index)
+        if (normalizedFields.length === 0) return
+        updateSnippet(snippetId, {
+          fields: normalizedFields,
+          field: normalizedFields[0] || 'general',
+        })
+      })
+      .catch((error) => {
+        console.warn('[InputScreen] Snippet field classification failed; keeping general field', error)
+      })
+
     showToast('Snippet toegevoegd.')
   }
 
   function handleSaveSnippetText(snippetId: string, text: string) {
     updateSnippet(snippetId, { text: String(text || '') })
-  }
-
-  function handleSaveSnippetLabels(snippetId: string, labels: string[]) {
-    const nextFields = Array.isArray(labels)
-      ? labels.map((label) => String(label || '').trim()).filter((label, index, list) => label.length > 0 && list.indexOf(label) === index)
-      : []
-    if (nextFields.length === 0) return
-    updateSnippet(snippetId, { fields: nextFields })
   }
 
   function handleSaveSummary(nextSummary: string) {
@@ -211,7 +230,6 @@ export function useInputScreen(props: InputScreenProps) {
     handleRegenerateInputSnippets,
     handleCreateSnippet,
     handleUpdateSnippetStatus,
-    handleSaveSnippetLabels,
     handleSaveSnippetText,
     handleDeleteSnippet,
     handleSaveSummary,

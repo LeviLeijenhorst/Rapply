@@ -6,6 +6,22 @@ const recordingChunkDurationMilliseconds = 250
 type ChunkHandler = (chunk: { blob: Blob; durationSeconds: number }) => void
 
 function formatUnknownError(error: unknown) {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
+  const normalizedName = error instanceof Error ? String(error.name || '').trim() : ''
+  const normalizedMessage = message.trim().toLowerCase()
+  if (
+    normalizedName === 'NotAllowedError' ||
+    normalizedName === 'PermissionDeniedError' ||
+    normalizedMessage.includes('permission denied by user') ||
+    normalizedMessage.includes('permission dismissed') ||
+    normalizedMessage.includes('requested device not found') ||
+    normalizedMessage.includes('notallowederror')
+  ) {
+    return 'Toestemming voor scherm- of audio-opname is geweigerd.'
+  }
+  if (normalizedName === 'AbortError' || normalizedMessage.includes('the request is not allowed')) {
+    return 'Het starten van de opname is geannuleerd.'
+  }
   if (error instanceof Error) return error.message
   if (typeof error === 'string') return error
   return 'Unknown error'

@@ -121,13 +121,6 @@ function InputModalContent({
   windowWidth,
   handleStopRecording,
 }: InputModalViewModel) {
-  const shouldHideModalWhileTabPickerIsOpen =
-    selectedOption === 'record-video' && step === 'recording' && (recorder.status === 'idle' || recorder.status === 'requesting')
-
-  if (shouldHideModalWhileTabPickerIsOpen) {
-    return null
-  }
-
   if (shouldShowMinimized) {
     return (
       <MinimizedRecordingLayer

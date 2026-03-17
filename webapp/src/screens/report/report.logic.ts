@@ -42,6 +42,10 @@ export function normalizeReportScreenProps(props: ReportScreenProps): Required<R
     initialSessionId: props.initialSessionId ?? props.initialInputId ?? null,
     initialClientId: props.initialClientId ?? props.initialCoacheeId ?? null,
     initialInputId: props.initialInputId ?? props.initialSessionId ?? null,
+    headerTitle: props.headerTitle ?? null,
+    headerClientName: props.headerClientName ?? null,
+    initialReport: props.initialReport ?? null,
+    onBack: props.onBack ?? (() => {}),
     mode: props.mode ?? 'controleren',
   }
 }

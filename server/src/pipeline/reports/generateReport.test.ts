@@ -5,7 +5,7 @@ import type { Client } from "../../types/Client"
 import type { OrganizationSettings } from "../../types/OrganizationSettings"
 import type { Trajectory } from "../../types/Trajectory"
 import type { UserSettings } from "../../types/UserSettings"
-import { createTemplateFieldIdResolver, generateStructuredReport } from "./generateReport"
+import { buildFieldPromptBlock, buildSystemPrompt, createTemplateFieldIdResolver, generateStructuredReport } from "./generateReport"
 import { listAiTemplateFields, readSupportedUwvTemplate } from "../templates/uwvTemplates"
 
 async function withDisabledAzureDeployments<T>(callback: () => Promise<T>): Promise<T> {
@@ -119,4 +119,32 @@ test("template AI metadata contains detailed question contract", () => {
   assert.equal(er42?.aiConfig?.antwoordType, "multiple_choice")
   assert.equal(er42?.aiConfig?.opties?.length, 3)
   assert.ok((er42?.aiConfig?.skipLogica || []).length >= 2)
+})
+
+test("system prompt includes canonical shared UWV instructions", () => {
+  const template = readSupportedUwvTemplate("eindrapportage_werkfit_maken")
+  const prompt = buildSystemPrompt(template)
+  assert.match(prompt, /OUTPUTFORMAT \(verplicht, exact\):/)
+  assert.match(prompt, /- miniPrompt/)
+  assert.match(prompt, /Doel:/)
+  assert.match(prompt, /factualBasis:/)
+  assert.match(prompt, /Actief template: Eindrapportage Werkfit maken \(eindrapportage_werkfit_maken\)/)
+})
+
+test("field prompt block includes miniPrompt and exact eindrapportage wording for 7.6/7.7/7.8", () => {
+  const template = readSupportedUwvTemplate("eindrapportage_werkfit_maken")
+  const fieldBlock = buildFieldPromptBlock(template)
+  assert.match(fieldBlock, /fieldId: er_werkfit_7_6[\s\S]*?vraag: Wat is uw vervolgadvies en welke bemiddeling en\/of begeleiding heeft de klant nog nodig\?[\s\S]*?miniPrompt:/)
+  assert.match(fieldBlock, /fieldId: er_werkfit_7_7[\s\S]*?vraag: Toelichting op advies/)
+  assert.match(fieldBlock, /fieldId: er_werkfit_7_8[\s\S]*?vraag: Wat vindt de klant van dit advies\?/)
+})
+
+test("reintegratieplan field prompt block includes miniPrompt for every AI field", () => {
+  const template = readSupportedUwvTemplate("reintegratieplan_werkfit_maken")
+  const aiFields = listAiTemplateFields(template)
+  const fieldBlock = buildFieldPromptBlock(template)
+  for (const field of aiFields) {
+    assert.ok(field.aiConfig?.miniPrompt)
+    assert.match(fieldBlock, new RegExp(`fieldId: ${field.fieldId}[\\\\s\\\\S]*?miniPrompt:`))
+  }
 })

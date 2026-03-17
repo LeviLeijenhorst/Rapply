@@ -22,6 +22,7 @@ const storeName = 'drafts'
 const subscriptionReturnDraftId = 'subscription-return'
 const resumeRequestStorageKey = 'coachscribe.newInput.subscriptionReturnResumeRequest'
 const draftMetaStorageKey = 'coachscribe.newInput.subscriptionReturnDraftMeta'
+const returnPathStorageKey = 'coachscribe.newInput.subscriptionReturnPath'
 const draftTtlMs = 24 * 60 * 60 * 1000
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -126,6 +127,37 @@ function clearDraftMeta() {
   } catch {}
 }
 
+function normalizeReturnPath(path: string | null | undefined): string | null {
+  const trimmed = String(path || '').trim()
+  if (!trimmed) return null
+  if (!trimmed.startsWith('/')) return null
+  if (trimmed.startsWith('//')) return null
+  return trimmed
+}
+
+export function setSubscriptionReturnPath(path: string | null | undefined): void {
+  if (typeof window === 'undefined') return
+  const normalized = normalizeReturnPath(path)
+  try {
+    if (!normalized) {
+      window.localStorage.removeItem(returnPathStorageKey)
+      return
+    }
+    window.localStorage.setItem(returnPathStorageKey, normalized)
+  } catch {}
+}
+
+export function consumeSubscriptionReturnPath(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(returnPathStorageKey)
+    window.localStorage.removeItem(returnPathStorageKey)
+    return normalizeReturnPath(raw)
+  } catch {
+    return null
+  }
+}
+
 export function consumeSubscriptionReturnResumeRequest(): boolean {
   const parsed = readJsonFromLocalStorage<{ requestedAtMs?: number }>(resumeRequestStorageKey)
   if (!parsed.ok) return false
@@ -186,6 +218,7 @@ export async function clearSubscriptionReturnDraft(): Promise<void> {
   await deleteDraft().catch(() => undefined)
   clearDraftMeta()
   clearResumeRequest()
+  setSubscriptionReturnPath(null)
 }
 
 

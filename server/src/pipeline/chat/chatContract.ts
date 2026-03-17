@@ -1,6 +1,8 @@
+import type { JsonValue } from "../../types/Report"
+
 export type PipelineChatFieldUpdate = {
   fieldId: string
-  answer: string
+  answer: JsonValue
 }
 
 export type PipelineChatResponse = {

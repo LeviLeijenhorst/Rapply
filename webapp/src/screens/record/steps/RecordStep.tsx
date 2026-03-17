@@ -1,6 +1,7 @@
 import React from 'react'
-import { Animated, Pressable, View } from 'react-native'
+import { Animated, Pressable, TextInput, View } from 'react-native'
 
+import { Modal } from '../../../ui/animated/Modal'
 import { Text } from '../../../ui/Text'
 import { CoachscribeLogo } from '../../../components/brand/CoachscribeLogo'
 import { ModalCloseIcon } from '../../../icons/ModalCloseIcon'
@@ -184,6 +185,14 @@ export function RecordStep({
               style={[
                 styles.recordingNotesModal,
                 {
+                  width: recordingNotesRevealProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 437],
+                  }) as unknown as number,
+                  marginLeft: recordingNotesRevealProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 24],
+                  }) as unknown as number,
                   opacity: recordingNotesRevealProgress.interpolate({
                     inputRange: [0, 1],
                     outputRange: [0, 1],
@@ -192,7 +201,7 @@ export function RecordStep({
                     {
                       translateX: recordingNotesRevealProgress.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [56, 0],
+                        outputRange: [32, 0],
                       }) as unknown as number,
                     },
                   ],
@@ -230,14 +239,6 @@ export function RecordStep({
                 ))}
               </View>
               <View style={styles.recordingNoteComposer}>
-                {editingRecordingNoteId ? (
-                  <View style={styles.recordingEditIndicatorRow}>
-                    <Text style={styles.recordingEditIndicatorText}>Notitie bewerken</Text>
-                    <Pressable onPress={onCancelEditingRecordingNote} style={({ hovered }) => [styles.recordingNoteActionButton, hovered ? styles.recordingNoteActionButtonHovered : undefined]}>
-                      <Text style={styles.recordingNoteActionText}>Annuleer</Text>
-                    </Pressable>
-                  </View>
-                ) : null}
                 <View style={styles.recordingNoteComposerInner}>
                   <ChatComposer
                     value={recordingNoteDraft}
@@ -251,6 +252,43 @@ export function RecordStep({
               </View>
             </Animated.View>
           ) : null}
+          <Modal visible={Boolean(editingRecordingNoteId)} onClose={onCancelEditingRecordingNote} contentContainerStyle={styles.recordingEditModalContainer}>
+            <View style={styles.recordingEditModalBody}>
+              <Text isBold style={styles.recordingEditModalTitle}>Notitie bewerken</Text>
+              <TextInput
+                value={recordingNoteDraft}
+                onChangeText={onRecordingNoteDraftChange}
+                placeholder="Bewerk je notitie..."
+                placeholderTextColor="#93858D"
+                multiline
+                textAlignVertical="top"
+                style={styles.recordingEditModalInput}
+              />
+            </View>
+            <View style={styles.recordedCloseWarningFooter}>
+              <Pressable
+                onPress={onCancelEditingRecordingNote}
+                style={({ hovered }) => [
+                  styles.recordedCloseWarningSecondaryButton,
+                  styles.cancelButtonNoBottomLeftRadius,
+                  hovered ? styles.recordedCloseWarningSecondaryButtonHovered : undefined,
+                ]}
+              >
+                <Text isBold style={styles.recordedCloseWarningSecondaryButtonText}>Annuleren</Text>
+              </Pressable>
+              <Pressable
+                onPress={onSaveRecordingNote}
+                disabled={isTransitioning || recordingNoteDraft.trim().length === 0}
+                style={({ hovered }) => [
+                  styles.recordedCloseWarningPrimaryButton,
+                  isTransitioning || recordingNoteDraft.trim().length === 0 ? styles.primaryButtonDisabled : undefined,
+                  hovered && !isTransitioning && recordingNoteDraft.trim().length > 0 ? styles.recordedCloseWarningPrimaryButtonHovered : undefined,
+                ]}
+              >
+                <Text isBold style={styles.recordedCloseWarningPrimaryButtonText}>Opslaan</Text>
+              </Pressable>
+            </View>
+          </Modal>
         </View>
       )}
     </View>

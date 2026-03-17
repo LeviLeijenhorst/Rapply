@@ -12,6 +12,7 @@ import {
   isSupportedSnippetField,
   normalizeSnippetFieldName,
   readSnippetExtractionDeploymentCandidates,
+  snippetExtractionSystemPrompt,
 } from "../extractSnippets"
 import { readOptionalSnippetStatus, readSnippet } from "../readSnippets"
 import { createSnippet, deleteSnippet, updateSnippet } from "../store"
@@ -42,6 +43,11 @@ function readNormalizedLabelList(value: unknown): string[] {
     labels.push(normalized)
   }
   return labels
+}
+
+function isRecordedSummaryInputType(value: string): boolean {
+  const normalized = normalizeText(value).toLowerCase()
+  return normalized === "recording" || normalized === "spoken_recap" || normalized === "spoken"
 }
 
 // Reads snippet text from strict JSON model output.
@@ -163,7 +169,47 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
       }
       if (!clientId) return sendError(res, 400, "Missing clientId")
 
-      const extracted = await extractSnippets({ transcript, sourceInputType })
+      const shouldLogRecordedSummaryDebug = isRecordedSummaryInputType(sourceInputType)
+      if (shouldLogRecordedSummaryDebug) {
+        console.log(
+          "[snippet-debug:recorded-summary] transcript",
+          JSON.stringify({
+            sourceSessionId,
+            clientId,
+            trajectoryId: resolvedTrajectoryId || null,
+            sourceInputType,
+            transcript,
+          }),
+        )
+      }
+
+      const extracted = await extractSnippets({ transcript, sourceInputType, includeDebug: shouldLogRecordedSummaryDebug })
+      if (shouldLogRecordedSummaryDebug) {
+        const debugChunks = Array.isArray(extracted.debugChunks) ? extracted.debugChunks : []
+        for (const chunk of debugChunks) {
+          console.log(
+            "[snippet-debug:recorded-summary] prompt",
+            JSON.stringify({
+              sourceSessionId,
+              sourceInputType,
+              chunkIndex: chunk.chunkIndex,
+              systemPrompt: snippetExtractionSystemPrompt,
+              userPrompt: chunk.promptUsed,
+            }),
+          )
+          console.log(
+            "[snippet-debug:recorded-summary] result",
+            JSON.stringify({
+              sourceSessionId,
+              sourceInputType,
+              chunkIndex: chunk.chunkIndex,
+              rawModelResponse: chunk.rawModelResponse,
+              parsedSnippets: chunk.parsedSnippets,
+            }),
+          )
+        }
+      }
+
       const now = Date.now()
       const created: Array<{
         id: string
@@ -205,6 +251,29 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
       }
 
       res.status(200).json({ snippets: created })
+    }),
+  )
+
+  app.post(
+    "/ai/snippet-classify-fields",
+    params.rateLimitAi,
+    asyncHandler(async (req, res) => {
+      await requireAuthenticatedUser(req)
+      const transcript = normalizeText(req.body?.transcript)
+      const sourceInputType = normalizeText(req.body?.sourceInputType).toLowerCase()
+      if (!transcript) return sendError(res, 400, "Missing transcript")
+
+      const extracted = await extractSnippets({ transcript, sourceInputType })
+      const fields = Array.from(
+        new Set(
+          extracted.snippets
+            .flatMap((snippet) => (Array.isArray(snippet.fields) ? snippet.fields : []))
+            .map((field) => normalizeText(field))
+            .filter(Boolean),
+        ),
+      ).sort()
+
+      res.status(200).json({ fields: fields.length > 0 ? fields : ["general"] })
     }),
   )
 

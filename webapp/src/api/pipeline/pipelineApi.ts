@@ -9,6 +9,7 @@ export type PipelineTemplateField = {
   aiConfig?: {
     vraag?: string
     instructie?: string
+    miniPrompt?: string
     antwoordType?: 'text' | 'multiple_choice' | 'structured'
     opties?: Array<{ value: number; label: string }>
     answerFormat?: string
@@ -391,14 +392,16 @@ export async function extractDocumentText(params: {
   fileName: string
   mimeType: string
   base64Content: string
-}): Promise<{ extractedText: string; detectedType: 'pdf' | 'docx' }> {
-  const response = await callSecureApi<{ extractedText?: unknown; detectedType?: unknown }>(
+}): Promise<{ extractedText: string; detectedType: 'pdf' | 'docx' | 'doc'; suggestedTitle?: string }> {
+  const response = await callSecureApi<{ extractedText?: unknown; detectedType?: unknown; suggestedTitle?: unknown }>(
     '/pipeline/extract-document-text',
     params,
   )
-  const detectedType = normalizeText(response.detectedType) === 'docx' ? 'docx' : 'pdf'
+  const normalizedDetectedType = normalizeText(response.detectedType)
+  const detectedType = normalizedDetectedType === 'docx' ? 'docx' : normalizedDetectedType === 'doc' ? 'doc' : 'pdf'
   return {
     extractedText: normalizeText(response.extractedText),
+    suggestedTitle: normalizeText(response.suggestedTitle),
     detectedType,
   }
 }

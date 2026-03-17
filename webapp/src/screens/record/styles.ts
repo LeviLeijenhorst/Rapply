@@ -2,6 +2,9 @@ import { StyleSheet } from 'react-native'
 
 import { colors } from '../../design/theme/colors'
 
+const SHELL_LEFT_PANE_WIDTH = 256
+const SHELL_LEFT_PANE_GAP = 8
+
 export const styles = StyleSheet.create({
   overlay: {
     ...( { position: 'fixed', inset: 0, zIndex: 9000 } as any ),
@@ -51,7 +54,7 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   minimizedOverlay: {
-    ...( { position: 'fixed', top: 16, left: 240, right: 24, zIndex: 9000 } as any ),
+    ...( { position: 'fixed', top: 16, left: SHELL_LEFT_PANE_WIDTH + SHELL_LEFT_PANE_GAP, right: 24, zIndex: 9000 } as any ),
     alignItems: 'flex-start',
     height: 40,
   },
@@ -671,6 +674,7 @@ export const styles = StyleSheet.create({
     ...( { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } as any ),
     padding: 0,
     gap: 0,
+    overflow: 'hidden',
   },
   recordingNotesTitle: {
     fontSize: 24,
@@ -770,6 +774,31 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     color: colors.textSecondary,
+  },
+  recordingEditModalContainer: {
+    width: 560,
+  },
+  recordingEditModalBody: {
+    padding: 24,
+    gap: 16,
+  },
+  recordingEditModalTitle: {
+    fontSize: 18,
+    lineHeight: 22,
+    color: colors.textStrong,
+  },
+  recordingEditModalInput: {
+    minHeight: 180,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DFE0E2',
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.textStrong,
+    ...( { outlineStyle: 'none', outlineWidth: 0, resize: 'vertical' } as any ),
   },
   recordingNoteInputWrap: {
     width: '100%',

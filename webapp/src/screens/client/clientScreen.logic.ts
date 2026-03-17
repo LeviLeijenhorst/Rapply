@@ -51,12 +51,14 @@ function readTrajectoryClientId(trajectory: ClientTrajectory): string {
 
 export function getClientInputListItems(data: ClientDataShape, clientId: string): {
   sessionItems: InputListItem[]
+  documentItems: InputListItem[]
   noteItems: InputListItem[]
   reportItems: InputListItem[]
 } {
   const sessionItems = data.inputs
     .filter((item) => readInputClientId(item) === clientId)
     .filter((item) => !isInputNotesArtifact(item))
+    .filter((item) => item.type !== 'uploaded-document')
     .map<InputListItem>((item) => ({
       id: item.id,
       targetInputId: item.id,
@@ -72,6 +74,31 @@ export function getClientInputListItems(data: ClientDataShape, clientId: string)
       transcriptionStatus: item.transcriptionStatus,
       rowType: 'session',
     }))
+    .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
+
+  const documentItems = data.inputs
+    .filter((item) => readInputClientId(item) === clientId)
+    .filter((item) => item.type === 'uploaded-document')
+    .map<InputListItem>((item) => {
+      const trajectoryLabel = item.trajectoryId ? data.trajectories.find((t) => t.id === item.trajectoryId)?.name || 'Traject' : 'Geen traject'
+      const fileName = String(item.uploadFileName || '').trim()
+      const title = String(item.title || '').trim() || fileName || 'Document'
+      return {
+        id: item.id,
+        targetInputId: item.id,
+        title,
+        trajectoryLabel,
+        kind: item.kind,
+        dateLabel: new Date(item.createdAtUnixMs).toLocaleDateString('nl-NL', { month: 'short', day: 'numeric', year: 'numeric' }),
+        timeLabel: new Date(item.createdAtUnixMs).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
+        durationLabel: '',
+        isReport: false,
+        searchText: `${title} ${fileName} ${trajectoryLabel}`.toLowerCase(),
+        createdAtUnixMs: item.createdAtUnixMs,
+        transcriptionStatus: item.transcriptionStatus,
+        rowType: 'document',
+      }
+    })
     .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
 
   const noteItems: InputListItem[] = data.notes
@@ -130,6 +157,7 @@ export function getClientInputListItems(data: ClientDataShape, clientId: string)
 
   return {
     sessionItems,
+    documentItems,
     noteItems,
     reportItems,
   }

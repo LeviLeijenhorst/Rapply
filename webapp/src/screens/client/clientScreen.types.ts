@@ -21,7 +21,7 @@ export type InputListItem = {
   searchText: string
   createdAtUnixMs: number
   transcriptionStatus: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
-  rowType: 'session' | 'note' | 'report'
+  rowType: 'session' | 'note' | 'report' | 'document'
 }
 
 export type ClientRecord = {
@@ -48,6 +48,7 @@ export type ClientInput = {
   clientId?: string | null
   trajectoryId?: string | null
   title: string
+  type?: string | null
   kind: string
   audioBlobId?: string | null
   audioDurationSeconds?: number | null

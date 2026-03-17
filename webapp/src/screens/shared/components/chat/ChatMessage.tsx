@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native'
 import { LoadingSpinner } from '../../../../ui/LoadingSpinner'
 
 import { Text } from '../../../../ui/Text'
@@ -16,6 +16,7 @@ type Props = {
   role: 'user' | 'assistant'
   text: string
   isLoading?: boolean
+  isStreaming?: boolean
   onTranscriptMentionPress?: (seconds: number) => void
   exportTitle?: string
   onRequestPdfEdit?: (params: { text: string; title?: string; organizationSettings: PdfPracticeSettings }) => void
@@ -816,7 +817,7 @@ function renderInlineSegments({
   )
 }
 
-export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, exportTitle, onRequestPdfEdit }: Props) {
+export function ChatMessage({ role, text, isLoading, isStreaming, onTranscriptMentionPress, exportTitle, onRequestPdfEdit }: Props) {
   const { data } = useLocalAppData() as any
   const organizationSettings = (data as any)?.organizationSettings ?? {}
   const pdfPracticeSettings = useMemo<PdfPracticeSettings>(
@@ -833,6 +834,27 @@ export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, e
   const exportableText = resolveExportableMessageText(text)
   const displayText = removeExportMarkers(text)
   const lines = parseRichTextMarkdown(displayText || '')
+  const shouldShowCopyButton = isAssistant && !isLoading && !isStreaming && displayText.trim().length > 0
+  const [isCopyButtonVisible, setIsCopyButtonVisible] = useState(shouldShowCopyButton)
+  const copyRevealAnimation = useRef(new Animated.Value(shouldShowCopyButton ? 1 : 0)).current
+
+  useEffect(() => {
+    if (!shouldShowCopyButton) {
+      setIsCopyButtonVisible(false)
+      copyRevealAnimation.stopAnimation()
+      copyRevealAnimation.setValue(0)
+      return
+    }
+    setIsCopyButtonVisible(true)
+    copyRevealAnimation.setValue(0)
+    Animated.timing(copyRevealAnimation, {
+      toValue: 1,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start()
+  }, [copyRevealAnimation, shouldShowCopyButton])
+
   const isExportable = false
 
   if (isAssistant) {
@@ -912,18 +934,37 @@ export function ChatMessage({ role, text, isLoading, onTranscriptMentionPress, e
               </View>
 
               <View style={styles.messageActionsRow}>
-                <Pressable
-                  onPress={() => {
-                    if (typeof navigator === 'undefined') return
-                    navigator.clipboard?.writeText(String(displayText || '')).then(() => {
-                      setShowCopyNotification(true)
-                      setTimeout(() => setShowCopyNotification(false), 3000)
-                    })
-                  }}
-                  style={({ hovered }) => [styles.actionButton, hovered ? styles.actionButtonHovered : undefined]}
-                >
-                  {showCopyNotification ? <CopiedIcon size={18} /> : <CopyIcon color="#8E8480" size={18} />}
-                </Pressable>
+                {isCopyButtonVisible ? (
+                  <Animated.View
+                    style={[
+                      styles.copyActionWrap,
+                      {
+                        opacity: copyRevealAnimation,
+                        transform: [
+                          {
+                            translateY: copyRevealAnimation.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [6, 0],
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
+                  >
+                    <Pressable
+                      onPress={() => {
+                        if (typeof navigator === 'undefined') return
+                        navigator.clipboard?.writeText(String(displayText || '')).then(() => {
+                          setShowCopyNotification(true)
+                          setTimeout(() => setShowCopyNotification(false), 3000)
+                        })
+                      }}
+                      style={({ hovered }) => [styles.actionButton, hovered ? styles.actionButtonHovered : undefined]}
+                    >
+                      {showCopyNotification ? <CopiedIcon size={18} /> : <CopyIcon color="#8E8480" size={18} />}
+                    </Pressable>
+                  </Animated.View>
+                ) : null}
 
                 {isExportable ? (
                   <>
@@ -1051,13 +1092,14 @@ const styles = StyleSheet.create({
   loadingText: { fontSize: 14, lineHeight: 20, color: colors.textSecondary },
   messageText: { fontSize: 14, lineHeight: 20, color: colors.text },
   messageActionsRow: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  copyActionWrap: { alignItems: 'center', justifyContent: 'center' },
   actionButton: { width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   actionButtonHovered: { backgroundColor: colors.hoverBackground },
   copyNotification: { alignItems: 'center' },
   copyNotificationText: { fontSize: 12, lineHeight: 16, color: colors.selected, textAlign: 'center' },
   userRow: { width: '100%', flexDirection: 'row', justifyContent: 'flex-end' },
-  userBubble: { maxWidth: 520, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 12 },
-  userText: { fontSize: 14, lineHeight: 20, color: colors.text },
+  userBubble: { maxWidth: '80%', minWidth: 0, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 12, overflow: 'hidden' },
+  userText: { fontSize: 14, lineHeight: 20, color: colors.text, ...( { wordBreak: 'break-word' } as any ) },
   userTextBold: { fontSize: 14, lineHeight: 20, color: colors.text },
   userQuoteText: { fontSize: 14, lineHeight: 20, color: colors.textSecondary },
   transcriptMention: {

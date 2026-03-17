@@ -43,22 +43,67 @@ export const REINTEGRATIE_ACTIVITEITEN_OPTIES = [
   'In beeld brengen arbeidsmarktpositie',
 ] as const
 
-const sectionTitleOverrides: Record<string, string> = {
-  '1': 'Gegevens cli\u00ebnt',
-  '2': 'Gegevens UWV',
-  '3': 'Gegevens re-integratiebedrijf',
-  '4': 'Wat is het ordernummer?',
-  '5': 'Re-integratieactiviteiten en begeleidingsuren',
-  '6': 'Doorlooptijd',
-  '7': 'Visie op dienstverlening',
-  '8': 'Specialistisch uurtarief',
+const templateSectionTitleOverrides: Record<string, Record<string, string>> = {
+  reintegratieplanwerkfitmaken: {
+    '1': 'Gegevens cli\u00ebnt',
+    '2': 'Gegevens UWV',
+    '3': 'Gegevens re-integratiebedrijf',
+    '4': 'Ordernummer',
+    '5': 'Re-integratieactiviteiten en begeleidingsuren',
+    '6': 'Doorlooptijd',
+    '7': 'Visie op dienstverlening',
+    '8': 'Specialistisch uurtarief',
+  },
+  eindrapportagewerkfitmaken: {
+    '1': 'Gegevens klant',
+    '2': 'Gegevens UWV',
+    '3': 'Gegevens re-integratiebedrijf',
+    '4': 'Aanleiding voor de eindrapportage',
+    '5': 'Be\u00ebindiging re-integratiedienst naar aanleiding van het evaluatiemoment',
+    '6': 'Be\u00ebindiging wegens voortijdige terugmelding',
+    '7': 'Be\u00ebindiging re-integratiedienst',
+    '8': 'Oordeel klant',
+  },
+}
+
+const templateFieldLabelOverrides: Record<string, Record<string, string>> = {
+  reintegratieplanwerkfitmaken: {
+    '4.1': 'Wat is het ordernummer?',
+    '3.4': 'Postcode en plaats (van het bezoekadres)',
+    '7.2': 'Wat is uw visie op de re-integratiemogelijkheden van de cli\u00ebnt?',
+    '7.3': 'Wat verwacht u van de inzet en het resultaat van de re-integratiedienst?',
+  },
+  eindrapportagewerkfitmaken: {
+    '1.1': 'Voorletters en achternaam',
+    '1.2': 'Burgerservicenummer',
+    '2.1': 'Naam contactpersoon UWV',
+    '3.1': 'Naam organisatie',
+    '3.2': 'Naam contactpersoon',
+    '4.1': 'Wat is het ordernummer?',
+    '4.2': 'Van welke eindsituatie is sprake?',
+    '5.1': 'Waarom be\u00ebindigt u de re-integratiedienst naar aanleiding van het evaluatiemoment? Is de klant het hiermee eens?',
+    '5.2': 'Wat is uw advies voor het vervolg van de dienstverlening?',
+    '6.1': 'Wat is de reden van de voortijdige terugmelding?',
+    '6.2': 'Geef een toelichting op de reden van de voortijdige terugmelding.',
+    '6.3': 'Een voortijdige terugmelding moet altijd vooraf worden besproken met de klant en met UWV. Met wie bij UWV heeft u dit besproken?',
+    '7.1': 'Welke re-integratieactiviteiten heeft u voor de klant uitgevoerd? En hoeveel begeleidingsuren heeft u ingezet per activiteit?',
+    '7.2': 'Welke vorderingen heeft de klant gemaakt?',
+    '7.3': 'Wat is het bereikte resultaat?',
+    '7.4': 'Geef aan waaruit blijkt dat de klant werkfit is, of wat de reden is dat de klant niet werkfit is.',
+    '7.5': 'Is de klant naar zijn eigen mening werkfit? Waaruit blijkt dat?',
+    '7.6': 'Wat is uw vervolgadvies en welke bemiddeling en/of begeleiding heeft de klant nog nodig?',
+    '7.7': 'Toelichting op advies',
+    '7.8': 'Wat vindt de klant van dit advies?',
+    '8.1': 'Hoe heeft de klant de door u ingezette re-integratieactiviteiten ervaren?',
+    '8.2': 'Is de klant akkoord met het aantal door u ingezette en verantwoorde begeleidingsuren?',
+  },
 }
 
 const defaultCollapsedSectionTitles = new Set([
   'Gegevens cli\u00ebnt',
   'Gegevens UWV',
   'Gegevens re-integratiebedrijf',
-  'Wat is het ordernummer?',
+  'Ordernummer',
 ])
 
 export function asObject(value: JsonValue): Record<string, JsonValue> | null {
@@ -79,9 +124,9 @@ export function readSingleChoiceOptions(fieldId: string): Array<{ value: number;
       { value: 2, label: 'Nee' },
     ],
     er_werkfit_4_2: [
-      { value: 1, label: "Beëindiging re-integratiedienst 'Werkfit maken' naar aanleiding van evaluatiemoment" },
+      { value: 1, label: "Be\u00ebindiging re-integratiedienst 'Werkfit maken' naar aanleiding van het evaluatiemoment" },
       { value: 2, label: 'Voortijdige terugmelding' },
-      { value: 3, label: "Beëindiging re-integratiedienst 'Werkfit maken'" },
+      { value: 3, label: "Be\u00ebindiging re-integratiedienst 'Werkfit maken'" },
     ],
     er_werkfit_6_1: [
       { value: 1, label: 'Ziekte langer dan 4 weken (klant met een Ziektewet-uitkering)' },
@@ -103,8 +148,59 @@ export function readSingleChoiceOptions(fieldId: string): Array<{ value: number;
   return map[fieldId] || []
 }
 
-export function readDefaultSectionTitle(sectionKey: string, fallbackTitle: string): string {
-  return sectionTitleOverrides[sectionKey] || fallbackTitle || `Rubriek ${sectionKey}`
+function normalizeTemplateKey(templateIdOrName: string): string {
+  return String(templateIdOrName || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '')
+}
+
+export function readDefaultSectionTitle(sectionKey: string, fallbackTitle: string, templateIdOrName = ''): string {
+  const templateOverrides = templateSectionTitleOverrides[normalizeTemplateKey(templateIdOrName)] || {}
+  return templateOverrides[sectionKey] || fallbackTitle || `Rubriek ${sectionKey}`
+}
+
+export function readDisplayFieldLabel(numberKey: string, fallbackLabel: string, templateIdOrName = ''): string {
+  const templateOverrides = templateFieldLabelOverrides[normalizeTemplateKey(templateIdOrName)] || {}
+  return templateOverrides[numberKey] || fallbackLabel
+}
+
+export function readSingleChoiceValueKey(fieldId: string): string {
+  const map: Record<string, string> = {
+    rp_werkfit_8_1: 'keuze',
+    er_werkfit_4_2: 'keuze',
+    er_werkfit_6_1: 'reden',
+    er_werkfit_7_3: 'resultaat',
+    er_werkfit_8_2: 'akkoord',
+  }
+  return map[fieldId] || 'keuze'
+}
+
+export function readConditionalHiddenFieldIds(params: { rp81Choice?: number | null; er42Choice?: number | null }): string[] {
+  const hidden = new Set<string>()
+  if (params.rp81Choice === 2) {
+    hidden.add('rp_werkfit_8_2')
+    hidden.add('rp_werkfit_8_3')
+  }
+  if (params.er42Choice === 1) {
+    hidden.add('er_werkfit_6_1')
+    hidden.add('er_werkfit_6_2')
+    hidden.add('er_werkfit_6_3')
+  }
+  if (params.er42Choice === 2) {
+    hidden.add('er_werkfit_5_1')
+    hidden.add('er_werkfit_5_2')
+  }
+  if (params.er42Choice === 3) {
+    hidden.add('er_werkfit_5_1')
+    hidden.add('er_werkfit_5_2')
+    hidden.add('er_werkfit_6_1')
+    hidden.add('er_werkfit_6_2')
+    hidden.add('er_werkfit_6_3')
+  }
+  return Array.from(hidden)
 }
 
 export function isDefaultCollapsedSection(sectionTitle: string): boolean {
@@ -211,6 +307,30 @@ export function normalizeNumericInput(value: string): string {
   return String(value || '').replace(/[^\d]/g, '')
 }
 
+export function normalizeHoursInput(value: string): string {
+  const normalized = String(value || '').replace(/,/g, '.')
+  const filtered = normalized.replace(/[^\d.]/g, '')
+  const firstDotIndex = filtered.indexOf('.')
+  if (firstDotIndex < 0) return filtered.slice(0, 2)
+  const before = filtered.slice(0, firstDotIndex).replace(/\./g, '').slice(0, 2)
+  const after = filtered.slice(firstDotIndex + 1).replace(/\./g, '').slice(0, 2)
+  const safeBefore = before || '0'
+  if (filtered.endsWith('.') && after.length === 0) return `${safeBefore}.`
+  return `${safeBefore}.${after}`
+}
+
+export function parseHoursToNumber(value: JsonValue): number {
+  if (typeof value === 'number') return Number.isFinite(value) ? Math.round(value * 100) / 100 : 0
+  const normalized = normalizeHoursInput(String(value || ''))
+  const parsed = Number(normalized.replace(/^\.$/, ''))
+  if (!Number.isFinite(parsed)) return 0
+  return Math.round(parsed * 100) / 100
+}
+
+export function shouldShowAkkoordToelichting(akkoordValue: number | null | undefined): boolean {
+  return akkoordValue === 2
+}
+
 export function shouldCapitalizeField(numberKey: string, label: string): boolean {
   const sectionKey = String(numberKey || '').split('.')[0]
   if (!['1', '2', '3'].includes(sectionKey)) return false
@@ -237,7 +357,7 @@ export function deserializeMultiSelect(value: string): string[] {
 
 export function serializeRepeatableRows(rows: RepeatableActivityRow[]): string {
   return rows
-    .map((row) => ({ hours: normalizeNumericInput(row.hours), activity: String(row.activity || '').trim() }))
+    .map((row) => ({ hours: normalizeHoursInput(row.hours), activity: String(row.activity || '').trim() }))
     .filter((row) => row.hours || row.activity)
     .map((row) => {
       if (row.activity && row.hours) return `${row.activity} (${row.hours} uur)`
@@ -253,15 +373,15 @@ export function deserializeRepeatableRows(value: string): RepeatableActivityRow[
     .map((part) => String(part || '').trim())
     .filter(Boolean)
     .map((part) => {
-      const match = part.match(/^(.*?)\s*\(\s*([0-9]+)\s*(?:uur|uren)?\s*\)\s*$/i)
+      const match = part.match(/^(.*?)\s*\(\s*([0-9]+(?:[.,][0-9]+)?)\s*(?:uur|uren)?\s*\)\s*$/i)
       if (match) {
         return {
           activity: String(match[1] || '').trim(),
-          hours: String(match[2] || '').trim(),
+          hours: normalizeHoursInput(String(match[2] || '').trim()),
         }
       }
-      const hours = normalizeNumericInput(part)
-      const activity = String(part.replace(/[0-9]+/g, '') || '').replace(/[()]/g, '').trim()
+      const hours = normalizeHoursInput(part)
+      const activity = String(part.replace(/[0-9]+(?:[.,][0-9]+)?/g, '') || '').replace(/[()]/g, '').trim()
       return { hours, activity }
     })
     .filter((row) => row.hours || row.activity)
@@ -330,11 +450,10 @@ export function readFieldVariant(params: { fieldId?: string; numberKey: string; 
   if (fieldId === 'rp_werkfit_6_1') return 'maanden_object'
 
   if (numberKey === '1.1') return 'split_name'
-  if (numberKey === '3.4') return 'split_address'
+  if (fieldId === 'rp_werkfit_3_4') return 'split_address'
   if (numberKey === '5.1') return 'multi_select'
   if (numberKey === '5.3') return 'repeatable_rows'
   if (numberKey === '6.1' || numberKey === '1.2' || numberKey === '8.1') return 'numeric'
   if (fieldType === 'programmatic') return 'single_line'
   return 'plain_text'
 }
-

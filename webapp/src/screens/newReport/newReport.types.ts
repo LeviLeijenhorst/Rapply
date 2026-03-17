@@ -10,6 +10,7 @@ export type NewReportScreenProps = {
   initialClientId?: string | null
   initialInputId?: string | null
   mode?: RapportagePageMode
+  onBack?: () => void
 }
 
 export type InputRow = {

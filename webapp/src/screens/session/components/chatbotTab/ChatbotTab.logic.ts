@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { streamInputPipelineChatMessage } from '@/api/pipeline/pipelineApi'
+import { createTypewriterStream } from '@/screens/shared/components/chat/createTypewriterStream'
 import type { ChatbotMessage, UseChatbotTabLogicParams } from '@/screens/session/sessionScreen.types'
 
 export function useChatbotTabLogic({ inputId }: UseChatbotTabLogicParams) {
@@ -31,19 +32,26 @@ export function useChatbotTabLogic({ inputId }: UseChatbotTabLogicParams) {
     setChatMessages([...nextMessages, placeholderAssistant])
     setChatComposerValue('')
     setIsChatSending(true)
+    const typewriter = createTypewriterStream({
+      appendChar: (nextChar) => {
+        setChatMessages((previousMessages) =>
+          previousMessages.map((message) =>
+            message.id === assistantId ? { ...message, text: `${message.text}${nextChar}` } : message,
+          ),
+        )
+      },
+    })
 
     try {
       const response = await streamInputPipelineChatMessage({
         inputId,
         messages: nextMessages.map((message) => ({ role: message.role, text: message.text })),
         onDelta: (delta) => {
-          setChatMessages((previousMessages) =>
-            previousMessages.map((message) =>
-              message.id === assistantId ? { ...message, text: `${message.text}${delta}` } : message,
-            ),
-          )
+          typewriter.pushDelta(delta)
         },
       })
+      await typewriter.waitUntilIdle()
+      typewriter.dispose()
 
       setChatMessages((previousMessages) =>
         previousMessages.map((message) =>
@@ -61,6 +69,7 @@ export function useChatbotTabLogic({ inputId }: UseChatbotTabLogicParams) {
             : message,
         ),
       )
+      typewriter.dispose()
     } finally {
       setIsChatSending(false)
     }

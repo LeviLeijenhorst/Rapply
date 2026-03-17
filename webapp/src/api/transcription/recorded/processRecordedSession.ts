@@ -92,7 +92,11 @@ function sanitizeCreatedSnippets(snippets: Snippet[]): Snippet[] {
 }
 
 function readTranscriptLeadSentence(transcript: string): string {
-  const normalized = normalizeWhitespace(transcript)
+  const normalized = normalizeWhitespace(
+    removeSpeakerLabels(String(transcript || ''))
+      .replace(/^\s*\[\d{1,2}:\d{2}(?:\.\d+)?\]\s*/g, '')
+      .replace(/^\s*\d{1,2}:\d{2}(?:\.\d+)?\s*[-:]\s*/g, ''),
+  )
   if (!normalized) return ''
   const match = normalized.match(/^(.{40,280}?[.!?])(?:\s|$)/)
   return normalizeWhitespace(match?.[1] || normalized.slice(0, 220))

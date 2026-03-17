@@ -25,6 +25,8 @@ export type SnippetExtractionDebugChunk = {
   parsedSnippets: SnippetExtractionResult[]
 }
 
+export const snippetExtractionSystemPrompt = "Geef uitsluitend geldige JSON terug. Geen markdown. Geen extra toelichting."
+
 function ensureSentenceEnding(value: string): string {
   const trimmed = normalizeText(value)
   if (!trimmed) return ""
@@ -74,7 +76,7 @@ export const snippetFieldQuestions: SnippetFieldQuestion[] = [
   { field: "rp_werkfit_6_1", question: "Wat is de maximale individuele doorlooptijd van de re-integratiedienst?" },
   { field: "rp_werkfit_7_1", question: "Wat verwacht de client van de inzet en het resultaat van de re-integratiedienst? En van de begeleiding door uw organisatie?" },
   { field: "rp_werkfit_7_2", question: "Wat is uw visie op de re-integratiemogelijkheden van de client?" },
-  { field: "rp_werkfit_7_3", question: "Wat verwacht de client van de inzet en het resultaat van de re-integratiedienst?" },
+  { field: "rp_werkfit_7_3", question: "Wat verwacht u van de inzet en het resultaat van de re-integratiedienst?" },
   { field: "rp_werkfit_8_1", question: "Is er sprake van specialistisch uurtarief?" },
   { field: "rp_werkfit_8_2", question: "Motiveer welke specialistische expertise voor de client nodig is en hoeveel uren u adviseert." },
   {
@@ -104,7 +106,7 @@ export const snippetFieldQuestions: SnippetFieldQuestion[] = [
   { field: "er_werkfit_7_7", question: "Geef een toelichting op uw advies." },
   { field: "er_werkfit_7_8", question: "Wat vindt de klant van dit advies?" },
   { field: "er_werkfit_8_1", question: "Hoe heeft de klant de door u ingezette re-integratieactiviteiten ervaren?" },
-  { field: "er_werkfit_8_2", question: "Is de klant akkoord met de ingezette en verantwoorde begeleidingsuren?" },
+  { field: "er_werkfit_8_2", question: "Is de klant akkoord met het aantal door u ingezette en verantwoorde begeleidingsuren?" },
   {
     field: "general",
     question: "Relevante trajectinformatie die nuttig is voor vragen aan AI-assistenten in Coachscribe, maar niet direct onder een specifieke rapportagevraag valt.",
@@ -338,7 +340,7 @@ async function extractSnippetsForChunk(params: { prompt: string }): Promise<{ ra
         deployment,
         temperature: 0,
         messages: [
-          { role: "system", content: "Geef uitsluitend geldige JSON terug. Geen markdown. Geen extra toelichting." },
+          { role: "system", content: snippetExtractionSystemPrompt },
           { role: "user", content: params.prompt },
         ],
       })

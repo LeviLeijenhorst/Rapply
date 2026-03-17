@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   titlePillHover: {
-    backgroundColor: semanticColorTokens.light.hoverAccent,
+    backgroundColor: semanticColorTokens.light.hoverNeutral,
   },
   backIconWrap: {
     width: 24,

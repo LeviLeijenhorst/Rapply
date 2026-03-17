@@ -17,6 +17,7 @@ export function ChatbotTab({
   messages,
   composerValue,
   isSending,
+  shouldAutoFocus = false,
   onChangeComposerValue,
   onSendMessage,
   onClearChat,
@@ -46,14 +47,15 @@ export function ChatbotTab({
       </View>
 
       <ScrollView style={styles.feed} contentContainerStyle={messages.length === 0 ? styles.feedContentCentered : styles.feedContent} showsVerticalScrollIndicator={false}>
-        {messages.length === 0 ? (
+        {messages.length === 0 && !isSending ? (
           <Text style={styles.emptyText}>Stel een vraag over deze sessie om AI-chat te starten.</Text>
         ) : (
           <>
             {messages.map((message) => {
               const isHiddenStreamingPlaceholder = message.role === 'assistant' && message.text.trim().length === 0
               if (isHiddenStreamingPlaceholder) return null
-              return <ChatMessage key={message.id} role={message.role} text={message.text} />
+              const isStreamingMessage = isSending && message.id.startsWith('assistant-stream-')
+              return <ChatMessage key={message.id} role={message.role} text={message.text} isStreaming={isStreamingMessage} />
             })}
             {isSending && !messages.some((message) => message.id.startsWith('assistant-stream-') && message.text.trim().length > 0)
               ? <ChatMessage role="assistant" text="" isLoading />
@@ -71,8 +73,8 @@ export function ChatbotTab({
           showDisclaimer={false}
           sendIconVariant="arrow"
           isSendDisabled={isSending || composerValue.trim().length === 0}
-          shouldAutoFocus={isModalVariant}
-          autoFocusKey={`session-chat-${inputId}-${isModalVariant ? 'modal' : 'panel'}`}
+          shouldAutoFocus={isModalVariant || shouldAutoFocus}
+          autoFocusKey={`session-chat-${inputId}-${isModalVariant ? 'modal' : 'panel'}-${shouldAutoFocus ? 'active' : 'inactive'}`}
         />
       </View>
     </View>
