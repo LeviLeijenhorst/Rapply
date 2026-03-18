@@ -16,6 +16,8 @@ import { useToast } from '@/toast/ToastProvider'
 import { Text } from '@/ui/Text'
 import { ClientPageDocumentenIcon, ClientPageNotesIcon, ClientPageSessiesIcon } from '@/icons/ClientPageSvgIcons'
 import { MainContainer } from '@/ui/animated/MainContainer'
+import { createId } from '@/utils/createId'
+import { markSidebarProcessingItemDone, removeSidebarProcessingItem, upsertSidebarProcessingItem } from '@/app/shell/sidebarProcessingStore'
 
 function areStringArraysEqual(left: string[], right: string[]): boolean {
   if (left.length !== right.length) return false
@@ -237,6 +239,13 @@ export function NewReportScreen(props: NewReportScreenProps) {
       showErrorToast('Geen goedgekeurde snippets in de selectie. Keur eerst snippets goed.')
       return
     }
+    const processingId = createId('report-processing')
+    upsertSidebarProcessingItem({
+      id: processingId,
+      kind: 'report',
+      label: selectedTemplate?.name || 'Rapport genereren',
+      status: 'processing',
+    })
     setIsGenerating(true)
     try {
       const report = await generateReport({
@@ -249,7 +258,9 @@ export function NewReportScreen(props: NewReportScreenProps) {
       setActiveReport(report)
       await refreshAppData()
       showToast('Rapport gegenereerd.')
+      markSidebarProcessingItemDone(processingId, { targetReportId: report.id })
     } catch (error) {
+      removeSidebarProcessingItem(processingId)
       showErrorToast(error instanceof Error ? error.message : 'Rapport genereren mislukt.')
     } finally {
       setIsGenerating(false)

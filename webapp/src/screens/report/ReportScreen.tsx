@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+﻿import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
 import { listPipelineTemplates, readPipelineReport, readPipelineReportByInput, type PipelineTemplate } from '@/api/pipeline/pipelineApi'
 import { exportReportToWord } from '@/api/reports/exportReportToWord'
@@ -10,6 +10,39 @@ import { Header } from '@/screens/session/components/Header'
 import type { Report } from '@/storage/types'
 import { useToast } from '@/toast/ToastProvider'
 import { Text } from '@/ui/Text'
+import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg'
+
+function ReportSavedCloudIcon() {
+  return (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M7.27004 13.01C6.74004 12.74 6.15004 12.6 5.55004 12.6C0.870039 12.93 0.870039 19.74 5.55004 20.07H16.64C17.99 20.08 19.29 19.58 20.28 18.67C23.57 15.8 21.81 10.03 17.48 9.48C15.92 0.110001 2.39004 3.67 5.60004 12.6"
+        stroke="#171717"
+        strokeWidth={1.5}
+        strokeMiterlimit={10}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M15.8501 9.92001C16.3701 9.66001 16.9401 9.52001 17.5201 9.51001" stroke="#171717" strokeWidth={1.5} strokeMiterlimit={10} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  )
+}
+
+function HeaderGradientOverlay() {
+  return (
+    <View pointerEvents="none" style={styles.headerGradientOverlay}>
+      <Svg width="100%" height="100%" preserveAspectRatio="none">
+        <Defs>
+          <LinearGradient id="reportHeaderFade" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#F7F5F8" stopOpacity="1" />
+            <Stop offset="1" stopColor="#F7F5F8" stopOpacity="0" />
+          </LinearGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#reportHeaderFade)" />
+      </Svg>
+    </View>
+  )
+}
 
 function isNotAuthenticatedError(error: unknown): boolean {
   return error instanceof Error && error.message === 'Not authenticated'
@@ -28,7 +61,6 @@ async function loadReportFromReference(referenceId: string): Promise<Report | nu
   } catch (error) {
     if (isNotAuthenticatedError(error)) throw error
     if (!isNotFoundApiError(error)) throw error
-    // Continue with input lookup for non-auth failures.
   }
   try {
     const reportByInput = await readPipelineReportByInput(trimmedReference)
@@ -36,7 +68,6 @@ async function loadReportFromReference(referenceId: string): Promise<Report | nu
   } catch (error) {
     if (isNotAuthenticatedError(error)) throw error
     if (!isNotFoundApiError(error)) throw error
-    // Continue with null fallback for non-auth failures.
   }
   return null
 }
@@ -58,6 +89,7 @@ export function ReportScreen(props: ReportScreenProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [authRequired, setAuthRequired] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [hideNotFoundMessage, setHideNotFoundMessage] = useState(false)
 
   const emptyMessage = useMemo(() => {
@@ -101,6 +133,10 @@ export function ReportScreen(props: ReportScreenProps) {
       isCancelled = true
     }
   }, [props.initialReport, referenceId, showErrorToast])
+
+  function handleEditorSavingStateChange(nextIsSaving: boolean) {
+    setIsSaving(nextIsSaving)
+  }
 
   async function handleReload() {
     if (!referenceId) return
@@ -170,20 +206,24 @@ export function ReportScreen(props: ReportScreenProps) {
 
   return (
     <View style={styles.screenWrap}>
+      <HeaderGradientOverlay />
       <View style={styles.headerRow}>
-        <View style={styles.headerWrap}>
+        <View style={styles.headerMain}>
           <Header
             title={report.title || props.headerTitle || 'Rapportage'}
             clientName={props.headerClientName || 'Cliënt'}
             date=""
             onBack={props.onBack || (() => {})}
           />
+          <View style={styles.savingStatusInline}>
+            {isSaving ? <ActivityIndicator size="small" color="#667085" style={styles.savingSpinnerSmall} /> : <ReportSavedCloudIcon />}
+          </View>
         </View>
         <Pressable onPress={() => void handleExportWord()} style={({ hovered }) => [styles.exportButton, hovered ? styles.exportButtonHover : undefined]}>
           {isExporting ? <ActivityIndicator size="small" color="#007ACF" /> : <View style={styles.exportButtonContent}><ReportUwvLogoIcon /><Text isSemibold style={styles.exportButtonText}>Exporteer naar Word</Text></View>}
         </Pressable>
       </View>
-      <ReportEditorPanel report={report} templates={templates} onReportUpdated={setReport} showExportButton={false} />
+      <ReportEditorPanel key={report.id} report={report} templates={templates} onReportUpdated={setReport} showExportButton={false} onSavingStateChange={handleEditorSavingStateChange} />
     </View>
   )
 }
@@ -204,11 +244,20 @@ const styles = StyleSheet.create({
   },
   reloadButtonHover: { backgroundColor: '#FFF2F9' },
   reloadButtonText: { fontSize: 13, lineHeight: 16, color: '#BE0165' },
-  screenWrap: { flex: 1, backgroundColor: '#F7F5F8', paddingHorizontal: 24, paddingTop: 8, paddingBottom: 0 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerWrap: { flex: 1, minWidth: 0 },
+  screenWrap: { flex: 1, backgroundColor: '#F7F5F8', paddingHorizontal: 24, paddingTop: 8, paddingBottom: 12, position: 'relative' },
+  headerGradientOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 116,
+  },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, zIndex: 1 },
+  headerMain: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  savingStatusInline: { marginLeft: 8 },
+  savingSpinnerSmall: { transform: [{ scale: 0.8 }] },
   exportButton: {
-    minHeight: 48,
+    minHeight: 40,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#007ACF',
@@ -216,9 +265,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   exportButtonHover: { backgroundColor: '#EFF7FF' },
   exportButtonContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   exportButtonText: { color: '#007ACF' },
 })
+

@@ -57,7 +57,6 @@ async function createSpeechmaticsJob(params: {
       type: "transcription",
       transcription_config: {
         language: params.language,
-        diarization: "speaker",
       },
     }),
   )
@@ -200,7 +199,7 @@ function extractSpeechmaticsTranscript(resultJson: any): { text: string; isDiari
     return { text: plainText, isDiarized: false }
   }
 
-  const lines: Array<{ speaker: string; parts: string[] }> = []
+  const parts: string[] = []
 
   for (const item of results) {
     const alternatives = Array.isArray(item?.alternatives) ? item.alternatives : []
@@ -208,34 +207,19 @@ function extractSpeechmaticsTranscript(resultJson: any): { text: string; isDiari
     const content = normalizeText(alternative?.content || item?.content || item?.word || item?.text)
     if (!content) continue
 
-    const speakerRaw = normalizeText(alternative?.speaker || item?.speaker)
-    const speakerNumber = Number.isFinite(Number(speakerRaw)) ? Number(speakerRaw) + 1 : null
-    const speaker = speakerNumber ? `speaker_${speakerNumber}` : "speaker_1"
     const tokenType = normalizeText(item?.type).toLowerCase()
     const isPunctuation = tokenType === "punctuation" || /^[,.;:!?]+$/.test(content)
-    const previousLine = lines[lines.length - 1]
-
-    if (!previousLine || previousLine.speaker !== speaker) {
-      const nextLine = { speaker, parts: [] as string[] }
-      appendTranscriptToken(nextLine.parts, content, isPunctuation)
-      lines.push(nextLine)
-      continue
-    }
-
-    appendTranscriptToken(previousLine.parts, content, isPunctuation)
+    appendTranscriptToken(parts, content, isPunctuation)
   }
 
-  const diarizedLines = lines
-    .map((line) => `${line.speaker}: ${normalizeTranscriptSpacing(line.parts.join(" "))}`)
-    .filter(Boolean)
-
-  if (diarizedLines.length === 0) {
+  const plainText = normalizeTranscriptSpacing(parts.join(" "))
+  if (!plainText) {
     return { text: "", isDiarized: false }
   }
 
   return {
-    text: diarizedLines.join("\n"),
-    isDiarized: diarizedLines.some((line) => line.startsWith("speaker_2:") || line.startsWith("speaker_3:")),
+    text: plainText,
+    isDiarized: false,
   }
 }
 
@@ -276,5 +260,5 @@ export async function runSpeechmaticsBatchTranscription(params: {
     throw new Error("No transcript returned")
   }
 
-  return transcript.isDiarized ? transcript.text : `[00:00.0] speaker_1: ${transcript.text}`
+  return transcript.text
 }

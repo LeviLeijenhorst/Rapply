@@ -110,6 +110,7 @@ export function ClientScreen({
   const lastAnchoredAssistantPanelHeightRef = useRef<number | null>(null)
   const onLeftActiveTabChangeRef = useRef(onLeftActiveTabChange)
   const lastNotifiedLeftTabRef = useRef<ClientLeftTabKey | null>(null)
+  const containerScrollRef = useRef<ScrollView | null>(null)
 
   const searchInputRef = useRef<TextInput | null>(null)
   const chatScrollRef = useRef<ScrollView | null>(null)
@@ -213,6 +214,11 @@ export function ClientScreen({
 
   useEffect(() => {
     setIsAssistantFullscreen(false)
+  }, [clientId])
+
+  useEffect(() => {
+    containerScrollRef.current?.scrollTo({ y: 0, animated: false })
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [clientId])
 
   useEffect(() => {
@@ -356,7 +362,10 @@ export function ClientScreen({
   }
 
   function handleAddItemForLeftTab() {
-    if (leftActiveTabKey === 'documenten') return
+    if (leftActiveTabKey === 'documenten') {
+      onPressCreateInput(activeTrajectory?.id ?? null, 'import-document')
+      return
+    }
     if (leftActiveTabKey === 'notities') {
       setIsCreateNoteModalOpen(true)
       return
@@ -392,7 +401,7 @@ export function ClientScreen({
   const shouldShowAssignedCoachesCard = false
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView ref={containerScrollRef} style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <ClientHeaderCard
         clientName={clientName}
         isCreateInputDisabled={isCreateInputDisabled}

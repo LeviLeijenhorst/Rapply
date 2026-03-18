@@ -41,6 +41,7 @@ type Params = {
   setLiveTranscriptText: (value: string | ((previous: string) => string)) => void
   setStep: (step: NewInputStep) => void
   onRecordingReady?: (payload: { blob: Blob; mimeType: string; durationSeconds: number }) => void
+  includeSpeakerLabelsInRealtimeTranscript?: boolean
   useDisplayCapture?: boolean
   disableAutoStart?: boolean
   step: NewInputStep
@@ -63,6 +64,7 @@ export function useRecordingFlow({
   setLiveTranscriptText,
   setStep,
   onRecordingReady,
+  includeSpeakerLabelsInRealtimeTranscript = true,
   useDisplayCapture = false,
   disableAutoStart = false,
   step,
@@ -154,7 +156,7 @@ export function useRecordingFlow({
       mediaStream: recorder.mediaStream,
       onFinalSegment: (segment) => {
         if (cancelled) return
-        const line = `${segment.speaker}: ${segment.text}`.trim()
+        const line = (includeSpeakerLabelsInRealtimeTranscript ? `${segment.speaker}: ${segment.text}` : segment.text).trim()
         if (!line) return
         setLiveTranscriptText((previous) => (previous ? `${previous}\n${line}` : line))
       },
@@ -194,6 +196,7 @@ export function useRecordingFlow({
     setIsRealtimeTranscriberStarting,
     setLiveTranscriptError,
     setLiveTranscriptText,
+    includeSpeakerLabelsInRealtimeTranscript,
     step,
     stopLiveTranscriber,
     visible,

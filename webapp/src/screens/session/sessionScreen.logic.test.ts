@@ -3,18 +3,18 @@ import test from 'node:test'
 
 import { resolveInputSummaryText } from './sessionSummary'
 
-test('resolveInputSummaryText prefers markdown summary when available', () => {
+test('resolveInputSummaryText prefers structured summary when available', () => {
   const summary = resolveInputSummaryText({
     summary: 'Korte samenvatting',
     summaryStructured: {
-      doelstelling: 'Wordt niet gebruikt',
+      doelstelling: 'Structured samenvatting',
       belastbaarheid: '',
       belemmeringen: '',
       voortgang: '',
       arbeidsmarktorientatie: '',
     },
   })
-  assert.equal(summary, 'Korte samenvatting')
+  assert.match(String(summary), /Structured samenvatting/)
 })
 
 test('resolveInputSummaryText formats structured summary when markdown is missing', () => {

@@ -52,6 +52,8 @@ import {
   type OptionKey,
 } from '../utils'
 import type { NewInputModalArgs } from '../types'
+import { createId } from '../../../utils/createId'
+import { markSidebarProcessingItemDone, removeSidebarProcessingItem, upsertSidebarProcessingItem } from '../../../app/shell/sidebarProcessingStore'
 
 const BASE_RECORDING_MODAL_WIDTH = 747
 const NOTES_PANEL_WIDTH = 437
@@ -181,6 +183,7 @@ export function useNewInputModalController({
     isMinimizedCloseWarningVisible,
     isRealtimeTranscriberStarting,
     isRecordedCloseWarningVisible,
+    isRecordingCloseWarningVisible,
     isRendered,
     isRestoringFromMinimized,
     isUploadDragActive,
@@ -226,6 +229,7 @@ export function useNewInputModalController({
     setIsMinimizedCloseWarningVisible,
     setIsRealtimeTranscriberStarting,
     setIsRecordedCloseWarningVisible,
+    setIsRecordingCloseWarningVisible,
     setIsRendered,
     setIsRestoringFromMinimized,
     setIsUploadDragActive,
@@ -315,6 +319,7 @@ export function useNewInputModalController({
     setIsMinimized(false)
     setIsMinimizedCloseWarningVisible(false)
     setIsRecordedCloseWarningVisible(false)
+    setIsRecordingCloseWarningVisible(false)
     setHasRecordingConsent(false)
     setIsUploadDragActive(false)
     setClientDropdownMaxHeight(null)
@@ -326,6 +331,7 @@ export function useNewInputModalController({
     recordingExpandProgress.setValue(0)
     recordingShiftProgress.setValue(0)
     recordingNotesRevealProgress.setValue(0)
+    skipRecordingReadyAnimationRef.current = false
     shouldAnimateRecordingLayoutRef.current = true
     hasAutoStartedRecordingRef.current = false
     hasAutoSubmittedRecordingRef.current = false
@@ -989,7 +995,7 @@ export function useNewInputModalController({
       activeMeetingRecordingRef.current = null
       const message = mapMeetingRecordingErrorMessage(error)
       showErrorToast(message, 'Starten van video-opname is mislukt.')
-      setStep('select')
+      setStep('consent')
     })
   }
 
@@ -1256,6 +1262,8 @@ export function useNewInputModalController({
     setAudioForTranscription(null)
     setIsMinimizedCloseWarningVisible(false)
     setIsRecordedCloseWarningVisible(false)
+    setIsRecordingCloseWarningVisible(false)
+    skipRecordingReadyAnimationRef.current = false
     void clearSubscriptionReturnDraft()
     onClose()
   }
@@ -1317,6 +1325,13 @@ export function useNewInputModalController({
       return false
     }
     const now = Date.now()
+    const processingId = createId('document-processing')
+    upsertSidebarProcessingItem({
+      id: processingId,
+      kind: 'document',
+      label: sessionTitle.trim() || documentFile.name || 'Document uploaden',
+      status: 'processing',
+    })
     try {
       const documentBase64 = await readFileAsBase64(documentFile)
       const response = await createPipelineInput({
@@ -1333,10 +1348,12 @@ export function useNewInputModalController({
       await refreshAppData()
       void clearSubscriptionReturnDraft()
       handleClose()
+      markSidebarProcessingItemDone(processingId)
       return true
     } catch (error) {
       console.error('[NewInputModal] Documentverwerking mislukt', error)
       showErrorToast(error instanceof Error ? error.message : 'Document uploaden is mislukt. Probeer opnieuw.')
+      removeSidebarProcessingItem(processingId)
       return false
     }
   }
@@ -1533,8 +1550,14 @@ export function useNewInputModalController({
     }
     if (!isRealtimeModeActive) {
       showErrorToast('Realtime transcriptie staat uit. Zet transcription mode op "azure-realtime-live" om een videogesprek op te nemen.')
-      setStep('select')
+      setStep('consent')
       return
+    }
+    const captureStarted = recorder.startWithCaptureMode
+      ? await recorder.startWithCaptureMode('display-with-audio-fallback')
+      : await recorder.start()
+    if (!captureStarted) {
+      throw new Error('Het starten van schermdeling is geannuleerd.')
     }
     const started = await startMeetingRecordingRemote({
       sessionId: null,
@@ -1555,11 +1578,6 @@ export function useNewInputModalController({
       uploadError: null,
     }
     hasAutoSubmittedRecordingRef.current = false
-    if (recorder.startWithCaptureMode) {
-      recorder.startWithCaptureMode('display-with-audio-fallback')
-      return
-    }
-    recorder.start()
   }, [hasAutoSubmittedRecordingRef, isRealtimeModeActive, recorder, selectedClient?.id, selectedTrajectoryId, sessionTitle, setStep, showErrorToast])
 
   const stopVideoMeetingRecordingDraft = useCallback(async () => {
@@ -1629,8 +1647,11 @@ export function useNewInputModalController({
   }, [recordingExpandProgress, recordingNotesRevealProgress, recordingShiftProgress, setShouldRenderRecordingNotesPanel])
 
   const recordingFinishTransitionRef = useRef(0)
+  const skipRecordingReadyAnimationRef = useRef(false)
 
   const handleRecordingReady = useCallback((_payload: { blob: Blob; mimeType: string; durationSeconds: number }) => {
+    const skipAnimation = skipRecordingReadyAnimationRef.current
+    skipRecordingReadyAnimationRef.current = false
     if (selectedOption === 'record-video') {
       void stopVideoMeetingRecordingDraft()
       setStep('recorded')
@@ -1644,7 +1665,7 @@ export function useNewInputModalController({
       setStep('recorded')
     }
 
-    if (!visible || limitedMode || isReducedMotionEnabled || isMinimized) {
+    if (skipAnimation || !visible || limitedMode || isReducedMotionEnabled || isMinimized) {
       setShouldRenderRecordingNotesPanel(false)
       recordingNotesRevealProgress.setValue(0)
       recordingExpandProgress.setValue(0)
@@ -1671,7 +1692,7 @@ export function useNewInputModalController({
   const handleStopRecording = useCallback(() => {
     if (isRecordingTransitioning) return
     if (step !== 'recording') return
-    setStep('recording_finishing')
+    skipRecordingReadyAnimationRef.current = true
     recorder.stop()
   }, [isRecordingTransitioning, recorder, setStep, step])
 
@@ -1691,6 +1712,7 @@ export function useNewInputModalController({
     setLiveTranscriptText,
     setStep,
     onRecordingReady: handleRecordingReady,
+    includeSpeakerLabelsInRealtimeTranscript: selectedOption !== 'gespreksverslag',
     useDisplayCapture: selectedOption === 'record-video',
     disableAutoStart: selectedOption === 'record-video',
     step,
@@ -1714,7 +1736,7 @@ export function useNewInputModalController({
       setIsVideoTabSelectionPending(false)
       hasAutoStartedRecordingRef.current = false
       void cancelVideoMeetingRecording()
-      setStep('select')
+      setStep('consent')
     }
   }, [cancelVideoMeetingRecording, enterRecordingStep, isVideoTabSelectionPending, recorder.status, selectedOption, setStep, step, visible])
 
@@ -1730,7 +1752,7 @@ export function useNewInputModalController({
       activeMeetingRecordingRef.current = null
       const message = mapMeetingRecordingErrorMessage(error)
       showErrorToast(message, 'Starten van video-opname is mislukt.')
-      setStep('select')
+      setStep('consent')
     })
   }, [hasAutoStartedRecordingRef, recorder.status, selectedOption, setStep, showErrorToast, startVideoMeetingRecording, step, visible])
 
@@ -1741,6 +1763,13 @@ export function useNewInputModalController({
       setEditingRecordingNoteId(null)
     }
   }, [step, visible])
+
+  useEffect(() => {
+    if (!visible) return
+    if (step !== 'recorded') return
+    const timeouts = [0, 120, 260].map((delay) => setTimeout(() => sessionTitleInputRef.current?.focus(), delay))
+    return () => timeouts.forEach((timeoutId) => clearTimeout(timeoutId))
+  }, [sessionTitleInputRef, step, visible])
 
   const handleMinimizedPauseOrResume = () => {
     if (recorder.status === 'recording') {
@@ -1766,7 +1795,7 @@ export function useNewInputModalController({
     onOpenNewClient()
   }
 
-  const handleCancelRecording = () => {
+  const performCancelRecording = () => {
     if (isRecordingTransitioning) return
     if (selectedOption === 'record-video') {
       void cancelVideoMeetingRecording()
@@ -1785,6 +1814,20 @@ export function useNewInputModalController({
     animateRecordingLayoutExit(() => {
       setStep('select')
     })
+  }
+
+  const handleCancelRecording = () => {
+    if (isRecordingTransitioning) return
+    setIsRecordingCloseWarningVisible(true)
+  }
+
+  const handleCloseRecordingWarning = () => {
+    setIsRecordingCloseWarningVisible(false)
+  }
+
+  const handleConfirmRecordingCancel = () => {
+    setIsRecordingCloseWarningVisible(false)
+    performCancelRecording()
   }
 
   const handleToggleAudioSave = () => {
@@ -1859,7 +1902,9 @@ export function useNewInputModalController({
       handleAddClient,
       handleCancelRecording,
       handleCloseInsufficientMinutes,
+      handleCloseRecordingWarning,
       handleCloseRecordedWarning,
+      handleConfirmRecordingCancel,
       handleConfirmRecordedDelete,
       handleConsentBack,
       handleDownloadAudioForInsufficientMinutes,
@@ -1882,6 +1927,7 @@ export function useNewInputModalController({
       isMinimizedCloseWarningVisible,
       isPrimaryActionDisabled,
       isRecordedCloseWarningVisible,
+      isRecordingCloseWarningVisible,
       isRecordingPaused,
       isUploadDragActive,
       isUploadStep,

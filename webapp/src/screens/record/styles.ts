@@ -721,18 +721,15 @@ export const styles = StyleSheet.create({
     gap: 6,
   },
   recordingNoteActionButton: {
+    width: 28,
+    height: 24,
     borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#EEF0F3',
   },
   recordingNoteActionButtonHovered: {
     backgroundColor: '#E2E6EC',
-  },
-  recordingNoteActionText: {
-    fontSize: 12,
-    lineHeight: 14,
-    color: colors.textStrong,
   },
   recordingNoteTimestamp: {
     fontSize: 14,

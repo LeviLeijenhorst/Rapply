@@ -23,7 +23,9 @@ export function resolveInputSummaryText(session: SessionSummarySource | null | u
   const markdownSummary = String(session?.summary || '').trim()
   const structuredSummary = (session?.summaryStructured ?? null) as Parameters<typeof hasStructuredSummaryContent>[0]
   const hasStructuredSummary = hasStructuredSummaryContent(structuredSummary)
+  if (hasStructuredSummary) {
+    return structuredSummaryToPlainText(structuredSummary)
+  }
   if (markdownSummary && !looksLikeTranscript(markdownSummary)) return markdownSummary
-  if (!hasStructuredSummary) return null
-  return structuredSummaryToPlainText(structuredSummary)
+  return null
 }

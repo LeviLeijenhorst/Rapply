@@ -20,7 +20,7 @@ export function ClientRightTabs({
     <View style={[styles.rightColumn, rightColumnStyle]}>
       <View style={styles.tabsRow}>
         <RightTabButton
-          label="AI-chat"
+          label="Rapply"
           icon={(color) => <ClientPageAiChatIcon color={color} size={14} />}
           isSelected={activeTabKey === 'chatbot'}
           onPress={() => onSelectTab('chatbot')}

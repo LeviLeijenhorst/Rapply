@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 
+import { generateInputSummary, generateStructuredInputSummary } from '@/api/summaries/generateInputSummaryFromTranscript'
 import { classifySnippetFields, extractSnippets } from '@/api/snippets/snippetGenerationApi'
+import { cancelTranscriptionRun, finishTranscriptionRun, isTranscriptionRunActive, setSummaryAbortController, startTranscriptionRun } from '@/api/transcription/transcriptionRunState'
 import type { InputDataItem, InputNoteItem, InputScreenProps, InputSnippetItem } from '@/screens/session/sessionScreen.types'
 import { resolveInputSummaryText } from '@/screens/session/sessionSummary'
 import { useLocalAppData } from '@/storage/LocalAppDataProvider'
+import { hasStructuredSummaryContent, mapReportMarkdownToStructuredSummary } from '@/types/structuredSummary'
 import { useToast } from '@/toast/ToastProvider'
 
 function selectSnippetsForInput(snippets: InputSnippetItem[], inputId: string): InputSnippetItem[] {
@@ -29,6 +32,7 @@ export function useInputScreen(props: InputScreenProps) {
   const { showErrorToast, showToast } = useToast()
   const [isRegeneratingSnippets, setIsRegeneratingSnippets] = useState(false)
   const [isSnippetStateSettling, setIsSnippetStateSettling] = useState(false)
+  const [isRegeneratingSummary, setIsRegeneratingSummary] = useState(false)
 
   const appData = data as any
 
@@ -78,7 +82,7 @@ export function useInputScreen(props: InputScreenProps) {
       setIsSnippetStateSettling(false)
       return undefined
     }
-    const isGeneratingPipeline = transcriptionStatus === 'transcribing' || transcriptionStatus === 'generating'
+    const isGeneratingPipeline = transcriptionStatus === 'transcribing'
     if (isGeneratingPipeline && sessionSnippets.length === 0 && hasTranscript) {
       setIsSnippetStateSettling(true)
       return
@@ -94,6 +98,9 @@ export function useInputScreen(props: InputScreenProps) {
   }, [hasTranscript, isWrittenInput, transcriptionStatus, sessionSnippets.length])
 
   const canRegenerateSnippets = !isWrittenInput && hasTranscript && !isSnippetStateSettling
+  const canRegenerateSummary = !isWrittenInput && !isUploadedDocument && hasTranscript && !isRegeneratingSummary
+  const canCancelSummaryGeneration = !isWrittenInput && (transcriptionStatus === 'transcribing' || transcriptionStatus === 'generating')
+  const isSnippetsLoading = isRegeneratingSnippets || (!isRegeneratingSummary && transcriptionStatus === 'generating' && sessionSnippets.length === 0)
 
   async function handleRegenerateInputSnippets() {
     if (!session) return
@@ -213,6 +220,82 @@ export function useInputScreen(props: InputScreenProps) {
     })
   }
 
+  function handleCancelSummaryGeneration() {
+    if (!session) return
+    cancelTranscriptionRun(session.id)
+    updateInput(session.id, {
+      transcriptionStatus: 'done',
+      transcriptionError: 'Samenvatting genereren geannuleerd.',
+    })
+    showToast('Samenvatting genereren geannuleerd.')
+  }
+
+  async function handleRegenerateSummary() {
+    if (!session || !canRegenerateSummary) return
+    const sessionTranscript = String(session.transcript || '').trim()
+    if (!sessionTranscript) return
+    const runId = startTranscriptionRun(session.id)
+    const summaryAbortController = new AbortController()
+    setSummaryAbortController(session.id, runId, summaryAbortController)
+    setIsRegeneratingSummary(true)
+    updateInput(session.id, {
+      transcriptionStatus: 'generating',
+      transcriptionError: null,
+    })
+    try {
+      const structuredSummary = await generateStructuredInputSummary({
+        transcript: sessionTranscript,
+        signal: summaryAbortController.signal,
+        sourceInputType: resolveSourceInputType(session.type),
+        sourceSessionId: resolvedInputId,
+      })
+      if (!isTranscriptionRunActive(session.id, runId)) return
+      if (hasStructuredSummaryContent(structuredSummary)) {
+        updateInput(session.id, {
+          summaryStructured: structuredSummary,
+          summary: null,
+          transcriptionStatus: 'done',
+          transcriptionError: null,
+        })
+        showToast('Samenvatting opnieuw gegenereerd.')
+        return
+      }
+
+      const fallbackSummary = String(
+        await generateInputSummary({
+          transcript: sessionTranscript,
+          signal: summaryAbortController.signal,
+          sourceInputType: resolveSourceInputType(session.type),
+          sourceSessionId: resolvedInputId,
+        }),
+      ).trim()
+      if (!isTranscriptionRunActive(session.id, runId)) return
+      if (!fallbackSummary) {
+        throw new Error('Geen bruikbare samenvatting gegenereerd.')
+      }
+      const fallbackStructuredSummary = mapReportMarkdownToStructuredSummary(fallbackSummary)
+      updateInput(session.id, {
+        summaryStructured: fallbackStructuredSummary || null,
+        summary: fallbackStructuredSummary ? null : fallbackSummary,
+        transcriptionStatus: 'done',
+        transcriptionError: null,
+      })
+      showToast('Samenvatting opnieuw gegenereerd.')
+    } catch (error) {
+      if (!isTranscriptionRunActive(session.id, runId)) return
+      const message = error instanceof Error ? error.message : 'Samenvatting genereren mislukt.'
+      const isAbort = error instanceof Error && error.name === 'AbortError'
+      updateInput(session.id, {
+        transcriptionStatus: 'done',
+        transcriptionError: isAbort ? 'Samenvatting genereren geannuleerd.' : message,
+      })
+      if (!isAbort) showErrorToast(message)
+    } finally {
+      finishTranscriptionRun(session.id, runId)
+      setIsRegeneratingSummary(false)
+    }
+  }
+
   return {
     session,
     resolvedInputId,
@@ -223,6 +306,9 @@ export function useInputScreen(props: InputScreenProps) {
     transcriptionStatus,
     transcript,
     canRegenerateSnippets,
+    canRegenerateSummary,
+    canCancelSummaryGeneration,
+    isSnippetsLoading,
     sessionNotes,
     sessionSnippets,
     isSnippetStateSettling,
@@ -233,6 +319,8 @@ export function useInputScreen(props: InputScreenProps) {
     handleSaveSnippetText,
     handleDeleteSnippet,
     handleSaveSummary,
+    handleCancelSummaryGeneration,
+    handleRegenerateSummary,
     createNote,
     updateNote,
     deleteNote,

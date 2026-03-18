@@ -162,6 +162,7 @@ export async function completePipelineChat(params: {
     params.allowFieldUpdates
       ? 'Als de gebruiker vraagt om een rapportveld te herschrijven, geef updates terug. Output JSON: {"answer":"string","updates":[{"fieldId":"string","answer":"string|object"}]}. Geef alleen updates als ze geldig en toepasbaar zijn. Als je niets valide kunt aanpassen, geef updates: [] en zeg expliciet dat er niets is gewijzigd.'
       : "Geef alleen platte tekst als antwoord. Geef geen JSON, labels of metadata.",
+    "Bij tekstvelden: geef direct de uiteindelijke veldinhoud, zonder de vraagtitel te herhalen en zonder inleidingen zoals '... is als volgt:'.",
     "Zeg alleen dat iets is gewijzigd als er daadwerkelijk updates worden teruggegeven.",
     "Gebruik nooit letterlijke placeholderwaarden zoals 'string' of 'antwoord' als inhoud.",
     "",
@@ -191,10 +192,15 @@ export async function completePipelineChat(params: {
   const parsed = safeJsonParse(raw)
   const answer = resolveAnswerText({ raw, parsedAnswer: parsed?.answer })
   const updates = params.allowFieldUpdates && Array.isArray(parsed?.updates) ? readFieldUpdates(parsed.updates) : []
+  const fallbackAnswer = params.allowFieldUpdates
+    ? updates.length > 0
+      ? "De gevraagde veldwijzigingen zijn doorgevoerd."
+      : "Er zijn geen geldige veldwijzigingen doorgevoerd."
+    : "Waarmee kan ik u helpen?"
 
   return createPipelineChatResponse({
     tool: params.tool,
-    answer: answer || "Waarmee kan ik u helpen?",
+    answer: answer || fallbackAnswer,
     fieldUpdates: updates,
   })
 }

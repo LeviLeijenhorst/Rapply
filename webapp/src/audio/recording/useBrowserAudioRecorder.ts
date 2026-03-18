@@ -252,17 +252,17 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
     setStatus('ready')
   }
 
-  async function beginRecording(shouldReset: boolean, captureMode: RecorderCaptureMode = 'microphone') {
-    if (typeof window === 'undefined') return
+  async function beginRecording(shouldReset: boolean, captureMode: RecorderCaptureMode = 'microphone'): Promise<boolean> {
+    if (typeof window === 'undefined') return false
     if (!isSupported) {
       setStatus('error')
       setErrorMessage('Audio recording is not supported in this browser.')
-      return
+      return false
     }
     if (!window.isSecureContext) {
       setStatus('error')
       setErrorMessage('Microphone access requires HTTPS (or localhost).')
-      return
+      return false
     }
 
     if (shouldReset) {
@@ -456,21 +456,23 @@ export function useBrowserAudioRecorder(params?: { onChunk?: (chunk: { blob: Blo
       // Avoid timeslice chunk fragmentation because some containers (notably mp4)
       // are not safely reconstructable via simple blob concatenation.
       recorder.start()
+      return true
     } catch (error) {
       console.error('[useBrowserAudioRecorder] Failed to start', error)
       setStatus('error')
       setErrorMessage(formatUnknownError(error))
       stopTimer()
       stopTracks()
+      return false
     }
   }
 
-  async function start() {
-    await beginRecording(true, 'microphone')
+  async function start(): Promise<boolean> {
+    return beginRecording(true, 'microphone')
   }
 
-  async function startWithCaptureMode(captureMode: RecorderCaptureMode = 'microphone') {
-    await beginRecording(true, captureMode)
+  async function startWithCaptureMode(captureMode: RecorderCaptureMode = 'microphone'): Promise<boolean> {
+    return beginRecording(true, captureMode)
   }
 
   function pause() {

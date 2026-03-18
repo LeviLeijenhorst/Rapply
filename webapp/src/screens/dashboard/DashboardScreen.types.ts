@@ -6,6 +6,7 @@ export type DashboardScreenProps = {
   onOpenNewClientPage: () => void
   onOpenRecord: (action: DashboardQuickInputId) => void
   onOpenClientsPage: () => void
+  onOpenSessionsPage: () => void
   onOpenReportsPage: () => void
   onOpenInput: (sessionId: string) => void
   welcomeName?: string | null

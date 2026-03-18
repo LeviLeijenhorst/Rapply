@@ -18,6 +18,12 @@ type Props = {
   showDisclaimer?: boolean
   sendIconVariant?: 'send' | 'arrow'
   focusTrigger?: number
+  inputPlaceholder?: string
+  leadingContent?: React.ReactNode
+  trailingContent?: React.ReactNode
+  rowBackgroundColor?: string
+  hideInput?: boolean
+  enableSlashFocusShortcut?: boolean
 }
 
 const tabAutocompleteSuggestions = [
@@ -48,6 +54,12 @@ export function ChatComposer({
   showDisclaimer = true,
   sendIconVariant = 'send',
   focusTrigger,
+  inputPlaceholder = '',
+  leadingContent,
+  trailingContent,
+  rowBackgroundColor = '#F3F4F6',
+  hideInput = false,
+  enableSlashFocusShortcut = false,
 }: Props) {
   const inputWebStyle = { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent' } as any
   const [isScrollable, setIsScrollable] = useState(false)
@@ -58,6 +70,78 @@ export function ChatComposer({
   const canvasContextRef = useRef<CanvasRenderingContext2D | null>(null)
   const inputRef = useRef<TextInput | null>(null)
   const animatedHeight = useRef(new Animated.Value(0)).current
+
+  function getInputElement(): HTMLElement | null {
+    if (typeof window === 'undefined') return null
+    const candidate: any = inputRef.current
+    if (!candidate) return null
+    if (candidate instanceof HTMLElement) return candidate
+    if (candidate?._node instanceof HTMLElement) return candidate._node
+    if (candidate?._inputRef?.current instanceof HTMLElement) return candidate._inputRef.current
+    return null
+  }
+
+  function getScrollableAncestors(element: HTMLElement): HTMLElement[] {
+    const ancestors: HTMLElement[] = []
+    let current: HTMLElement | null = element.parentElement
+    while (current) {
+      const style = window.getComputedStyle(current)
+      const canScrollY = (style.overflowY === 'auto' || style.overflowY === 'scroll') && current.scrollHeight > current.clientHeight
+      if (canScrollY) ancestors.push(current)
+      current = current.parentElement
+    }
+    const scrollingElement = document.scrollingElement
+    if (scrollingElement instanceof HTMLElement) ancestors.push(scrollingElement)
+    return ancestors
+  }
+
+  function focusInputWithoutScroll() {
+    const inputElement = getInputElement()
+    if (!inputElement) {
+      inputRef.current?.focus()
+      return
+    }
+
+    const ancestors = getScrollableAncestors(inputElement)
+    const snapshots = ancestors.map((node) => ({ node, top: node.scrollTop, left: node.scrollLeft }))
+    const windowScrollX = window.scrollX
+    const windowScrollY = window.scrollY
+
+    try {
+      ;(inputElement as any).focus?.({ preventScroll: true })
+    } catch {
+      ;(inputElement as any).focus?.()
+    }
+
+    const restore = () => {
+      for (const snapshot of snapshots) {
+        snapshot.node.scrollTop = snapshot.top
+        snapshot.node.scrollLeft = snapshot.left
+      }
+      window.scrollTo(windowScrollX, windowScrollY)
+    }
+
+    restore()
+    requestAnimationFrame(restore)
+    setTimeout(restore, 80)
+  }
+
+  function isComposerFocused(): boolean {
+    const inputElement = getInputElement()
+    if (inputElement && typeof document !== 'undefined') return document.activeElement === inputElement
+    const nativeRef: any = inputRef.current
+    if (typeof nativeRef?.isFocused === 'function') return Boolean(nativeRef.isFocused())
+    return false
+  }
+
+  function isEditableTarget(target: EventTarget | null): boolean {
+    if (!target || typeof window === 'undefined') return false
+    const element = target as HTMLElement
+    if (!(element instanceof HTMLElement)) return false
+    if (element.isContentEditable) return true
+    const tagName = element.tagName.toLowerCase()
+    return tagName === 'input' || tagName === 'textarea' || element.getAttribute('role') === 'textbox'
+  }
 
   const { minHeight, lineHeight, maxLines, verticalPadding, inputPaddingTop, inputPaddingBottom } = useMemo(() => {
     const maxLines = 7
@@ -105,15 +189,37 @@ export function ChatComposer({
 
   useEffect(() => {
     if (!shouldAutoFocus) return
-    const timeouts = [0, 120, 260].map((delay) => setTimeout(() => inputRef.current?.focus(), delay))
-    return () => timeouts.forEach((id) => clearTimeout(id))
+    const id = setTimeout(() => focusInputWithoutScroll(), 0)
+    return () => clearTimeout(id)
   }, [autoFocusKey, shouldAutoFocus])
 
   useEffect(() => {
     if (typeof focusTrigger !== 'number') return
-    const id = setTimeout(() => inputRef.current?.focus(), 0)
+    const id = setTimeout(() => focusInputWithoutScroll(), 0)
     return () => clearTimeout(id)
   }, [focusTrigger])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!enableSlashFocusShortcut) return
+    if (hideInput) return
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return
+      if (event.ctrlKey || event.metaKey || event.altKey) return
+      const key = String(event.key || '')
+      if (key !== '/' && key !== '?') return
+
+      if (isComposerFocused()) return
+      if (isEditableTarget(event.target)) return
+
+      event.preventDefault()
+      focusInputWithoutScroll()
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [enableSlashFocusShortcut, hideInput])
 
   function getExplicitLineCount(rawValue: string): number {
     return Math.max(1, String(rawValue || '').split('\n').length)
@@ -197,59 +303,63 @@ export function ChatComposer({
 
   return (
     <View style={styles.container}>
-      <View style={styles.row}>
-        <Animated.View
-          style={[
-            styles.inputContainer,
-            compact ? styles.inputContainerCompact : undefined,
-            { height: animatedHeight },
-          ]}
-          onLayout={(event) => {
-            const measuredWidth = Math.floor(event.nativeEvent.layout.width ?? 0)
-            if (!measuredWidth) return
-            inputWidthRef.current = measuredWidth
-          }}
-        >
-          <TextInput
-            ref={(nextValue) => {
-              inputRef.current = nextValue
-            }}
-            value={value}
-            onChangeText={handleChangeText}
-            placeholder=""
-            placeholderTextColor="#8E8480"
-            multiline
-            scrollEnabled={isScrollable}
-            textAlignVertical="top"
-            onKeyPress={(event: any) => {
-              const key = event?.nativeEvent?.key
-              const isShift = Boolean(event?.nativeEvent?.shiftKey ?? event?.shiftKey)
-              if (key === 'Tab') {
-                if (typeof event?.preventDefault === 'function') event.preventDefault()
-                const suggestion = applyTabAutocomplete(value)
-                if (suggestion) onChangeValue(suggestion)
-                return
-              }
-              if (key === 'Escape') {
-                if (typeof event?.preventDefault === 'function') event.preventDefault()
-                onPressEscape?.()
-                return
-              }
-              if (key === 'Enter' && !isShift) {
-                if (typeof event?.preventDefault === 'function') event.preventDefault()
-                if (value.trim().length === 0 || isSendDisabled) return
-                onSend()
-              }
-            }}
+      <View style={[styles.row, { backgroundColor: rowBackgroundColor }]}>
+        {leadingContent ? <View style={styles.leadingContentWrap}>{leadingContent}</View> : null}
+        {!hideInput ? (
+          <Animated.View
             style={[
-              styles.input,
-              compact ? styles.inputCompact : undefined,
-              { lineHeight, paddingTop: inputPaddingTop, paddingBottom: inputPaddingBottom },
-              inputWebStyle,
-              inputScrollStyle,
+              styles.inputContainer,
+              compact ? styles.inputContainerCompact : undefined,
+              { height: animatedHeight },
             ]}
-          />
-        </Animated.View>
+            onLayout={(event) => {
+              const measuredWidth = Math.floor(event.nativeEvent.layout.width ?? 0)
+              if (!measuredWidth) return
+              inputWidthRef.current = measuredWidth
+            }}
+          >
+            <TextInput
+              ref={(nextValue) => {
+                inputRef.current = nextValue
+              }}
+              value={value}
+              onChangeText={handleChangeText}
+              placeholder={inputPlaceholder}
+              placeholderTextColor="#8E8480"
+              multiline
+              scrollEnabled={isScrollable}
+              textAlignVertical="top"
+              onKeyPress={(event: any) => {
+                const key = event?.nativeEvent?.key
+                const isShift = Boolean(event?.nativeEvent?.shiftKey ?? event?.shiftKey)
+                if (key === 'Tab') {
+                  if (typeof event?.preventDefault === 'function') event.preventDefault()
+                  const suggestion = applyTabAutocomplete(value)
+                  if (suggestion) onChangeValue(suggestion)
+                  return
+                }
+                if (key === 'Escape') {
+                  if (typeof event?.preventDefault === 'function') event.preventDefault()
+                  onPressEscape?.()
+                  return
+                }
+                if (key === 'Enter' && !isShift) {
+                  if (typeof event?.preventDefault === 'function') event.preventDefault()
+                  if (value.trim().length === 0 || isSendDisabled) return
+                  onSend()
+                }
+              }}
+              style={[
+                styles.input,
+                compact ? styles.inputCompact : undefined,
+                { lineHeight, paddingTop: inputPaddingTop, paddingBottom: inputPaddingBottom },
+                inputWebStyle,
+                inputScrollStyle,
+              ]}
+            />
+          </Animated.View>
+        ) : null}
+        {trailingContent ? <View style={styles.trailingContentWrap}>{trailingContent}</View> : null}
 
         <Pressable
           onPress={() => {
@@ -305,6 +415,16 @@ const styles = StyleSheet.create({
   },
   inputContainerCompact: {
     minHeight: 0,
+  },
+  leadingContentWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  trailingContentWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   input: {
     fontSize: 16,

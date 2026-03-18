@@ -149,6 +149,16 @@ function convertFloat32ToPcm16(input: Float32Array): Int16Array {
   return output
 }
 
+function safeSocketSend(socket: WebSocket, payload: string | ArrayBuffer): boolean {
+  if (socket.readyState !== WebSocket.OPEN) return false
+  try {
+    socket.send(payload)
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function fetchTranscriptionRuntimeConfig(): Promise<{
   mode: TranscriptionMode
   provider: TranscriptionProvider
@@ -188,9 +198,6 @@ async function startAzureRealtimeTranscriber(params: StartRealtimeTranscriberPar
   const sdk: any = await import('microsoft-cognitiveservices-speech-sdk')
   const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(token, region)
   speechConfig.speechRecognitionLanguage = normalizeLanguageForAzure(params.languageCode)
-  if (sdk.PropertyId?.SpeechServiceResponse_DiarizeIntermediateResults) {
-    speechConfig.setProperty(sdk.PropertyId.SpeechServiceResponse_DiarizeIntermediateResults, 'true')
-  }
 
   let stopPcmStreamer: (() => Promise<void>) | null = null
   let audioConfig: any = null
@@ -286,8 +293,7 @@ async function startSpeechmaticsRealtimeTranscriber(params: StartRealtimeTranscr
   const pcmStreamer = await startPcmStreamingFromMediaStream({
     mediaStream: stream,
     onPcmChunk: (chunk) => {
-      if (socket.readyState !== WebSocket.OPEN) return
-      socket.send(chunk)
+      safeSocketSend(socket, chunk)
     },
   })
 
@@ -323,7 +329,8 @@ async function startSpeechmaticsRealtimeTranscriber(params: StartRealtimeTranscr
   await openPromise
 
   const sampleRate = Number.isFinite(pcmStreamer.sampleRate) ? Math.floor(pcmStreamer.sampleRate) : 16000
-  socket.send(
+  const didStart = safeSocketSend(
+    socket,
     JSON.stringify({
       message: 'StartRecognition',
       audio_format: {
@@ -333,16 +340,16 @@ async function startSpeechmaticsRealtimeTranscriber(params: StartRealtimeTranscr
       },
       transcription_config: {
         language: normalizeLanguageForSpeechmatics(params.languageCode),
-        diarization: 'speaker',
       },
     }),
   )
+  if (!didStart) {
+    throw new Error('Realtime verbinding is gesloten voordat transcriptie kon starten.')
+  }
 
   const stop = async () => {
     await pcmStreamer.stop().catch(() => undefined)
-    try {
-      socket.send(JSON.stringify({ message: 'EndOfStream' }))
-    } catch {}
+    safeSocketSend(socket, JSON.stringify({ message: 'EndOfStream' }))
     if (ownsStream) {
       stream.getTracks().forEach((track) => {
         try {

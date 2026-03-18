@@ -62,6 +62,7 @@ export type NotesTabProps = {
 export type SnippetSectionProps = {
   snippets: InputSnippetItem[]
   isLoading?: boolean
+  hideEmptyState?: boolean
   canRegenerate?: boolean
   isRegenerating?: boolean
   onRegenerate?: () => void
@@ -84,6 +85,8 @@ export type SummaryCardProps = {
   emptyText?: string
   transcriptionStatus: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
   onPressEdit?: (() => void) | null
+  onPressRegenerate?: (() => void) | null
+  onPressCancelGeneration?: (() => void) | null
 }
 
 export type ChatbotMessage = {

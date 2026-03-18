@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native'
-import { LoadingSpinner } from '../../../../ui/LoadingSpinner'
 
 import { Text } from '../../../../ui/Text'
 import { colors } from '../../../../design/theme/colors'
@@ -272,6 +271,33 @@ function TranscriptMention({ label, seconds, onPress }: { label: string; seconds
       {label}
     </Text>
   )
+}
+
+function PulsatingDotLoader() {
+  const scale = useRef(new Animated.Value(0.8)).current
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, {
+          toValue: 1.15,
+          duration: 620,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 0.8,
+          duration: 620,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    )
+    animation.start()
+    return () => animation.stop()
+  }, [scale])
+
+  return <Animated.View style={[styles.loadingDot, { transform: [{ scale }] }]} />
 }
 
 function splitBoldSegments(text: string, forceBold = false): DocumentSegment[] {
@@ -833,6 +859,7 @@ export function ChatMessage({ role, text, isLoading, isStreaming, onTranscriptMe
   const [showCopyNotification, setShowCopyNotification] = useState(false)
   const exportableText = resolveExportableMessageText(text)
   const displayText = removeExportMarkers(text)
+  const hasDisplayText = displayText.trim().length > 0
   const lines = parseRichTextMarkdown(displayText || '')
   const shouldShowCopyButton = isAssistant && !isLoading && !isStreaming && displayText.trim().length > 0
   const [isCopyButtonVisible, setIsCopyButtonVisible] = useState(shouldShowCopyButton)
@@ -863,8 +890,7 @@ export function ChatMessage({ role, text, isLoading, isStreaming, onTranscriptMe
         <View style={styles.assistantContent}>
           {isLoading ? (
             <View style={styles.loadingRow}>
-              <LoadingSpinner size="small" />
-              <Text style={styles.loadingText}>Aan het nadenken</Text>
+              <PulsatingDotLoader />
             </View>
           ) : (
             <>
@@ -932,6 +958,11 @@ export function ChatMessage({ role, text, isLoading, isStreaming, onTranscriptMe
                   )
                 })}
               </View>
+              {isStreaming && !hasDisplayText ? (
+                <View style={styles.streamingRow}>
+                  <PulsatingDotLoader />
+                </View>
+              ) : null}
 
               <View style={styles.messageActionsRow}>
                 {isCopyButtonVisible ? (
@@ -1088,8 +1119,9 @@ const styles = StyleSheet.create({
   dividerRow: { width: '100%', paddingVertical: 6 },
   dividerLine: { width: '100%', height: 1, backgroundColor: colors.border, marginVertical: 6 },
   emptyLine: { height: 8 },
-  loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  loadingText: { fontSize: 14, lineHeight: 20, color: colors.textSecondary },
+  loadingRow: { flexDirection: 'row', alignItems: 'center' },
+  loadingDot: { width: 9, height: 9, borderRadius: 999, backgroundColor: colors.textSecondary },
+  streamingRow: { marginTop: 8, flexDirection: 'row', alignItems: 'center' },
   messageText: { fontSize: 14, lineHeight: 20, color: colors.text },
   messageActionsRow: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
   copyActionWrap: { alignItems: 'center', justifyContent: 'center' },

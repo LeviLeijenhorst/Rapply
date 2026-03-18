@@ -1,7 +1,7 @@
 import type { Note } from "../../types/Note"
 import type { StructuredReportField } from "../../types/Report"
 import type { Snippet } from "../../types/Snippet"
-import type { UwvTemplate } from "../templates/uwvTemplates"
+import type { UwvTemplate, UwvTemplateField } from "../templates/uwvTemplates"
 
 function normalizeText(value: unknown): string {
   if (typeof value === "string") return value.trim()
@@ -10,9 +10,11 @@ function normalizeText(value: unknown): string {
   return String(value).trim()
 }
 
-function formatFieldContextLine(field: StructuredReportField): string {
+function formatFieldContextLine(field: StructuredReportField, templateField: UwvTemplateField): string {
   return [
     `fieldId=${field.fieldId}`,
+    `exportNumberKey=${normalizeText(templateField.exportNumberKey) || "-"}`,
+    `label=${normalizeText(templateField.label) || "-"}`,
     `type=${field.fieldType}`,
     `answer=${normalizeText(field.answer) || "-"}`,
     `factualBasis=${normalizeText(field.factualBasis) || "-"}`,
@@ -47,10 +49,10 @@ export function buildReportChatContext(params: {
   notes: Note[]
 }): string {
   const allowedFieldLines = params.template.fields
-    .map((templateField) => params.fields[templateField.fieldId])
-    .filter((field): field is StructuredReportField => Boolean(field))
-    .filter((field) => field.fieldType !== "programmatic")
-    .map((field) => formatFieldContextLine(field))
+    .map((templateField) => ({ templateField, field: params.fields[templateField.fieldId] }))
+    .filter((item): item is { templateField: UwvTemplateField; field: StructuredReportField } => Boolean(item.field))
+    .filter((item) => item.field.fieldType !== "programmatic")
+    .map((item) => formatFieldContextLine(item.field, item.templateField))
 
   const reportClientId = normalizeText(params.clientId)
   const reportSourceInputId = normalizeText(params.sourceInputId)

@@ -125,10 +125,17 @@ function buildFallbackSummaryFromMarkdown(markdown: string): StructuredItemSumma
 
 export async function generateStructuredItemSummary(params: {
   transcript: string
+  includeDebug?: boolean
+  debugContext?: {
+    sourceSessionId?: string
+    sourceInputType?: string
+  }
 }): Promise<StructuredItemSummary> {
   const deployment = normalizeText(env.azureOpenAiSummaryDeployment || env.azureOpenAiChatDeployment)
   const markdownSummary = await generateSummary({
     transcript: params.transcript,
+    includeDebug: params.includeDebug,
+    debugContext: params.debugContext,
   })
 
   if (!deployment) {
@@ -145,7 +152,10 @@ export async function generateStructuredItemSummary(params: {
     "",
     "Regels:",
     "- Gebruik alleen feiten uit de aangeleverde samenvatting.",
-    "- Houd elke waarde kort en feitelijk.",
+    "- Schrijf per veld 1 volledige, natuurlijke zin wanneer er informatie beschikbaar is.",
+    "- Formuleer concreet en professioneel met duidelijke werkwoorden.",
+    "- Bundel overlappende informatie tot 1 kernzin per veld.",
+    "- Houd de stijl neutraal, compact en natuurlijk.",
     "- Als informatie ontbreekt: gebruik een lege string.",
     '- Antwoord alleen met geldige JSON, bijvoorbeeld {"doelstelling":"","belastbaarheid":"","belemmeringen":"","voortgang":"","arbeidsmarktorientatie":""}.',
     "",

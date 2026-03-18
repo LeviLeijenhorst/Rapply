@@ -30,6 +30,13 @@ export function ClientChatbot({
   setComposerText,
   setIsNoMinutesCtaDismissed,
 }: ClientChatbotProps) {
+  const activeStreamingMessageId = isChatSending
+    ? [...chatMessages].reverse().find((message) => message.id.startsWith('assistant-stream-'))?.id ?? null
+    : null
+  const hasVisibleActiveStreamingMessage = Boolean(
+    activeStreamingMessageId && chatMessages.some((message) => message.id === activeStreamingMessageId && message.text.trim().length > 0),
+  )
+
   return (
     <View style={[styles.chatTab, isModal ? styles.chatTabModal : undefined]}>
       <View style={[styles.chatTopActions, isModal ? styles.chatTopActionsModal : undefined]}>
@@ -75,10 +82,10 @@ export function ClientChatbot({
             {chatMessages.map((message) => {
               const isHiddenStreamingPlaceholder = message.role === 'assistant' && message.text.trim().length === 0
               if (isHiddenStreamingPlaceholder) return null
-              const isStreamingMessage = isChatSending && message.id.startsWith('assistant-stream-')
+              const isStreamingMessage = isChatSending && message.id === activeStreamingMessageId
               return <ChatMessage key={message.id} role={message.role} text={message.text} isStreaming={isStreamingMessage} />
             })}
-            {isChatSending && !chatMessages.some((message) => message.id.startsWith('assistant-stream-') && message.text.trim().length > 0)
+            {isChatSending && !hasVisibleActiveStreamingMessage
               ? <ChatMessage role="assistant" text="" isLoading />
               : null}
           </>
@@ -105,8 +112,10 @@ export function ClientChatbot({
           onChangeValue={setComposerText}
           onSend={handleSendChatMessage}
           compact={isModal}
+          inputPlaceholder=""
           showDisclaimer={false}
           sendIconVariant="arrow"
+          enableSlashFocusShortcut
           isSendDisabled={
             isChatSending || isCheckingChatMinutes || isChatMinutesBlocked || composerText.trim().length === 0
           }

@@ -21,6 +21,7 @@ export function ClientsScreen({ onSelectClient, onOpenNewClientPage }: Props) {
   const { data } = useLocalAppData()
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
+  const tableScrollRef = React.useRef<ScrollView | null>(null)
 
   const allItems = useMemo(() => selectClientListItems(data), [data])
   const visibleItems = useMemo(() => filterClientListItems(allItems, query), [allItems, query])
@@ -36,6 +37,15 @@ export function ClientsScreen({ onSelectClient, onOpenNewClientPage }: Props) {
   React.useEffect(() => {
     setPage(1)
   }, [query])
+
+  React.useEffect(() => {
+    tableScrollRef.current?.scrollTo({ y: 0, animated: false })
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [])
+
+  React.useEffect(() => {
+    tableScrollRef.current?.scrollTo({ y: 0, animated: false })
+  }, [currentPage])
 
   return (
     <View style={styles.container}>
@@ -71,7 +81,7 @@ export function ClientsScreen({ onSelectClient, onOpenNewClientPage }: Props) {
           <View style={styles.chevronColumn} />
         </View>
 
-        <ScrollView style={styles.tableBody} showsVerticalScrollIndicator={false}>
+        <ScrollView ref={tableScrollRef} style={styles.tableBody} showsVerticalScrollIndicator={false}>
           {paginatedItems.map((item) => (
             <ClientTableRow key={item.clientId} item={item} onPress={onSelectClient} />
           ))}

@@ -169,6 +169,7 @@ export function useDashboardScreenModel(props: DashboardScreenProps): DashboardS
         value: String(inputsThisWeek),
         accentFrom: '#1B4EC2',
         accentTo: '#2A6DFF',
+        onPress: props.onOpenSessionsPage,
       },
       {
         id: 'reports-this-week',
@@ -179,7 +180,7 @@ export function useDashboardScreenModel(props: DashboardScreenProps): DashboardS
         onPress: props.onOpenReportsPage,
       },
     ]
-  }, [data.clients, data.inputs, data.inputSummaries, props.onOpenClientsPage, props.onOpenReportsPage])
+  }, [data.clients, data.inputs, data.inputSummaries, props.onOpenClientsPage, props.onOpenReportsPage, props.onOpenSessionsPage])
 
   return {
     scrollRef,

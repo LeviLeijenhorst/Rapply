@@ -167,6 +167,14 @@ export function applyRouteToShell(params: ApplyRouteParams): void {
     setInputOriginRoute(null)
     return
   }
+  if (route.kind === 'sessions') {
+    setSelectedSidebarItemKey('sessions')
+    setSelectedClientId(null)
+    setSelectedTrajectoryId(null)
+    setSelectedSessieId(null)
+    setInputOriginRoute(null)
+    return
+  }
   if (route.kind === 'templates') {
     setSelectedSidebarItemKey('reports')
     setSelectedClientId(null)

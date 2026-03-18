@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Pressable, TextInput, View } from 'react-native'
 
 import { Modal } from '../../../ui/animated/Modal'
@@ -8,6 +8,9 @@ import { ModalCloseIcon } from '../../../icons/ModalCloseIcon'
 import { PauseIcon } from '../../../icons/PauseIcon'
 import { PlaySmallIcon } from '../../../icons/PlaySmallIcon'
 import { StopSquareIcon } from '../../../icons/StopSquareIcon'
+import { EditSmallIcon } from '../../../icons/EditSmallIcon'
+import { TrashIcon } from '../../../icons/TrashIcon'
+import { colors } from '../../../design/theme/colors'
 import { webTransitionSmooth } from '../../../design/theme/transitions'
 import { ChatComposer } from '../../shared/components/chat/ChatComposer'
 import { formatTimeLabel } from '../utils'
@@ -71,6 +74,28 @@ export function RecordStep({
   onSetWaveBarCount,
   onStopRecording,
 }: RecordStepModel) {
+  const editInputRef = useRef<TextInput | null>(null)
+  const [pendingDeleteRecordingNoteId, setPendingDeleteRecordingNoteId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!editingRecordingNoteId) return
+    const timeouts = [0, 120, 260].map((delay) => setTimeout(() => editInputRef.current?.focus(), delay))
+    return () => timeouts.forEach((timeoutId) => clearTimeout(timeoutId))
+  }, [editingRecordingNoteId])
+
+  const visibleWaveHeights = useMemo(() => {
+    const count = bars.length
+    const next = Array.from({ length: count }, () => 8)
+    for (let index = 0; index < count; index++) {
+      const mirrorIndex = count - 1 - index
+      const leftHeight = liveWaveHeights[index] ?? 8
+      const rightHeight = liveWaveHeights[mirrorIndex] ?? 8
+      const mirroredHeight = Math.max(leftHeight, rightHeight)
+      next[index] = mirroredHeight
+    }
+    return next
+  }, [bars.length, liveWaveHeights])
+
   const recorderNode = (
     <View style={styles.recordingMainCard}>
       <View style={styles.recordingCardHeader}>
@@ -97,7 +122,7 @@ export function RecordStep({
           }}
         >
           {bars.map((index) => {
-            const rawHeight = liveWaveHeights[index] ?? 8
+            const rawHeight = visibleWaveHeights[index] ?? 8
             const height = rawHeight <= 8 ? 8 : rawHeight
             return <View key={index} style={[styles.waveBar, { height, borderRadius: height <= 8 ? 4 : 8 }]} />
           })}
@@ -222,15 +247,17 @@ export function RecordStep({
                           disabled={isTransitioning}
                           onPress={() => onEditRecordingNote(note.id)}
                           style={({ hovered }) => [styles.recordingNoteActionButton, hovered ? styles.recordingNoteActionButtonHovered : undefined]}
+                          accessibilityLabel="Notitie bewerken"
                         >
-                          <Text style={styles.recordingNoteActionText}>Bewerken</Text>
+                          <EditSmallIcon color={colors.textStrong} size={14} />
                         </Pressable>
                         <Pressable
                           disabled={isTransitioning}
-                          onPress={() => onDeleteRecordingNote(note.id)}
+                          onPress={() => setPendingDeleteRecordingNoteId(note.id)}
                           style={({ hovered }) => [styles.recordingNoteActionButton, hovered ? styles.recordingNoteActionButtonHovered : undefined]}
+                          accessibilityLabel="Notitie verwijderen"
                         >
-                          <Text style={styles.recordingNoteActionText}>Verwijderen</Text>
+                          <TrashIcon color={colors.textStrong} size={15} />
                         </Pressable>
                       </View>
                     </View>
@@ -244,6 +271,7 @@ export function RecordStep({
                     value={recordingNoteDraft}
                     onChangeValue={onRecordingNoteDraftChange}
                     onSend={onSaveRecordingNote}
+                    shouldAutoFocus
                     showDisclaimer={false}
                     sendIconVariant="arrow"
                     isSendDisabled={isTransitioning || recordingNoteDraft.trim().length === 0}
@@ -256,6 +284,7 @@ export function RecordStep({
             <View style={styles.recordingEditModalBody}>
               <Text isBold style={styles.recordingEditModalTitle}>Notitie bewerken</Text>
               <TextInput
+                ref={editInputRef}
                 value={recordingNoteDraft}
                 onChangeText={onRecordingNoteDraftChange}
                 placeholder="Bewerk je notitie..."
@@ -286,6 +315,41 @@ export function RecordStep({
                 ]}
               >
                 <Text isBold style={styles.recordedCloseWarningPrimaryButtonText}>Opslaan</Text>
+              </Pressable>
+            </View>
+          </Modal>
+          <Modal
+            visible={Boolean(pendingDeleteRecordingNoteId)}
+            onClose={() => setPendingDeleteRecordingNoteId(null)}
+            contentContainerStyle={styles.closeWarningContainer}
+          >
+            <View style={styles.closeWarningContent}>
+              <Text isBold style={styles.closeWarningTitle}>Notitie verwijderen?</Text>
+              <Text style={styles.closeWarningText}>Deze notitie wordt definitief verwijderd.</Text>
+            </View>
+            <View style={styles.recordedCloseWarningFooter}>
+              <Pressable
+                onPress={() => setPendingDeleteRecordingNoteId(null)}
+                style={({ hovered }) => [
+                  styles.recordedCloseWarningSecondaryButton,
+                  styles.cancelButtonNoBottomLeftRadius,
+                  hovered ? styles.recordedCloseWarningSecondaryButtonHovered : undefined,
+                ]}
+              >
+                <Text isBold style={styles.recordedCloseWarningSecondaryButtonText}>Annuleren</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  if (!pendingDeleteRecordingNoteId) return
+                  onDeleteRecordingNote(pendingDeleteRecordingNoteId)
+                  setPendingDeleteRecordingNoteId(null)
+                }}
+                style={({ hovered }) => [
+                  styles.recordedCloseWarningPrimaryButton,
+                  hovered ? styles.recordedCloseWarningPrimaryButtonHovered : undefined,
+                ]}
+              >
+                <Text isBold style={styles.recordedCloseWarningPrimaryButtonText}>Verwijderen</Text>
               </Pressable>
             </View>
           </Modal>

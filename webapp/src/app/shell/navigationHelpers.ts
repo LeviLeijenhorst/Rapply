@@ -26,6 +26,7 @@ export function getMainContentKey(params: MainContentKeyParams): string {
   if (params.isNewClientPageOpen) return 'new-client-page'
   if (params.selectedSessieId) return `sessie-${params.selectedSessieId}`
   if (params.selectedSidebarItemKey === 'dashboard') return 'dashboard'
+  if (params.selectedSidebarItemKey === 'sessions') return 'sessions'
   if (params.selectedSidebarItemKey === 'clients') {
     if (params.selectedTrajectoryId) return `trajectory-${params.selectedTrajectoryId}`
     return params.selectedClientId ? `client-${params.selectedClientId}` : 'clients'
@@ -59,6 +60,7 @@ export function getCurrentRouteFromSelection(params: CurrentRouteParams): RouteS
   }
   if (params.selectedSessieId) return { kind: 'sessie', sessieId: params.selectedSessieId }
   if (params.selectedSidebarItemKey === 'dashboard') return { kind: 'dashboard' }
+  if (params.selectedSidebarItemKey === 'sessions') return { kind: 'sessions' }
   if (params.selectedSidebarItemKey === 'reports') return { kind: 'reports' }
   if (params.selectedSidebarItemKey === 'clients') {
     if (params.selectedClientId && params.selectedTrajectoryId) {

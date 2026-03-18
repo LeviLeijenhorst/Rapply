@@ -9,6 +9,7 @@ import { readOrganizationSettings } from "../../organizationSettings/store"
 import { listReports, readLatestReportIdByInput, saveReport } from "../../reports/store"
 import { listSessions, createSession } from "../../sessions/store"
 import { extractSnippets } from "../../snippets/extractSnippets"
+import { snippetExtractionSystemPrompt } from "../../snippets/extractSnippets"
 import { createSnippet, listSnippets, updateSnippet } from "../../snippets/store"
 import { readUserSettings } from "../../userSettings/store"
 import { ensureActiveTrajectoryForClient, listTrajectories } from "../../trajectories/store"
@@ -18,7 +19,7 @@ import { buildGroupedClientKnowledgeContext } from "../chat/clientKnowledgeConte
 import { buildReportChatContext } from "../chat/reportChatContext"
 import { extractDocumentText, isSupportedDocumentType } from "../inputs/extractDocumentText"
 import { selectEvidenceForReport } from "../reports/evidenceSelection"
-import { generateStructuredReport } from "../reports/generateReport"
+import { createTemplateFieldIdResolver, generateStructuredReport } from "../reports/generateReport"
 import type { PromptSource, PromptSourceType } from "../reports/generateReport"
 import { regenerateReportField } from "../reports/regenerateReportField"
 import {
@@ -77,6 +78,11 @@ function normalizeLabelList(values: unknown[]): string[] {
 
 function readSnippetLabels(snippet: { fieldIds?: string[]; fieldId?: string | null; snippetType?: string | null }): string[] {
   return normalizeLabelList([...(Array.isArray(snippet.fieldIds) ? snippet.fieldIds : []), snippet.fieldId, snippet.snippetType])
+}
+
+function shouldLogRecordedSummarySnippetDebug(sourceInputType: string): boolean {
+  const normalized = normalizeText(sourceInputType).toLowerCase()
+  return normalized === "recording" || normalized === "spoken_recap" || normalized === "spoken"
 }
 
 function readChatMessages(value: unknown): ChatMessage[] {
@@ -157,10 +163,51 @@ function buildSnippetRows(params: {
     updatedAtUnixMs: number
   }>
 > {
+  const shouldLogSnippetDebug = shouldLogRecordedSummarySnippetDebug(params.sourceInputType)
+  if (shouldLogSnippetDebug) {
+    console.log(
+      "[snippet-debug:recorded-summary] transcript",
+      JSON.stringify({
+        sourceSessionId: params.inputId,
+        clientId: params.clientId,
+        trajectoryId: params.trajectoryId,
+        sourceInputType: params.sourceInputType,
+        transcript: normalizeText(params.transcript),
+      }),
+    )
+  }
+
   return extractSnippets({
     transcript: params.transcript,
     sourceInputType: params.sourceInputType,
+    includeDebug: shouldLogSnippetDebug,
   }).then((result) => {
+    if (shouldLogSnippetDebug) {
+      const debugChunks = Array.isArray(result.debugChunks) ? result.debugChunks : []
+      for (const chunk of debugChunks) {
+        console.log(
+          "[snippet-debug:recorded-summary] prompt",
+          JSON.stringify({
+            sourceSessionId: params.inputId,
+            sourceInputType: params.sourceInputType,
+            chunkIndex: chunk.chunkIndex,
+            systemPrompt: snippetExtractionSystemPrompt,
+            userPrompt: chunk.promptUsed,
+          }),
+        )
+        console.log(
+          "[snippet-debug:recorded-summary] result",
+          JSON.stringify({
+            sourceSessionId: params.inputId,
+            sourceInputType: params.sourceInputType,
+            chunkIndex: chunk.chunkIndex,
+            rawModelResponse: chunk.rawModelResponse,
+            parsedSnippets: chunk.parsedSnippets,
+          }),
+        )
+      }
+    }
+
     const now = Date.now()
     return result.snippets.map((snippet) => ({
       fieldIds: snippet.fields.length > 0 ? snippet.fields : ["general"],
@@ -796,6 +843,7 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
       }
       const structuredReport = report.reportStructuredJson
       const template = readSupportedUwvTemplate(structuredReport.templateId)
+      const resolveFieldId = createTemplateFieldIdResolver(template)
       const [snippets, notes] = await Promise.all([listSnippets(user.userId), listNotes(user.userId)])
       const context = buildReportChatContext({
         reportId,
@@ -886,9 +934,16 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
         }
 
         if (variant === "activities_rows") {
+          if (Array.isArray(normalized)) {
+            return { activiteiten: normalizeActivities(normalized) }
+          }
           const objectValue = asObject(normalized)
           if (!objectValue) return null
-          return { activiteiten: normalizeActivities(objectValue.activiteiten ?? []) }
+          return {
+            activiteiten: normalizeActivities(
+              objectValue.activiteiten ?? objectValue.rows ?? objectValue.items ?? [],
+            ),
+          }
         }
 
         if (variant === "activiteiten_en_keuzes") {
@@ -941,10 +996,12 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
           return String(value)
         }
         for (const fieldUpdate of chat.fieldUpdates) {
-          const existingField = updatedFields[fieldUpdate.fieldId]
+          const resolvedFieldId = resolveFieldId(fieldUpdate.fieldId)
+          if (!resolvedFieldId) continue
+          const existingField = updatedFields[resolvedFieldId]
           if (!existingField) continue
           if (existingField.fieldType !== "ai") continue
-          const normalizedAnswer = normalizeFieldUpdateAnswer(fieldUpdate.fieldId, fieldUpdate.answer)
+          const normalizedAnswer = normalizeFieldUpdateAnswer(resolvedFieldId, fieldUpdate.answer)
           if (normalizedAnswer === null) continue
           const nextField = appendFieldVersion({
             field: existingField,
@@ -952,8 +1009,8 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
             answer: normalizedAnswer,
             prompt: null,
           })
-          updatedFields[fieldUpdate.fieldId] = nextField
-          appliedFieldUpdates.push({ fieldId: fieldUpdate.fieldId, answer: answerToText(nextField.answer) })
+          updatedFields[resolvedFieldId] = nextField
+          appliedFieldUpdates.push({ fieldId: resolvedFieldId, answer: answerToText(nextField.answer) })
         }
         const updatedStructuredReport = updateStructuredReport({
           report: structuredReport,

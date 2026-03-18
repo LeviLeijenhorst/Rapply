@@ -118,3 +118,44 @@ test('structured export parses address composite fields with mixed casing and sp
   assert.equal(context['3_4_post_postcode'], '2222BB')
   assert.equal(context['3_4_post_plaats'], 'Den Haag')
 })
+
+test('structured export parses JSON-string activity rows for reintegratieplan and eindrapportage', () => {
+  const templateWithEndRows: PipelineTemplate = {
+    ...template,
+    fields: [
+      ...template.fields,
+      { fieldId: 'er_werkfit_7_1', label: 'Re-integratieactiviteiten en begeleidingsuren', fieldType: 'ai', exportNumberKey: '7.1' },
+    ],
+  }
+
+  const reportWithStringJson: StructuredReport = {
+    ...report,
+    fields: {
+      ...report.fields,
+      rp_werkfit_5_3: {
+        ...report.fields.rp_werkfit_5_3,
+        answer: '{"activiteiten":[{"activiteit":"Opstellen van een cv","uren":4},{"activiteit":"Arbeidsmarktverkenning","uren":6},{"activiteit":"Verbeteren van sollicitatievaardigheden","uren":5}]}',
+      },
+      er_werkfit_7_1: {
+        fieldId: 'er_werkfit_7_1',
+        label: 'Re-integratieactiviteiten en begeleidingsuren',
+        fieldType: 'ai',
+        answer: '{"keuzes":[1,3],"activiteiten":[{"activiteit":"Netwerkgesprekken","uren":3},{"activiteit":"Sollicitatietraining","uren":4}]}',
+        factualBasis: '',
+        reasoning: '',
+        confidence: 0.6,
+        updatedAtUnixMs: 1,
+        versions: [],
+      },
+    },
+  }
+
+  const context = buildStructuredExportContext(templateWithEndRows, reportWithStringJson)
+  assert.equal(context['5_3_1_re_integratieactiviteit'], 'Opstellen van een cv')
+  assert.equal(context['5_3_1_aantal_begeleidingsuren'], '4')
+  assert.equal(context['5_3_3_re_integratieactiviteit'], 'Verbeteren van sollicitatievaardigheden')
+  assert.equal(context['5_3_totaal_aantal_begeleidingsuren'], '15')
+  assert.equal(context['7_1_1_re_integratieactiviteit'], 'Netwerkgesprekken')
+  assert.equal(context['7_1_2_aantal_begeleidingsuren'], '4')
+  assert.equal(context['7_1_totaal_aantal_begeleidingsuren'], '7')
+})

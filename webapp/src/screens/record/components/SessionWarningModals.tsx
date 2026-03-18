@@ -15,9 +15,12 @@ type InsufficientMinutesContext = {
 type InputWarningModalsModel = {
   insufficientMinutesContext: InsufficientMinutesContext | null
   isInsufficientMinutesWarningVisible: boolean
+  isRecordingCloseWarningVisible: boolean
   isRecordedCloseWarningVisible: boolean
   onCloseInsufficientMinutes: () => void
+  onCloseRecordingWarning: () => void
   onCloseRecordedWarning: () => void
+  onConfirmRecordingCancel: () => void
   onConfirmRecordedDelete: () => void
   onDownloadAudioForInsufficientMinutes: () => void
   onOpenSubscriptionFromInsufficientMinutes: () => void
@@ -26,15 +29,58 @@ type InputWarningModalsModel = {
 export function InputWarningModals({
   insufficientMinutesContext,
   isInsufficientMinutesWarningVisible,
+  isRecordingCloseWarningVisible,
   isRecordedCloseWarningVisible,
   onCloseInsufficientMinutes,
+  onCloseRecordingWarning,
   onCloseRecordedWarning,
+  onConfirmRecordingCancel,
   onConfirmRecordedDelete,
   onDownloadAudioForInsufficientMinutes,
   onOpenSubscriptionFromInsufficientMinutes,
 }: InputWarningModalsModel) {
   return (
     <>
+      <Modal
+        visible={isRecordingCloseWarningVisible}
+        onClose={onCloseRecordingWarning}
+        contentContainerStyle={styles.closeWarningContainer}
+      >
+        <View style={styles.closeWarningContent}>
+          <Text isBold style={styles.closeWarningTitle}>
+            Weet je zeker dat je de opname wilt sluiten?
+          </Text>
+          <Text style={styles.closeWarningText}>
+            Als je nu sluit, wordt de huidige opname verwijderd.
+          </Text>
+        </View>
+        <View style={styles.recordedCloseWarningFooter}>
+          <Pressable
+            onPress={onCloseRecordingWarning}
+            style={({ hovered }) => [
+              styles.recordedCloseWarningSecondaryButton,
+              styles.cancelButtonNoBottomLeftRadius,
+              hovered ? styles.recordedCloseWarningSecondaryButtonHovered : undefined,
+            ]}
+          >
+            <Text isBold style={styles.recordedCloseWarningSecondaryButtonText}>
+              Annuleren
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={onConfirmRecordingCancel}
+            style={({ hovered }) => [
+              styles.recordedCloseWarningPrimaryButton,
+              hovered ? styles.recordedCloseWarningPrimaryButtonHovered : undefined,
+            ]}
+          >
+            <Text isBold style={styles.recordedCloseWarningPrimaryButtonText}>
+              Sluiten
+            </Text>
+          </Pressable>
+        </View>
+      </Modal>
+
       <Modal
         visible={isRecordedCloseWarningVisible}
         onClose={onCloseRecordedWarning}

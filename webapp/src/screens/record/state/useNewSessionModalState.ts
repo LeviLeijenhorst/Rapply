@@ -23,6 +23,7 @@ export function useNewInputModalState(visible: boolean) {
   const [isMinimized, setIsMinimized] = useState(false)
   const [isMinimizedCloseWarningVisible, setIsMinimizedCloseWarningVisible] = useState(false)
   const [isRecordedCloseWarningVisible, setIsRecordedCloseWarningVisible] = useState(false)
+  const [isRecordingCloseWarningVisible, setIsRecordingCloseWarningVisible] = useState(false)
   const [hasRecordingConsent, setHasRecordingConsent] = useState(false)
   const sessionTitleInputRef = useRef<TextInput | null>(null)
   const uploadDropAreaRef = useRef<View | null>(null)
@@ -81,6 +82,7 @@ export function useNewInputModalState(visible: boolean) {
     isMinimizedCloseWarningVisible,
     isRealtimeTranscriberStarting,
     isRecordedCloseWarningVisible,
+    isRecordingCloseWarningVisible,
     isRendered,
     isRestoringFromMinimized,
     isUploadDragActive,
@@ -126,6 +128,7 @@ export function useNewInputModalState(visible: boolean) {
     setIsMinimizedCloseWarningVisible,
     setIsRealtimeTranscriberStarting,
     setIsRecordedCloseWarningVisible,
+    setIsRecordingCloseWarningVisible,
     setIsRendered,
     setIsRestoringFromMinimized,
     setIsUploadDragActive,

@@ -8,6 +8,7 @@ import { ModalCloseDarkIcon } from '../../../icons/ModalCloseDarkIcon'
 import { TrashIcon } from '../../../icons/TrashIcon'
 import { MijnAccountIcon } from '../../../icons/MijnAccountIcon'
 import { LogoutIcon } from '../../../icons/LogoutIcon'
+import { Button } from '../../../ui/Button'
 
 type Props = {
   visible: boolean
@@ -61,27 +62,21 @@ export function MyAccountModal({
         </View>
 
         <View style={styles.topActionsRow}>
-          <Pressable onPress={onLogout} style={({ hovered }) => [styles.secondaryWideButton, hovered ? styles.secondaryWideButtonHovered : undefined]}>
-            <View style={styles.secondaryWideButtonContent}>
-              <LogoutIcon size={18} color={colors.textStrong} />
-              <Text isSemibold style={styles.secondaryWideButtonText}>
-                Uitloggen
-              </Text>
-            </View>
-          </Pressable>
-
-          <Pressable
+          <Button
+            label="Uitloggen"
+            onPress={onLogout}
+            variant="neutral"
+            leading={<LogoutIcon size={18} color={colors.textStrong} />}
+            style={styles.topActionButton}
+          />
+          <Button
+            label={isDeleteAccountBusy ? 'Account verwijderen...' : 'Account verwijderen'}
             onPress={onDeleteAccount}
-            style={({ hovered }) => [styles.dangerWideButton, hovered ? styles.dangerWideButtonHovered : undefined, isDeleteAccountBusy ? styles.actionButtonDisabled : undefined]}
-            disabled={isDeleteAccountBusy}
-          >
-            <View style={styles.dangerWideButtonContent}>
-              <TrashIcon color={colors.selected} size={18} />
-              <Text isSemibold style={styles.dangerWideButtonText}>
-                {isDeleteAccountBusy ? 'Account verwijderen...' : 'Account verwijderen'}
-              </Text>
-            </View>
-          </Pressable>
+            variant="outlined"
+            isDisabled={isDeleteAccountBusy}
+            leading={<TrashIcon color={colors.selected} size={18} />}
+            style={styles.topActionButton}
+          />
         </View>
       </ScrollView>
 
@@ -177,9 +172,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: colors.text,
   },
-  actionButtonDisabled: {
-    opacity: 0.6,
-  },
   topActionsRow: {
     width: '100%',
     flexDirection: 'row',
@@ -187,53 +179,11 @@ const styles = StyleSheet.create({
     gap: 16,
     marginTop: 8,
   },
-  secondaryWideButton: {
+  topActionButton: {
     flex: 1,
+    flexBasis: 0,
     height: 56,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryWideButtonHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  secondaryWideButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  secondaryWideButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textStrong,
-  },
-  dangerWideButton: {
-    flex: 1,
-    height: 56,
-    borderRadius: 12,
-    backgroundColor: '#FCE3F2',
-    borderWidth: 1,
-    borderColor: '#F2BBD9',
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dangerWideButtonHovered: {
-    backgroundColor: '#F8D2EA',
-  },
-  dangerWideButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  dangerWideButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.selected,
+    paddingHorizontal: 16,
   },
   footer: {
     width: '100%',

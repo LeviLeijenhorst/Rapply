@@ -24,6 +24,12 @@ export function ChatbotTab({
   onOpenExpanded,
 }: ChatbotTabProps) {
   const isModalVariant = variant === 'modal'
+  const activeStreamingMessageId = isSending
+    ? [...messages].reverse().find((message) => message.id.startsWith('assistant-stream-'))?.id ?? null
+    : null
+  const hasVisibleActiveStreamingMessage = Boolean(
+    activeStreamingMessageId && messages.some((message) => message.id === activeStreamingMessageId && message.text.trim().length > 0),
+  )
 
   return (
     <View style={[styles.container, isModalVariant ? styles.containerModal : undefined]}>
@@ -48,16 +54,16 @@ export function ChatbotTab({
 
       <ScrollView style={styles.feed} contentContainerStyle={messages.length === 0 ? styles.feedContentCentered : styles.feedContent} showsVerticalScrollIndicator={false}>
         {messages.length === 0 && !isSending ? (
-          <Text style={styles.emptyText}>Stel een vraag over deze sessie om AI-chat te starten.</Text>
+          <Text style={styles.emptyText}>Stel een vraag over deze sessie om Rapply te starten.</Text>
         ) : (
           <>
             {messages.map((message) => {
               const isHiddenStreamingPlaceholder = message.role === 'assistant' && message.text.trim().length === 0
               if (isHiddenStreamingPlaceholder) return null
-              const isStreamingMessage = isSending && message.id.startsWith('assistant-stream-')
+              const isStreamingMessage = isSending && message.id === activeStreamingMessageId
               return <ChatMessage key={message.id} role={message.role} text={message.text} isStreaming={isStreamingMessage} />
             })}
-            {isSending && !messages.some((message) => message.id.startsWith('assistant-stream-') && message.text.trim().length > 0)
+            {isSending && !hasVisibleActiveStreamingMessage
               ? <ChatMessage role="assistant" text="" isLoading />
               : null}
           </>

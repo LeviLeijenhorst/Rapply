@@ -330,6 +330,42 @@ function parseSelectionList(value: string): string[] {
     .filter(Boolean)
 }
 
+function parseJsonObjectValue(value: string): Record<string, unknown> | null {
+  const raw = String(value || '').trim()
+  if (!raw.startsWith('{') || !raw.endsWith('}')) return null
+  try {
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null
+    return parsed as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
+
+function readChoiceNumber(value: string, key: string): number | null {
+  const parsed = parseJsonObjectValue(value)
+  if (parsed && typeof parsed[key] === 'number' && Number.isFinite(parsed[key] as number)) return Number(parsed[key])
+  const keyMatch = String(value || '').match(new RegExp(`\"${key}\"\\s*:\\s*(\\d+)`, 'i'))
+  if (!keyMatch) return null
+  const numeric = Number(keyMatch[1])
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+function readChoiceArray(value: string, key: string): number[] {
+  const parsed = parseJsonObjectValue(value)
+  if (parsed && Array.isArray(parsed[key])) {
+    return parsed[key]
+      .map((item) => (typeof item === 'number' && Number.isFinite(item) ? Number(item) : null))
+      .filter((item): item is number => item !== null)
+  }
+  const keyMatch = String(value || '').match(new RegExp(`\"${key}\"\\s*:\\s*\\[([^\\]]*)\\]`, 'i'))
+  if (!keyMatch) return []
+  return String(keyMatch[1] || '')
+    .split(',')
+    .map((item) => Number(String(item || '').trim()))
+    .filter((item) => Number.isFinite(item))
+}
+
 function parseSpecialistExpertiseValue(value: string): { hours: string; motivation: string } {
   const raw = String(value || '').trim()
   if (!raw) return { hours: '', motivation: '' }
@@ -542,18 +578,45 @@ function resolveEindrapportageField(params: FieldResolverParams): string {
     'naam_contactpersoon',
     '3_2',
   )
+  if (params.effectiveNumberKey === '7.1') {
+    const normalizedLabel = normalizeMatchValue(params.rowLabel)
+    if (normalizedLabel.includes('totaal aantal begeleidingsuren')) {
+      return getContextValue(contextValues, '7_1_totaal_aantal_begeleidingsuren', '5_3_totaal_aantal_begeleidingsuren')
+    }
+    if (params.inferredRowIndex > 0 && params.fieldCount >= 2) {
+      if (params.fieldIndex === 1) {
+        return getContextValue(
+          contextValues,
+          `7_1_${params.inferredRowIndex}_re_integratieactiviteit`,
+          `5_3_${params.inferredRowIndex}_re_integratieactiviteit`,
+        )
+      }
+      if (params.fieldIndex === 2) {
+        return getContextValue(
+          contextValues,
+          `7_1_${params.inferredRowIndex}_aantal_begeleidingsuren`,
+          `5_3_${params.inferredRowIndex}_aantal_begeleidingsuren`,
+        )
+      }
+      return ''
+    }
+  }
   if (params.numberKey) {
+    const fromContextByNumber = getContextValue(contextValues, params.numberKey.replace('.', '_'), params.numberKey)
     if (params.numberKey === '1.1') {
       if (params.fieldCount >= 2) {
         if (params.fieldIndex === 1) return clientInitials
         if (params.fieldIndex === 2) return clientSurname
         return ''
       }
-      return clientName || params.numberedValues.get(params.numberKey) || ''
+      return clientName || fromContextByNumber || params.numberedValues.get(params.numberKey) || ''
     }
     if (params.fieldIndex > 1) return ''
-    if (params.numberKey === '1.2') return getContextValue(contextValues, '1_2', 'bsn', 'burgerservicenummer') || params.numberedValues.get(params.numberKey) || ''
-    return params.numberedValues.get(params.numberKey) || ''
+    if (params.numberKey === '1.2') {
+      return getContextValue(contextValues, '1_2', 'bsn', 'burgerservicenummer') || fromContextByNumber || params.numberedValues.get(params.numberKey) || ''
+    }
+    if (params.numberKey === '7.1') return ''
+    return fromContextByNumber || params.numberedValues.get(params.numberKey) || ''
   }
 
   const normalizedLabel = normalizeMatchValue(params.rowLabel)
@@ -686,38 +749,110 @@ function fillDocumentXmlFormTextFields(params: {
     return `${rowHead}${rowTail.replace(endRunPattern, repairedField)}`
   }
 
-  function applyCheckboxSelection(rowXml: string, rowNumberKey: string, contextValues: Record<string, string | null | undefined>, numberedValues: Map<string, string>): string {
-    if (!rowNumberKey) return rowXml
+  function applyCheckboxSelection(
+    rowXml: string,
+    rowNumberKey: string,
+    rowLabel: string,
+    contextValues: Record<string, string | null | undefined>,
+    numberedValues: Map<string, string>,
+  ): string {
     const checkboxPattern = /<w:checkBox>[\s\S]*?<w:default w:val="([01])"\s*\/>[\s\S]*?<\/w:checkBox>/g
     const checkboxes = String(rowXml || '').match(checkboxPattern) || []
     if (checkboxes.length === 0) return rowXml
 
     let states: boolean[] = []
-    if (rowNumberKey === '5.1') {
+    const normalizedLabel = normalizeMatchValue(rowLabel)
+    const effectiveNumberKey = normalizedLabel.includes('van welke eindsituatie is sprake')
+      ? '4.2'
+      : normalizedLabel.includes('wat is de reden van de voortijdige terugmelding')
+        ? '6.1'
+        : normalizedLabel.includes('is de klant akkoord met het aantal door u ingezette en verantwoorde begeleidingsuren')
+          ? '8.2'
+        : rowNumberKey
+    if (!effectiveNumberKey) return rowXml
+
+    if (effectiveNumberKey === '5.1') {
       const rawValue =
         getContextValue(
           contextValues,
           '5_1',
           '5.1',
+          'rp_werkfit_5_1',
           'welke_hoofdactiviteiten_zijn_in_het_werkplan_of_plan_van_aanpak_benoemd',
         ) || numberedValues.get('5.1') || ''
-      const selected = new Set(parseSelectionList(rawValue))
-      const options = [
-        'versterken werknemersvaardigheden',
-        'verbeteren persoonlijke effectiviteit',
-        'in beeld brengen arbeidsmarktpositie',
-      ].map((item) => normalizeMatchValue(item))
-      states = options.map((option) => selected.has(option))
-    } else if (rowNumberKey === '8.1') {
+      const selectedNumeric = new Set(readChoiceArray(rawValue, 'keuzes'))
+      if (selectedNumeric.size > 0) {
+        states = [selectedNumeric.has(1), selectedNumeric.has(2), selectedNumeric.has(3)]
+      } else {
+        const selected = new Set(parseSelectionList(rawValue))
+        const options = [
+          'versterken werknemersvaardigheden',
+          'verbeteren persoonlijke effectiviteit',
+          'in beeld brengen arbeidsmarktpositie',
+        ].map((item) => normalizeMatchValue(item))
+        states = options.map((option) => selected.has(option))
+      }
+    } else if (effectiveNumberKey === '8.1') {
       const rawValue =
         getContextValue(
           contextValues,
           '8_1',
           '8.1',
+          'rp_werkfit_8_1',
           'is_er_sprake_van_specialistisch_uurtarief',
         ) || numberedValues.get('8.1') || ''
+      const keuze = readChoiceNumber(rawValue, 'keuze')
+      if (keuze !== null) {
+        states = [keuze === 2, keuze === 1]
+      } else {
+        const normalized = normalizeMatchValue(rawValue)
+        states = [normalized === 'nee', normalized === 'ja']
+      }
+    } else if (effectiveNumberKey === '4.2') {
+      const rawValue = getContextValue(contextValues, '4_2', '4.2', 'er_werkfit_4_2') || numberedValues.get('4.2') || ''
+      const keuze = readChoiceNumber(rawValue, 'keuze')
+      states = [keuze === 1, keuze === 2, keuze === 3]
+    } else if (effectiveNumberKey === '6.1') {
+      const rawValue = getContextValue(contextValues, '6_1', '6.1', 'er_werkfit_6_1') || numberedValues.get('6.1') || ''
+      const reden = readChoiceNumber(rawValue, 'reden')
+      if (checkboxes.length === 1 && normalizedLabel.includes('anders')) {
+        states = [reden === 6]
+      } else {
+        states = [reden === 1, reden === 2, reden === 3, reden === 4, reden === 5, reden === 6]
+      }
+    } else if (effectiveNumberKey === '7.1') {
+      const rawValue = getContextValue(contextValues, '7_1', '7.1', 'er_werkfit_7_1') || numberedValues.get('7.1') || ''
+      const selected = new Set(readChoiceArray(rawValue, 'keuzes'))
+      states = [selected.has(1), selected.has(2), selected.has(3)]
+    } else if (effectiveNumberKey === '7.3') {
+      const rawValue = getContextValue(contextValues, '7_3', '7.3', 'er_werkfit_7_3') || numberedValues.get('7.3') || ''
+      const resultaat = readChoiceNumber(rawValue, 'resultaat')
+      states = [resultaat === 1, resultaat === 2]
+    } else if (effectiveNumberKey === '7.6') {
+      const rawValue = getContextValue(contextValues, '7_6', '7.6', 'er_werkfit_7_6') || numberedValues.get('7.6') || ''
       const normalized = normalizeMatchValue(rawValue)
-      states = [normalized === 'nee', normalized === 'ja']
+      const selectionByPhrase = [
+        'zelf in staat om werk te zoeken',
+        'naar werk kan worden ingezet',
+        'door uwv naar werk worden begeleid',
+        'eerst scholing nodig',
+        'niet verder naar werk worden begeleid',
+        'overige bemiddeling',
+        'overige begeleiding',
+      ].map((phrase) => normalized.includes(normalizeMatchValue(phrase)))
+      states = selectionByPhrase
+      if (!states.some(Boolean) && checkboxes.length === 1 && normalizedLabel.includes('anders')) {
+        states = [normalized.includes('anders') || normalized.includes('overige')]
+      }
+    } else if (effectiveNumberKey === '8.2') {
+      const rawValue = getContextValue(contextValues, '8_2', '8.2', 'er_werkfit_8_2') || numberedValues.get('8.2') || ''
+      const akkoord = readChoiceNumber(rawValue, 'akkoord')
+      if (checkboxes.length === 1) {
+        if (normalizedLabel.includes('nee') && !normalizedLabel.includes('ja')) states = [akkoord === 2]
+        else states = [akkoord === 1]
+      } else {
+        states = [akkoord === 1, akkoord === 2]
+      }
     } else {
       return rowXml
     }
@@ -749,7 +884,7 @@ function fillDocumentXmlFormTextFields(params: {
     const numberKey = extractNumberKeyFromLabel(rowPlainLabel)
     if (numberKey) {
       activeNumberKey = numberKey
-      if (numberKey !== '5.3') activityDistributionRowCursor = 0
+      if (numberKey !== '5.3' && numberKey !== '7.1') activityDistributionRowCursor = 0
     }
     const fieldPattern =
       /(<w:r[^>]*>[\s\S]*?<w:fldChar w:fldCharType="separate"\/>[\s\S]*?<\/w:r>)([\s\S]*?)(<w:r[^>]*>[\s\S]*?<w:fldChar w:fldCharType="end"\/>[\s\S]*?<\/w:r>)/g
@@ -759,13 +894,16 @@ function fillDocumentXmlFormTextFields(params: {
       return applyCheckboxSelection(
         rowXml,
         numberKey || activeNumberKey,
+        rowPlainLabel,
         params.contextValues || {},
         numberedValues,
       )
     }
 
     const inferredActivityDistributionRow =
-      !numberKey && activeNumberKey === '5.3' && !rowPlainLabel && fieldCount >= 2 ? ++activityDistributionRowCursor : 0
+      !numberKey && (activeNumberKey === '5.3' || activeNumberKey === '7.1') && !rowPlainLabel && fieldCount >= 2
+        ? ++activityDistributionRowCursor
+        : 0
 
     let fieldIndex = 0
 
@@ -815,6 +953,7 @@ function fillDocumentXmlFormTextFields(params: {
     return applyCheckboxSelection(
       cleanedRow,
       numberKey || activeNumberKey,
+      rowPlainLabel,
       params.contextValues || {},
       numberedValues,
     )

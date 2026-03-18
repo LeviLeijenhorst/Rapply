@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react'
 import type { ScrollView, TextInput } from 'react-native'
 
 import type { ChatStateMessage } from '@/types/chatState'
+import type { NewInputQuickAction } from '@/screens/record/types'
 
 export type ClientLeftTabKey = 'sessies' | 'notities' | 'rapportages' | 'documenten'
 
@@ -119,7 +120,7 @@ export type ClientScreenProps = {
   clientId: string
   onBack: () => void
   onSelectInput: (sessionId: string, sourceTab: ClientLeftTabKey) => void
-  onPressCreateInput: (trajectoryId: string | null) => void
+  onPressCreateInput: (trajectoryId: string | null, initialQuickAction?: NewInputQuickAction | null) => void
   onPressCreateReports: (trajectoryId: string | null) => void
   initialLeftActiveTabKey?: ClientLeftTabKey
   initialRightActiveTabKey?: ClientRightTabKey

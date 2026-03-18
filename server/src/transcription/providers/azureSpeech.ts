@@ -66,10 +66,7 @@ async function requestAzureSpeechTranscription(params: {
   const definition = {
     locales: [params.locale],
     profanityFilterMode: "Masked",
-    diarization: {
-      maxSpeakers: 6,
-      enabled: true,
-    },
+    diarization: { enabled: false },
   }
 
   for (let attempt = 1; attempt <= 4; attempt += 1) {
@@ -118,18 +115,16 @@ async function requestAzureSpeechTranscription(params: {
 // Extracts a diarized transcript string from Azure Speech JSON.
 function extractAzureSpeechTranscript(resultJson: any): { text: string; isDiarized: boolean } {
   const phrases = Array.isArray(resultJson?.phrases) ? resultJson.phrases : []
-  const diarizedLines = phrases
+  const phraseText = phrases
     .map((item: any) => {
-      const speakerNumber = Number.isFinite(Number(item?.speaker)) ? Number(item.speaker) + 1 : null
-      const speaker = speakerNumber ? `speaker_${speakerNumber}` : ""
       const text = normalizeTranscriptSpacing(String(item?.text || ""))
-      if (!speaker || !text) return null
-      return `${speaker}: ${text}`
+      if (!text) return null
+      return text
     })
     .filter(Boolean)
 
-  if (diarizedLines.length > 0) {
-    return { text: diarizedLines.join("\n"), isDiarized: true }
+  if (phraseText.length > 0) {
+    return { text: normalizeTranscriptSpacing(phraseText.join(" ")), isDiarized: false }
   }
 
   const combinedText = Array.isArray(resultJson?.combinedPhrases)
@@ -179,5 +174,5 @@ export async function runAzureSpeechBatchTranscription(params: {
     )
   }
 
-  return transcript.isDiarized ? transcript.text : `[00:00.0] speaker_1: ${transcript.text}`
+  return transcript.text
 }

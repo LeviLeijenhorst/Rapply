@@ -8,6 +8,28 @@ import { SummaryGenerationError } from "../errors/SummaryGenerationError"
 const chunkTokenBudget = 6_500
 const mergeTokenBudget = 8_000
 
+type SummaryDebugContext = {
+  sourceSessionId?: string
+  sourceInputType?: string
+}
+
+type SummaryInputType = "transcript" | "spoken_recap" | "written_recap"
+
+function normalizeSummaryInputType(value: unknown): SummaryInputType {
+  const normalized = normalizeText(value).toLowerCase()
+  if (normalized === "spoken_recap" || normalized === "spoken" || normalized === "recording") return "spoken_recap"
+  if (normalized === "written_recap" || normalized === "written" || normalized === "text") return "written_recap"
+  return "transcript"
+}
+
+function logSummaryDebug(label: string, payload: unknown): void {
+  try {
+    console.log(`[summary-debug:recorded-summary] ${label}`, JSON.stringify(payload))
+  } catch {
+    // Never let diagnostics break summary generation.
+  }
+}
+
 // Makes sure transcript text is present.
 function readRequiredTranscript(transcript: string): string {
   const normalizedTranscript = normalizeText(transcript)
@@ -16,18 +38,44 @@ function readRequiredTranscript(transcript: string): string {
 }
 
 // Builds the system prompt used for summary generation.
-function buildSummarySystemPrompt(): string {
+function buildSummarySystemPrompt(inputType: SummaryInputType): string {
+  const sourceTypeLine =
+    inputType === "spoken_recap"
+      ? "Bronvorm: mondelinge dictatie of nabespreking na het gesprek."
+      : inputType === "written_recap"
+        ? "Bronvorm: geschreven nabespreking van het gesprek."
+        : "Bronvorm: transcriptie van een gesprek."
   return [
-    "Je bent een assistent voor Coachscribe.",
+    "Je bent een assistent voor professionele sessiesamenvattingen in het Nederlands.",
     "Schrijf een heldere sessiesamenvatting in het Nederlands.",
-    "Geef exact 2 alinea's (geen markdown, geen kopjes, geen bullets).",
-    "Alinea 1: een korte, snelle samenvatting van de sessie.",
-    "Alinea 2: de actiepunten uit de sessie.",
-    "Als er geen actiepunten zijn, vermeld dat expliciet in alinea 2.",
+    "Gebruik exact dit format:",
+    "1) Eén korte alinea met de samenvatting van de sessie.",
+    "2) Daarna letterlijk: 'Vervolgstappen:' op een nieuwe regel.",
+    "3) Onder 'Vervolgstappen:' alleen bullet points met concrete acties.",
+    "Gebruik '-' als bullet marker.",
     "Gebruik alleen informatie uit het transcript.",
     "Noem geen details die niet in het transcript staan.",
     "Gebruik geen sprekerlabels.",
     "Houd de toon feitelijk en professioneel.",
+    "Schrijf vloeiende, natuurlijke zinnen die direct de inhoud samenvatten.",
+    "Bundel overlappende informatie tot één heldere formulering.",
+    "Gebruik concrete handelingen en observaties als kern van de tekst.",
+    "Noem specifieke activiteiten en uitkomsten expliciet wanneer die in de input staan (bijv. cv bijgewerkt, LinkedIn-verzoeken verstuurd).",
+    "Kies voor concrete formuleringen boven algemene labels zoals 'positieve voortgang' zonder onderbouwing.",
+    "Varieer in zinsaanzetten en herhaal 'De cliënt' niet onnodig in opeenvolgende zinnen.",
+    "Voorkom semantische duplicatie: noem hetzelfde punt niet meerdere keren in andere woorden.",
+    sourceTypeLine,
+    "Verwerk zowel directe gesprekstranscripties als nabesprekingen op dezelfde neutrale, feitelijke manier.",
+    "Zet onder 'Vervolgstappen:' altijd minimaal één bullet.",
+    "Als er geen expliciete vervolgstap in de input staat, gebruik dan: '- Geen concrete vervolgstappen genoemd.'",
+    "",
+    "Stijlvoorbeeld alinea 1:",
+    "Cliënt heeft gewerkt aan het actualiseren van het cv en het uitbreiden van het LinkedIn-netwerk. Verder is er besproken welke stappen al zijn gezet en waar nog ondersteuning nodig is.",
+    "Stijlvoorbeeld vervolgstappen:",
+    "Vervolgstappen:",
+    "- Versturen van gerichte connectieverzoeken op LinkedIn.",
+    "- Verwerken van ontvangen feedback op het cv.",
+    "- Inplannen van een kort voortgangsmoment.",
   ].join("\n")
 }
 
@@ -59,13 +107,16 @@ function splitTextRecursively(value: string, maxAllowedTokens: number): string[]
 async function summarizeChunk(params: {
   deployment: string
   systemPrompt: string
+  inputType: SummaryInputType
   chunkText: string
   chunkIndex: number
   totalChunks: number
+  includeDebug?: boolean
+  debugContext?: SummaryDebugContext
 }): Promise<string> {
   const userPrompt = [
+    `Inputtype: ${params.inputType}.`,
     `Dit is deel ${params.chunkIndex} van ${params.totalChunks}.`,
-    "Gebruik alleen feiten uit dit deel.",
     "",
     "Transcriptdeel:",
     params.chunkText,
@@ -75,11 +126,30 @@ async function summarizeChunk(params: {
     { role: "system", content: params.systemPrompt },
     { role: "user", content: userPrompt },
   ]
-  return await completeAzureOpenAiChat({
+  if (params.includeDebug) {
+    logSummaryDebug("prompt", {
+      sourceSessionId: normalizeText(params.debugContext?.sourceSessionId),
+      sourceInputType: normalizeText(params.debugContext?.sourceInputType),
+      chunkIndex: params.chunkIndex - 1,
+      systemPrompt: params.systemPrompt,
+      userPrompt,
+    })
+  }
+  const rawSummary = await completeAzureOpenAiChat({
     deployment: params.deployment,
     messages,
     temperature: 0.2,
   })
+  if (params.includeDebug) {
+    logSummaryDebug("result", {
+      sourceSessionId: normalizeText(params.debugContext?.sourceSessionId),
+      sourceInputType: normalizeText(params.debugContext?.sourceInputType),
+      chunkIndex: params.chunkIndex - 1,
+      rawModelResponse: rawSummary,
+      parsedSummary: normalizeGeneratedSummaryText(rawSummary),
+    })
+  }
+  return rawSummary
 }
 
 // Merges chunk summaries into one summary.
@@ -87,6 +157,8 @@ async function mergeChunkSummaries(params: {
   deployment: string
   systemPrompt: string
   partialSummaries: string[]
+  includeDebug?: boolean
+  debugContext?: SummaryDebugContext
 }): Promise<string> {
   let current = params.partialSummaries.slice()
   while (current.length > 1) {
@@ -105,18 +177,44 @@ async function mergeChunkSummaries(params: {
 
     const next: string[] = []
     for (const input of groups) {
+      const userPrompt = [
+        "Voeg deze deelsamenvattingen samen zonder nieuwe feiten.",
+        "Gebruik exact dit format:",
+        "- eerst 1 korte samenvattingsalinea",
+        "- daarna 'Vervolgstappen:' met bullet points ('-' bullets)",
+        "",
+        input,
+      ].join("\n")
       const messages: ChatMessage[] = [
         { role: "system", content: params.systemPrompt },
         {
           role: "user",
-          content: ["Voeg deze deelsamenvattingen samen tot 1 tekst met exact 2 alinea's, zonder nieuwe feiten.", input].join("\n\n"),
+          content: userPrompt,
         },
       ]
+      if (params.includeDebug) {
+        logSummaryDebug("prompt", {
+          sourceSessionId: normalizeText(params.debugContext?.sourceSessionId),
+          sourceInputType: normalizeText(params.debugContext?.sourceInputType),
+          chunkIndex: -1,
+          systemPrompt: params.systemPrompt,
+          userPrompt,
+        })
+      }
       const mergedGroup = await completeAzureOpenAiChat({
         deployment: params.deployment,
         messages,
         temperature: 0.2,
       })
+      if (params.includeDebug) {
+        logSummaryDebug("result", {
+          sourceSessionId: normalizeText(params.debugContext?.sourceSessionId),
+          sourceInputType: normalizeText(params.debugContext?.sourceInputType),
+          chunkIndex: -1,
+          rawModelResponse: mergedGroup,
+          parsedSummary: normalizeGeneratedSummaryText(mergedGroup),
+        })
+      }
       const normalizedMergedGroup = normalizeText(mergedGroup)
       if (!normalizedMergedGroup) throw new SummaryGenerationError("Summary generation failed")
       next.push(normalizedMergedGroup)
@@ -137,31 +235,65 @@ function normalizeGeneratedSummaryText(summary: string): string {
     .trim()
 }
 
+function ensureSummaryActionPoints(summary: string): string {
+  const normalized = normalizeText(summary)
+  if (!normalized) return normalized
+
+  const hasSection = /(?:^|\n)\s*vervolgstappen\s*:/i.test(normalized)
+  if (!hasSection) {
+    return `${normalized}\n\nVervolgstappen:\n- Geen concrete vervolgstappen genoemd.`
+  }
+
+  const lines = normalized.split(/\r?\n/)
+  const sectionIndex = lines.findIndex((line) => /^\s*vervolgstappen\s*:/i.test(line))
+  if (sectionIndex < 0) {
+    return `${normalized}\n\nVervolgstappen:\n- Geen concrete vervolgstappen genoemd.`
+  }
+
+  const tail = lines.slice(sectionIndex + 1).map((line) => line.trim())
+  const hasBullet = tail.some((line) => line.startsWith("- "))
+  if (hasBullet) return normalized
+
+  const prefix = lines.slice(0, sectionIndex + 1).join("\n").trimEnd()
+  return `${prefix}\n- Geen concrete vervolgstappen genoemd.`
+}
+
 // Resolves the summary deployment from environment settings.
 export function readSummaryDeployment(): string {
   return normalizeText(env.azureOpenAiSummaryDeployment || env.azureOpenAiChatDeployment)
 }
 
 // Generates a plain-text summary from transcript text.
-export async function generateSummary(params: { transcript: string }): Promise<string> {
+export async function generateSummary(params: { transcript: string; includeDebug?: boolean; debugContext?: SummaryDebugContext }): Promise<string> {
   const deployment = readSummaryDeployment()
   if (!deployment) throw new SummaryGenerationError("Azure OpenAI summary deployment is not configured")
 
   const transcript = readRequiredTranscript(params.transcript)
-  const systemPrompt = buildSummarySystemPrompt()
+  const inputType = normalizeSummaryInputType(params.debugContext?.sourceInputType)
+  if (params.includeDebug) {
+    logSummaryDebug("transcript", {
+      sourceSessionId: normalizeText(params.debugContext?.sourceSessionId),
+      sourceInputType: normalizeText(params.debugContext?.sourceInputType),
+      transcript,
+    })
+  }
+  const systemPrompt = buildSummarySystemPrompt(inputType)
   const chunks = splitTextRecursively(transcript, chunkTokenBudget)
 
   if (chunks.length <= 1) {
     const summary = await summarizeChunk({
       deployment,
       systemPrompt,
+      inputType,
       chunkText: chunks[0] || transcript,
       chunkIndex: 1,
       totalChunks: 1,
+      includeDebug: params.includeDebug,
+      debugContext: params.debugContext,
     })
     const cleanedSummary = normalizeGeneratedSummaryText(summary)
     if (!cleanedSummary) throw new SummaryGenerationError("Summary generation failed")
-    return cleanedSummary
+    return ensureSummaryActionPoints(cleanedSummary)
   }
 
   const partialSummaries: string[] = []
@@ -169,9 +301,12 @@ export async function generateSummary(params: { transcript: string }): Promise<s
     const partialSummary = await summarizeChunk({
       deployment,
       systemPrompt,
+      inputType,
       chunkText: chunks[chunkIndex],
       chunkIndex: chunkIndex + 1,
       totalChunks: chunks.length,
+      includeDebug: params.includeDebug,
+      debugContext: params.debugContext,
     })
     const normalizedPartialSummary = normalizeText(partialSummary)
     if (!normalizedPartialSummary) throw new SummaryGenerationError("Summary generation failed")
@@ -182,8 +317,10 @@ export async function generateSummary(params: { transcript: string }): Promise<s
     deployment,
     systemPrompt,
     partialSummaries,
+    includeDebug: params.includeDebug,
+    debugContext: params.debugContext,
   })
   const cleanedSummary = normalizeGeneratedSummaryText(mergedSummary)
   if (!cleanedSummary) throw new SummaryGenerationError("Summary generation failed")
-  return cleanedSummary
+  return ensureSummaryActionPoints(cleanedSummary)
 }

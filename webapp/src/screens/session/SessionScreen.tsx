@@ -40,9 +40,11 @@ export function InputScreen(props: InputScreenProps) {
     transcriptionStatus,
     transcript,
     canRegenerateSnippets,
+    canRegenerateSummary,
+    canCancelSummaryGeneration,
+    isSnippetsLoading,
     sessionNotes,
     sessionSnippets,
-    isSnippetStateSettling,
     isRegeneratingSnippets,
     handleRegenerateInputSnippets,
     handleCreateSnippet,
@@ -50,6 +52,8 @@ export function InputScreen(props: InputScreenProps) {
     handleSaveSnippetText,
     handleDeleteSnippet,
     handleSaveSummary,
+    handleCancelSummaryGeneration,
+    handleRegenerateSummary,
     createNote,
     updateNote,
     deleteNote,
@@ -77,11 +81,14 @@ export function InputScreen(props: InputScreenProps) {
               title={isUploadedDocument ? 'Document' : 'Samenvatting'}
               emptyText={isUploadedDocument ? 'Geen leesbare documenttekst beschikbaar.' : undefined}
               onPressEdit={!isUploadedDocument ? () => setIsSummaryEditModalOpen(true) : null}
+              onPressRegenerate={canRegenerateSummary ? handleRegenerateSummary : null}
+              onPressCancelGeneration={canCancelSummaryGeneration ? handleCancelSummaryGeneration : null}
             />
 
             <SnippetSection
               snippets={sessionSnippets}
-              isLoading={((transcriptionStatus === 'transcribing' || transcriptionStatus === 'generating') && sessionSnippets.length === 0) || isSnippetStateSettling}
+              isLoading={isSnippetsLoading}
+              hideEmptyState={transcriptionStatus === 'transcribing'}
               canRegenerate={canRegenerateSnippets}
               isRegenerating={isRegeneratingSnippets}
               onRegenerate={handleRegenerateInputSnippets}

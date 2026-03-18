@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, LayoutAnimation, Platform, Pressable, StyleSheet, TextInput, UIManager, View } from 'react-native'
+import { Animated, Easing, LayoutAnimation, Platform, Pressable, StyleSheet, TextInput, UIManager, View } from 'react-native'
 
 import { semanticColorTokens, brandColors } from '@/design/tokens/colors'
 import { borderWidths } from '@/design/tokens/borderWidths'
@@ -33,6 +33,7 @@ function resolveSnippetBorderColor(status: SnippetStatus): string {
 export function SnippetSection({
   snippets,
   isLoading = false,
+  hideEmptyState = false,
   canRegenerate = false,
   isRegenerating = false,
   onRegenerate,
@@ -48,6 +49,11 @@ export function SnippetSection({
   const [isCreateSnippetInputFocused, setIsCreateSnippetInputFocused] = useState(false)
   const [draftSnippetText, setDraftSnippetText] = useState('')
   const createSnippetInputRef = useRef<TextInput | null>(null)
+  const loadingTextEntranceProgress = useRef(new Animated.Value(isLoading ? 0 : 1)).current
+  const refreshSpinProgress = useRef(new Animated.Value(0)).current
+  const refreshSpinProgressRef = useRef(0)
+  const refreshSpinAnimationRef = useRef<Animated.CompositeAnimation | null>(null)
+  const shouldSpinRefreshRef = useRef(false)
   const sortedSnippets = useMemo(
     () => [...snippets].sort((leftSnippet, rightSnippet) => leftSnippet.createdAtUnixMs - rightSnippet.createdAtUnixMs),
     [snippets],
@@ -69,6 +75,81 @@ export function SnippetSection({
     const focusTimer = setTimeout(() => createSnippetInputRef.current?.focus(), 120)
     return () => clearTimeout(focusTimer)
   }, [isCreateSnippetModalOpen])
+
+  useEffect(() => {
+    if (!isLoading) {
+      loadingTextEntranceProgress.stopAnimation()
+      loadingTextEntranceProgress.setValue(1)
+      return undefined
+    }
+    loadingTextEntranceProgress.stopAnimation()
+    loadingTextEntranceProgress.setValue(0)
+    Animated.timing(loadingTextEntranceProgress, {
+      toValue: 1,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start()
+    return () => loadingTextEntranceProgress.stopAnimation()
+  }, [isLoading, loadingTextEntranceProgress])
+
+  useEffect(() => {
+    const listener = refreshSpinProgress.addListener(({ value }) => {
+      refreshSpinProgressRef.current = value
+    })
+    return () => refreshSpinProgress.removeListener(listener)
+  }, [refreshSpinProgress])
+
+  useEffect(() => {
+    function stopCurrentRefreshSpin() {
+      if (!refreshSpinAnimationRef.current) return
+      refreshSpinAnimationRef.current.stop()
+      refreshSpinAnimationRef.current = null
+    }
+
+    function spinCycle() {
+      if (!shouldSpinRefreshRef.current) return
+      const targetValue = refreshSpinProgressRef.current + 1
+      const spinAnimation = Animated.timing(refreshSpinProgress, {
+        toValue: targetValue,
+        duration: 760,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+      refreshSpinAnimationRef.current = spinAnimation
+      spinAnimation.start(({ finished }) => {
+        refreshSpinAnimationRef.current = null
+        if (finished && shouldSpinRefreshRef.current) spinCycle()
+      })
+    }
+
+    if (isRegenerating) {
+      shouldSpinRefreshRef.current = true
+      if (!refreshSpinAnimationRef.current) spinCycle()
+      return () => {
+        shouldSpinRefreshRef.current = false
+      }
+    }
+
+    shouldSpinRefreshRef.current = false
+    stopCurrentRefreshSpin()
+    const currentValue = refreshSpinProgressRef.current
+    const targetValue = Math.ceil(currentValue)
+    if (targetValue <= currentValue) return undefined
+    const settleAnimation = Animated.timing(refreshSpinProgress, {
+      toValue: targetValue,
+      duration: Math.max(140, Math.round((targetValue - currentValue) * 760)),
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    })
+    refreshSpinAnimationRef.current = settleAnimation
+    settleAnimation.start(() => {
+      refreshSpinAnimationRef.current = null
+    })
+    return () => {
+      stopCurrentRefreshSpin()
+    }
+  }, [isRegenerating, refreshSpinProgress])
 
   return (
     <View style={styles.container}>
@@ -92,7 +173,20 @@ export function SnippetSection({
                   isRegenerating ? styles.disabledButton : undefined,
                 ]}
               >
-                {isRegenerating ? <ActivityIndicator size="small" color={brandColors.primary} /> : <RotateLeftIcon color={brandColors.primary} size={16} />}
+                <Animated.View
+                  style={{
+                    transform: [
+                      {
+                        rotate: refreshSpinProgress.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0deg', '360deg'],
+                        }),
+                      },
+                    ],
+                  }}
+                >
+                  <RotateLeftIcon color={brandColors.primary} size={16} />
+                </Animated.View>
               </Pressable>
             ) : (
               <Pressable
@@ -129,11 +223,25 @@ export function SnippetSection({
       {sortedSnippets.length === 0 && isLoading ? (
         <View style={styles.loadingOnly}>
           <LoadingSpinner size="small" />
-          <Text style={styles.emptyText}>Snippets worden gegenereerd...</Text>
+          <Animated.View
+            style={{
+              opacity: loadingTextEntranceProgress,
+              transform: [
+                {
+                  translateY: loadingTextEntranceProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [8, 0],
+                  }),
+                },
+              ],
+            }}
+          >
+            <Text style={styles.emptyText}>Snippets worden gegenereerd...</Text>
+          </Animated.View>
         </View>
       ) : null}
 
-      {sortedSnippets.length === 0 && !isLoading ? (
+      {sortedSnippets.length === 0 && !isLoading && !hideEmptyState ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>Nog geen snippets in deze sessie.</Text>
         </View>

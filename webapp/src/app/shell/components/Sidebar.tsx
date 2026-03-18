@@ -1,16 +1,29 @@
-import React from 'react'
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
+import React, { useEffect, useRef, useState } from 'react'
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 
 import { colors } from '../../../design/theme/colors'
+import { webTransitionSmooth } from '../../../design/theme/transitions'
 import { typography } from '../../../design/theme/typography'
+import { LoadingSpinner } from '../../../ui/LoadingSpinner'
 import { Text } from '../../../ui/Text'
 import { SidebarItem } from './SidebarItem'
 import { ProfileCircleIcon } from '../../../icons/ProfileCircleIcon'
+import { SessiesIcon } from '../../../icons/SessiesIcon'
+import { ModalCloseDarkIcon } from '../../../icons/ModalCloseDarkIcon'
 
-export type SidebarItemKey = 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'admin' | 'adminContact' | 'adminWachtlijst'
+export type SidebarItemKey = 'clients' | 'sessions' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'admin' | 'adminContact' | 'adminWachtlijst'
 
 type AnchorPoint = { x: number; y: number }
+
+export type SidebarProcessingItem = {
+  id: string
+  label: string
+  kind: 'input' | 'report' | 'document'
+  status: 'processing' | 'done'
+  isClickable: boolean
+  targetReportId?: string | null
+}
 
 type Props = {
   selectedSidebarItemKey: SidebarItemKey
@@ -20,7 +33,10 @@ type Props = {
   totalMinutes?: number
   userName?: string | null
   userRole?: string | null
+  processingItems?: SidebarProcessingItem[]
   onSelectSidebarItem: (sidebarItemKey: SidebarItemKey) => void
+  onPressProcessingItem?: (item: SidebarProcessingItem) => void
+  onDismissProcessingItem?: (item: SidebarProcessingItem) => void
   onOpenProfileSection: () => void
   onOpenSettingsMenu: (anchorPoint: AnchorPoint) => void
 }
@@ -37,7 +53,10 @@ export function Sidebar({
   totalMinutes = 0,
   userName,
   userRole,
+  processingItems = [],
   onSelectSidebarItem,
+  onPressProcessingItem,
+  onDismissProcessingItem,
   onOpenProfileSection,
   onOpenSettingsMenu,
 }: Props) {
@@ -48,6 +67,23 @@ export function Sidebar({
   const progressWidth = Math.round(192 * ratio)
   const displayName = String(userName || '').trim()
   const displayRole = String(userRole || '').trim()
+  const [animatedProcessingItems, setAnimatedProcessingItems] = useState<Array<{ item: SidebarProcessingItem; isExiting: boolean }>>([])
+
+  useEffect(() => {
+    setAnimatedProcessingItems((previous) => {
+      const nextItemIds = new Set(processingItems.map((item) => item.id))
+      const previousById = new Map(previous.map((entry) => [entry.item.id, entry]))
+      const activeEntries = processingItems.map((item) => {
+        const existing = previousById.get(item.id)
+        if (existing) return { ...existing, item, isExiting: false }
+        return { item, isExiting: false }
+      })
+      const exitingEntries = previous
+        .filter((entry) => !nextItemIds.has(entry.item.id))
+        .map((entry) => ({ ...entry, isExiting: true }))
+      return [...activeEntries, ...exitingEntries]
+    })
+  }, [processingItems])
 
   function getMenuAnchorPoint(event: any): AnchorPoint {
     const rectFromCurrentTarget = event?.currentTarget?.getBoundingClientRect?.()
@@ -84,6 +120,13 @@ export function Sidebar({
             isCompact
           />
           <SidebarItem
+            label="Sessies"
+            isSelected={selectedSidebarItemKey === 'sessions'}
+            onPress={() => onSelectSidebarItem('sessions')}
+            icon={<SessiesIcon color={selectedSidebarItemKey === 'sessions' ? '#BE0165' : '#2C111F'} size={18} />}
+            isCompact
+          />
+          <SidebarItem
             label="Rapportages"
             isSelected={selectedSidebarItemKey === 'reports'}
             onPress={() => onSelectSidebarItem('reports')}
@@ -111,7 +154,7 @@ export function Sidebar({
 
   return (
     <View style={styles.container}>
-      <View style={styles.topSection}>
+      <ScrollView style={styles.topSection} contentContainerStyle={styles.topSectionContent} showsVerticalScrollIndicator={false}>
         <View style={styles.menuItems}>
           <SidebarItem
             label="Dashboard"
@@ -126,6 +169,12 @@ export function Sidebar({
             icon={<PeopleIcon color={selectedSidebarItemKey === 'clients' ? '#BE0165' : '#2C111F'} />}
           />
           <SidebarItem
+            label="Sessies"
+            isSelected={selectedSidebarItemKey === 'sessions'}
+            onPress={() => onSelectSidebarItem('sessions')}
+            icon={<SessiesIcon color={selectedSidebarItemKey === 'sessions' ? '#BE0165' : '#2C111F'} size={18} />}
+          />
+          <SidebarItem
             label="Rapportages"
             isSelected={selectedSidebarItemKey === 'reports'}
             onPress={() => onSelectSidebarItem('reports')}
@@ -138,6 +187,25 @@ export function Sidebar({
             icon={<NotificationIcon color="#8E8480" />}
             disabled
           />
+          {animatedProcessingItems.length > 0 ? (
+            <View style={styles.processingSection}>
+              <Text style={styles.processingSectionTitle}>Wordt verwerkt</Text>
+              <View style={styles.processingList}>
+                {animatedProcessingItems.map((entry) => (
+                  <AnimatedSidebarProcessingItem
+                    key={entry.item.id}
+                    item={entry.item}
+                    visible={!entry.isExiting}
+                    onPress={() => onPressProcessingItem?.(entry.item)}
+                    onDismiss={() => onDismissProcessingItem?.(entry.item)}
+                    onExited={() => {
+                      setAnimatedProcessingItems((previous) => previous.filter((current) => current.item.id !== entry.item.id))
+                    }}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
           {isAdminUser ? (
             <SidebarItem
               label="Admin"
@@ -163,7 +231,7 @@ export function Sidebar({
             />
           ) : null}
         </View>
-      </View>
+      </ScrollView>
 
       <View style={styles.bottomSection}>
         <View style={styles.menuItems}>
@@ -212,6 +280,84 @@ export function Sidebar({
   )
 }
 
+function AnimatedSidebarProcessingItem({
+  item,
+  visible,
+  onPress,
+  onDismiss,
+  onExited,
+}: {
+  item: SidebarProcessingItem
+  visible: boolean
+  onPress: () => void
+  onDismiss: () => void
+  onExited: () => void
+}) {
+  const animation = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    const nextValue = visible ? 1 : 0
+    const timing = Animated.timing(animation, {
+      toValue: nextValue,
+      duration: visible ? 220 : 170,
+      easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
+      useNativeDriver: false,
+    })
+    timing.start(({ finished }) => {
+      if (!finished) return
+      if (!visible) onExited()
+    })
+    return () => timing.stop()
+  }, [animation, onExited, visible])
+
+  const containerHeight = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 40],
+  })
+  const containerMarginTop = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 8],
+  })
+  const translateY = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-6, 0],
+  })
+
+  return (
+    <Animated.View style={{ height: containerHeight, marginTop: containerMarginTop, opacity: animation, transform: [{ translateY }] }}>
+      <Pressable
+        onPress={() => {
+          if (!item.isClickable) return
+          onPress()
+        }}
+        style={({ hovered }) => [
+          styles.processingItemPressable,
+          item.isClickable ? styles.processingItemPressableClickable : styles.processingItemPressableDisabled,
+          hovered && item.isClickable ? styles.processingItemPressableHovered : undefined,
+        ]}
+      >
+        <View style={styles.processingItemRow}>
+          <View style={styles.processingLeadSlot}>
+            {item.status === 'processing' ? <LoadingSpinner size={14} color="#BE0165" /> : null}
+          </View>
+          <Text numberOfLines={1} style={[styles.processingItemLabel, item.isClickable ? styles.processingItemLabelClickable : undefined]}>
+            {item.label}
+          </Text>
+          <Pressable
+            onPress={(event) => {
+              ;(event as any)?.stopPropagation?.()
+              onDismiss()
+            }}
+            style={({ hovered }) => [styles.processingItemCloseButton, hovered ? styles.processingItemCloseButtonHovered : undefined]}
+          >
+            <ModalCloseDarkIcon size={26} />
+          </Pressable>
+        </View>
+      </Pressable>
+    </Animated.View>
+  )
+}
+
 const styles = StyleSheet.create({
   container: {
     width: 256,
@@ -238,9 +384,81 @@ const styles = StyleSheet.create({
   topSection: {
     paddingHorizontal: 16,
     flex: 1,
+    minHeight: 0,
+  },
+  topSectionContent: {
+    paddingBottom: 12,
   },
   menuItems: {
     gap: 3,
+  },
+  processingSection: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#ECE7EB',
+    paddingTop: 8,
+  },
+  processingSectionTitle: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#93858D',
+    marginBottom: 0,
+    paddingHorizontal: 2,
+  },
+  processingList: {
+    gap: 4,
+  },
+  processingItemPressable: {
+    width: '100%',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E7E1E5',
+    justifyContent: 'center',
+    ...(webTransitionSmooth as any),
+  },
+  processingItemPressableClickable: {
+    borderColor: '#E6D4DF',
+  },
+  processingItemPressableHovered: {
+    backgroundColor: '#FAF8FB',
+  },
+  processingItemPressableDisabled: {
+    opacity: 0.94,
+  },
+  processingItemRow: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  processingLeadSlot: {
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  processingItemCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  processingItemCloseButtonHovered: {
+    backgroundColor: '#F0EBEF',
+  },
+  processingItemLabel: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#2C111F',
+    fontFamily: typography.fontFamilyMedium,
+  },
+  processingItemLabelClickable: {
+    color: '#7E0E51',
   },
   bottomSection: {
     paddingHorizontal: 16,

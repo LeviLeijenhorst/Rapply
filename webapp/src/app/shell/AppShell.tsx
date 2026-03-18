@@ -4,7 +4,7 @@ import { Image, Linking, Pressable, StyleSheet, useWindowDimensions, View } from
 import { colors } from '../../design/theme/colors'
 import { MainContainer } from '../../ui/animated/MainContainer'
 import { Navbar } from './components/Navbar'
-import { Sidebar, SidebarItemKey } from './components/Sidebar'
+import { Sidebar, SidebarItemKey, SidebarProcessingItem } from './components/Sidebar'
 import { Text } from '../../ui/Text'
 import type { ClientLeftTabKey } from '../../screens/client/clientScreen.types'
 import { NewInputModal } from '../../screens/record/NewSessionModal'
@@ -48,6 +48,7 @@ import {
 import { getMainContentKey } from './navigationHelpers'
 import { applyRouteToShell } from './applyRoute'
 import { buildBreadcrumbItems } from './breadcrumbHelpers'
+import { removeSidebarProcessingItem, useSidebarProcessingItems } from './sidebarProcessingStore'
 
 type AnchorPoint = { x: number; y: number }
 
@@ -119,6 +120,88 @@ export function AppShell({ onLogout }: Props) {
   const isCurrentUserAdmin = currentUserAccountType === 'admin'
   const sidebarUserName = String(data.userSettings.name || '').trim() || currentUserName
   const sidebarUserRole = String(data.userSettings.role || '').trim() || 'Re-integratiecoach'
+  const adHocSidebarProcessingItems = useSidebarProcessingItems()
+  const [dismissedSidebarProcessingIds, setDismissedSidebarProcessingIds] = useState<Set<string>>(() => new Set())
+  const [completedInputItems, setCompletedInputItems] = useState<Record<string, SidebarProcessingItem>>({})
+  const previousActiveInputIdsRef = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    const activeInputIds = new Set<string>()
+    const doneInputsById = new Map<string, (typeof data.inputs)[number]>()
+    for (const input of data.inputs) {
+      const isActive = input.transcriptionStatus === 'transcribing' || input.transcriptionStatus === 'generating'
+      if (isActive) {
+        activeInputIds.add(input.id)
+      } else if (input.transcriptionStatus === 'done') {
+        doneInputsById.set(input.id, input)
+      }
+    }
+
+    const previouslyActive = previousActiveInputIdsRef.current
+    setCompletedInputItems((previous) => {
+      const next: Record<string, SidebarProcessingItem> = {}
+      for (const [inputId, item] of Object.entries(previous)) {
+        if (!doneInputsById.has(inputId)) continue
+        if (dismissedSidebarProcessingIds.has(`input-${inputId}`)) continue
+        if (activeInputIds.has(inputId)) continue
+        next[inputId] = item
+      }
+
+      for (const inputId of previouslyActive) {
+        if (activeInputIds.has(inputId)) continue
+        const input = doneInputsById.get(inputId)
+        if (!input) continue
+        if (dismissedSidebarProcessingIds.has(`input-${inputId}`)) continue
+        next[inputId] = {
+          id: `input-${inputId}`,
+          label: String(input.title || '').trim() || 'Input verwerkt',
+          kind: 'input',
+          status: 'done',
+          isClickable: true,
+        }
+      }
+      return next
+    })
+
+    previousActiveInputIdsRef.current = activeInputIds
+  }, [data.inputs, dismissedSidebarProcessingIds])
+
+  const sidebarProcessingItems = useMemo<SidebarProcessingItem[]>(() => {
+    const inputItems = data.inputs
+      .filter((input) => input.transcriptionStatus === 'transcribing' || input.transcriptionStatus === 'generating')
+      .filter((input) => !dismissedSidebarProcessingIds.has(`input-${input.id}`))
+      .sort((leftInput, rightInput) => rightInput.updatedAtUnixMs - leftInput.updatedAtUnixMs)
+      .map((input) => {
+        const isDocument = input.type === 'uploaded-document'
+        const isReport = input.type === 'written-recap' || input.kind === 'written'
+        const kind: SidebarProcessingItem['kind'] = isDocument ? 'document' : isReport ? 'report' : 'input'
+        const fallbackLabel = isDocument ? 'Document uploaden' : isReport ? 'Rapport genereren' : 'Input verwerken'
+        return {
+          id: `input-${input.id}`,
+          label: String(input.title || '').trim() || fallbackLabel,
+          kind,
+          status: 'processing' as const,
+          isClickable: kind === 'input',
+        }
+      })
+
+    const inputDoneItems = Object.values(completedInputItems)
+      .filter((item) => !dismissedSidebarProcessingIds.has(item.id))
+      .sort((leftItem, rightItem) => rightItem.id.localeCompare(leftItem.id))
+
+    const extraItems: SidebarProcessingItem[] = adHocSidebarProcessingItems
+      .filter((item) => !dismissedSidebarProcessingIds.has(`adhoc-${item.id}`))
+      .map((item) => ({
+        id: `adhoc-${item.id}`,
+        label: String(item.label || '').trim() || (item.kind === 'report' ? 'Rapport genereren' : 'Document uploaden'),
+        kind: item.kind,
+        status: item.status as SidebarProcessingItem['status'],
+        isClickable: item.kind === 'report' && item.status === 'done' && !!item.targetReportId,
+        targetReportId: item.targetReportId ?? null,
+      }))
+
+    return [...inputItems, ...inputDoneItems, ...extraItems]
+  }, [adHocSidebarProcessingItems, completedInputItems, data.inputs, dismissedSidebarProcessingIds])
 
   const refreshSubscriptionAccess = useCallback(async () => {
     try {
@@ -335,9 +418,7 @@ export function AppShell({ onLogout }: Props) {
     if (
       !window.location.pathname ||
       window.location.pathname === '/' ||
-      window.location.pathname === '/inloggen' ||
-      window.location.pathname === '/sessies' ||
-      window.location.pathname === '/sessies/'
+      window.location.pathname === '/inloggen'
     ) {
       const nextPath = buildPathFromRoute({ kind: 'clients' })
       window.history.replaceState({ path: nextPath }, '', nextPath)
@@ -615,8 +696,6 @@ export function AppShell({ onLogout }: Props) {
           setIsMySubscriptionModalOpen(true)
         }}
         breadcrumbItems={breadcrumbItems}
-        onPressNieuweRapportage={() => navigateTo({ kind: 'nieuwe-rapportage' })}
-        isNieuweRapportageDisabled
         onPressRecord={() => openNewInputModal(null, null, null)}
         isRecordDisabled={isRecordingBusy}
       />
@@ -632,9 +711,54 @@ export function AppShell({ onLogout }: Props) {
               totalMinutes={totalMinutes}
               userName={sidebarUserName}
               userRole={sidebarUserRole}
+              processingItems={sidebarProcessingItems}
               onSelectSidebarItem={(sidebarItemKey) => {
                 navigateTo(routeFromSidebarItemKey(sidebarItemKey))
                 setIsSettingsMenuOpen(false)
+              }}
+              onPressProcessingItem={(item) => {
+                if (!item.isClickable) return
+                if (item.id.startsWith('adhoc-')) {
+                  const adHocId = item.id.slice('adhoc-'.length)
+                  if (item.kind === 'report' && item.status === 'done' && item.targetReportId) {
+                    setDismissedSidebarProcessingIds((previous) => new Set(previous).add(item.id))
+                    removeSidebarProcessingItem(adHocId)
+                    navigateTo({ kind: 'rapportage', reportId: item.targetReportId })
+                  }
+                  return
+                }
+                const inputId = item.id.startsWith('input-') ? item.id.slice('input-'.length) : item.id
+                const selectedInput = data.inputs.find((candidate) => candidate.id === inputId)
+                if (!selectedInput) return
+                if (item.status === 'done') {
+                  setDismissedSidebarProcessingIds((previous) => new Set(previous).add(item.id))
+                  setCompletedInputItems((previous) => {
+                    const next = { ...previous }
+                    delete next[inputId]
+                    return next
+                  })
+                }
+                if (selectedInput.clientId && selectedInput.trajectoryId) {
+                  navigateTo({ kind: 'item', clientId: selectedInput.clientId, trajectoryId: selectedInput.trajectoryId, itemId: inputId })
+                  return
+                }
+                navigateTo({ kind: 'sessie', sessieId: inputId })
+              }}
+              onDismissProcessingItem={(item) => {
+                setDismissedSidebarProcessingIds((previous) => new Set(previous).add(item.id))
+                if (item.id.startsWith('input-')) {
+                  const inputId = item.id.slice('input-'.length)
+                  setCompletedInputItems((previous) => {
+                    const next = { ...previous }
+                    delete next[inputId]
+                    return next
+                  })
+                  return
+                }
+                if (item.id.startsWith('adhoc-')) {
+                  const adHocId = item.id.slice('adhoc-'.length)
+                  removeSidebarProcessingItem(adHocId)
+                }
               }}
               onOpenProfileSection={() => {
                 navigateTo({ kind: 'mijn-profiel' })

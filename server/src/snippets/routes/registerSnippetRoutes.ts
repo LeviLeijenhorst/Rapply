@@ -167,8 +167,6 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
           resolvedTrajectoryId = normalizeText(sessionRow?.trajectory_id)
         }
       }
-      if (!clientId) return sendError(res, 400, "Missing clientId")
-
       const shouldLogRecordedSummaryDebug = isRecordedSummaryInputType(sourceInputType)
       if (shouldLogRecordedSummaryDebug) {
         console.log(
@@ -213,7 +211,7 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
       const now = Date.now()
       const created: Array<{
         id: string
-        clientId: string
+        clientId: string | null
         trajectoryId: string | null
         sourceSessionId: string
         sourceInputId: string
@@ -233,7 +231,7 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
         if (!sanitizedText) continue
         const snippetRow = {
           id: `snippet-${crypto.randomUUID()}`,
-          clientId,
+          clientId: clientId || null,
           trajectoryId: resolvedTrajectoryId || null,
           sourceSessionId,
           sourceInputId: sourceSessionId,
@@ -246,7 +244,12 @@ export function registerSnippetRoutes(app: Express, params: RegisterSnippetRoute
           createdAtUnixMs: now,
           updatedAtUnixMs: now,
         }
-        await createSnippet(user.userId, snippetRow)
+        if (clientId) {
+          await createSnippet(user.userId, {
+            ...snippetRow,
+            clientId,
+          })
+        }
         created.push(snippetRow)
       }
 

@@ -43,7 +43,9 @@ function InputModalContent({
   handleSelectOption,
   handleCancelRecording,
   handleCloseInsufficientMinutes,
+  handleCloseRecordingWarning,
   handleCloseRecordedWarning,
+  handleConfirmRecordingCancel,
   handleConfirmRecordedDelete,
   handleConsentBack,
   handleDownloadAudioForInsufficientMinutes,
@@ -64,6 +66,7 @@ function InputModalContent({
   isLimitedFooter,
   isMinimizedCloseWarningVisible,
   isPrimaryActionDisabled,
+  isRecordingCloseWarningVisible,
   isRecordedCloseWarningVisible,
   isRecordingPaused,
   isUploadDragActive,
@@ -469,9 +472,12 @@ function InputModalContent({
       <InputWarningModals
         insufficientMinutesContext={insufficientMinutesContext}
         isInsufficientMinutesWarningVisible={isInsufficientMinutesWarningVisible}
+        isRecordingCloseWarningVisible={isRecordingCloseWarningVisible}
         isRecordedCloseWarningVisible={isRecordedCloseWarningVisible}
         onCloseInsufficientMinutes={handleCloseInsufficientMinutes}
+        onCloseRecordingWarning={handleCloseRecordingWarning}
         onCloseRecordedWarning={handleCloseRecordedWarning}
+        onConfirmRecordingCancel={handleConfirmRecordingCancel}
         onConfirmRecordedDelete={handleConfirmRecordedDelete}
         onDownloadAudioForInsufficientMinutes={handleDownloadAudioForInsufficientMinutes}
         onOpenSubscriptionFromInsufficientMinutes={handleOpenSubscriptionFromInsufficientMinutes}

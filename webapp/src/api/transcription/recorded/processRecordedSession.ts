@@ -113,24 +113,6 @@ function buildFallbackStructuredSummary(transcript: string): NonNullable<Input['
   }
 }
 
-function buildFallbackSnippet(params: { sessionId: string; trajectoryId: string | null | undefined; transcript: string; itemDate: number }): Snippet | null {
-  const text = sanitizeSnippetText(readTranscriptLeadSentence(params.transcript))
-  if (!text) return null
-  const now = Date.now()
-  return {
-    id: `snippet-${crypto.randomUUID()}`,
-    trajectoryId: params.trajectoryId ?? null,
-    inputId: params.sessionId,
-    itemId: params.sessionId,
-    field: 'algemeen',
-    text,
-    date: Number.isFinite(params.itemDate) ? params.itemDate : now,
-    status: 'pending',
-    createdAtUnixMs: now,
-    updatedAtUnixMs: now,
-  }
-}
-
 function isMissingAudioBytesError(error: unknown): boolean {
   const message = String(error instanceof Error ? error.message : error || '').toLowerCase()
   return message.includes('missing audio bytes') || message.includes('audio payload is empty')
@@ -170,15 +152,8 @@ async function maybeExtractSnippets(params: {
     }
   } catch (error) {
     console.warn('[processRecordedInput] snippet extraction failed', error)
-    const fallback = buildFallbackSnippet({
-      sessionId: params.sessionId,
-      trajectoryId: params.trajectoryId,
-      transcript,
-      itemDate: params.itemDate,
-    })
-    if (fallback) {
-      params.onCreatedSnippets?.([fallback])
-    }
+    // Intentionally do not create fallback snippets from transcript text.
+    // On extraction failure we prefer no snippet over low-quality paraphrase.
   }
 }
 
@@ -291,6 +266,8 @@ export async function processRecordedInput(params: {
       const generatedStructuredSummary = await generateStructuredInputSummary({
         transcript: presetTranscript,
         signal: summaryAbortController.signal,
+        sourceInputType: 'recording',
+        sourceSessionId: sessionId,
       })
       if (!isTranscriptionRunActive(sessionId, runId)) return
       const resolvedStructuredSummary = hasStructuredSummaryContent(generatedStructuredSummary)
@@ -337,35 +314,6 @@ export async function processRecordedInput(params: {
     setTranscriptionAbortController(sessionId, runId, null)
     latestTranscriptForSnippetExtraction = transcript
 
-    const cleanedSummary = String(summary || '').trim()
-    if (cleanedSummary && !looksLikeTranscript(cleanedSummary)) {
-      updateInput(sessionId, {
-        transcript,
-        summary: cleanedSummary,
-        transcriptionStatus: 'generating',
-        transcriptionError: null,
-      })
-      await maybeExtractSnippets({
-        enabled: Boolean(snippetExtraction?.enabled),
-        sessionId,
-        clientId: snippetExtraction?.clientId ?? null,
-        trajectoryId: snippetExtraction?.trajectoryId ?? null,
-        transcript,
-        itemDate: Number(snippetExtraction?.itemDate) || Date.now(),
-        onCreatedSnippets: snippetExtraction?.onCreatedSnippets,
-      })
-      updateInput(sessionId, {
-        audioBlobId: null,
-        audioDurationSeconds: null,
-        transcriptionStatus: 'done',
-        transcriptionError: null,
-      })
-      await markPendingPreviewTranscriptionSucceeded(sessionId)
-      await clearPendingPreviewAudioIfEligible(sessionId)
-      finishTranscriptionRun(sessionId, runId)
-      return
-    }
-
     const summaryAbortController = new AbortController()
     setSummaryAbortController(sessionId, runId, summaryAbortController)
     updateInput(sessionId, {
@@ -377,6 +325,8 @@ export async function processRecordedInput(params: {
     const generatedStructuredSummary = await generateStructuredInputSummary({
       transcript,
       signal: summaryAbortController.signal,
+      sourceInputType: 'recording',
+      sourceSessionId: sessionId,
     })
     if (!isTranscriptionRunActive(sessionId, runId)) return
     const resolvedStructuredSummary = hasStructuredSummaryContent(generatedStructuredSummary)

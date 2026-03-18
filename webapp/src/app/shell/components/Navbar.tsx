@@ -8,7 +8,7 @@ import { typography } from '../../../design/theme/typography'
 import { CoachscribeLogo } from '../../../components/brand/CoachscribeLogo'
 import { Text } from '../../../ui/Text'
 import { UsageIndicator } from './UsageIndicator'
-import { ClientPageMicrophoneIcon, ClientPageRapportageIcon } from '../../../icons/ClientPageSvgIcons'
+import { ClientPageMicrophoneIcon } from '../../../icons/ClientPageSvgIcons'
 import { ChevronLeftIcon } from '../../../icons/ChevronLeftIcon'
 
 type Props = {
@@ -18,8 +18,6 @@ type Props = {
   isUsageClickable?: boolean
   onPressUsage?: () => void
   breadcrumbItems?: Array<{ label: string; onPress: () => void }>
-  onPressNieuweRapportage?: () => void
-  isNieuweRapportageDisabled?: boolean
   onPressRecord?: () => void
   isRecordDisabled?: boolean
 }
@@ -42,14 +40,12 @@ export function Navbar({
   isUsageClickable = false,
   onPressUsage,
   breadcrumbItems = [],
-  onPressNieuweRapportage,
-  isNieuweRapportageDisabled = false,
   onPressRecord,
   isRecordDisabled = false,
 }: Props) {
   const { width } = useWindowDimensions()
   const hideUsage = width < 600 || HIDE_USAGE_WIDGET_FOR_DEMO
-  const shouldShowClientActions = !!onPressNieuweRapportage && !!onPressRecord
+  const shouldShowClientActions = !!onPressRecord
 
   return (
     <View style={styles.container}>
@@ -83,32 +79,18 @@ export function Navbar({
         {/* Right actions */}
         <View style={styles.rightActions}>
           {shouldShowClientActions ? (
-            <>
-              <Pressable
-                disabled={isNieuweRapportageDisabled}
-                onPress={onPressNieuweRapportage}
-                style={({ hovered }) => [
-                  styles.secondaryButton,
-                  isNieuweRapportageDisabled ? styles.secondaryButtonDisabled : undefined,
-                  hovered && !isNieuweRapportageDisabled ? styles.secondaryButtonHovered : undefined,
-                ]}
-              >
-                <ClientPageRapportageIcon color="#2C111F" size={18} />
-                <Text style={styles.secondaryButtonText}>Nieuwe rapportage</Text>
-              </Pressable>
-              <Pressable
-                disabled={isRecordDisabled}
-                onPress={onPressRecord}
-                style={({ hovered }) => [
-                  styles.primaryButton,
-                  isRecordDisabled ? styles.primaryButtonDisabled : undefined,
-                  hovered && !isRecordDisabled ? styles.primaryButtonHovered : undefined,
-                ]}
-              >
-                <ClientPageMicrophoneIcon size={18} />
-                <Text style={styles.primaryButtonText}>Nieuwe input</Text>
-              </Pressable>
-            </>
+            <Pressable
+              disabled={isRecordDisabled}
+              onPress={onPressRecord}
+              style={({ hovered }) => [
+                styles.primaryButton,
+                isRecordDisabled ? styles.primaryButtonDisabled : undefined,
+                hovered && !isRecordDisabled ? styles.primaryButtonHovered : undefined,
+              ]}
+            >
+              <ClientPageMicrophoneIcon size={18} />
+              <Text style={styles.primaryButtonText}>Nieuwe input</Text>
+            </Pressable>
           ) : null}
           {/* Usage indicator */}
           {!hideUsage ? (
@@ -203,28 +185,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     flexShrink: 0,
-  },
-  secondaryButton: {
-    height: 40,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: '#D2D2D2',
-    backgroundColor: '#F9FAFB',
-    paddingHorizontal: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  secondaryButtonHovered: {
-    backgroundColor: colors.hoverBackground,
-  },
-  secondaryButtonDisabled: {
-    opacity: 0.5,
-  },
-  secondaryButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.text,
   },
   primaryButton: {
     height: 40,

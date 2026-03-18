@@ -493,7 +493,9 @@ export function LocalAppDataProvider({ children, isAuthenticated }: Props) {
           updatedAtUnixMs: values.updatedAtUnixMs ?? now,
         }
         setData((previous) => createSnippet(previous, snippet))
-        runRemoteMutation('create snippet', () => snippetApi.create(snippet))
+        if (snippet.clientId) {
+          runRemoteMutation('create snippet', () => snippetApi.create(snippet))
+        }
         return snippet.id
       },
       updateSnippet: (snippetId, values) => {

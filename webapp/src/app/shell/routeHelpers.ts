@@ -3,6 +3,7 @@ import { features } from '../../config/features'
 
 export type RouteState =
   | { kind: 'dashboard' }
+  | { kind: 'sessions' }
   | { kind: 'record' }
   | { kind: 'reports' }
   | { kind: 'rapportage'; reportId: string }
@@ -51,7 +52,7 @@ export function parseRouteFromPath(pathname: string): RouteState {
   const parts = path.split('/').filter(Boolean)
 
   if (parts[0] === 'opnemen') return { kind: 'record' }
-  if (parts[0] === 'rapportages' && parts[1]) return { kind: 'rapportage', reportId: ensurePrefix(parts[1], 'session') }
+  if (parts[0] === 'rapportages' && parts[1]) return { kind: 'rapportage', reportId: parts[1] }
   if (parts[0] === 'rapportages') return { kind: 'reports' }
 
   if (parts[0] === 'clienten' || parts[0] === 'clients' || parts[0] === 'coaches') {
@@ -79,7 +80,7 @@ export function parseRouteFromPath(pathname: string): RouteState {
   if (parts[0] === 'dashboard' || parts[0] === 'activiteiten') return { kind: 'dashboard' }
   if (parts[0] === 'sessies') {
     if (parts[1]) return { kind: 'sessie', sessieId: ensurePrefix(parts[1], 'session') }
-    return { kind: 'dashboard' }
+    return { kind: 'sessions' }
   }
   if (parts[0] === 'templates') return { kind: 'templates' }
   if (parts[0] === 'nieuwe-rapportage') return { kind: 'nieuwe-rapportage' }
@@ -95,6 +96,7 @@ export function parseRouteFromPath(pathname: string): RouteState {
 export function buildPathFromRoute(routeInput: RouteState): string {
   const route = normalizeRouteForAvailability(routeInput)
   if (route.kind === 'dashboard') return '/dashboard'
+  if (route.kind === 'sessions') return '/sessies'
   if (route.kind === 'record') return '/opnemen'
   if (route.kind === 'rapportage') return `/rapportages/${stripPrefix(route.reportId, 'session')}`
   if (route.kind === 'reports') return '/rapportages'
@@ -120,6 +122,7 @@ export function buildPathFromRoute(routeInput: RouteState): string {
 
 export function routeFromSidebarItemKey(sidebarItemKey: SidebarItemKey): RouteState {
   if (sidebarItemKey === 'clients') return { kind: 'clients' }
+  if (sidebarItemKey === 'sessions') return { kind: 'sessions' }
   if (sidebarItemKey === 'dashboard') return { kind: 'dashboard' }
   if (sidebarItemKey === 'reports') return { kind: 'reports' }
   if (sidebarItemKey === 'admin') return { kind: 'admin' }

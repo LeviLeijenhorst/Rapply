@@ -27,34 +27,6 @@ export type SnippetExtractionDebugChunk = {
 
 export const snippetExtractionSystemPrompt = "Geef uitsluitend geldige JSON terug. Geen markdown. Geen extra toelichting."
 
-function ensureSentenceEnding(value: string): string {
-  const trimmed = normalizeText(value)
-  if (!trimmed) return ""
-  if (/[.!?]$/.test(trimmed)) return trimmed
-  return `${trimmed}.`
-}
-
-function toLowercaseFirst(value: string): string {
-  const input = String(value || "").trim()
-  if (!input) return ""
-  return `${input.slice(0, 1).toLowerCase()}${input.slice(1)}`
-}
-
-export function buildFallbackGeneralSnippet(transcript: string): SnippetExtractionResult | null {
-  const normalizedTranscript = normalizeText(transcript)
-  if (!normalizedTranscript) return null
-  const firstSentence = normalizedTranscript.split(/(?<=[.!?])\s+/).find((line) => normalizeText(line).length > 0) || normalizedTranscript
-  const clipped = normalizeText(firstSentence).slice(0, 280)
-  const sanitized = sanitizeSnippetText(ensureSentenceEnding(clipped))
-  if (!sanitized) return null
-  const fallbackBody = sanitized.replace(/[.!?]+$/g, "").trim()
-  const paraphrased = ensureSentenceEnding(`Coach geeft aan dat ${toLowercaseFirst(fallbackBody)}`)
-  return {
-    fields: ["general"],
-    text: paraphrased,
-  }
-}
-
 // Cleans up a snippet field name from input.
 function normalizeSnippetField(value: unknown): string {
   const normalized = normalizeText(value)
@@ -138,12 +110,12 @@ function normalizeSnippetInputType(value: string): SnippetInputType {
 // Returns the instruction line for each input type.
 function inputTypeInstruction(inputType: SnippetInputType): string {
   if (inputType === "spoken_recap") {
-    return "Inputtype: spoken_recap (mondeling gespreksverslag). Splits brede recap-zinnen op in losse feiten."
+    return "Inputtype: spoken_recap (dictatie/nabespreking na het gesprek). Splits brede recap-zinnen op in losse feiten. Behandel dit niet als letterlijke dialoogtranscriptie."
   }
   if (inputType === "written_recap") {
-    return "Inputtype: written_recap (geschreven gespreksverslag). Extraheer kernfeiten op detailniveau."
+    return "Inputtype: written_recap (geschreven nabespreking na het gesprek). Extraheer kernfeiten op detailniveau."
   }
-  return "Inputtype: transcript (ruwe gespreksweergave). Filter ruis en herhaling; behoud alleen concrete feiten."
+  return "Inputtype: transcript (letterlijke gespreksweergave). Filter ruis en herhaling; behoud alleen concrete feiten."
 }
 
 // Builds the extraction prompt for one transcript chunk.
@@ -160,9 +132,15 @@ function buildSnippetPrompt(params: { inputType: SnippetInputType; transcript: s
     "Regels:",
     "- Gebruik alleen informatie uit de input (zie onderaan deze prompt).",
     "- Schrijf feitelijk, neutraal en concreet.",
+    "- Gebruik de term `cliënt` (niet `klant`) in snippet-tekst.",
     "- Herschrijf informatie in eigen woorden; citeer geen letterlijke transcriptzinnen.",
     "- Gebruik geen timestamps, speakerlabels of ruwe transcriptnotatie in snippets.",
     "- Als er geen relevante informatie is: geef een lege lijst terug.",
+    "- Behandel korte maar betekenisvolle statuszinnen als relevant; ook dit zijn snippets.",
+    "- Voorbeeld relevant `general`: 'het gaat goed met de cliënt', 'cliënt ervaart meer rust', 'cliënt heeft weer vertrouwen'.",
+    "- Als de input minimaal 1 betekenisvolle observatie bevat, retourneer minimaal 1 snippet.",
+    "- Geef bij voorkeur meer relevante snippets dan te weinig; wees niet te terughoudend met feitelijke observaties.",
+    "- Bij twijfel over relevantie: neem het feit op als snippet zolang het concreet en transcript-onderbouwd is.",
     "- Er mag geen medische informatie in de snippets staan.",
     "- Gebruik uitsluitend fields uit de mapping hieronder.",
     "- Kies altijd het meest specifieke field dat past.",
@@ -173,8 +151,11 @@ function buildSnippetPrompt(params: { inputType: SnippetInputType; transcript: s
     "- Bij twijfel tussen een specifiek field en `general`: kies het specifieke field.",
     "- Een feit mag aan meerdere fields gekoppeld worden als het aantoonbaar en duidelijk relevant is voor meerdere rapportagevragen; maak in dat geval meerdere snippets met dezelfde feitelijke kern, elk met een ander `field`.",
     "- 1 feit = 1 snippet (standaard), behalve wanneer hetzelfde feit meerdere fields direct ondersteunt.",
+    "- Maak verwijzingen expliciet: als de input zegt dat iemand goed met 'tips en tops' omgaat, noem ook het onderwerp (bijv. 'tips en tops over het CV').",
     "- Zet alleen informatie in `general` die bruikbaar is als context voor AI-assistentvragen en niet direct als rapportagebewijs in een specifiek field past.",
     "- Negeer alleen pure smalltalk zonder contextwaarde.",
+    "- Vermijd generieke containertermen zoals 're-integratieactiviteiten' in de snippettekst.",
+    "- Benoem in plaats daarvan de concrete handeling (bijv. 'op LinkedIn gezocht naar vacatures', 'enquete opgesteld').",
     "",
     "BELANGRIJK:",
     "Elk `field` hoort exact bij 1 rapportagevraag.",
@@ -412,13 +393,6 @@ export async function extractSnippets(params: {
   }
 
   const merged = Array.from(mergedByText.values())
-
-  if (merged.length === 0) {
-    const fallbackSnippet = buildFallbackGeneralSnippet(transcript)
-    if (fallbackSnippet) {
-      merged.push(fallbackSnippet)
-    }
-  }
 
   return {
     snippets: merged,

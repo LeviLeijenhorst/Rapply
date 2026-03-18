@@ -1,4 +1,4 @@
-import { assertUserCanAccessClient } from "../access/clientAccess"
+import { assertUserCanAccessClient, isUserOrganizationAdmin, requireUserDefaultOrganizationId } from "../access/clientAccess"
 import { execute, queryMany, queryOne } from "../db"
 import type { Session, SessionInputType } from "../types/Session"
 
@@ -109,17 +109,24 @@ async function resolveValidSourceUploadId(params: { userId: string; sourceUpload
   return row?.id ?? null
 }
 
-async function readSessionClientId(sessionId: string): Promise<string | null> {
-  const row = await queryOne<{ client_id: string | null }>(
+async function readSessionAccessRow(sessionId: string): Promise<{
+  client_id: string | null
+  organization_id: string | null
+  created_by_user_id: string | null
+} | null> {
+  return await queryOne<{
+    client_id: string | null
+    organization_id: string | null
+    created_by_user_id: string | null
+  }>(
     `
-    select client_id
+    select client_id, organization_id, created_by_user_id
     from public.inputs
     where id = $1
     limit 1
     `,
     [sessionId],
   )
-  return row?.client_id ?? null
 }
 
 export async function listSessions(userId: string): Promise<Session[]> {
@@ -153,6 +160,7 @@ export async function listSessions(userId: string): Promise<Session[]> {
      and ca.user_id = $1
     where ou.role = 'admin'
        or ca.user_id is not null
+       or i.created_by_user_id = $1
     order by i.created_at_unix_ms desc
     `,
     [userId],
@@ -161,12 +169,10 @@ export async function listSessions(userId: string): Promise<Session[]> {
 }
 
 export async function createSession(userId: string, session: Session): Promise<void> {
-  if (!session.clientId) {
-    const error: any = new Error("Session must include clientId")
-    error.status = 400
-    throw error as Error
+  if (session.clientId) {
+    await assertUserCanAccessClient(userId, session.clientId)
   }
-  await assertUserCanAccessClient(userId, session.clientId)
+  const fallbackOrganizationId = await requireUserDefaultOrganizationId(userId)
   const sourceUploadId = await resolveValidSourceUploadId({ userId, sourceUploadId: session.audioUploadId })
 
   await execute(
@@ -177,8 +183,7 @@ export async function createSession(userId: string, session: Session): Promise<v
     values (
       $1,
       $2,
-      (select organization_id from public.clients where id = $2),
-      $3,
+      coalesce((select organization_id from public.clients where id = $2), $3),
       $4,
       $5,
       $6,
@@ -189,7 +194,8 @@ export async function createSession(userId: string, session: Session): Promise<v
       $11,
       $12,
       $13,
-      $14
+      $14,
+      $15
     )
     on conflict (id) do update
       set client_id = excluded.client_id,
@@ -209,6 +215,7 @@ export async function createSession(userId: string, session: Session): Promise<v
     [
       session.id,
       session.clientId,
+      fallbackOrganizationId,
       session.trajectoryId,
       userId,
       mapApiInputTypeToDbInputType(session.inputType),
@@ -280,9 +287,17 @@ export async function updateSession(
     updatedAtUnixMs: number
   },
 ): Promise<void> {
-  const existingClientId = await readSessionClientId(params.id)
-  if (!existingClientId) return
-  await assertUserCanAccessClient(userId, existingClientId)
+  const accessRow = await readSessionAccessRow(params.id)
+  if (!accessRow) return
+  if (accessRow.client_id) {
+    await assertUserCanAccessClient(userId, accessRow.client_id)
+  } else if (accessRow.created_by_user_id !== userId) {
+    if (!accessRow.organization_id || !(await isUserOrganizationAdmin(userId, accessRow.organization_id))) {
+      const error: any = new Error("Forbidden")
+      error.status = 403
+      throw error as Error
+    }
+  }
   if (params.clientId) {
     await assertUserCanAccessClient(userId, params.clientId)
   }
@@ -295,9 +310,12 @@ export async function updateSession(
   values.push(params.updatedAtUnixMs)
 
   if (params.clientId !== undefined) {
+    const clientIdParamIndex = index
     updates.push(`client_id = $${index++}`)
     values.push(params.clientId)
-    updates.push(`organization_id = (select organization_id from public.clients where id = $${index - 1})`)
+    const fallbackOrganizationId = await requireUserDefaultOrganizationId(userId)
+    updates.push(`organization_id = coalesce((select organization_id from public.clients where id = $${clientIdParamIndex}), $${index++})`)
+    values.push(fallbackOrganizationId)
   }
   if (typeof params.title === "string") {
     updates.push(`title = $${index++}`)
@@ -376,9 +394,17 @@ export async function updateSession(
 }
 
 export async function deleteSession(userId: string, id: string): Promise<void> {
-  const clientId = await readSessionClientId(id)
-  if (!clientId) return
-  await assertUserCanAccessClient(userId, clientId)
+  const accessRow = await readSessionAccessRow(id)
+  if (!accessRow) return
+  if (accessRow.client_id) {
+    await assertUserCanAccessClient(userId, accessRow.client_id)
+  } else if (accessRow.created_by_user_id !== userId) {
+    if (!accessRow.organization_id || !(await isUserOrganizationAdmin(userId, accessRow.organization_id))) {
+      const error: any = new Error("Forbidden")
+      error.status = 403
+      throw error as Error
+    }
+  }
   await execute(`delete from public.inputs where id = $1`, [id])
 }
 

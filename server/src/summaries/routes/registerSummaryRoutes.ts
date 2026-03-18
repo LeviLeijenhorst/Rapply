@@ -18,6 +18,10 @@ export function registerSummaryRoutes(app: Express, params: RegisterSummaryRoute
 
       const transcript = typeof req.body?.transcript === "string" ? req.body.transcript : ""
       const responseMode = String(req.body?.responseMode || "markdown").trim().toLowerCase()
+      const sourceInputType = String(req.body?.sourceInputType || "").trim().toLowerCase()
+      const sourceSessionId = String(req.body?.sourceSessionId || req.body?.inputId || "").trim()
+      const explicitDebug = req.body?.debugSummary === true
+      const includeDebug = explicitDebug || sourceInputType === "recording" || sourceInputType === "spoken_recap" || sourceInputType === "spoken"
 
       if (!String(transcript || "").trim()) {
         sendError(res, 400, "Missing transcript")
@@ -25,12 +29,20 @@ export function registerSummaryRoutes(app: Express, params: RegisterSummaryRoute
       }
 
       if (responseMode === "structured_item_summary") {
-        const structuredSummary = await generateStructuredItemSummary({ transcript })
+        const structuredSummary = await generateStructuredItemSummary({
+          transcript,
+          includeDebug,
+          debugContext: { sourceInputType, sourceSessionId },
+        })
         res.status(200).json({ summary: JSON.stringify(structuredSummary) })
         return
       }
 
-      const summary = await generateSummary({ transcript })
+      const summary = await generateSummary({
+        transcript,
+        includeDebug,
+        debugContext: { sourceInputType, sourceSessionId },
+      })
       res.status(200).json({ summary })
     }),
   )

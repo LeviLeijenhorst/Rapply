@@ -34,6 +34,8 @@ export async function generateInputSummary(params: {
   template?: SummaryTemplate
   signal?: AbortSignal
   responseMode?: SummaryResponseMode
+  sourceInputType?: string
+  sourceSessionId?: string
 }): Promise<string> {
   const responseMode: SummaryResponseMode = params.responseMode === 'structured_item_summary' ? 'structured_item_summary' : 'markdown'
   let response: GenerateSummaryResponse | null = null
@@ -46,6 +48,8 @@ export async function generateInputSummary(params: {
           transcript: params.transcript,
           template: params.template,
           responseMode,
+          ...(params.sourceInputType ? { sourceInputType: params.sourceInputType } : {}),
+          ...(params.sourceSessionId ? { sourceSessionId: params.sourceSessionId } : {}),
         },
         { signal: params.signal, timeoutMs: SUMMARY_TIMEOUT_MS },
       )

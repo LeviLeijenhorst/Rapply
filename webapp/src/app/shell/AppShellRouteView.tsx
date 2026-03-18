@@ -4,6 +4,7 @@ import { EmptyPageMessage } from '../../ui/EmptyPageMessage'
 import { LoadingScreen } from '../../ui/LoadingScreen'
 import { Text } from '../../ui/Text'
 import { ClientsScreen } from '../../screens/clients/ClientsScreen'
+import { SessionsScreen } from '../../screens/sessions/SessionsScreen'
 import { ClientScreen } from '../../screens/client/ClientScreen'
 import { InputScreen } from '../../screens/session/InputScreen'
 import { NewReportScreen } from '../../screens/newReport/NewReportScreen'
@@ -55,7 +56,7 @@ type Props = {
   onSetRapportageEditInputId: (sessionId: string | null) => void
   onSetRapportageOnlyInputId: (sessionId: string | null) => void
   onSetRapportageScreenMode: (mode: 'controleren' | 'bewerken') => void
-  onSetSelectedSidebarItemKey: (key: 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'admin' | 'adminContact' | 'adminWachtlijst') => void
+  onSetSelectedSidebarItemKey: (key: 'clients' | 'sessions' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'admin' | 'adminContact' | 'adminWachtlijst') => void
   onSetInputIdPendingTemplatePicker: (sessionId: string | null) => void
   onSetInputOriginRoute: (route: RouteState | null) => void
   onToggleE2eePage: (open: boolean) => void
@@ -64,7 +65,7 @@ type Props = {
   rapportageOnlyInputId: string | null
   rapportageScreenMode: 'controleren' | 'bewerken'
   selectedClientId: string | null
-  selectedSidebarItemKey: 'clients' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'admin' | 'adminContact' | 'adminWachtlijst'
+  selectedSidebarItemKey: 'clients' | 'sessions' | 'dashboard' | 'reports' | 'mijnPraktijk' | 'mijnProfiel' | 'admin' | 'adminContact' | 'adminWachtlijst'
   selectedSessieId: string | null
   selectedTrajectoryId: string | null
   sessionIdPendingTemplatePicker: string | null
@@ -206,7 +207,9 @@ export function AppShellRouteView(props: Props) {
             props.onSetRapportageOnlyInputId(null)
             props.navigateTo({ kind: 'sessie', sessieId: sessionId })
           }}
-          onPressCreateInput={(trajectoryId) => props.onOpenNewInputModal(props.selectedClientId!, trajectoryId)}
+          onPressCreateInput={(trajectoryId, initialQuickAction) =>
+            props.onOpenNewInputModal(props.selectedClientId!, trajectoryId, null, initialQuickAction ?? null)
+          }
           onPressCreateReports={() => {
             props.onSetRapportageOnlyInputId(null)
             props.onSetRapportageScreenMode('controleren')
@@ -235,6 +238,7 @@ export function AppShellRouteView(props: Props) {
           props.onOpenNewInputModal(null, null, null, action)
         }}
         onOpenClientsPage={() => props.navigateTo({ kind: 'clients' })}
+        onOpenSessionsPage={() => props.navigateTo({ kind: 'sessions' })}
         onOpenReportsPage={() => props.navigateTo({ kind: 'reports' })}
         onOpenInput={(sessionId) => props.navigateTo({ kind: 'sessie', sessieId: sessionId })}
         welcomeName={props.currentUserGivenName || props.currentUserName}
@@ -254,6 +258,21 @@ export function AppShellRouteView(props: Props) {
         onLogout={props.onLogout}
         onDeleteAccount={props.onOpenDeleteAccountConfirm}
         isDeleteAccountBusy={props.isDeleteAccountBusy}
+      />
+    )
+  }
+
+  if (props.selectedSidebarItemKey === 'sessions') {
+    return (
+      <SessionsScreen
+        onSelectSession={(item) => {
+          props.onSetInputOriginRoute({ kind: 'sessions' })
+          if (item.clientId && item.trajectoryId) {
+            props.navigateTo({ kind: 'item', clientId: item.clientId, trajectoryId: item.trajectoryId, itemId: item.inputId })
+            return
+          }
+          props.navigateTo({ kind: 'sessie', sessieId: item.inputId })
+        }}
       />
     )
   }
