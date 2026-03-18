@@ -114,7 +114,7 @@ export default function SettingsHomeScreen() {
           accessibilityRole="button"
           onPress={() => {
             vibrate()
-            Linking.openURL("https://www.coachscribe.nl/over-ons")
+            Linking.openURL("https://www.Rapply.nl/over-ons")
           }}
           style={styles.rowBetween}
         >
@@ -126,11 +126,11 @@ export default function SettingsHomeScreen() {
           accessibilityRole="button"
           onPress={() => {
             vibrate()
-            Share.share({ message: "Probeer CoachScribe: www.coachscribe.nl" })
+            Share.share({ message: "Probeer Rapply: www.Rapply.nl" })
           }}
           style={styles.rowBetween}
         >
-          <Text style={styles.rowText}>Deel CoachScribe</Text>
+          <Text style={styles.rowText}>Deel Rapply</Text>
           <Icon name="chevronRight" />
         </OverlayPressable>
         <View style={styles.divider} />
@@ -138,7 +138,7 @@ export default function SettingsHomeScreen() {
           accessibilityRole="button"
           onPress={() => {
             vibrate()
-            Linking.openURL("https://www.coachscribe.nl/privacy")
+            Linking.openURL("https://www.Rapply.nl/privacy")
           }}
           style={styles.rowBetween}
         >

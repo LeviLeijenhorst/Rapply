@@ -40,7 +40,7 @@ export default function WrittenReportScreen() {
     const reportId = String(Date.now())
     const coacheeId = (coacheeName || "").trim().toLowerCase().replace(/\s+/g, "_")
     if (coacheeId) {
-      const baseDirectory = `CoachScribe/coachees/${coacheeId}/${reportId}`
+      const baseDirectory = `Rapply/coachees/${coacheeId}/${reportId}`
       try {
         await writeEncryptedFile(baseDirectory, "type.txt.enc", "written_report", "text")
         await writeEncryptedFile(baseDirectory, "title.txt.enc", finalTitle, "text")

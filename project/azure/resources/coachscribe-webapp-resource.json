@@ -1,7 +1,7 @@
 {
     "apiVersion": "2024-11-01",
-    "id": "/subscriptions/2a01c7e4-a7a4-45c7-aea4-365c8d7346d6/resourceGroups/jnlsolutions-coachscribe/providers/Microsoft.Web/staticSites/coachscribe-webapp",
-    "name": "coachscribe-webapp",
+    "id": "/subscriptions/2a01c7e4-a7a4-45c7-aea4-365c8d7346d6/resourceGroups/jnlsolutions-Rapply/providers/Microsoft.Web/staticSites/Rapply-webapp",
+    "name": "Rapply-webapp",
     "type": "microsoft.web/staticsites",
     "sku": {
         "name": "Standard",
@@ -10,10 +10,10 @@
     "location": "westeurope",
     "properties": {
         "defaultHostname": "red-pond-09ece7303.4.azurestaticapps.net",
-        "repositoryUrl": "https://github.com/LeviLeijenhorst/CoachScribe",
+        "repositoryUrl": "https://github.com/LeviLeijenhorst/Rapply",
         "branch": "main",
         "customDomains": [
-            "app.coachscribe.nl"
+            "app.Rapply.nl"
         ],
         "stableInboundIP": "51.105.228.104",
         "privateEndpointConnections": [],

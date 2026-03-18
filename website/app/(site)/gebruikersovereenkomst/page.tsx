@@ -7,7 +7,7 @@ export default async function GebruikersovereenkomstPage() {
   return (
     <LegalDocumentPage
       title="Gebruikersovereenkomst"
-      subtitle="De afspraken voor het gebruik van CoachScribe."
+      subtitle="De afspraken voor het gebruik van Rapply."
       markdown={markdown}
     />
   );

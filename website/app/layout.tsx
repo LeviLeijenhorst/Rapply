@@ -9,8 +9,8 @@ const catamaran = Catamaran({
 });
 
 export const metadata: Metadata = {
-  title: "CoachScribe",
-  description: "CoachScribe website",
+  title: "Rapply",
+  description: "Rapply website",
 };
 
 export default function RootLayout({

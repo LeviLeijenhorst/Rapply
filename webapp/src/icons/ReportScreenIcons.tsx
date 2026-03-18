@@ -5,6 +5,11 @@ type IconProps = {
   size?: number
 }
 
+type CloudIconProps = {
+  size?: number
+  color?: string
+}
+
 export function ReportSessiesIcon({ size = 18 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 18 18" fill="none">
@@ -45,6 +50,29 @@ export function ReportUwvLogoIcon() {
       <Path fill="#0078D2" d="m40.6 49.4v-1c-0.7 1.2-2 1.9-3.3 1.8-1.4 0-3.1-0.9-3.1-4.2v-6.7l2.3-0.4v7c-0.1 0.7 0.1 1.4 0.6 1.9 0.9 0.8 2.5 0.3 3.5-1.5v-7.1l2.3-0.4v11.2h-1.6c-0.5 0-0.8-0.2-0.7-0.6-0.1 0-0.1 0 0 0" />
       <Path fill="#0078D2" d="M65.6,46.9l2.6-7.9h2.3l-3.9,10.9V50h-1.8c-0.3,0-0.5-0.2-0.6-0.4L60.5,39h2.5L65.6,46.9z" />
       <Path fill="#0078D2" d="M51.9,42l-2.5,8h-1.8c-0.3,0-0.5-0.2-0.6-0.4L44,39h2.5l2,7.6l2.4-7.6h2.2l2.4,7.6l2-7.6h2.3l-3.1,11H55c-0.2,0-0.5-0.1-0.6-0.3L51.9,42z" />
+    </Svg>
+  )
+}
+
+export function ReportSavedCloudIcon({ size = 24, color = '#171717' }: CloudIconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M7.27004 13.01C6.74004 12.74 6.15004 12.6 5.55004 12.6C0.870039 12.93 0.870039 19.74 5.55004 20.07H16.64C17.99 20.08 19.29 19.58 20.28 18.67C23.57 15.8 21.81 10.03 17.48 9.48C15.92 0.110001 2.39004 3.67 5.60004 12.6"
+        stroke={color}
+        strokeWidth={1.5}
+        strokeMiterlimit={10}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M15.8501 9.92001C16.3701 9.66001 16.9401 9.52001 17.5201 9.51001"
+        stroke={color}
+        strokeWidth={1.5}
+        strokeMiterlimit={10}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </Svg>
   )
 }

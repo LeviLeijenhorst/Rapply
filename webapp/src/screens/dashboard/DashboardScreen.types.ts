@@ -34,7 +34,7 @@ export type DashboardQuickInputAction = {
 
 export type DashboardContinueItem = {
   id: string
-  clientId: string
+  clientId: string | null
   clientName: string
   subtitle: string
   profilePhotoUri: string | null

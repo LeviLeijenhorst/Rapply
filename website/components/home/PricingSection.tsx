@@ -48,7 +48,7 @@ type RoiResults = {
 };
 
 const ENTRA_ACCESS_TOKEN_KEY = "entra_access_token";
-const APP_URL = "https://app.coachscribe.nl";
+const APP_URL = "https://app.Rapply.nl";
 
 function clamp(value: number, min: number, max: number) {
   if (!Number.isFinite(value)) return min;
@@ -262,7 +262,7 @@ export default function PricingSection(props: PricingSectionProps) {
                 ROI calculator
               </h2>
               <p className="mt-2 text-[14px] leading-5 text-[rgba(38,52,63,0.78)] md:text-[15px] md:leading-6">
-                Bereken hoeveel tijd en omzet je potentieel vrijspeelt met CoachScribe.
+                Bereken hoeveel tijd en omzet je potentieel vrijspeelt met Rapply.
               </p>
 
               <div className="mt-5 space-y-4">
@@ -339,7 +339,7 @@ export default function PricingSection(props: PricingSectionProps) {
                 </p>
               </div>
               <p className="mt-2 text-[12px] leading-4 text-[rgba(38,52,63,0.65)]">
-                Een CoachScribe abonnement kost 85 euro per maand.
+                Een Rapply abonnement kost 85 euro per maand.
               </p>
 
               <div className="mt-6">

@@ -62,7 +62,7 @@ export function FeedbackModal({ visible, onClose, onContinue }: Props) {
 
       <View style={styles.body}>
         <Text style={styles.description}>
-          Wat fijn dat je ons wil helpen om CoachScribe te verbeteren! Vertel ons waar je tegenaan bent gelopen of wat we kunnen toevoegen.
+          Wat fijn dat je ons wil helpen om Rapply te verbeteren! Vertel ons waar je tegenaan bent gelopen of wat we kunnen toevoegen.
         </Text>
 
         <TextInput

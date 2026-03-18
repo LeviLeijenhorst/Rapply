@@ -366,6 +366,27 @@ function readChoiceArray(value: string, key: string): number[] {
     .filter((item) => Number.isFinite(item))
 }
 
+function readNumberArrayLoose(value: string): number[] {
+  const raw = String(value || '').trim()
+  if (!raw) return []
+  if (raw.startsWith('[') && raw.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item) => (typeof item === 'number' && Number.isFinite(item) ? Number(item) : null))
+          .filter((item): item is number => item !== null)
+      }
+    } catch {
+      // Fall through to delimiter parsing.
+    }
+  }
+  return raw
+    .split(/[,\s;]+/)
+    .map((item) => Number(String(item || '').trim()))
+    .filter((item) => Number.isFinite(item))
+}
+
 function parseSpecialistExpertiseValue(value: string): { hours: string; motivation: string } {
   const raw = String(value || '').trim()
   if (!raw) return { hours: '', motivation: '' }
@@ -447,6 +468,25 @@ function resolveReintegratieplanField(params: FieldResolverParams): string {
     '2_1',
   )
 
+  if (!params.numberKey && params.effectiveNumberKey) {
+    const continuationMap: Record<string, string[]> = {
+      '5.2': ['rp_werkfit_5_2', '5_2', '5.2'],
+      '5.4': ['rp_werkfit_5_4', '5_4', '5.4'],
+      '5.5': ['rp_werkfit_5_5', '5_5', '5.5'],
+      '5.6': ['rp_werkfit_5_6', '5_6', '5.6'],
+      '7.1': ['rp_werkfit_7_1', '7_1', '7.1'],
+      '7.2': ['rp_werkfit_7_2', '7_2', '7.2'],
+      '7.3': ['rp_werkfit_7_3', '7_3', '7.3'],
+    }
+    const keys = continuationMap[params.effectiveNumberKey] || []
+    if (keys.length > 0) {
+      const value = getContextValue(contextValues, ...keys)
+      if (value) return value
+      const numbered = params.numberedValues.get(params.effectiveNumberKey)
+      if (numbered) return numbered
+    }
+  }
+
   if (normalizedLabel.includes('totaal aantal begeleidingsuren')) {
     return getContextValue(
       contextValues,
@@ -467,6 +507,33 @@ function resolveReintegratieplanField(params: FieldResolverParams): string {
   }
   if (params.numberKey === '3.5') return contactName || params.numberedValues.get('3.5') || ''
   if (params.numberKey === '4.1') return resolveOrderNumber({ contextValues, numberedValues: params.numberedValues })
+  if (params.numberKey === '7.1') {
+    if (params.fieldIndex > 1) return ''
+    return (
+      getContextValue(
+        contextValues,
+        'rp_werkfit_7_1',
+        '7_1',
+        '7.1',
+      ) ||
+      params.numberedValues.get('7.1') ||
+      ''
+    )
+  }
+  if (params.numberKey === '6.1') {
+    const raw =
+      getContextValue(
+        contextValues,
+        'rp_werkfit_6_1_maanden',
+        '6_1',
+        '6.1',
+      ) || params.numberedValues.get('6.1') || ''
+    const maanden = readChoiceNumber(raw, 'maanden')
+    if (maanden !== null) return String(maanden)
+    const numeric = extractNumericOnly(raw)
+    return numeric || raw
+  }
+
   if (params.numberKey === '3.8' && normalizeMatchValue(params.rowLabel).includes('ordernummer')) {
     return resolveOrderNumber({ contextValues, numberedValues: params.numberedValues })
   }
@@ -559,6 +626,7 @@ function resolveReintegratieplanField(params: FieldResolverParams): string {
 
 function resolveEindrapportageField(params: FieldResolverParams): string {
   const contextValues = params.contextValues || {}
+  const normalizedLabel = normalizeMatchValue(params.rowLabel)
   const clientInitials = getContextValue(contextValues, '1_1_voorletters', 'voorletters')
   const clientSurname = getContextValue(contextValues, '1_1_achternaam', 'achternaam')
   const clientName =
@@ -578,8 +646,52 @@ function resolveEindrapportageField(params: FieldResolverParams): string {
     'naam_contactpersoon',
     '3_2',
   )
+  if (params.effectiveNumberKey === '8.2' && normalizedLabel.includes('toelichting')) {
+    const raw = getContextValue(contextValues, 'er_werkfit_8_2_toelichting', '8_2_toelichting')
+    if (raw) return raw
+    const akkoordRaw = getContextValue(contextValues, '8_2', '8.2', 'er_werkfit_8_2') || params.numberedValues.get('8.2') || ''
+    const parsed = parseJsonObjectValue(akkoordRaw)
+    if (parsed && typeof parsed.toelichting === 'string') return String(parsed.toelichting || '').trim()
+    return ''
+  }
+  if (params.effectiveNumberKey === '6.1') {
+    const rawReason = getContextValue(contextValues, 'er_werkfit_6_1', '6_1', '6.1') || params.numberedValues.get('6.1') || ''
+    const parsed = parseJsonObjectValue(rawReason)
+    const customReason =
+      getContextValue(contextValues, 'er_werkfit_6_1_custom_reason') ||
+      (parsed && typeof parsed.customReason === 'string' ? String(parsed.customReason || '').trim() : '')
+    const reasonNumber = readChoiceNumber(rawReason, 'reden')
+    const isAndersRow =
+      normalizedLabel.includes('anders') ||
+      normalizedLabel.includes('namelijk') ||
+      (!params.numberKey && !normalizedLabel && params.fieldCount === 1)
+    if (isAndersRow && customReason) return customReason
+    if (reasonNumber === 6 && !params.numberKey && params.fieldCount === 1) return customReason
+  }
+  if (!params.numberKey && params.effectiveNumberKey) {
+    const fieldMap: Record<string, string[]> = {
+      '3.2': ['er_werkfit_3_2', '3_2', '3.2'],
+      '3.4': ['er_werkfit_3_4', '3_4', '3.4'],
+      '5.1': ['er_werkfit_5_1', '5_1', '5.1'],
+      '5.2': ['er_werkfit_5_2', '5_2', '5.2'],
+      '6.2': ['er_werkfit_6_2', '6_2', '6.2'],
+      '7.2': ['er_werkfit_7_2', '7_2', '7.2'],
+      '7.4': ['er_werkfit_7_4', '7_4', '7.4'],
+      '7.5': ['er_werkfit_7_5', '7_5', '7.5'],
+      '7.6': ['er_werkfit_7_6', '7_6', '7.6'],
+      '7.7': ['er_werkfit_7_7', '7_7', '7.7'],
+      '7.8': ['er_werkfit_7_8', '7_8', '7.8'],
+      '8.1': ['er_werkfit_8_1', '8_1', '8.1'],
+    }
+    const keys = fieldMap[params.effectiveNumberKey] || []
+    if (keys.length > 0) {
+      const value = getContextValue(contextValues, ...keys)
+      if (value) return value
+      const numbered = params.numberedValues.get(params.effectiveNumberKey)
+      if (numbered) return numbered
+    }
+  }
   if (params.effectiveNumberKey === '7.1') {
-    const normalizedLabel = normalizeMatchValue(params.rowLabel)
     if (normalizedLabel.includes('totaal aantal begeleidingsuren')) {
       return getContextValue(contextValues, '7_1_totaal_aantal_begeleidingsuren', '5_3_totaal_aantal_begeleidingsuren')
     }
@@ -615,11 +727,28 @@ function resolveEindrapportageField(params: FieldResolverParams): string {
     if (params.numberKey === '1.2') {
       return getContextValue(contextValues, '1_2', 'bsn', 'burgerservicenummer') || fromContextByNumber || params.numberedValues.get(params.numberKey) || ''
     }
+    if (params.numberKey === '3.4') {
+      return (
+        getContextValue(
+          contextValues,
+          'er_werkfit_3_4',
+          '3_4',
+          '3.4',
+          'rp_werkfit_3_7',
+          '3_7',
+          '3.7',
+          'telefoonnummer_contactpersoon',
+          'telefoon',
+        ) ||
+        fromContextByNumber ||
+        params.numberedValues.get(params.numberKey) ||
+        ''
+      )
+    }
     if (params.numberKey === '7.1') return ''
     return fromContextByNumber || params.numberedValues.get(params.numberKey) || ''
   }
 
-  const normalizedLabel = normalizeMatchValue(params.rowLabel)
   if (normalizedLabel.includes('datum') && normalizedLabel.includes('handtekening')) return ''
   if (normalizedLabel === 'naam' && params.fieldIndex === 1) {
     if (params.signatureRole === 'contact') return contactName
@@ -772,12 +901,23 @@ function fillDocumentXmlFormTextFields(params: {
     if (!effectiveNumberKey) return rowXml
 
     if (effectiveNumberKey === '5.1') {
+      const explicitKeuzes = readNumberArrayLoose(getContextValue(contextValues, 'rp_werkfit_5_1_keuzes'))
+      if (explicitKeuzes.length > 0) {
+        const selectedFromExplicit = new Set(explicitKeuzes)
+        states = [selectedFromExplicit.has(1), selectedFromExplicit.has(2), selectedFromExplicit.has(3)]
+        let checkboxIndex = 0
+        return rowXml.replace(checkboxPattern, (match) => {
+          const isChecked = Boolean(states[checkboxIndex])
+          checkboxIndex += 1
+          return match.replace(/<w:default w:val="([01])"\s*\/>/, `<w:default w:val="${isChecked ? '1' : '0'}"/>`)
+        })
+      }
       const rawValue =
         getContextValue(
           contextValues,
+          'rp_werkfit_5_1',
           '5_1',
           '5.1',
-          'rp_werkfit_5_1',
           'welke_hoofdactiviteiten_zijn_in_het_werkplan_of_plan_van_aanpak_benoemd',
         ) || numberedValues.get('5.1') || ''
       const selectedNumeric = new Set(readChoiceArray(rawValue, 'keuzes'))
@@ -821,9 +961,18 @@ function fillDocumentXmlFormTextFields(params: {
         states = [reden === 1, reden === 2, reden === 3, reden === 4, reden === 5, reden === 6]
       }
     } else if (effectiveNumberKey === '7.1') {
-      const rawValue = getContextValue(contextValues, '7_1', '7.1', 'er_werkfit_7_1') || numberedValues.get('7.1') || ''
+      const rawValue = getContextValue(contextValues, 'er_werkfit_7_1', '7_1', '7.1') || numberedValues.get('7.1') || ''
       const selected = new Set(readChoiceArray(rawValue, 'keuzes'))
-      states = [selected.has(1), selected.has(2), selected.has(3)]
+      if (selected.size > 0) {
+        states = [selected.has(1), selected.has(2), selected.has(3)]
+      } else {
+        const normalized = normalizeMatchValue(rawValue)
+        states = [
+          normalized.includes('werknemersvaard') || normalized.includes('werkritme') || normalized.includes('arbeidsvaard'),
+          normalized.includes('persoonlijke effectiviteit') || normalized.includes('zelfvertrouwen') || normalized.includes('sollicitatievaard'),
+          normalized.includes('arbeidsmarkt') || normalized.includes('netwerk') || normalized.includes('cv'),
+        ]
+      }
     } else if (effectiveNumberKey === '7.3') {
       const rawValue = getContextValue(contextValues, '7_3', '7.3', 'er_werkfit_7_3') || numberedValues.get('7.3') || ''
       const resultaat = readChoiceNumber(rawValue, 'resultaat')
@@ -832,14 +981,14 @@ function fillDocumentXmlFormTextFields(params: {
       const rawValue = getContextValue(contextValues, '7_6', '7.6', 'er_werkfit_7_6') || numberedValues.get('7.6') || ''
       const normalized = normalizeMatchValue(rawValue)
       const selectionByPhrase = [
-        'zelf in staat om werk te zoeken',
-        'naar werk kan worden ingezet',
-        'door uwv naar werk worden begeleid',
-        'eerst scholing nodig',
-        'niet verder naar werk worden begeleid',
-        'overige bemiddeling',
-        'overige begeleiding',
-      ].map((phrase) => normalized.includes(normalizeMatchValue(phrase)))
+        normalized.includes('zelf in staat') || normalized.includes('zelfstandig') || normalized.includes('zelf werk zoeken'),
+        normalized.includes('naar werk') || normalized.includes('traject') || normalized.includes('werkfit'),
+        normalized.includes('uwv') && normalized.includes('werk'),
+        normalized.includes('scholing') || normalized.includes('opleiding'),
+        normalized.includes('niet verder') || normalized.includes('niet begeleid') || normalized.includes('niet mogelijk'),
+        normalized.includes('bemiddeling') || normalized.includes('arbeidsbemiddeling'),
+        normalized.includes('begeleiding') || normalized.includes('nazorg') || normalized.includes('ondersteuning'),
+      ]
       states = selectionByPhrase
       if (!states.some(Boolean) && checkboxes.length === 1 && normalizedLabel.includes('anders')) {
         states = [normalized.includes('anders') || normalized.includes('overige')]
@@ -867,6 +1016,7 @@ function fillDocumentXmlFormTextFields(params: {
 
   const filledRowsXml = String(params.documentXml || '').replace(/<w:tr[\s\S]*?<\/w:tr>/g, (rowXml) => {
     const hasCheckboxFields = /<w:instrText[^>]*>\s*FORMCHECKBOX\s*<\/w:instrText>/i.test(String(rowXml || ''))
+    const hasTextFormFields = /<w:instrText[^>]*>\s*FORMTEXT\s*<\/w:instrText>/i.test(String(rowXml || ''))
     const rowPlainLabel = normalizeMatchValue(
       String(rowXml || '')
         .replace(/<w:instrText[^>]*>\s*FORMTEXT\s*<\/w:instrText>/g, ' ')
@@ -890,14 +1040,16 @@ function fillDocumentXmlFormTextFields(params: {
       /(<w:r[^>]*>[\s\S]*?<w:fldChar w:fldCharType="separate"\/>[\s\S]*?<\/w:r>)([\s\S]*?)(<w:r[^>]*>[\s\S]*?<w:fldChar w:fldCharType="end"\/>[\s\S]*?<\/w:r>)/g
     const fieldCount = (String(rowXml || '').match(/w:fldCharType="separate"/g) || []).length
     if (!rowPlainLabel && fieldCount === 0) return rowXml
+    let rowXmlWithCheckboxes = rowXml
     if (hasCheckboxFields) {
-      return applyCheckboxSelection(
+      rowXmlWithCheckboxes = applyCheckboxSelection(
         rowXml,
         numberKey || activeNumberKey,
         rowPlainLabel,
         params.contextValues || {},
         numberedValues,
       )
+      if (!hasTextFormFields) return rowXmlWithCheckboxes
     }
 
     const inferredActivityDistributionRow =
@@ -907,7 +1059,7 @@ function fillDocumentXmlFormTextFields(params: {
 
     let fieldIndex = 0
 
-    const replacedTextRow = rowXml.replace(fieldPattern, (_fullMatch, before, between, after) => {
+    const replacedTextRow = rowXmlWithCheckboxes.replace(fieldPattern, (_fullMatch, before, between, after) => {
         fieldIndex += 1
         const nextValue =
           pendingSignatureDateField && fieldIndex === 1
@@ -972,7 +1124,7 @@ function fillDocumentXmlFormTextFields(params: {
 
   if (!contactNameForRepair) return filledRowsXml
 
-  return filledRowsXml.replace(/<w:tr[\s\S]*?<\/w:tr>/g, (rowXml) => {
+  const repairedContactRowXml = filledRowsXml.replace(/<w:tr[\s\S]*?<\/w:tr>/g, (rowXml) => {
     if (!/<w:t>3\.5<\/w:t>/.test(rowXml)) return rowXml
     if (!/<w:t>Naam contactpersoon<\/w:t>/.test(rowXml)) return rowXml
     if (/w:fldCharType="separate"/.test(rowXml)) return rowXml
@@ -981,6 +1133,34 @@ function fillDocumentXmlFormTextFields(params: {
       rowXml,
       markerXml: '<w:t>Naam contactpersoon</w:t>',
       value: contactNameForRepair,
+    })
+  })
+
+  if (params.templateKind !== 'eindrapportage') return repairedContactRowXml
+
+  const endrapportageContactName =
+    getContextValue(
+      params.contextValues || {},
+      '3_2',
+      '3.2',
+      'er_werkfit_3_2',
+      'naam_contactpersoon',
+      'naam_contactpersoon_re_integratiebedrijf',
+      '9_ondertekening_contactpersoon_re_integratiebedrijf_naam',
+      '10_ondertekening_contactpersoon_re_integratiebedrijf_naam',
+    ) || ''
+
+  if (!endrapportageContactName) return repairedContactRowXml
+
+  return repairedContactRowXml.replace(/<w:tr[\s\S]*?<\/w:tr>/g, (rowXml) => {
+    if (!/<w:t>3\.2<\/w:t>/.test(rowXml)) return rowXml
+    if (!/<w:t>Naam contactpersoon<\/w:t>/.test(rowXml)) return rowXml
+    if (/w:fldCharType="separate"/.test(rowXml)) return rowXml
+    if (!/w:fldCharType="end"/.test(rowXml)) return rowXml
+    return injectEndOnlyValueAfterMarker({
+      rowXml,
+      markerXml: '<w:t>Naam contactpersoon</w:t>',
+      value: endrapportageContactName,
     })
   })
 }

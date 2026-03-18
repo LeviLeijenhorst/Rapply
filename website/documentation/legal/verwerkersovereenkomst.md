@@ -1,6 +1,6 @@
-### VERWERKERSOVEREENKOMST COACHSCRIBE
+### VERWERKERSOVEREENKOMST Rapply
 
-Deze verwerkersovereenkomst ("Overeenkomst") maakt integraal onderdeel uit van de overeenkomst inzake het gebruik van CoachScribe tussen Partijen.
+Deze verwerkersovereenkomst ("Overeenkomst") maakt integraal onderdeel uit van de overeenkomst inzake het gebruik van Rapply tussen Partijen.
 
 Partijen leggen hierin vast op welke wijze persoonsgegevens worden verwerkt en beveiligd overeenkomstig artikel 28 van de Algemene verordening gegevensbescherming (AVG).
 
@@ -20,13 +20,13 @@ Hierna: "Verwerkingsverantwoordelijke".
 #### 1.2 Verwerker
 
 Naam: JNL Solutions  
-Handelend onder de naam: CoachScribe  
+Handelend onder de naam: Rapply  
 Adres: Stationsplein 26  
 6512 AB Nijmegen  
 Nederland  
-E-mail: contact@coachscribe.nl
+E-mail: contact@Rapply.nl
 
-Website: https://www.coachscribe.nl
+Website: https://www.Rapply.nl
 
 Hierna: "Verwerker".
 
@@ -42,17 +42,17 @@ Waar in deze Overeenkomst begrippen niet nader zijn gedefinieerd, geldt de betek
 
 #### 3.1 Onderwerp
 
-Verwerker verwerkt persoonsgegevens ten behoeve van Verwerkingsverantwoordelijke in het kader van het leveren van CoachScribe, zoals nader omschreven in Bijlage 1.
+Verwerker verwerkt persoonsgegevens ten behoeve van Verwerkingsverantwoordelijke in het kader van het leveren van Rapply, zoals nader omschreven in Bijlage 1.
 
 #### 3.2 Duur
 
-Deze Overeenkomst treedt in werking op [INGANGSDATUM] en geldt zolang Verwerker persoonsgegevens verwerkt in het kader van CoachScribe.
+Deze Overeenkomst treedt in werking op [INGANGSDATUM] en geldt zolang Verwerker persoonsgegevens verwerkt in het kader van Rapply.
 
 ### 4. Aard en doel van de verwerking
 
 Verwerker verwerkt persoonsgegevens uitsluitend:
 
-- ten behoeve van het leveren van CoachScribe;
+- ten behoeve van het leveren van Rapply;
 - overeenkomstig deze Overeenkomst;
 - op basis van gedocumenteerde instructies van Verwerkingsverantwoordelijke.
 
@@ -130,7 +130,7 @@ Na beëindiging van de dienstverlening:
 - verwerkt Verwerker geen persoonsgegevens meer, tenzij wettelijk verplicht;
 - verwijdert of anonimiseert Verwerker persoonsgegevens binnen een redelijke termijn.
 
-Gedurende de dienstverlening kan Verwerkingsverantwoordelijke zelfstandig gegevens verwijderen via de functionaliteiten van CoachScribe.
+Gedurende de dienstverlening kan Verwerkingsverantwoordelijke zelfstandig gegevens verwijderen via de functionaliteiten van Rapply.
 
 ### 12. Audit
 
@@ -198,7 +198,7 @@ Afhankelijk van het gebruik kunnen onder meer worden verwerkt:
 
 #### C. Categorieen betrokkenen
 
-- Gebruikers van CoachScribe;
+- Gebruikers van Rapply;
 - Personen over wie gegevens worden vastgelegd;
 - Contactpersonen die contact opnemen met support.
 
@@ -210,9 +210,9 @@ Verwerkingsverantwoordelijke bepaalt welke gegevens worden ingevoerd en is veran
 
 #### E. Aard van de verwerking
 
-De verwerking vindt doorlopend plaats zolang CoachScribe wordt gebruikt.
+De verwerking vindt doorlopend plaats zolang Rapply wordt gebruikt.
 
-Audio voor transcriptie wordt versleuteld verzonden, tijdelijk verwerkt en na verwerking verwijderd, tenzij opslag door Verwerkingsverantwoordelijke wordt voortgezet binnen CoachScribe.
+Audio voor transcriptie wordt versleuteld verzonden, tijdelijk verwerkt en na verwerking verwijderd, tenzij opslag door Verwerkingsverantwoordelijke wordt voortgezet binnen Rapply.
 
 ### BIJLAGE 2 - Beveiligingsmaatregelen
 

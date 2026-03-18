@@ -80,7 +80,7 @@ export default function KeyCustodySetupScreen() {
     return (
       <View style={styles.root}>
         <View style={styles.container}>
-          <Text style={styles.title}>Save your CoachScribe-key</Text>
+          <Text style={styles.title}>Save your Rapply-key</Text>
           <Text style={styles.body}>
             This key unlocks your encrypted data on new devices. Store it safely before you continue.
           </Text>
@@ -112,11 +112,11 @@ export default function KeyCustodySetupScreen() {
         <Text style={styles.title}>{requiresRecovery ? "Restore encryption key" : "Set up encryption key"}</Text>
         {requiresRecovery ? (
           <>
-            <Text style={styles.body}>This account already has end-to-end encryption enabled. Unlock with your CoachScribe-key.</Text>
+            <Text style={styles.body}>This account already has end-to-end encryption enabled. Unlock with your Rapply-key.</Text>
             <TextInput
               value={recoveryKeyInput}
               onChangeText={setRecoveryKeyInput}
-              placeholder="CoachScribe-key"
+              placeholder="Rapply-key"
               placeholderTextColor={colors.textSecondary}
               style={styles.input}
               autoCapitalize="none"
@@ -137,7 +137,7 @@ export default function KeyCustodySetupScreen() {
           </>
         ) : (
           <>
-            <Text style={styles.body}>CoachScribe uses self-custody. You keep the CoachScribe-key for account recovery.</Text>
+            <Text style={styles.body}>Rapply uses self-custody. You keep the Rapply-key for account recovery.</Text>
             <Pressable
               accessibilityRole="button"
               style={({ pressed }) => [styles.primaryBtn, pressed ? styles.primaryBtnPressed : null, isBusy ? styles.btnDisabled : null]}

@@ -127,8 +127,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: 'rgba(16,18,20,0.22)',
-    ...( { backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' } as any ),
+    backgroundColor: 'rgba(16,18,20,0.3)',
     zIndex: 0,
   },
   backdropPressable: {

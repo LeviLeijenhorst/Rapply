@@ -14,7 +14,7 @@ export default function VeiligheidHeroSection() {
               <span className="block">vertrouwelijke gesprekken</span>
             </h1>
             <p className="max-w-xl text-[16px] font-medium text-black/70">
-              CoachScribe is ontworpen voor gesprekken met gevoelige informatie.
+              Rapply is ontworpen voor gesprekken met gevoelige informatie.
               Met verwerking binnen de Europese Unie en aanvullende
               versleuteling tijdens opslag.
             </p>

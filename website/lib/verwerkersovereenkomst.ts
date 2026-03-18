@@ -52,9 +52,9 @@ export function buildVerwerkersovereenkomst(
   );
   const signerRole = withFallback(values.signerRole, "[FUNCTIE]");
 
-  return `VERWERKERSOVEREENKOMST COACHSCRIBE
+  return `VERWERKERSOVEREENKOMST Rapply
 
-Deze verwerkersovereenkomst hoort bij het gebruik van CoachScribe.
+Deze verwerkersovereenkomst hoort bij het gebruik van Rapply.
 
 1. Partijen
 
@@ -72,18 +72,18 @@ Naam: JNL Solutions
 Adres: Stationsplein 26
 Postcode en plaats: 6512 AB, Nijmegen
 Land: Nederland
-E-mail: contact@coachscribe.nl
-Website: https://www.coachscribe.nl
+E-mail: contact@Rapply.nl
+Website: https://www.Rapply.nl
 
 2. Onderwerp en duur
 
-Verwerker verwerkt persoonsgegevens voor Verwerkingsverantwoordelijke bij het leveren van CoachScribe, zoals beschreven in Bijlage 1.
-Deze verwerkersovereenkomst geldt vanaf ${effectiveDate} en loopt zolang Verwerker persoonsgegevens verwerkt voor Verwerkingsverantwoordelijke in het kader van CoachScribe.
+Verwerker verwerkt persoonsgegevens voor Verwerkingsverantwoordelijke bij het leveren van Rapply, zoals beschreven in Bijlage 1.
+Deze verwerkersovereenkomst geldt vanaf ${effectiveDate} en loopt zolang Verwerker persoonsgegevens verwerkt voor Verwerkingsverantwoordelijke in het kader van Rapply.
 
 3. Instructies en doelbinding
 
 Verwerker verwerkt persoonsgegevens uitsluitend:
-- om CoachScribe te leveren zoals afgesproken met Verwerkingsverantwoordelijke; en
+- om Rapply te leveren zoals afgesproken met Verwerkingsverantwoordelijke; en
 - op basis van schriftelijke of aantoonbare instructies van Verwerkingsverantwoordelijke.
 
 4. Vertrouwelijkheid en beveiliging
@@ -93,7 +93,7 @@ Verwerker zorgt ervoor dat personen met toegang tot persoonsgegevens gebonden zi
 
 5. Subverwerkers
 
-Verwerkingsverantwoordelijke geeft algemene toestemming voor het inschakelen van subverwerkers die nodig zijn voor CoachScribe.
+Verwerkingsverantwoordelijke geeft algemene toestemming voor het inschakelen van subverwerkers die nodig zijn voor Rapply.
 De actuele subverwerkers staan in Bijlage 3.
 
 6. Datalekken
@@ -129,7 +129,7 @@ BIJLAGE 1 - Omschrijving van de verwerking
 
 A. Doeleinden
 - account en authenticatie via Microsoft Entra;
-- opslag en beheer van gegevens die Verwerkingsverantwoordelijke in CoachScribe invoert;
+- opslag en beheer van gegevens die Verwerkingsverantwoordelijke in Rapply invoert;
 - transcriptie van audio via Azure Speech;
 - genereren van samenvattingen en chatreacties via Azure OpenAI;
 - beveiliging, stabiliteit en foutopsporing.

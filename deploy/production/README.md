@@ -1,11 +1,11 @@
-# Production deployment (Hetzner) - CoachScribe
+# Production deployment (Hetzner) - Rapply
 
 This folder is meant to make your production deployment reproducible.
 
 ## What you will deploy
 
 - Supabase (self-hosted) using the official Docker Compose setup
-- CoachScribe API (`server/`) as a Docker container
+- Rapply API (`server/`) as a Docker container
 - Caddy as a reverse proxy for HTTPS and routing
 
 ## Domains (recommended)
@@ -14,7 +14,7 @@ Use three subdomains:
 
 - `supabase.yourdomain.com` → Supabase API (Kong)
 - `admin.yourdomain.com` → Supabase Studio
-- `backend.yourdomain.com` → CoachScribe server API (your secure endpoints)
+- `backend.yourdomain.com` → Rapply server API (your secure endpoints)
 
 Your mobile app will use:
 
@@ -57,28 +57,28 @@ Important:
 - Set `API_EXTERNAL_URL` to `https://supabase.yourdomain.com`
 - Configure SMTP (email verification + password reset depends on it)
 
-## Step 3 - Add CoachScribe API + Caddy
+## Step 3 - Add Rapply API + Caddy
 
 Copy these files to the VM:
 
-- `deploy/production/coachscribe-compose.yml`
+- `deploy/production/Rapply-compose.yml`
 - `deploy/production/Caddyfile`
 - `deploy/production/env.example` (create your real `env.production` from it)
 
 Place them in:
 
 ```bash
-mkdir -p /opt/coachscribe
+mkdir -p /opt/Rapply
 ```
 
 ## Step 4 - Start everything
 
 Start Supabase first (from `/opt/supabase`).
 
-Then start CoachScribe API + Caddy (from `/opt/coachscribe`):
+Then start Rapply API + Caddy (from `/opt/Rapply`):
 
 ```bash
-docker compose --env-file env.production -f coachscribe-compose.yml up -d
+docker compose --env-file env.production -f Rapply-compose.yml up -d
 ```
 
 Important:
@@ -109,7 +109,7 @@ This repo includes minimal scripts:
 Example usage:
 
 ```bash
-cd /opt/coachscribe
+cd /opt/Rapply
 chmod +x backup/backup.sh backup/restore.sh
 ./backup/backup.sh <POSTGRES_CONTAINER_NAME> ./backups
 ```

@@ -48,6 +48,7 @@ function normalizeInputType(value: unknown): Input['type'] {
   if (normalized === 'recording' || normalized === 'full_audio_recording') return 'recorded-session'
   if (normalized === 'uploaded_audio') return 'uploaded-session'
   if (normalized === 'written_recap') return 'written-recap'
+  if (normalized === 'written_report' || normalized === 'written-report') return 'written-recap'
   if (normalized === 'spoken_recap' || normalized === 'spoken_recap_recording' || normalized === 'intake') return 'spoken-recap'
   if (normalized === 'uploaded_document') return 'uploaded-document'
   if (normalized === 'upload') return 'uploaded-session'

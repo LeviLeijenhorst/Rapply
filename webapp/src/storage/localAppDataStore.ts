@@ -407,6 +407,9 @@ function normalizeInputType(value: unknown): Input['type'] {
       return 'spoken-recap'
     case 'written_recap':
       return 'written-recap'
+    case 'written_report':
+    case 'written-report':
+      return 'written-recap'
     case 'uploaded_document':
       return 'uploaded-document'
     case 'upload':

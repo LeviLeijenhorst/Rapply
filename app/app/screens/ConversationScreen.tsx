@@ -214,7 +214,7 @@ export default function ConversationScreen() {
     if (!id) return null
     const name = (coacheeName || "").trim()
     const coacheeId = name ? slugifyId(name) : "loose_recordings"
-    return `CoachScribe/coachees/${coacheeId}/${id}`
+    return `Rapply/coachees/${coacheeId}/${id}`
   }
 
   function setSummaryAndMarkSaved(value: string) {
@@ -549,7 +549,7 @@ export default function ConversationScreen() {
       if (hasTranscriptFile) {
         const name = coacheeName.trim()
         const coacheeId = name ? slugifyId(name) : "loose_recordings"
-        const baseDirectory = `CoachScribe/coachees/${coacheeId}/${id}`
+        const baseDirectory = `Rapply/coachees/${coacheeId}/${id}`
         const txt = await readEncryptedFile(baseDirectory, "transcript.txt.enc")
         setTranscript(txt)
       }
@@ -695,7 +695,7 @@ export default function ConversationScreen() {
         if (cancelled) return
         const name = coacheeName.trim()
         const coacheeId = name ? name.toLowerCase().replace(/\s+/g, "_") : "loose_recordings"
-        const baseDirectory = `CoachScribe/coachees/${coacheeId}/${id}`
+        const baseDirectory = `Rapply/coachees/${coacheeId}/${id}`
         const toFileSystemPath = (uri: string) => (uri.startsWith("file://") ? uri.slice(7) : uri)
         const keyBase64 = await getOrCreateLocalEncryptionKey()
         async function findAudioFileName() {
@@ -844,7 +844,7 @@ export default function ConversationScreen() {
 
         const name = coacheeName.trim()
         const coacheeId = name ? slugifyId(name) : "loose_recordings"
-        const baseDirectory = `CoachScribe/coachees/${coacheeId}/${id}`
+        const baseDirectory = `Rapply/coachees/${coacheeId}/${id}`
 
         try {
           const exists = await transcriptFileExists(coacheeName, id)
@@ -912,7 +912,7 @@ export default function ConversationScreen() {
           try {
             const name = coacheeName.trim()
             const coacheeId = name ? slugifyId(name) : "loose_recordings"
-            const baseDirectory = `CoachScribe/coachees/${coacheeId}/${id}`
+            const baseDirectory = `Rapply/coachees/${coacheeId}/${id}`
             const dTxt = await readPlainTextFile(baseDirectory, "duration.txt")
             const dNum = parseInt((dTxt || "").trim(), 10)
             if (!Number.isNaN(dNum)) {
@@ -962,7 +962,7 @@ export default function ConversationScreen() {
       try {
         const name = coacheeName.trim()
         const coacheeId = name ? slugifyId(name) : "loose_recordings"
-        const baseDirectory = `CoachScribe/coachees/${coacheeId}/${id}`
+        const baseDirectory = `Rapply/coachees/${coacheeId}/${id}`
         const files = await listFiles(baseDirectory)
         const hasTranscriptFile = files.includes("transcript.txt.enc")
         const hasSummaryFile = files.includes("summary.txt.enc")
@@ -1096,7 +1096,7 @@ export default function ConversationScreen() {
       try {
         const name = coacheeName.trim()
         const coacheeId = name ? slugifyId(name) : "loose_recordings"
-        const baseDirectory = `CoachScribe/coachees/${coacheeId}/${id}`
+        const baseDirectory = `Rapply/coachees/${coacheeId}/${id}`
         const txt = await readEncryptedFile(baseDirectory, "transcript.txt.enc")
         if (!cancelled) setTranscript(txt)
         try {
@@ -1131,7 +1131,7 @@ export default function ConversationScreen() {
           setHasTranscript(true)
           const name = coacheeName.trim()
           const coacheeId = name ? slugifyId(name) : "loose_recordings"
-          const baseDirectory = `CoachScribe/coachees/${coacheeId}/${id}`
+          const baseDirectory = `Rapply/coachees/${coacheeId}/${id}`
           const txt = await readEncryptedFile(baseDirectory, "transcript.txt.enc")
           if (isCancelled) return
           setTranscript(txt)
@@ -1162,7 +1162,7 @@ export default function ConversationScreen() {
       try {
         const name = coacheeName.trim()
         const coacheeId = name ? slugifyId(name) : "loose_recordings"
-        const baseDirectory = `CoachScribe/coachees/${coacheeId}/${id}`
+        const baseDirectory = `Rapply/coachees/${coacheeId}/${id}`
         const files = await listFiles(baseDirectory)
         if (isCancelled) return
         if (files.includes("summary.txt.enc")) {
@@ -1220,7 +1220,7 @@ export default function ConversationScreen() {
       try {
         const name = coacheeName.trim()
         const coacheeId = name ? slugifyId(name) : "loose_recordings"
-        const baseDirectory = `CoachScribe/coachees/${coacheeId}/${id}`
+        const baseDirectory = `Rapply/coachees/${coacheeId}/${id}`
         const files = await listFiles(baseDirectory)
         if (isCancelled) return
         if (files.includes("summary.txt.enc")) {

@@ -20,7 +20,7 @@ export default function HeroSection() {
           </h1>
           {/* Hero description */}
           <p className="max-w-3xl text-[16px] font-medium text-black/70">
-            CoachScribe helpt loopbaan- en re-integratieprofessionals bij de
+            Rapply helpt loopbaan- en re-integratieprofessionals bij de
             verslaglegging van hun sessies en het bewaren van overzicht per
             traject.
             <br />
@@ -31,7 +31,7 @@ export default function HeroSection() {
           <div className="flex w-full flex-wrap items-center justify-center gap-4">
             <Button
               label="Probeer het uit"
-              destination="https://app.coachscribe.nl"
+              destination="https://app.Rapply.nl"
               variant="primary"
               showArrow
               className="font-normal"

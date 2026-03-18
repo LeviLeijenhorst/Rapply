@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import {
@@ -421,7 +421,7 @@ export default function VerwerkersovereenkomstFlow() {
             </h1>
             <p className="text-base font-normal text-black/70 md:text-lg">
               Vul de gegevens in. Daarna kun je de verwerkersovereenkomst als
-              CoachScribe PDF downloaden.
+              Rapply PDF downloaden.
             </p>
           </div>
 
@@ -649,7 +649,7 @@ export default function VerwerkersovereenkomstFlow() {
                 >
                   {isDownloading
                     ? "PDF wordt gemaakt..."
-                    : "Download CoachScribe PDF"}
+                    : "Download Rapply PDF"}
                 </button>
                 <button
                   type="button"
@@ -664,7 +664,7 @@ export default function VerwerkersovereenkomstFlow() {
                 <div className="mb-5 flex justify-end">
                   <Image
                     src="/icon.svg"
-                    alt="CoachScribe logo"
+                    alt="Rapply logo"
                     width={26}
                     height={26}
                   />
@@ -698,7 +698,7 @@ export default function VerwerkersovereenkomstFlow() {
                     if (isBullet(line)) {
                       return (
                         <p key={`bullet-${index}`} className="pl-3 text-[13.5px] leading-[1.45]">
-                          • {line.replace(/^- /, "").trim()}
+                          � {line.replace(/^- /, "").trim()}
                         </p>
                       );
                     }
@@ -720,7 +720,7 @@ export default function VerwerkersovereenkomstFlow() {
                   })}
                 </div>
                 <div className="mt-5 border-t border-[#BD0265] pt-3 text-[11px] text-[#606060]">
-                  coachscribe.nl | contact@coachscribe.nl
+                  Rapply.nl | contact@Rapply.nl
                 </div>
               </article>
             </div>

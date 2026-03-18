@@ -148,7 +148,7 @@ export default function OverOnsContactSection({
             </p>
             <Image
               src={contactImage}
-              alt="CoachScribe team"
+              alt="Rapply team"
               className="mt-6 h-auto w-full max-w-[320px] rounded-xl object-cover md:max-w-[380px] xl:max-w-[420px]"
             />
           </div>

@@ -145,6 +145,9 @@ export async function ensureClientAccessSchemaCompatibility(): Promise<void> {
       add column if not exists organization_id text references public.organizations (id) on delete cascade,
       add column if not exists created_by_user_id text references public.users (id) on delete set null;
 
+    alter table if exists public.inputs
+      alter column client_id drop not null;
+
     alter table if exists public.notes
       add column if not exists created_by_user_id text references public.users (id) on delete set null;
 

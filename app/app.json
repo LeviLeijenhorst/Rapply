@@ -1,7 +1,7 @@
 {
-  "name": "CoachScribe",
-  "slug": "coachscribe",
-  "scheme": "coachscribe",
+  "name": "Rapply",
+  "slug": "Rapply",
+  "scheme": "Rapply",
   "version": "1.0.0",
   "orientation": "portrait",
   "userInterfaceStyle": "automatic",
@@ -20,7 +20,7 @@
   ],
   "android": {
     "icon": "./assets/images/app-icon-android-legacy.png",
-    "package": "com.jnlstudios.coachscribe",
+    "package": "com.jnlstudios.Rapply",
     "adaptiveIcon": {
       "foregroundImage": "./assets/images/app-icon-android-adaptive-foreground.png",
       "backgroundImage": "./assets/images/app-icon-android-adaptive-background.png"
@@ -36,17 +36,17 @@
       "BILLING"
     ],
     "foregroundService": {
-      "notificationTitle": "CoachScribe is recording",
+      "notificationTitle": "Rapply is recording",
       "notificationText": "Recording in progress"
     }
   },
   "ios": {
     "icon": "./assets/images/app-icon-ios.png",
     "supportsTablet": true,
-    "bundleIdentifier": "com.jnlstudios.coachscribe",
+    "bundleIdentifier": "com.jnlstudios.Rapply",
     "buildNumber": "1",
     "infoPlist": {
-      "NSMicrophoneUsageDescription": "CoachScribe records audio to generate transcripts and insights.",
+      "NSMicrophoneUsageDescription": "Rapply records audio to generate transcripts and insights.",
       "UIBackgroundModes": [
         "audio",
         "audio"

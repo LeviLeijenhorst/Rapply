@@ -31,11 +31,11 @@ export default function ContactFeedbackScreen() {
 
   function openEmail() {
     vibrate()
-    Linking.openURL("mailto:contact@coachscribe.nl")
+    Linking.openURL("mailto:contact@Rapply.nl")
   }
   function openWebsite() {
     vibrate()
-    Linking.openURL("https://www.coachscribe.nl")
+    Linking.openURL("https://www.Rapply.nl")
   }
   function openAddress() {
     vibrate()
@@ -80,12 +80,12 @@ export default function ContactFeedbackScreen() {
       >
         <View style={styles.card}>
           <Pressable accessibilityRole="button" onPress={openEmail} style={({ pressed }) => [styles.row, pressed && { opacity: 0.8 }]}> 
-            <Text style={styles.rowText}>contact@coachscribe.nl</Text>
+            <Text style={styles.rowText}>contact@Rapply.nl</Text>
             <Icon name="email" />
           </Pressable>
           <View style={styles.divider} />
           <Pressable accessibilityRole="button" onPress={openWebsite} style={({ pressed }) => [styles.row, pressed && { opacity: 0.8 }]}> 
-            <Text style={styles.rowText}>www.coachscribe.nl</Text>
+            <Text style={styles.rowText}>www.Rapply.nl</Text>
             <Icon name="internet" />
           </Pressable>
           <View style={styles.divider} />
@@ -98,7 +98,7 @@ export default function ContactFeedbackScreen() {
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Feedback</Text>
           <Text style={styles.sectionBody}>
-            Wij zijn heel benieuwd wat jij van CoachScribe vindt. Deel jouw mening zodat wij verder kunnen bouwen aan iets
+            Wij zijn heel benieuwd wat jij van Rapply vindt. Deel jouw mening zodat wij verder kunnen bouwen aan iets
             waar jij écht wat aan hebt.
           </Text>
 

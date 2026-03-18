@@ -18,7 +18,7 @@ const securityItems = [
   {
     title: "Verwerking binnen Europa",
     description:
-      "CoachScribe verwerkt en bewaart sessiegegevens binnen de Europese Unie. Zo sluiten opslag en verwerking aan op de AVG.",
+      "Rapply verwerkt en bewaart sessiegegevens binnen de Europese Unie. Zo sluiten opslag en verwerking aan op de AVG.",
     icon: securitySafeIcon,
   },
   {
@@ -116,7 +116,7 @@ export default function SecuritySection({
           <h2 className="font-[var(--font-catamaran)] text-[34px] font-medium leading-[120%] text-black md:text-[40px]">
             {duplicateCards ? (
               <>
-                Hoe CoachScribe{" "}
+                Hoe Rapply{" "}
                 <span className="text-[#BD0265]">met gegevens omgaat</span>
               </>
             ) : (

@@ -4,7 +4,7 @@ const markdown = `## Hoe geef ik toestemming voor het opnemen van een gesprek?
 
 Wanneer je een gesprek opneemt, is het belangrijk dat alle betrokkenen hiervan op de hoogte zijn en toestemming geven.
 
-Als coach ben jij verantwoordelijk voor het zorgvuldig omgaan met vertrouwelijke informatie. CoachScribe helpt je daarbij, maar jij blijft verantwoordelijk voor het verkrijgen van toestemming.
+Als coach ben jij verantwoordelijk voor het zorgvuldig omgaan met vertrouwelijke informatie. Rapply helpt je daarbij, maar jij blijft verantwoordelijk voor het verkrijgen van toestemming.
 
 ## Wanneer heb ik toestemming nodig?
 
@@ -62,7 +62,7 @@ Je kunt er dan voor kiezen om handmatig notities te maken zoals je gewend bent.
 
 ## Twijfel over de regels?
 
-Wetgeving rondom privacy verschilt per land en situatie. CoachScribe geeft geen juridisch advies.
+Wetgeving rondom privacy verschilt per land en situatie. Rapply geeft geen juridisch advies.
 
 Bij twijfel raden we aan juridisch advies in te winnen of de richtlijnen van jouw beroepsorganisatie te raadplegen.
 `;

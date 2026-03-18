@@ -120,15 +120,14 @@ export function useDashboardScreenModel(props: DashboardScreenProps): DashboardS
     () =>
       [...data.inputs]
         .sort((a, b) => b.createdAtUnixMs - a.createdAtUnixMs)
-        .filter((session) => !!session.clientId)
         .slice(0, 5)
         .map((session) => {
           const client = session.clientId ? clientById.get(session.clientId) : null
           const title = String(session.title || '').trim() || 'Naamloze sessie'
           return {
             id: session.id,
-            clientId: session.clientId || '',
-            clientName: client?.name || 'Onbekende client',
+            clientId: session.clientId ?? null,
+            clientName: client?.name || 'Niet gekoppeld aan client',
             subtitle: formatContinueSubtitle(session.kind, title),
             profilePhotoUri: client?.profilePhotoUri || null,
           }

@@ -9,7 +9,7 @@ function slugifyId(value: string) {
 
 function coacheeDir(coacheeName: string) {
   const coacheeId = coacheeName.trim() ? slugifyId(coacheeName) : "loose_recordings"
-  return `CoachScribe/coachees/${coacheeId}`
+  return `Rapply/coachees/${coacheeId}`
 }
 
 function isConversationId(value: string) {
@@ -22,7 +22,7 @@ function isConversationId(value: string) {
 
 function baseDir(coacheeName: string, conversationId: string) {
   const coacheeId = coacheeName.trim() ? slugifyId(coacheeName) : "loose_recordings"
-  return `CoachScribe/coachees/${coacheeId}/${conversationId}`
+  return `Rapply/coachees/${coacheeId}/${conversationId}`
 }
 
 async function readJson(directory: string, fileName: string) {
@@ -83,7 +83,7 @@ export async function saveCoacheeAskAiHistory(coacheeName: string, items: ChatIt
 export async function loadSummariesForCoachee(coacheeName: string, excludeConversationId?: string) {
   const name = coacheeName.trim()
   const coacheeId = name ? slugifyId(name) : "loose_recordings"
-  const root = `CoachScribe/coachees/${coacheeId}`
+  const root = `Rapply/coachees/${coacheeId}`
   const result: { conversationId: string; summary: string }[] = []
   try {
     const entries = await listFiles(root)
@@ -105,7 +105,7 @@ export async function loadSummariesForCoachee(coacheeName: string, excludeConver
 export async function loadLatestConversationTranscriptForCoachee(coacheeName: string) {
   const name = coacheeName.trim()
   const coacheeId = name ? slugifyId(name) : "loose_recordings"
-  const root = `CoachScribe/coachees/${coacheeId}`
+  const root = `Rapply/coachees/${coacheeId}`
   try {
     const entries = await listFiles(root)
     const conversationIds = entries
@@ -142,7 +142,7 @@ export async function loadConversationTranscriptsForCoachee(params: {
 }): Promise<{ entries: ConversationTranscriptEntry[]; isTruncated: boolean }> {
   const name = params.coacheeName.trim()
   const coacheeId = name ? slugifyId(name) : "loose_recordings"
-  const root = `CoachScribe/coachees/${coacheeId}`
+  const root = `Rapply/coachees/${coacheeId}`
   const maxTotalCharacters = Math.max(1000, params.maxTotalCharacters ?? 60000)
   const maxTranscriptCharactersPerConversation = Math.max(1000, params.maxTranscriptCharactersPerConversation ?? 8000)
   const maxConversations = Math.max(1, params.maxConversations ?? 50)
@@ -203,7 +203,7 @@ export async function loadConversationTranscriptsForCoachee(params: {
 export async function getTranscriptForConversation(coacheeName: string, conversationId: string) {
   const name = coacheeName.trim()
   const coacheeId = name ? slugifyId(name) : "loose_recordings"
-  const dir = `CoachScribe/coachees/${coacheeId}/${conversationId}`
+  const dir = `Rapply/coachees/${coacheeId}/${conversationId}`
   const files = await listFiles(dir)
   if (!files.includes("transcript.txt.enc")) {
     throw new Error("Transcript not found")

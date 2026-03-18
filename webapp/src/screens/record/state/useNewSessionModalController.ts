@@ -1767,8 +1767,14 @@ export function useNewInputModalController({
   useEffect(() => {
     if (!visible) return
     if (step !== 'recorded') return
-    const timeouts = [0, 120, 260].map((delay) => setTimeout(() => sessionTitleInputRef.current?.focus(), delay))
-    return () => timeouts.forEach((timeoutId) => clearTimeout(timeoutId))
+    const focusRaf = requestAnimationFrame(() => {
+      focusTimeout = setTimeout(() => sessionTitleInputRef.current?.focus(), 80)
+    })
+    let focusTimeout: ReturnType<typeof setTimeout> | null = null
+    return () => {
+      cancelAnimationFrame(focusRaf)
+      if (focusTimeout) clearTimeout(focusTimeout)
+    }
   }, [sessionTitleInputRef, step, visible])
 
   const handleMinimizedPauseOrResume = () => {

@@ -1,40 +1,40 @@
-### Gebruikersovereenkomst CoachScribe
+### Gebruikersovereenkomst Rapply
 
-Deze gebruikersovereenkomst beschrijft de afspraken tussen jou en JNL Solutions over het gebruik van CoachScribe.
+Deze gebruikersovereenkomst beschrijft de afspraken tussen jou en JNL Solutions over het gebruik van Rapply.
 
-Door CoachScribe te gebruiken ga je akkoord met deze gebruikersovereenkomst.
+Door Rapply te gebruiken ga je akkoord met deze gebruikersovereenkomst.
 
 ---
 
 ### 1. Wie zijn wij
 
-CoachScribe is een dienst van **JNL Solutions**, gevestigd aan Stationsplein 26, 6512 AB, Nijmegen.
+Rapply is een dienst van **JNL Solutions**, gevestigd aan Stationsplein 26, 6512 AB, Nijmegen.
 
 Contact:
-- Website: `https://www.coachscribe.nl`
-- E-mail: contact@coachscribe.nl
+- Website: `https://www.Rapply.nl`
+- E-mail: contact@Rapply.nl
 - Telefoon: +31 6 221 68 360
 
 ---
 
-### 2. Voor wie is CoachScribe bedoeld
+### 2. Voor wie is Rapply bedoeld
 
-CoachScribe is bedoeld voor personen van **16 jaar en ouder**.
+Rapply is bedoeld voor personen van **16 jaar en ouder**.
 
-Als je CoachScribe gebruikt voor gesprekken met andere personen, dan ben jij verantwoordelijk voor het rechtmatig opnemen van die gesprekken en voor het informeren van gesprekspartners.
+Als je Rapply gebruikt voor gesprekken met andere personen, dan ben jij verantwoordelijk voor het rechtmatig opnemen van die gesprekken en voor het informeren van gesprekspartners.
 
 ---
 
-### 3. Wat CoachScribe doet
+### 3. Wat Rapply doet
 
-CoachScribe helpt je om gesprekken vast te leggen en te verwerken. Afhankelijk van wat je gebruikt kan CoachScribe onder andere:
+Rapply helpt je om gesprekken vast te leggen en te verwerken. Afhankelijk van wat je gebruikt kan Rapply onder andere:
 - audio verwerken voor transcriptie;
 - transcripties tonen en opslaan;
 - samenvattingen genereren;
 - notities en geschreven rapporten opslaan;
 - een chatfunctie bieden die context kan gebruiken uit transcripties en jouw chatinvoer.
 
-CoachScribe is een hulpmiddel. Het is niet bedoeld voor medisch advies, diagnose of behandeling.
+Rapply is een hulpmiddel. Het is niet bedoeld voor medisch advies, diagnose of behandeling.
 
 ---
 
@@ -50,7 +50,7 @@ Wij kunnen de toegang beperken of blokkeren als wij misbruik vermoeden of als di
 
 ### 5. Jouw inhoud en jouw verantwoordelijkheid
 
-In CoachScribe kun je inhoud opslaan zoals transcripties, samenvattingen, notities, chatberichten en coachee-gegevens. Jij bepaalt zelf welke inhoud je toevoegt.
+In Rapply kun je inhoud opslaan zoals transcripties, samenvattingen, notities, chatberichten en coachee-gegevens. Jij bepaalt zelf welke inhoud je toevoegt.
 
 Jij belooft dat:
 - je geen inhoud toevoegt waarvoor je geen recht of toestemming hebt;
@@ -63,7 +63,7 @@ Als je gevoelige informatie verwerkt, zoals gezondheidsinformatie, dan ben jij v
 
 ### 6. Beveiliging en versleuteling van audio-uploads
 
-CoachScribe is ontworpen om zorgvuldig met gegevens om te gaan.
+Rapply is ontworpen om zorgvuldig met gegevens om te gaan.
 
 Bij transcriptie kan audio als **versleutelde upload** worden verwerkt. Uploadlinks zijn tijdelijk. De tijdelijke versleutelde upload wordt in principe verwijderd nadat de verwerking klaar is.
 
@@ -73,13 +73,13 @@ Je begrijpt dat geen enkele online dienst 100% veilig kan worden gemaakt. Wij ne
 
 ### 7. Externe dienstverleners
 
-Om CoachScribe te laten werken gebruiken wij dienstverleners, bijvoorbeeld voor:
+Om Rapply te laten werken gebruiken wij dienstverleners, bijvoorbeeld voor:
 - authenticatie;
 - hosting en opslag;
 - transcriptie, samenvattingen en chatfunctionaliteit;
 - abonnementen en aankopen.
 
-Welke dienstverleners precies worden ingezet kan afhangen van de configuratie van CoachScribe.
+Welke dienstverleners precies worden ingezet kan afhangen van de configuratie van Rapply.
 
 Meer uitleg over gegevensverwerking vind je in onze privacyverklaring.
 
@@ -87,7 +87,7 @@ Meer uitleg over gegevensverwerking vind je in onze privacyverklaring.
 
 ### 8. Abonnementen, betalingen en aankopen
 
-CoachScribe kan betaalde functies hebben, bijvoorbeeld via een abonnement of extra aankopen.
+Rapply kan betaalde functies hebben, bijvoorbeeld via een abonnement of extra aankopen.
 
 Betalingen kunnen verlopen via app stores en via een dienst voor abonnementstatus en aankoopinformatie. Als een app store jouw betaling verwerkt, dan gelden ook de voorwaarden van die app store.
 
@@ -97,9 +97,9 @@ Als je een abonnement opzegt, dan blijft het abonnement meestal actief tot het e
 
 ### 9. Beschikbaarheid en wijzigingen
 
-Wij doen ons best om CoachScribe beschikbaar en stabiel te houden. Soms is er onderhoud of is er een storing.
+Wij doen ons best om Rapply beschikbaar en stabiel te houden. Soms is er onderhoud of is er een storing.
 
-Wij mogen CoachScribe wijzigen, verbeteren of (gedeeltelijk) stoppen. Als een wijziging grote impact heeft, proberen wij dit op tijd te communiceren.
+Wij mogen Rapply wijzigen, verbeteren of (gedeeltelijk) stoppen. Als een wijziging grote impact heeft, proberen wij dit op tijd te communiceren.
 
 ---
 
@@ -114,26 +114,26 @@ Om de dienst veilig en bruikbaar te houden kunnen wij beperkingen toepassen, zoa
 
 ### 11. Intellectueel eigendom
 
-CoachScribe, de software en de vormgeving zijn van JNL Solutions of van onze licentiegevers.
+Rapply, de software en de vormgeving zijn van JNL Solutions of van onze licentiegevers.
 
-Jij blijft eigenaar van de inhoud die jij invoert of opslaat. Je geeft ons wel toestemming om die inhoud te verwerken, voor zover dat nodig is om CoachScribe aan jou te leveren.
+Jij blijft eigenaar van de inhoud die jij invoert of opslaat. Je geeft ons wel toestemming om die inhoud te verwerken, voor zover dat nodig is om Rapply aan jou te leveren.
 
 ---
 
 ### 12. Verwijderen van gegevens en account
 
-Je kunt in CoachScribe gegevens verwijderen. Je kunt ook je account verwijderen. Na het verwijderen van je account worden de bijbehorende gegevens verwijderd, tenzij wij bepaalde gegevens langer moeten bewaren omdat de wet dat verplicht.
+Je kunt in Rapply gegevens verwijderen. Je kunt ook je account verwijderen. Na het verwijderen van je account worden de bijbehorende gegevens verwijderd, tenzij wij bepaalde gegevens langer moeten bewaren omdat de wet dat verplicht.
 
 ---
 
 ### 13. Aansprakelijkheid
 
-Wij willen CoachScribe zo goed mogelijk leveren, maar wij kunnen niet garanderen dat:
+Wij willen Rapply zo goed mogelijk leveren, maar wij kunnen niet garanderen dat:
 - transcripties of samenvattingen altijd volledig of foutloos zijn;
 - de dienst altijd beschikbaar is;
 - de dienst altijd geschikt is voor jouw specifieke situatie.
 
-Voor zover de wet dat toestaat is onze aansprakelijkheid beperkt tot directe schade en tot het bedrag dat je in de laatste 12 maanden voor CoachScribe hebt betaald. Als je niets hebt betaald, dan is onze aansprakelijkheid beperkt tot een redelijk bedrag.
+Voor zover de wet dat toestaat is onze aansprakelijkheid beperkt tot directe schade en tot het bedrag dat je in de laatste 12 maanden voor Rapply hebt betaald. Als je niets hebt betaald, dan is onze aansprakelijkheid beperkt tot een redelijk bedrag.
 
 Wij zijn niet aansprakelijk voor indirecte schade, zoals gemiste omzet, gemiste kansen of gevolgschade, voor zover de wet dat toestaat.
 
@@ -141,9 +141,9 @@ Wij zijn niet aansprakelijk voor indirecte schade, zoals gemiste omzet, gemiste 
 
 ### 14. Beëindiging
 
-Je mag stoppen met CoachScribe wanneer je wilt.
+Je mag stoppen met Rapply wanneer je wilt.
 
-Wij mogen het gebruik van CoachScribe opschorten of beëindigen als:
+Wij mogen het gebruik van Rapply opschorten of beëindigen als:
 - je deze gebruikersovereenkomst schendt;
 - dit nodig is om misbruik of schade te voorkomen;
 - wij de dienst beëindigen.
@@ -152,7 +152,7 @@ Wij mogen het gebruik van CoachScribe opschorten of beëindigen als:
 
 ### 15. Klachten en contact
 
-Heb je een vraag of klacht, mail dan naar contact@coachscribe.nl. Wij proberen altijd samen tot een oplossing te komen.
+Heb je een vraag of klacht, mail dan naar contact@Rapply.nl. Wij proberen altijd samen tot een oplossing te komen.
 
 ---
 

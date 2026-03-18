@@ -7,9 +7,9 @@ import SectionContainer from "@/components/home/SectionContainer";
 import imageA from "@/product/product-3a.jpg";
 import imageB from "@/product/product-3b.jpg";
 import imageC from "@/product/product-3c.jpg";
-import imageD from "@/product/coachscribe-3d.jpg";
-import imageE from "@/product/coachscribe-3e.jpg";
-import imageF from "@/product/coachscribe-3f.jpg";
+import imageD from "@/product/Rapply-3d.jpg";
+import imageE from "@/product/Rapply-3e.jpg";
+import imageF from "@/product/Rapply-3f.jpg";
 
 type ImpactItem = {
   title: string;
@@ -216,7 +216,7 @@ const impactItems: ImpactItem[] = [
   {
     title: "Tijd",
     description:
-      "CoachScribe legt gesprekken automatisch vast in duidelijke verslagen. Minder tijd naar administratie, meer tijd voor je clienten.",
+      "Rapply legt gesprekken automatisch vast in duidelijke verslagen. Minder tijd naar administratie, meer tijd voor je clienten.",
     image: imageB,
     icon: clockIcon,
   },
@@ -244,7 +244,7 @@ const impactItems: ImpactItem[] = [
   {
     title: "Rust",
     description:
-      "CoachScribe neemt het mentale werk rondom je sessies uit handen. Je hoeft niets te onthouden of te reconstrueren. Dat geeft ruimte in je hoofd en rust tussen sessies.",
+      "Rapply neemt het mentale werk rondom je sessies uit handen. Je hoeft niets te onthouden of te reconstrueren. Dat geeft ruimte in je hoofd en rust tussen sessies.",
     image: imageF,
     icon: calmIcon,
   },
@@ -258,7 +258,7 @@ export default function ProductImpactSection() {
     >
       <div className="flex w-full flex-col items-center">
         <h2 className="text-center font-[var(--font-catamaran)] text-[36px] font-medium leading-[110%] text-black md:text-[50px] xl:text-[64px]">
-          De <span className="text-[#BD0265]">impact</span> van CoachScribe
+          De <span className="text-[#BD0265]">impact</span> van Rapply
         </h2>
         <div className="mt-10 grid w-full gap-6 md:grid-cols-2 xl:grid-cols-3">
           {impactItems.map((impactItem) => (
@@ -288,7 +288,7 @@ export default function ProductImpactSection() {
         <div className="mt-10">
           <Button
             label="Probeer het uit"
-            destination="https://app.coachscribe.nl"
+            destination="https://app.Rapply.nl"
             variant="primary"
             showArrow
             className="font-normal"

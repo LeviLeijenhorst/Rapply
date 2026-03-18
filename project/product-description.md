@@ -1,8 +1,8 @@
-CoachScribe – Complete Product Description
+Rapply – Complete Product Description
 
-WHAT COACHSCRIBE IS
+WHAT Rapply IS
 
-CoachScribe is a web-based platform built for coaches to record
+Rapply is a web-based platform built for coaches to record
 sessions, automatically generate structured reports, and manage all
 session information securely in one place.
 
@@ -97,7 +97,7 @@ Premium plan - Full access - Unlimited sessions - Email support
 
 OVERALL POSITIONING SUMMARY
 
-CoachScribe is a secure, AI-powered session documentation platform for
+Rapply is a secure, AI-powered session documentation platform for
 coaches.
 
 It enables: - Recording - Automatic reporting - AI assistance. All securily.

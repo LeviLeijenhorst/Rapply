@@ -16,8 +16,14 @@ function selectSnippetsForInput(snippets: InputSnippetItem[], inputId: string): 
 }
 
 function isWrittenInputType(value: unknown): boolean {
-  const normalizedType = String(value || '').trim()
-  return normalizedType === 'written' || normalizedType === 'written-recap'
+  const normalizedType = String(value || '').trim().toLowerCase()
+  return (
+    normalizedType === 'written' ||
+    normalizedType === 'written-recap' ||
+    normalizedType === 'written_recap' ||
+    normalizedType === 'written-report' ||
+    normalizedType === 'written_report'
+  )
 }
 
 function resolveSourceInputType(value: unknown): string {
@@ -67,7 +73,7 @@ export function useInputScreen(props: InputScreenProps) {
   const isWrittenInput = isWrittenInputType(session?.type)
   const isUploadedDocument = session?.type === 'uploaded-document'
   const summary = useMemo(() => {
-    if (isWrittenInput) return null
+    if (isWrittenInput) return String(session?.summary || '').trim() || ''
     if (session?.type === 'uploaded-document') {
       return String(session.transcript || '').trim() || null
     }

@@ -17,7 +17,7 @@ const featureItems = [
   {
     title: "Leg je sessie vast",
     description:
-      "Zet de opname aan en focus je volledig op jouw client. CoachScribe neemt het gehele gesprek veilig op terwijl jij je bezig houdt met waar jij goed in bent: mensen helpen.",
+      "Zet de opname aan en focus je volledig op jouw client. Rapply neemt het gehele gesprek veilig op terwijl jij je bezig houdt met waar jij goed in bent: mensen helpen.",
     image: productOneImage,
   },
   {
@@ -80,7 +80,7 @@ export default function FeaturesSection() {
                   <div className="flex w-full">
                     <Button
                       label="Probeer het uit"
-                      destination="https://app.coachscribe.nl"
+                      destination="https://app.Rapply.nl"
                       variant="primary"
                       showArrow
                       className="font-normal"

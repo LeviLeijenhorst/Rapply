@@ -12,7 +12,7 @@ const navigationLinks = [
   { label: "Veiligheid", destination: "/veiligheid" },
   { label: "Over Ons", destination: "/over-ons" },
   { label: "Contact", destination: "/contact" },
-  { label: "Probeer het uit", destination: "https://app.coachscribe.nl" },
+  { label: "Probeer het uit", destination: "https://app.Rapply.nl" },
 ];
 
 const connectLinks = [
@@ -44,7 +44,7 @@ export default function Footer() {
               <div className="-mb-[108px] flex items-center">
                 <Image
                   src={logo}
-                  alt="CoachScribe logo"
+                  alt="Rapply logo"
                   width={261}
                   height={132}
                   className="-translate-x-[53px] -translate-y-[20px] h-[132px] w-[261px] object-contain"
@@ -52,7 +52,7 @@ export default function Footer() {
               </div>
               {/* Brand description */}
               <p className="text-[16px] font-medium leading-relaxed">
-                CoachScribe neemt sessies op van coaches
+                Rapply neemt sessies op van coaches
                 <br />
                 en zet deze om in praktische verslagen die
                 <br />
@@ -61,10 +61,10 @@ export default function Footer() {
             </div>
             {/* Brand contact */}
             <a
-              href="mailto:contact@coachscribe.nl"
+              href="mailto:contact@Rapply.nl"
               className="mt-8 text-[16px] font-medium"
             >
-              contact@coachscribe.nl
+              contact@Rapply.nl
             </a>
           </div>
           {/* Footer navigation */}
@@ -122,7 +122,7 @@ export default function Footer() {
         {/* Footer legal */}
         <div className="mt-40 flex w-full flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[16px] font-medium text-[#2D3B4A]">
           {/* Copyright */}
-          <span>Copyright © 2026 CoachScribe. Alle rechten voorbehouden.</span>
+          <span>Copyright © 2026 Rapply. Alle rechten voorbehouden.</span>
           {/* Legal links */}
           <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
             <Link

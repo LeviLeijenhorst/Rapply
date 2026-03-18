@@ -2,7 +2,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
 import { listPipelineTemplates, readPipelineReport, readPipelineReportByInput, type PipelineTemplate } from '@/api/pipeline/pipelineApi'
 import { exportReportToWord } from '@/api/reports/exportReportToWord'
-import { ReportUwvLogoIcon } from '@/icons/ReportScreenIcons'
+import { ReportSavedCloudIcon, ReportUwvLogoIcon } from '@/icons/ReportScreenIcons'
 import { ReportEditorPanel } from '@/screens/report/ReportEditorPanel'
 import { buildStructuredExportContext, buildStructuredReportText } from '@/screens/report/structuredReportExport'
 import type { ReportScreenProps } from '@/screens/report/report.types'
@@ -10,23 +10,7 @@ import { Header } from '@/screens/session/components/Header'
 import type { Report } from '@/storage/types'
 import { useToast } from '@/toast/ToastProvider'
 import { Text } from '@/ui/Text'
-import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg'
-
-function ReportSavedCloudIcon() {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M7.27004 13.01C6.74004 12.74 6.15004 12.6 5.55004 12.6C0.870039 12.93 0.870039 19.74 5.55004 20.07H16.64C17.99 20.08 19.29 19.58 20.28 18.67C23.57 15.8 21.81 10.03 17.48 9.48C15.92 0.110001 2.39004 3.67 5.60004 12.6"
-        stroke="#171717"
-        strokeWidth={1.5}
-        strokeMiterlimit={10}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path d="M15.8501 9.92001C16.3701 9.66001 16.9401 9.52001 17.5201 9.51001" stroke="#171717" strokeWidth={1.5} strokeMiterlimit={10} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  )
-}
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg'
 
 function HeaderGradientOverlay() {
   return (

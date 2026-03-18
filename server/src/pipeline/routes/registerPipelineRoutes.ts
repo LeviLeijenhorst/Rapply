@@ -227,6 +227,65 @@ function buildSnippetRows(params: {
   })
 }
 
+function buildStandaloneInputChatContext(params: {
+  input: {
+    id: string
+    title: string
+    inputType: string
+    createdAtUnixMs: number
+    transcriptText: string | null
+    sourceText: string | null
+  }
+  snippets: Array<{
+    approvalStatus: "pending" | "approved" | "rejected"
+    sourceInputId?: string | null
+    sourceSessionId: string
+    text: string
+  }>
+  notes: Array<{
+    sourceInputId: string | null
+    title: string
+    text: string
+  }>
+}): string {
+  const sourceInputId = normalizeText(params.input.id)
+  const transcript = normalizeText(params.input.transcriptText || params.input.sourceText || "")
+  const snippetLines = params.snippets
+    .filter((snippet) => snippet.approvalStatus === "approved")
+    .filter((snippet) => normalizeText(snippet.sourceInputId ?? snippet.sourceSessionId) === sourceInputId)
+    .map((snippet) => normalizeText(snippet.text))
+    .filter(Boolean)
+    .map((text) => `- ${text}`)
+  const noteLines = params.notes
+    .filter((note) => normalizeText(note.sourceInputId) === sourceInputId)
+    .flatMap((note) => {
+      const title = normalizeText(note.title)
+      const text = normalizeText(note.text)
+      if (title && text) return [`- ${title}: ${text}`]
+      if (text) return [`- ${text}`]
+      if (title) return [`- ${title}`]
+      return []
+    })
+
+  return [
+    "Samenvatting van relevante sessie-informatie",
+    "",
+    `Inputtype: ${params.input.inputType}`,
+    `Titel: ${normalizeText(params.input.title) || "Naamloze sessie"}`,
+    `Datum: ${new Date(Number(params.input.createdAtUnixMs) || Date.now()).toLocaleDateString("nl-NL")}`,
+    "",
+    transcript ? `Transcript / bron:\n${transcript}` : "Geen transcript of brontekst beschikbaar.",
+    "",
+    "Goedgekeurde snippets:",
+    ...(snippetLines.length > 0 ? snippetLines : ["- Geen goedgekeurde snippets beschikbaar."]),
+    "",
+    "Notities:",
+    ...(noteLines.length > 0 ? noteLines : ["- Geen notities beschikbaar."]),
+  ]
+    .join("\n")
+    .trim()
+}
+
 function escapeRegExp(value: string): string {
   return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
@@ -793,18 +852,24 @@ export function registerPipelineRoutes(app: Express, params: RegisterPipelineRou
       }
       const inputs = await listSessions(user.userId)
       const selectedInput = inputs.find((input) => input.id === inputId)
-      if (!selectedInput?.clientId) {
+      if (!selectedInput) {
         sendError(res, 404, "Input not found")
         return
       }
       const [snippets, notes] = await Promise.all([listSnippets(user.userId), listNotes(user.userId)])
-      const context = buildGroupedClientKnowledgeContext({
-        clientId: selectedInput.clientId,
-        inputId,
-        inputs,
-        snippets,
-        notes,
-      })
+      const context = selectedInput.clientId
+        ? buildGroupedClientKnowledgeContext({
+            clientId: selectedInput.clientId,
+            inputId,
+            inputs,
+            snippets,
+            notes,
+          })
+        : buildStandaloneInputChatContext({
+            input: selectedInput,
+            snippets,
+            notes,
+          })
       if (wantsChatStreaming(req)) {
         initSseResponse(res)
         try {

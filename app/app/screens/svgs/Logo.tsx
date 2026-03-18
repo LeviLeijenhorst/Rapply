@@ -1,6 +1,6 @@
 import React from "react"
-import CoachScribeLogo from "./CoachScribe.svg"
+import RapplyLogo from "./Rapply.svg"
 
 export default function Logo({ width = 300, height = 90 }: { width?: number; height?: number }) {
-  return <CoachScribeLogo width={width} height={height} />
+  return <RapplyLogo width={width} height={height} />
 }

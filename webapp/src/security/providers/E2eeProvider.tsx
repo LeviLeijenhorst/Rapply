@@ -420,7 +420,7 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
       await yieldToUiThread()
       const material = await e2eeGetUserKeyMaterial()
       if (!material.wrappedArkRecoveryCode) {
-        throw new Error('CoachScribe-code herstel is niet beschikbaar voor dit account')
+        throw new Error('Rapply-code herstel is niet beschikbaar voor dit account')
       }
       const userDataKeyBytes = await unwrapUserDataKeyForRecovery({ recoveryKey, wrappedUserDataKeyForRecovery: material.wrappedArkRecoveryCode })
       setPendingArkBytes(userDataKeyBytes)
@@ -539,7 +539,7 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
             </Text>
             <Text style={styles.bodyText}>
               {setupMode === 'recovered'
-                ? 'Je account is hersteld met je CoachScribe-code. Stel nu een nieuwe passphrase in.'
+                ? 'Je account is hersteld met je Rapply-code. Stel nu een nieuwe passphrase in.'
                 : 'Gebruik een passphrase om je versleutelde data in deze browser te ontgrendelen.'}
             </Text>
             <View style={styles.inputRow}>
@@ -587,7 +587,7 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
           <Pressable style={styles.overlayBackdropPressable} onPress={closeOptionalSetupModal} />
           <View style={styles.card}>
             <Text isBold style={styles.title}>
-              CoachScribe-code opslaan
+              Rapply-code opslaan
             </Text>
             <Text style={styles.bodyText}>
               Dit is je herstelcode. Sla hem op een veilige plek op voor het geval je je passphrase vergeet.
@@ -597,7 +597,7 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
                 {setupRecoveryKey}
               </Text>
             </View>
-            <Pressable onPress={() => downloadTextFile({ fileName: 'coachscribe-CoachScribe-code.txt', text: `${setupRecoveryKey}\n` })} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]}>
+            <Pressable onPress={() => downloadTextFile({ fileName: 'Rapply-Rapply-code.txt', text: `${setupRecoveryKey}\n` })} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined]}>
               <Text isBold style={styles.secondaryButtonText}>Download</Text>
             </Pressable>
             <Pressable
@@ -655,7 +655,7 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
               </View>
             </Pressable>
             <Pressable onPress={() => setStage('recoveryRequired')} style={({ hovered }) => [styles.secondaryButton, hovered ? styles.secondaryButtonHovered : undefined, isBusy ? styles.primaryButtonDisabled : undefined]} disabled={isBusy}>
-              <Text isBold style={styles.secondaryButtonText}>CoachScribe-code gebruiken</Text>
+              <Text isBold style={styles.secondaryButtonText}>Rapply-code gebruiken</Text>
             </Pressable>
           </View>
         </View>
@@ -665,7 +665,7 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
         <View style={styles.overlay}>
           <View style={styles.card}>
             <Text isBold style={styles.title}>
-              CoachScribe-code nodig
+              Rapply-code nodig
             </Text>
             <Text style={styles.bodyText}>
               Vul je herstelcode in om toegang te herstellen en een nieuwe passphrase te kiezen.
@@ -673,7 +673,7 @@ export function E2eeProvider({ isAuthenticated, children }: Props) {
             <TextInput
               value={recoveryInput}
               onChangeText={setRecoveryInput}
-              placeholder="CoachScribe-code..."
+              placeholder="Rapply-code..."
               placeholderTextColor="#656565"
               autoCapitalize="none"
               autoCorrect={false}

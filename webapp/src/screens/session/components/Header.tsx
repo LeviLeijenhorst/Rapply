@@ -11,7 +11,7 @@ import { ProfileCircleIcon } from '@/icons/ProfileCircleIcon'
 import type { HeaderProps } from '@/screens/session/sessionScreen.types'
 import { Text } from '@/ui/Text'
 
-export function Header({ title, clientName, date, onBack }: HeaderProps) {
+export function Header({ title, clientName, date, onBack, statusIndicator }: HeaderProps) {
   return (
     <View style={styles.container}>
       <View style={styles.row}>
@@ -37,6 +37,7 @@ export function Header({ title, clientName, date, onBack }: HeaderProps) {
               <Text isBold style={styles.metaText}>{date}</Text>
             </View>
           ) : null}
+          {statusIndicator ? <View style={styles.metaStatusPill}>{statusIndicator}</View> : null}
         </View>
       </View>
     </View>
@@ -99,6 +100,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xxs,
+  },
+  metaStatusPill: {
+    height: 48,
+    borderRadius: radius.sm,
+    backgroundColor: 'transparent',
+    paddingHorizontal: spacing.xxs,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   metaText: {
     color: semanticColorTokens.light.textHeading,

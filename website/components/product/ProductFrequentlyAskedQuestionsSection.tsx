@@ -10,7 +10,7 @@ const questions = [
       "Ja. Je kunt je eigen logo en praktijk kleur toevoegen, zodat elk verslag direct herkenbaar is en professioneel oogt. Zo blijft de uitstraling consistent en duidelijk voor jou en je clienten.",
   },
   {
-    question: "Is er een app voor CoachScribe?",
+    question: "Is er een app voor Rapply?",
     answer:
       "Binnenkort. Naar verwachting zal deze halverwege maart op de AppStore en PlayStore uit worden gebracht.",
   },

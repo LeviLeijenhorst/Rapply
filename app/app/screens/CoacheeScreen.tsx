@@ -146,7 +146,7 @@ export default function CoacheeScreen() {
         return
       }
       const coacheeId = coacheeNameToCoacheeId(coacheeName.trim())
-      const baseDirectory = `CoachScribe/coachees/${coacheeId}`
+      const baseDirectory = `Rapply/coachees/${coacheeId}`
       const ids = await listFiles(baseDirectory)
       const sorted = ids
         .filter((id) => isConversationId(id))
@@ -237,7 +237,7 @@ export default function CoacheeScreen() {
     if (!coacheeName.trim()) return
     const coacheeId = coacheeNameToCoacheeId(coacheeName.trim())
     for (const id of selectedSessionIds) {
-      await deleteDirectory(`CoachScribe/coachees/${coacheeId}/${id}`)
+      await deleteDirectory(`Rapply/coachees/${coacheeId}/${id}`)
     }
     setSelectedSessionIds([])
     setSelectMode(false)
@@ -267,7 +267,7 @@ export default function CoacheeScreen() {
     setShowDeleteCoacheeWarning(false)
     if (coacheeName.trim()) {
       const coacheeId = coacheeNameToCoacheeId(coacheeName.trim())
-      await deleteDirectory(`CoachScribe/coachees/${coacheeId}`)
+      await deleteDirectory(`Rapply/coachees/${coacheeId}`)
       await deleteFile("coachees", coacheeName.trim())
     }
     navigation.goBack()

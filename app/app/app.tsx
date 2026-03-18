@@ -113,7 +113,7 @@ export function App() {
       if (isSwitchingBetweenDifferentUsers) {
         invalidateBillingStatusCache()
         try {
-          await deleteDirectory("CoachScribe")
+          await deleteDirectory("Rapply")
         } catch {}
         try {
           await deleteDirectory("coachees")

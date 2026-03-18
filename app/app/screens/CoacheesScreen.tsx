@@ -103,14 +103,14 @@ export const CoacheesScreen: FC = function CoacheesScreen() {
 
     const coacheesPromise = listFiles("coachees").then((names) => setCoachees(names))
 
-    const loosePromise = listFiles("CoachScribe/coachees/loose_recordings").then(async (ids) => {
+    const loosePromise = listFiles("Rapply/coachees/loose_recordings").then(async (ids) => {
       const orderedIds = [...ids].reverse()
       setLooseRecordingIds(orderedIds)
       const titles = await Promise.all(
         orderedIds.map(async (id) => {
           try {
             const title = await readEncryptedFile(
-              `CoachScribe/coachees/loose_recordings/${id}`,
+              `Rapply/coachees/loose_recordings/${id}`,
               "title.txt.enc",
             )
             return title || id
@@ -411,7 +411,7 @@ export const CoacheesScreen: FC = function CoacheesScreen() {
                     .map((i) => looseRecordingIds[i])
                     .filter((v) => !!v)
                   for (const id of targets) {
-                    await deleteDirectory(`CoachScribe/coachees/loose_recordings/${id}`)
+                    await deleteDirectory(`Rapply/coachees/loose_recordings/${id}`)
                   }
                   setShowDeleteLooseWarning(false)
                   setSelectedLooseIndices([])

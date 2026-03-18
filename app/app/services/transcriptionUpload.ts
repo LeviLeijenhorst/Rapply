@@ -21,7 +21,7 @@ async function createRandomKeyBase64() {
 
 async function createTemporaryEncryptedAudioFilePath(recordingId: string) {
   const safeRecordingId = (recordingId || "recording").trim().replace(/[^a-z0-9_\-]/gi, "_")
-  const dir = new Directory(Paths.cache, "CoachScribe/transcription_uploads")
+  const dir = new Directory(Paths.cache, "Rapply/transcription_uploads")
   if (!dir.exists) {
     dir.create({ intermediates: true })
   }

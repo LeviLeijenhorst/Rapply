@@ -5,14 +5,14 @@ export const coachesCopy: SiteCopy = {
     heroTitleLine1: "Betere coaching begint bij",
     heroTitleLine2: "volledige aandacht",
     subheadline:
-      "CoachScribe helpt coaches bij verslaglegging van hun sessies en het bewaren van overzicht. Gesprekken worden veilig vastgelegd en georganiseerd, zodat jij je volledig kan focussen op de client.",
+      "Rapply helpt coaches bij verslaglegging van hun sessies en het bewaren van overzicht. Gesprekken worden veilig vastgelegd en georganiseerd, zodat jij je volledig kan focussen op de client.",
     primaryCta: "Probeer het uit",
     secondaryCta: "Hoe Het Werkt",
     features: [
       {
         title: "Leg je sessie vast",
         description:
-          "Zet de opname aan en focus je volledig op jouw client. CoachScribe neemt het gehele gesprek veilig op terwijl jij je bezig houdt met waar je goed in bent; mensen helpen.\n\nCoachScript is gebouwd voor maximale focus.",
+          "Zet de opname aan en focus je volledig op jouw client. Rapply neemt het gehele gesprek veilig op terwijl jij je bezig houdt met waar je goed in bent; mensen helpen.\n\nCoachScript is gebouwd voor maximale focus.",
       },
       {
         title: "Kies jouw workflow",
@@ -32,39 +32,39 @@ export const coachesCopy: SiteCopy = {
     ],
     availabilityTitleLine1: "Binnenkort ook",
     availabilityTitleLine2: "op Android en iOS",
-    availabilityTextLine1: "Gebruik CoachScribe op je laptop, tablet of telefoon.",
+    availabilityTextLine1: "Gebruik Rapply op je laptop, tablet of telefoon.",
     availabilityTextLine2: "Alles blijft gesynchroniseerd.",
     faqTitle: "Veel gestelde vragen",
     faqItems: [
       {
-        question: "Wat is CoachScribe?",
+        question: "Wat is Rapply?",
         answer:
-          "CoachScribe is een AI-ondersteunde tool voor coaches om gesprekken eenvoudig op te nemen, automatisch te laten samenvatten en overzichtelijke verslagen te maken. Het helpt je om minder tijd kwijt te zijn aan administratie, terwijl je wel grip houdt op inhoud, nuance en context.",
+          "Rapply is een AI-ondersteunde tool voor coaches om gesprekken eenvoudig op te nemen, automatisch te laten samenvatten en overzichtelijke verslagen te maken. Het helpt je om minder tijd kwijt te zijn aan administratie, terwijl je wel grip houdt op inhoud, nuance en context.",
       },
       {
-        question: "Is CoachScribe veilig?",
+        question: "Is Rapply veilig?",
         answer:
-          "Ja. CoachScribe is veilig ingericht met sterke technische en organisatorische maatregelen om jouw gegevens te beschermen. Alle data wordt versleuteld opgeslagen en verwerkt binnen de Europese Unie, in overeenstemming met de AVG. Jouw gegevens worden niet gebruikt om AI-modellen te trainen en alleen bewaard zolang dat functioneel nodig is.",
+          "Ja. Rapply is veilig ingericht met sterke technische en organisatorische maatregelen om jouw gegevens te beschermen. Alle data wordt versleuteld opgeslagen en verwerkt binnen de Europese Unie, in overeenstemming met de AVG. Jouw gegevens worden niet gebruikt om AI-modellen te trainen en alleen bewaard zolang dat functioneel nodig is.",
       },
       {
         question: "Worden er AI modellen getraind met mijn informatie?",
         answer:
-          "Nee. Jouw gegevens worden niet gebruikt om AI-modellen te trainen of te verbeteren. Ze worden uitsluitend verwerkt om de functionaliteiten van CoachScribe voor jou uit te voeren.",
+          "Nee. Jouw gegevens worden niet gebruikt om AI-modellen te trainen of te verbeteren. Ze worden uitsluitend verwerkt om de functionaliteiten van Rapply voor jou uit te voeren.",
       },
       {
-        question: "Voor wie is CoachScribe bedoeld?",
+        question: "Voor wie is Rapply bedoeld?",
         answer:
-          "CoachScribe is bedoeld voor coaches en begeleiders die werken met gesprekken en daar gestructureerde, heldere verslagen van willen maken. Denk aan coaches in het onderwijs, zorg, loopbaanbegeleiding en persoonlijke ontwikkeling.",
+          "Rapply is bedoeld voor coaches en begeleiders die werken met gesprekken en daar gestructureerde, heldere verslagen van willen maken. Denk aan coaches in het onderwijs, zorg, loopbaanbegeleiding en persoonlijke ontwikkeling.",
       },
       {
-        question: "Is CoachScribe een vervanging voor een menselijke coach?",
+        question: "Is Rapply een vervanging voor een menselijke coach?",
         answer:
-          "Nee. CoachScribe ondersteunt coaches met automatisering van taken zoals notities maken en verslaglegging, maar vervangt nooit het menselijke oordeel, de contextbegrip of de relatie tussen coach en client.",
+          "Nee. Rapply ondersteunt coaches met automatisering van taken zoals notities maken en verslaglegging, maar vervangt nooit het menselijke oordeel, de contextbegrip of de relatie tussen coach en client.",
       },
       {
         question: "Kan ik niet gewoon ChatGPT gebruiken?",
         answer:
-          "Nee. ChatGPT is een algemene AI en beschikt niet over de functionaliteit voor sessie opname, gestructureerde verslaglegging of AVG-proof beheer van clientgegevens, waardoor het niet geschikt is voor dit soort toepassingen. Daarnaast is CoachScribe ontworpen speciaal voor coaches en kan het dus een stuk gerichter te werk gaan.",
+          "Nee. ChatGPT is een algemene AI en beschikt niet over de functionaliteit voor sessie opname, gestructureerde verslaglegging of AVG-proof beheer van clientgegevens, waardoor het niet geschikt is voor dit soort toepassingen. Daarnaast is Rapply ontworpen speciaal voor coaches en kan het dus een stuk gerichter te werk gaan.",
       },
     ],
   },
@@ -76,7 +76,7 @@ export const coachesCopy: SiteCopy = {
       {
         title: "Verwerking binnen Europa",
         description:
-          "CoachScribe verwerkt en bewaart sessiegegevens binnen de Europese Unie. Zo sluiten opslag en verwerking aan op de AVG.",
+          "Rapply verwerkt en bewaart sessiegegevens binnen de Europese Unie. Zo sluiten opslag en verwerking aan op de AVG.",
       },
       {
         title: "Versleuteld van upload tot opslag",
@@ -92,12 +92,12 @@ export const coachesCopy: SiteCopy = {
     sectionForProfessionalsTitlePrefix: "Voor coaches,",
     sectionForProfessionalsTitleHighlight: "door coaches",
     sectionForProfessionalsParagraphs: [
-      "CoachScribe is ontstaan uit tientallen gesprekken met professionals in het werkveld. Door te onderzoeken welke functies echt waardevol zijn, hebben we een product ontwikkeld dat volledig aansluit bij de behoeften van coaches.",
+      "Rapply is ontstaan uit tientallen gesprekken met professionals in het werkveld. Door te onderzoeken welke functies echt waardevol zijn, hebben we een product ontwikkeld dat volledig aansluit bij de behoeften van coaches.",
       "We blijven continu in contact met coaches om het product te verbeteren en verder te ontwikkelen.",
       "Wil je meedenken of input geven? Neem contact met ons op!",
     ],
     sectionForProfessionalsCta: "Contact",
-    footerMicrocopyLine1: "CoachScribe neemt sessies op van coaches",
+    footerMicrocopyLine1: "Rapply neemt sessies op van coaches",
     footerMicrocopyLine2: "en zet deze om in praktische verslagen die",
     footerMicrocopyLine3: "aansluiten op de behoefte van de coach.",
   },
@@ -105,7 +105,7 @@ export const coachesCopy: SiteCopy = {
     heroTitleLine1: "Ervaar rust",
     heroTitleLine2: "met onze features",
     heroSubtext:
-      "CoachScribe neemt het noteren van gesprekken en verslaggeving uit handen. Jij behoudt de volledige controle, wij helpen je met de details, en het overzicht.",
+      "Rapply neemt het noteren van gesprekken en verslaggeving uit handen. Jij behoudt de volledige controle, wij helpen je met de details, en het overzicht.",
     heroCta: "Probeer het uit",
     impactItems: [
       {
@@ -116,7 +116,7 @@ export const coachesCopy: SiteCopy = {
       {
         title: "Tijd",
         description:
-          "CoachScribe legt gesprekken automatisch vast in duidelijke verslagen, waardoor je een hoop tijd bespaart met de voorbereiding en verslaglegging.",
+          "Rapply legt gesprekken automatisch vast in duidelijke verslagen, waardoor je een hoop tijd bespaart met de voorbereiding en verslaglegging.",
       },
       {
         title: "Kwaliteit",
@@ -136,7 +136,7 @@ export const coachesCopy: SiteCopy = {
       {
         title: "Rust",
         description:
-          "CoachScribe neemt het mentale werk rondom je sessies uit handen. Je hoeft niets te onthouden of te reconstrueren. Dat geeft ruimte in je hoofd en rust tussen sessies.",
+          "Rapply neemt het mentale werk rondom je sessies uit handen. Je hoeft niets te onthouden of te reconstrueren. Dat geeft ruimte in je hoofd en rust tussen sessies.",
       },
     ],
     faqTitle: "Veel gestelde vragen",
@@ -152,7 +152,7 @@ export const coachesCopy: SiteCopy = {
           "Ja. Je kunt je eigen logo en praktijk kleur toevoegen, zodat elk verslag direct herkenbaar is en professioneel oogt. Zo blijft de uitstraling consistent en duidelijk voor jou en je clienten.",
       },
       {
-        question: "Is er een app voor CoachScribe?",
+        question: "Is er een app voor Rapply?",
         answer:
           "Binnenkort. Naar verwachting zal deze halverwege maart op de AppStore en PlayStore uit worden gebracht.",
       },
@@ -174,7 +174,7 @@ export const coachesCopy: SiteCopy = {
     ],
   },
   coaches: {
-    heroTitleLine1: "Is CoachScribe",
+    heroTitleLine1: "Is Rapply",
     heroTitleLine2: "iets voor jou?",
     heroSubtext:
       "Ben jij een coach en ervaar je mentale druk door het bijhouden van sessies en clienten? Ben je teveel tijd kwijt aan voorbereiding en naslagwerk? Wellicht dat wij jou kunnen helpen :)",
@@ -230,42 +230,42 @@ export const coachesCopy: SiteCopy = {
     workflowTitlePrefix: "Jouw",
     workflowTitleHighlight: "werkwijze",
     workflowParagraphs: [
-      "Elke coach heeft een eigen werkwijze. Daarom werkt CoachScribe met templates die zijn afgestemd op verschillende coachingsvormen, zoals loopbaan-, life-, budget- en studentencoaching.",
+      "Elke coach heeft een eigen werkwijze. Daarom werkt Rapply met templates die zijn afgestemd op verschillende coachingsvormen, zoals loopbaan-, life-, budget- en studentencoaching.",
       "Deze templates zijn ontwikkeld in samenwerking met coaches, zodat ze aansluiten op hoe gesprekken echt verlopen.",
       "Mocht er niets tussen zitten? Geen probleem. Ontwerp gemakkelijk je eigen template die precies aansluit op jouw unieke manier van verslaglegging.",
     ],
     faqTitle: "Veel gestelde vragen",
     faqItems: [
       {
-        question: "Voor welke coaches is CoachScribe geschikt?",
+        question: "Voor welke coaches is Rapply geschikt?",
         answer:
-          "CoachScribe is geschikt voor alle professionals die gesprekken voeren met clienten en daar gestructureerde verslagen van willen bijhouden. Het helpt coaches overzicht te houden, informatie veilig te bewaren en sneller terug te vinden wat belangrijk is uit sessies.",
+          "Rapply is geschikt voor alle professionals die gesprekken voeren met clienten en daar gestructureerde verslagen van willen bijhouden. Het helpt coaches overzicht te houden, informatie veilig te bewaren en sneller terug te vinden wat belangrijk is uit sessies.",
       },
       {
-        question: "Kan CoachScribe worden gebruikt door loopbaancoaches?",
+        question: "Kan Rapply worden gebruikt door loopbaancoaches?",
         answer:
-          "Ja. Loopbaancoaches kunnen CoachScribe gebruiken om gesprekken met clienten vast te leggen, verslagen te maken en belangrijke inzichten overzichtelijk bij te houden. Dit maakt het makkelijker om trajecten te volgen en opvolging te plannen.",
+          "Ja. Loopbaancoaches kunnen Rapply gebruiken om gesprekken met clienten vast te leggen, verslagen te maken en belangrijke inzichten overzichtelijk bij te houden. Dit maakt het makkelijker om trajecten te volgen en opvolging te plannen.",
       },
       {
         question:
-          "Kan ik CoachScribe gebruiken als zelfstandig coach of alleen in een organisatie?",
+          "Kan ik Rapply gebruiken als zelfstandig coach of alleen in een organisatie?",
         answer:
-          "CoachScribe is geschikt voor zowel zelfstandige coaches als coaches die in een organisatie werken.",
+          "Rapply is geschikt voor zowel zelfstandige coaches als coaches die in een organisatie werken.",
       },
       {
         question: "Is er een minimum aantal clienten of sessies nodig om te beginnen?",
         answer:
-          "Nee. Je kunt CoachScribe vanaf het eerste gesprek gebruiken, ongeacht het aantal clienten of sessies. Het systeem werkt direct, waardoor je meteen overzicht krijgt en efficient notities en verslagen kunt bijhouden.",
+          "Nee. Je kunt Rapply vanaf het eerste gesprek gebruiken, ongeacht het aantal clienten of sessies. Het systeem werkt direct, waardoor je meteen overzicht krijgt en efficient notities en verslagen kunt bijhouden.",
       },
       {
-        question: "Kunnen onderwijscoaches of begeleiders CoachScribe gebruiken?",
+        question: "Kunnen onderwijscoaches of begeleiders Rapply gebruiken?",
         answer:
-          "Ja. CoachScribe kan worden ingezet door onderwijscoaches, mentoren en begeleiders om gesprekken met studenten of leerlingen gestructureerd vast te leggen. Het biedt een veilig overzicht van sessies en maakt het eenvoudiger om belangrijke informatie terug te vinden en te gebruiken voor begeleiding.",
+          "Ja. Rapply kan worden ingezet door onderwijscoaches, mentoren en begeleiders om gesprekken met studenten of leerlingen gestructureerd vast te leggen. Het biedt een veilig overzicht van sessies en maakt het eenvoudiger om belangrijke informatie terug te vinden en te gebruiken voor begeleiding.",
       },
       {
-        question: "Is CoachScribe geschikt voor nieuwe coaches zonder veel ervaring?",
+        question: "Is Rapply geschikt voor nieuwe coaches zonder veel ervaring?",
         answer:
-          "Ja. CoachScribe ondersteunt zowel ervaren als nieuwe coaches door structuur en overzicht te bieden bij sessies en verslaglegging. Het helpt nieuwe coaches om gespreksinformatie efficient te beheren en sneller vertrouwd te raken met het bijhouden van professionele verslagen.",
+          "Ja. Rapply ondersteunt zowel ervaren als nieuwe coaches door structuur en overzicht te bieden bij sessies en verslaglegging. Het helpt nieuwe coaches om gespreksinformatie efficient te beheren en sneller vertrouwd te raken met het bijhouden van professionele verslagen.",
       },
     ],
   },
@@ -284,7 +284,7 @@ export const coachesCopy: SiteCopy = {
       {
         title: "Samenwerking",
         description:
-          "CoachScribe ontstaat niet in isolatie. We ontwikkelen samen met coaches, partners en elkaar.",
+          "Rapply ontstaat niet in isolatie. We ontwikkelen samen met coaches, partners en elkaar.",
       },
       {
         title: "Kwaliteit",
@@ -294,12 +294,12 @@ export const coachesCopy: SiteCopy = {
       {
         title: "Innovatie",
         description:
-          "We testen en verbeteren continu, zodat CoachScribe beter aansluit bij de praktijk van coaches.",
+          "We testen en verbeteren continu, zodat Rapply beter aansluit bij de praktijk van coaches.",
       },
       {
         title: "Transparantie",
         description:
-          "We zijn open over hoe CoachScribe werkt en hoe we omgaan met data, zodat coaches altijd weten waar ze aan toe zijn.",
+          "We zijn open over hoe Rapply werkt en hoe we omgaan met data, zodat coaches altijd weten waar ze aan toe zijn.",
       },
       {
         title: "Verbinding",
@@ -311,16 +311,16 @@ export const coachesCopy: SiteCopy = {
       {
         name: "Levi Leijenhorst",
         description: [
-          "Levi heeft een achtergrond in toegepaste-psychologie en tijdens zijn stage als studentencoach is het idee voor CoachScribe ontstaan.",
-          "Levi is technisch aangelegd en heeft zichzelf leren coderen als hobby, deze hobby is ondertussen flink uit de hand gelopen en hij is verantwoordelijk over de gehele technische kant van CoachScribe, de veiligheid en alles wat hiermee te maken heeft.",
+          "Levi heeft een achtergrond in toegepaste-psychologie en tijdens zijn stage als studentencoach is het idee voor Rapply ontstaan.",
+          "Levi is technisch aangelegd en heeft zichzelf leren coderen als hobby, deze hobby is ondertussen flink uit de hand gelopen en hij is verantwoordelijk over de gehele technische kant van Rapply, de veiligheid en alles wat hiermee te maken heeft.",
           "Daarnaast voert Levi regelmatig feedback- en salesgesprekken met coaches, is nauw betrokken bij het design en gebruikerservaring en is een gepassioneerde ondernemer.",
         ],
       },
       {
         name: "Jonas Kroon",
         description: [
-          "Jonas is een oude jeugdvriend van Levi. Ook hij heeft toegepaste-psychologie gestudeerd en herkende de problemen die Levi omschreef. Toen Jonas het idee voor CoachScribe hoorde was hij gelijk verkocht.",
-          "Jonas is creatief en strategisch ingesteld. Hij neemt het design, de gebruikerservaring en marketing voor zijn rekening en houdt zich bezig met alles aan de voorkant van CoachScribe.",
+          "Jonas is een oude jeugdvriend van Levi. Ook hij heeft toegepaste-psychologie gestudeerd en herkende de problemen die Levi omschreef. Toen Jonas het idee voor Rapply hoorde was hij gelijk verkocht.",
+          "Jonas is creatief en strategisch ingesteld. Hij neemt het design, de gebruikerservaring en marketing voor zijn rekening en houdt zich bezig met alles aan de voorkant van Rapply.",
           "Ook Jonas voert regelmatig feedback- en salesgesprekken met coaches, is constant opzoek naar ruimte voor verbetering en een gepassioneerde ondernemer.",
         ],
       },

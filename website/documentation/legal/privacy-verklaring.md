@@ -1,23 +1,23 @@
-## Privacyverklaring CoachScribe
+## Privacyverklaring Rapply
 
-Deze privacyverklaring legt uit welke persoonsgegevens JNL Solutions verwerkt wanneer je CoachScribe gebruikt, waarom dat gebeurt, met wie gegevens worden gedeeld en welke rechten je hebt.
+Deze privacyverklaring legt uit welke persoonsgegevens JNL Solutions verwerkt wanneer je Rapply gebruikt, waarom dat gebeurt, met wie gegevens worden gedeeld en welke rechten je hebt.
 
 JNL Solutions, gevestigd aan Stationsplein 26, 6512 AB, Nijmegen, is verantwoordelijk voor de verwerking van persoonsgegevens zoals beschreven in deze privacyverklaring.
 
 ## Contactgegevens
 
-- Website: https://www.coachscribe.nl
+- Website: https://www.Rapply.nl
 - Adres: Stationsplein 26, 6512 AB, Nijmegen
 - Telefoon: +31 6 221 68 360
-- E-mail: contact@coachscribe.nl
+- E-mail: contact@Rapply.nl
 
 ## Rollen en verantwoordelijkheid
 
-- Jij als coach bent verwerkingsverantwoordelijke voor de inhoud die je in CoachScribe verwerkt.
-- CoachScribe (JNL Solutions) is verwerker en verwerkt gegevens alleen in jouw opdracht om de dienst te leveren.
+- Jij als coach bent verwerkingsverantwoordelijke voor de inhoud die je in Rapply verwerkt.
+- Rapply (JNL Solutions) is verwerker en verwerkt gegevens alleen in jouw opdracht om de dienst te leveren.
 - Jij blijft verantwoordelijk voor het rechtmatig vastleggen van gesprekken en het hebben van een geldige rechtsgrond.
 
-## Hoe data door CoachScribe stroomt
+## Hoe data door Rapply stroomt
 
 - Opname gebeurt lokaal op jouw apparaat.
 - Voor transcriptie wordt audio versleuteld verstuurd via een tijdelijk uploadmechanisme.
@@ -68,13 +68,13 @@ Als je contact met ons opneemt verwerken wij de gegevens die je verstrekt, zoals
 
 ## Gevoelige gegevens en toestemming
 
-CoachScribe kan worden gebruikt in situaties waarin gevoelige onderwerpen worden besproken. Daardoor kan de inhoud bijzondere persoonsgegevens bevatten, zoals gegevens over de gezondheid van een coachee.
+Rapply kan worden gebruikt in situaties waarin gevoelige onderwerpen worden besproken. Daardoor kan de inhoud bijzondere persoonsgegevens bevatten, zoals gegevens over de gezondheid van een coachee.
 
 Voordat je audio opneemt of uploadt, moet je bevestigen dat je expliciete toestemming hebt van je coachee.
 
 Onder expliciete toestemming verstaan wij een vrij gegeven, specifieke, geinformeerde en ondubbelzinnige wilsuiting conform de AVG.
 
-Op https://www.coachscribe.nl/toestemming-vragen leggen wij uit hoe je toestemming kunt vragen.
+Op https://www.Rapply.nl/toestemming-vragen leggen wij uit hoe je toestemming kunt vragen.
 
 ## Doeleinden van de verwerking
 
@@ -98,9 +98,9 @@ Wanneer er bijzondere persoonsgegevens in de inhoud voorkomen, hangt de rechtmat
 
 ## AI-verwerking en modelgebruik
 
-- AI-verwerking gebeurt binnen enterprise-omgevingen die wij voor CoachScribe hebben ingericht.
-- Gegevens uit CoachScribe worden niet door ons verkocht.
-- Gegevens uit CoachScribe worden niet door ons gebruikt om publieke AI-modellen te trainen.
+- AI-verwerking gebeurt binnen enterprise-omgevingen die wij voor Rapply hebben ingericht.
+- Gegevens uit Rapply worden niet door ons verkocht.
+- Gegevens uit Rapply worden niet door ons gebruikt om publieke AI-modellen te trainen.
 - Verwerking van inhoud gebeurt uitsluitend voor de door jou gevraagde functionaliteit.
 
 ## Verwerking binnen de EU en doorgifte
@@ -112,7 +112,7 @@ Wanneer er bijzondere persoonsgegevens in de inhoud voorkomen, hangt de rechtmat
 
 ## Delen met derden en subverwerkers
 
-Wij delen persoonsgegevens alleen met partijen die nodig zijn om CoachScribe te laten functioneren.
+Wij delen persoonsgegevens alleen met partijen die nodig zijn om Rapply te laten functioneren.
 
 Belangrijke categorieën:
 
@@ -143,15 +143,15 @@ Belangrijke maatregelen zijn onder meer:
 - Toegangsbeperking tot systemen
 - Rate limiting en misbruikdetectie
 
-Bij vermoedens van een beveiligingsincident kun je contact opnemen via contact@coachscribe.nl.
+Bij vermoedens van een beveiligingsincident kun je contact opnemen via contact@Rapply.nl.
 
 ## Geautomatiseerde besluitvorming
 
-CoachScribe gebruikt geen geautomatiseerde besluitvorming of profilering die rechtsgevolgen heeft of je significant treft.
+Rapply gebruikt geen geautomatiseerde besluitvorming of profilering die rechtsgevolgen heeft of je significant treft.
 
 ## Cookies
 
-CoachScribe gebruikt geen tracking-, marketing- of analytics-cookies. Eventuele cookies zijn uitsluitend functioneel en technisch noodzakelijk.
+Rapply gebruikt geen tracking-, marketing- of analytics-cookies. Eventuele cookies zijn uitsluitend functioneel en technisch noodzakelijk.
 
 ## Jouw rechten
 
@@ -163,13 +163,13 @@ Je hebt onder de AVG het recht om:
 - De verwerking te laten beperken
 - Bezwaar te maken tegen bepaalde verwerkingen
 
-Je kunt een verzoek sturen naar contact@coachscribe.nl. Wij reageren binnen een maand.
+Je kunt een verzoek sturen naar contact@Rapply.nl. Wij reageren binnen een maand.
 
 Je hebt ook het recht om een klacht in te dienen bij de Autoriteit Persoonsgegevens via www.autoriteitpersoonsgegevens.nl.
 
 ## Leeftijdsgrens
 
-CoachScribe is niet bedoeld voor personen jonger dan 16 jaar. Wij verzamelen niet bewust persoonsgegevens van personen jonger dan 16 jaar.
+Rapply is niet bedoeld voor personen jonger dan 16 jaar. Wij verzamelen niet bewust persoonsgegevens van personen jonger dan 16 jaar.
 
 ## Wijzigingen
 

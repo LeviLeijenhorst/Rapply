@@ -160,6 +160,7 @@ export async function listSessions(userId: string): Promise<Session[]> {
      and ca.user_id = $1
     where ou.role = 'admin'
        or ca.user_id is not null
+       or (i.client_id is null and ou.user_id is not null)
        or i.created_by_user_id = $1
     order by i.created_at_unix_ms desc
     `,
@@ -200,6 +201,7 @@ export async function createSession(userId: string, session: Session): Promise<v
     on conflict (id) do update
       set client_id = excluded.client_id,
           organization_id = excluded.organization_id,
+          created_by_user_id = coalesce(public.inputs.created_by_user_id, excluded.created_by_user_id),
           trajectory_id = excluded.trajectory_id,
           input_type = excluded.input_type,
           title = excluded.title,

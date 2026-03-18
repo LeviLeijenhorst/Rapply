@@ -1,7 +1,7 @@
 {
     "apiVersion": "2024-11-01",
-    "id": "/subscriptions/2a01c7e4-a7a4-45c7-aea4-365c8d7346d6/resourceGroups/jnlsolutions-coachscribe/providers/Microsoft.Web/staticSites/coachscribe-website",
-    "name": "coachscribe-website",
+    "id": "/subscriptions/2a01c7e4-a7a4-45c7-aea4-365c8d7346d6/resourceGroups/jnlsolutions-Rapply/providers/Microsoft.Web/staticSites/Rapply-website",
+    "name": "Rapply-website",
     "type": "microsoft.web/staticsites",
     "sku": {
         "name": "Standard",
@@ -10,11 +10,11 @@
     "location": "westeurope",
     "properties": {
         "defaultHostname": "mango-ground-015e83003.6.azurestaticapps.net",
-        "repositoryUrl": "https://github.com/LeviLeijenhorst/CoachScribe",
+        "repositoryUrl": "https://github.com/LeviLeijenhorst/Rapply",
         "branch": "main",
         "customDomains": [
-            "www.coachscribe.nl",
-            "coachscribe.nl"
+            "www.Rapply.nl",
+            "Rapply.nl"
         ],
         "stableInboundIP": "20.8.132.166",
         "privateEndpointConnections": [],

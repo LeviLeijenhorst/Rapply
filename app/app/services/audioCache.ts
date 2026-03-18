@@ -16,7 +16,7 @@ export function makeAudioKey(coacheeName: string, conversationId: string) {
 export function isDecryptedAudioCacheUri(uri: string | null | undefined) {
   if (typeof uri !== "string") return false
   if (!uri) return false
-  return uri.includes("/CoachScribe/decrypted/")
+  return uri.includes("/Rapply/decrypted/")
 }
 
 export async function deleteDecryptedAudioCacheFile(uri: string | null | undefined) {
@@ -76,7 +76,7 @@ export async function ensureDecryptedFile(
   try {
     const nm0 = coacheeName.trim()
     const coacheeId0 = nm0 ? nm0.toLowerCase().replace(/\s+/g, "_") : "loose_recordings"
-    const dirObj0 = new Directory(Paths.cache, `CoachScribe/decrypted/${coacheeId0}`)
+    const dirObj0 = new Directory(Paths.cache, `Rapply/decrypted/${coacheeId0}`)
     if (dirObj0.exists) {
       const tryExts0 = ["m4a", "mp3", "wav", "webm", "ogg"]
       for (const ext of tryExts0) {
@@ -103,7 +103,7 @@ export async function ensureDecryptedFile(
   try {
     const nm = coacheeName.trim()
     const coacheeId = nm ? nm.toLowerCase().replace(/\s+/g, "_") : "loose_recordings"
-    const baseDirectory = `CoachScribe/coachees/${coacheeId}/${conversationId}`
+    const baseDirectory = `Rapply/coachees/${coacheeId}/${conversationId}`
     logger.debug("ensureDecryptedFile:base_directory", { coacheeId, conversationId, baseDirectory })
     const files = await listFiles(baseDirectory)
     logger.debug("ensureDecryptedFile:list_files", {
@@ -121,7 +121,7 @@ export async function ensureDecryptedFile(
     })
     logger.debug("ensureDecryptedFile:audio_candidate", { found: !!audioFileName })
     if (!audioFileName) {
-      const dirObj = new Directory(Paths.cache, `CoachScribe/decrypted/${coacheeId}`)
+      const dirObj = new Directory(Paths.cache, `Rapply/decrypted/${coacheeId}`)
       if (!dirObj.exists) {
         dirObj.create({ intermediates: true })
       }
@@ -139,7 +139,7 @@ export async function ensureDecryptedFile(
       return undefined
     }
     const ext = extensionFromName(audioFileName)
-    const dirObj = new Directory(Paths.cache, `CoachScribe/decrypted/${coacheeId}`)
+    const dirObj = new Directory(Paths.cache, `Rapply/decrypted/${coacheeId}`)
     if (!dirObj.exists) {
       dirObj.create({ intermediates: true })
     }
@@ -187,7 +187,7 @@ export async function ensureDecryptedFile(
     try {
       const nm = coacheeName.trim()
       const coacheeId = nm ? nm.toLowerCase().replace(/\s+/g, "_") : "loose_recordings"
-      const dirObj = new Directory(Paths.cache, `CoachScribe/decrypted/${coacheeId}`)
+      const dirObj = new Directory(Paths.cache, `Rapply/decrypted/${coacheeId}`)
       if (!dirObj.exists) {
         dirObj.create({ intermediates: true })
       }

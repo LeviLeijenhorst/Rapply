@@ -22,7 +22,7 @@ export default function WinWinSection(props: WinWinSectionProps) {
               Win-win
             </h2>
             <p className="mt-4 max-w-[620px] text-[16px] leading-7 md:text-[18px] md:leading-8">
-              CoachScribe is bedoeld om tijd, en dus ook geld, te besparen voor
+              Rapply is bedoeld om tijd, en dus ook geld, te besparen voor
               professionals. Sterker nog, wanneer professionals meer tijd overhouden
               kunnen zij meer clienten helpen en meer verdienen.
             </p>

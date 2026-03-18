@@ -9,11 +9,11 @@ import { postToSecureApi } from "./secureApi"
 
 const ExpoSegmentedAudioNative = requireNativeModule<any>("ExpoSegmentedAudio") as any
 
-const deviceIdStorageKey = "coachscribe_e2ee_mobile_device_id_v1"
+const deviceIdStorageKey = "Rapply_e2ee_mobile_device_id_v1"
 const legacyEncryptionKeyStorageKey = "encryption_key"
-const userDataKeyStoragePrefix = "coachscribe_e2ee_user_data_key_v1:"
-const recoveryKeyStoragePrefix = "coachscribe_e2ee_recovery_key_v1:"
-const custodyModeStoragePrefix = "coachscribe_e2ee_custody_mode_v1:"
+const userDataKeyStoragePrefix = "Rapply_e2ee_user_data_key_v1:"
+const recoveryKeyStoragePrefix = "Rapply_e2ee_recovery_key_v1:"
+const custodyModeStoragePrefix = "Rapply_e2ee_custody_mode_v1:"
 
 type RecoveryCustodyMode = "self" | "escrow"
 
@@ -67,7 +67,7 @@ async function getOrCreateDeviceId(): Promise<string> {
 async function createTempFileUri(name: string): Promise<string> {
   const base = String(FileSystemLegacy.cacheDirectory || "")
   if (!base) throw new Error("Cache directory is not available")
-  const dir = `${base}CoachScribe/e2ee_tmp/`
+  const dir = `${base}Rapply/e2ee_tmp/`
   await FileSystemLegacy.makeDirectoryAsync(dir, { intermediates: true })
   return `${dir}${name}`
 }

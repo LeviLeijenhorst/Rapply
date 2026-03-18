@@ -76,7 +76,7 @@ export default function NavigationBar() {
               height="25"
               viewBox="0 0 103 25"
               fill="none"
-              aria-label="CoachScribe logo"
+              aria-label="Rapply logo"
               role="img"
               className="h-[25px] w-[103px]"
             >
@@ -115,7 +115,7 @@ export default function NavigationBar() {
             />
             <Button
               label="Probeer het uit"
-              destination="https://app.coachscribe.nl"
+              destination="https://app.Rapply.nl"
               variant="primary"
               className="font-normal"
             />
@@ -250,7 +250,7 @@ export default function NavigationBar() {
             <div onClick={() => setIsMobileMenuOpen(false)}>
               <Button
                 label="Probeer het uit"
-                destination="https://app.coachscribe.nl"
+                destination="https://app.Rapply.nl"
                 variant="primary"
                 className="font-normal"
               />

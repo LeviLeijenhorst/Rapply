@@ -6,7 +6,7 @@ import { logger } from "@/utils/logger"
 import { getAuthSession, onAuthSessionChange } from "@/services/auth"
 import * as Linking from "expo-linking"
 import { getMobileE2eeStatus } from "@/services/e2eeMobile"
-import CoachScribeMark from "./svgs/CoachScribeMark"
+import RapplyMark from "./svgs/RapplyMark"
 
 export default function LoadingScreen() {
   const navigation = useNavigation<any>()
@@ -103,7 +103,7 @@ export default function LoadingScreen() {
           ],
         }}
       >
-        <CoachScribeMark size={36} color={colors.orange} strokeWidth={1} />
+        <RapplyMark size={36} color={colors.orange} strokeWidth={1} />
       </Animated.View>
     </View>
   )

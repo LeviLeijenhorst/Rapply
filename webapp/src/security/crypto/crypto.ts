@@ -123,7 +123,7 @@ export async function unwrapUserDataKeyForDevice(params: { devicePrivateKey: Cry
 export async function wrapUserDataKeyForRecovery(params: { recoveryKey: string; userDataKeyBytes: Uint8Array }): Promise<string> {
   const recoveryBytes = fromBase64Url(params.recoveryKey)
   if (recoveryBytes.length !== 32) {
-    throw new Error('Ongeldige CoachScribe-code')
+    throw new Error('Ongeldige Rapply-code')
   }
   const key = await importAesKey(recoveryBytes)
   return encryptBytesWithAesGcm({ key, plaintext: params.userDataKeyBytes })
@@ -132,7 +132,7 @@ export async function wrapUserDataKeyForRecovery(params: { recoveryKey: string; 
 export async function unwrapUserDataKeyForRecovery(params: { recoveryKey: string; wrappedUserDataKeyForRecovery: string }): Promise<Uint8Array> {
   const recoveryBytes = fromBase64Url(params.recoveryKey)
   if (recoveryBytes.length !== 32) {
-    throw new Error('Ongeldige CoachScribe-code')
+    throw new Error('Ongeldige Rapply-code')
   }
   const key = await importAesKey(recoveryBytes)
   return decryptBytesWithAesGcm({ key, encrypted: params.wrappedUserDataKeyForRecovery })

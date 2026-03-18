@@ -13,7 +13,7 @@ export default function AvailabilitySection() {
             {/* Availability image */}
             <Image
               src={phoneAndLaptopImage}
-              alt="CoachScribe on mobile and desktop"
+              alt="Rapply on mobile and desktop"
               className="h-auto w-full max-w-md object-contain"
             />
           </div>
@@ -27,7 +27,7 @@ export default function AvailabilitySection() {
             </h3>
             {/* Availability description */}
             <p className="text-[16px] font-medium text-white/90">
-              Gebruik CoachScribe op je laptop, tablet of telefoon.
+              Gebruik Rapply op je laptop, tablet of telefoon.
               <br />
               Alles blijft gesynchroniseerd.
             </p>

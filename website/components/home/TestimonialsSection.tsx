@@ -4,7 +4,7 @@ import SectionHeading from "@/components/home/SectionHeading";
 const testimonials = [
   {
     quote:
-      "Het geeft een fijn rust gevoel omdat CoachScribe alle verslaglegging voor mij doet.",
+      "Het geeft een fijn rust gevoel omdat Rapply alle verslaglegging voor mij doet.",
     name: "Claudia Heringa",
     role: "Teamcoach",
   },
@@ -36,7 +36,7 @@ export default function TestimonialsSection() {
         {/* Testimonials heading */}
         <SectionHeading
           title="Ervaringen van coaches"
-          description="Coaches gebruiken CoachScribe elke dag om overzicht en rust te houden."
+          description="Coaches gebruiken Rapply elke dag om overzicht en rust te houden."
           alignment="center"
         />
         {/* Testimonials list */}

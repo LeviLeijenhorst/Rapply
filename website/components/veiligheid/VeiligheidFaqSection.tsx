@@ -12,12 +12,12 @@ const questions = [
   {
     question: "Worden onze gegevens gebruikt om AI-modellen te trainen?",
     answer:
-      "Nee. Gegevens binnen CoachScribe worden niet gebruikt om AI-modellen te trainen of commercieel te exploiteren.",
+      "Nee. Gegevens binnen Rapply worden niet gebruikt om AI-modellen te trainen of commercieel te exploiteren.",
   },
   {
     question: "Wie is verantwoordelijk onder de AVG?",
     answer:
-      "De gebruiker is verwerkingsverantwoordelijke.\nCoachScribe treedt op als verwerker en verwerkt gegevens uitsluitend op basis van instructies.",
+      "De gebruiker is verwerkingsverantwoordelijke.\nRapply treedt op als verwerker en verwerkt gegevens uitsluitend op basis van instructies.",
   },
   {
     question: "Hoe zijn gegevens technisch beveiligd?",
@@ -32,7 +32,7 @@ const questions = [
   {
     question: "Wordt audio tijdelijk opgeslagen?",
     answer:
-      "Audio wordt versleuteld verzonden voor transcriptie.\nTijdelijke uploads worden na verwerking verwijderd, tenzij de gebruiker ervoor kiest de gegevens binnen CoachScribe te bewaren.",
+      "Audio wordt versleuteld verzonden voor transcriptie.\nTijdelijke uploads worden na verwerking verwijderd, tenzij de gebruiker ervoor kiest de gegevens binnen Rapply te bewaren.",
   },
   {
     question: "Kan ik gegevens verwijderen als een cliënt dat vraagt?",
@@ -42,7 +42,7 @@ const questions = [
   {
     question: "Welke subverwerkers gebruiken jullie?",
     answer:
-      "CoachScribe maakt gebruik van cloud-, authenticatie- en AI-dienstverleners die nodig zijn voor hosting en functionaliteit.\nDe actuele lijst van subverwerkers is opgenomen in de verwerkersovereenkomst.",
+      "Rapply maakt gebruik van cloud-, authenticatie- en AI-dienstverleners die nodig zijn voor hosting en functionaliteit.\nDe actuele lijst van subverwerkers is opgenomen in de verwerkersovereenkomst.",
   },
   {
     question: "Hebben jullie een ISO 27001-certificering?",
@@ -52,7 +52,7 @@ const questions = [
   {
     question: "Wat als onze organisatie aanvullende beveiligingseisen heeft?",
     answer:
-      "Neem contact met ons op.\nWe bespreken graag aanvullende documentatie of technische vragen over de inrichting van CoachScribe.",
+      "Neem contact met ons op.\nWe bespreken graag aanvullende documentatie of technische vragen over de inrichting van Rapply.",
   },
 ];
 

@@ -10,7 +10,7 @@ export default function ProductCoachesSection() {
         <div className="relative w-full overflow-hidden rounded-2xl aspect-[4/3] lg:aspect-auto lg:h-full">
           <Image
             src={coachesImage}
-            alt="CoachScribe door coaches ontwikkeld"
+            alt="Rapply door coaches ontwikkeld"
             fill
             sizes="(min-width: 1024px) 52vw, 100vw"
             className="object-cover"
@@ -22,7 +22,7 @@ export default function ProductCoachesSection() {
           </h2>
           <div className="mt-3 flex w-full flex-col gap-6">
             <p className="text-[16px] font-medium text-black/70">
-              CoachScribe is ontstaan uit tientallen gesprekken met loopbaan-
+              Rapply is ontstaan uit tientallen gesprekken met loopbaan-
               en re-integratieprofessionals uit het werkveld. Door te
               onderzoeken welke functies echt waardevol zijn, hebben we een
               product ontwikkeld dat volledig aansluit bij hun behoeften.

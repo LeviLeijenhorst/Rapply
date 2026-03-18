@@ -66,9 +66,9 @@ function QuickInputRow({ action }: { action: DashboardQuickInputAction }) {
   )
 }
 
-function ContinueRow({ item, onPress }: { item: DashboardContinueItem; onPress: (clientId: string) => void }) {
+function ContinueRow({ item, onPress }: { item: DashboardContinueItem; onPress: (item: DashboardContinueItem) => void }) {
   return (
-    <Pressable onPress={() => onPress(item.clientId)} style={({ hovered }) => [styles.listRow, hovered ? styles.listRowHovered : undefined]}>
+    <Pressable onPress={() => onPress(item)} style={({ hovered }) => [styles.listRow, hovered ? styles.listRowHovered : undefined]}>
       <View style={styles.avatarWrap}>
         {item.profilePhotoUri ? (
           <Image source={{ uri: item.profilePhotoUri }} style={styles.avatarImage} resizeMode="cover" />
@@ -153,7 +153,19 @@ export function DashboardScreen(props: DashboardScreenProps) {
           <Text isSemibold style={styles.panelTitle}>Verder waar je was gebleven</Text>
           <View style={styles.panelList}>
             {model.continueItems.length > 0 ? (
-              model.continueItems.map((item) => <ContinueRow key={item.id} item={item} onPress={props.onSelectClient} />)
+              model.continueItems.map((item) => (
+                <ContinueRow
+                  key={item.id}
+                  item={item}
+                  onPress={(continueItem) => {
+                    if (continueItem.clientId) {
+                      props.onSelectClient(continueItem.clientId)
+                      return
+                    }
+                    props.onOpenInput(continueItem.id)
+                  }}
+                />
+              ))
             ) : (
               <View style={styles.emptyPanelState}>
                 <Text style={styles.emptyPanelText}>Nog geen recente items.</Text>

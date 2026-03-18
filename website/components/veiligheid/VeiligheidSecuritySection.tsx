@@ -16,7 +16,7 @@ const securityItems: SecurityItem[] = [
   {
     title: "Verwerking binnen Europa",
     description:
-      "CoachScribe verwerkt en bewaart sessiegegevens binnen de Europese Unie. Zo sluiten opslag en verwerking aan op de AVG.",
+      "Rapply verwerkt en bewaart sessiegegevens binnen de Europese Unie. Zo sluiten opslag en verwerking aan op de AVG.",
     icon: securitySafeIcon,
   },
   {

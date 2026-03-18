@@ -20,9 +20,9 @@ const founders: Founder[] = [
     name: "Levi Leijenhorst",
     description: [
       "Levi heeft een achtergrond in toegepaste psychologie en merkte tijdens zijn werk als begeleider hoe tijdrovend en mentaal belastend verslaglegging kan zijn.",
-      "Dat inzicht vormde de basis voor CoachScribe.",
-      "Binnen CoachScribe richt Levi zich op het vertalen van praktijkproblemen naar een goed doordachte digitale oplossing. De technische infrastructuur en beveiliging zijn ingericht op basis van technologie van gespecialiseerde cloud- en AI-partners die binnen de EU veel worden gebruikt voor het verwerken van gevoelige informatie.",
-      "Levi is verantwoordelijk voor de architectuurkeuzes, de manier waarop deze technologieen worden geintegreerd en de verdere doorontwikkeling van het platform. Daarnaast is hij nauw betrokken bij design, gebruikerservaring en de gesprekken met professionals die CoachScribe dagelijks gebruiken.",
+      "Dat inzicht vormde de basis voor Rapply.",
+      "Binnen Rapply richt Levi zich op het vertalen van praktijkproblemen naar een goed doordachte digitale oplossing. De technische infrastructuur en beveiliging zijn ingericht op basis van technologie van gespecialiseerde cloud- en AI-partners die binnen de EU veel worden gebruikt voor het verwerken van gevoelige informatie.",
+      "Levi is verantwoordelijk voor de architectuurkeuzes, de manier waarop deze technologieen worden geintegreerd en de verdere doorontwikkeling van het platform. Daarnaast is hij nauw betrokken bij design, gebruikerservaring en de gesprekken met professionals die Rapply dagelijks gebruiken.",
     ],
     image: leviImage,
     imageClassName: "lg:rounded-l-[24px]",
@@ -34,7 +34,7 @@ const founders: Founder[] = [
     name: "Jonas Kroon",
     description: [
       "Jonas heeft een achtergrond in toegepaste psychologie en herkende direct de uitdagingen waar professionals dagelijks mee te maken hebben.",
-      "Als creatief oprichter is Jonas verantwoordelijk voor design, gebruikerservaring en marketing. Hij zorgt ervoor dat CoachScribe niet alleen goed werkt, maar ook prettig en intuitief aanvoelt. Jonas staat in nauw contact met coaches en re-integratieprofessionals om het product continu te verbeteren.",
+      "Als creatief oprichter is Jonas verantwoordelijk voor design, gebruikerservaring en marketing. Hij zorgt ervoor dat Rapply niet alleen goed werkt, maar ook prettig en intuitief aanvoelt. Jonas staat in nauw contact met coaches en re-integratieprofessionals om het product continu te verbeteren.",
     ],
     image: jonasImage,
     textContainerClassName: "lg:px-[80px]",

@@ -77,6 +77,7 @@ export type HeaderProps = {
   clientName: string
   date: string
   onBack: () => void
+  statusIndicator?: ReactNode
 }
 
 export type SummaryCardProps = {

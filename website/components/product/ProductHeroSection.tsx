@@ -14,7 +14,7 @@ export default function ProductHeroSection() {
               <span className="block">met onze features</span>
             </h1>
             <p className="max-w-xl text-[16px] font-medium text-black/70">
-              CoachScribe neemt het maken van notities tijdens gesprekken en de
+              Rapply neemt het maken van notities tijdens gesprekken en de
               verslaglegging uit handen. Op een manier die is afgestemd op de
               werkwijze van loopbaan- en re-integratieprofessionals.
             </p>
@@ -22,7 +22,7 @@ export default function ProductHeroSection() {
           <div className="mt-6">
             <Button
               label="Probeer het uit"
-              destination="https://app.coachscribe.nl"
+              destination="https://app.Rapply.nl"
               variant="primary"
               showArrow
               className="font-normal"

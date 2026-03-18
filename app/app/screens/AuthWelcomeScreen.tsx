@@ -6,7 +6,7 @@ import { useNavigation } from "@react-navigation/native"
 import { useRoute } from "@react-navigation/native"
 import LoginArrow from "./svgs/LoginArrow"
 import LogoOnLight from "./svgs/LogoOnLight"
-import CoachScribeMark from "./svgs/CoachScribeMark"
+import RapplyMark from "./svgs/RapplyMark"
 import { isSignInInFlight, signIn } from "@/services/auth"
 import { logger } from "@/utils/logger"
 import { Alert } from "react-native"
@@ -87,11 +87,11 @@ export default function AuthWelcomeScreen() {
         </View>
 
         <View style={styles.center}>
-          <Text style={styles.welcome}>Welkom bij CoachScribe!</Text>
+          <Text style={styles.welcome}>Welkom bij Rapply!</Text>
           {isSigningIn ? (
             <View style={styles.signingIn}>
               <Animated.View style={spinStyle}>
-                <CoachScribeMark size={36} color={colors.orange} strokeWidth={1} />
+                <RapplyMark size={36} color={colors.orange} strokeWidth={1} />
               </Animated.View>
               <Text style={styles.signingInText}>Bezig met inloggen…</Text>
             </View>

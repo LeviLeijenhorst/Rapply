@@ -1,7 +1,7 @@
 import React from 'react'
 
 import { ActionMenu } from '../../../ui/overlays/ActionMenu'
-import { DeelCoachScribeIcon } from '../../../icons/DeelCoachScribeIcon'
+import { DeelRapplyIcon } from '../../../icons/DeelRapplyIcon'
 import { PrivacyIcon } from '../../../icons/PrivacyIcon'
 import { FeedbackIcon } from '../../../icons/FeedbackIcon'
 import { ContactIcon } from '../../../icons/ContactIcon'
@@ -51,8 +51,8 @@ export function SettingsMenu({
     },
     {
       key: 'share',
-      label: 'Deel CoachScribe',
-      icon: <DeelCoachScribeIcon color={menuIconColor} />,
+      label: 'Deel Rapply',
+      icon: <DeelRapplyIcon color={menuIconColor} />,
       onPress: onOpenShare,
     },
     {

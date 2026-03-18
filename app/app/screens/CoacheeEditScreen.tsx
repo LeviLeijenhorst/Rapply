@@ -48,12 +48,12 @@ export default function CoacheeEditScreen() {
 
     const oldCoacheeId = slugifyId(oldName)
     const newCoacheeId = slugifyId(nextName)
-    const fromDirectoryName = `CoachScribe/coachees/${oldCoacheeId}`
-    const toDirectoryName = `CoachScribe/coachees/${newCoacheeId}`
+    const fromDirectoryName = `Rapply/coachees/${oldCoacheeId}`
+    const toDirectoryName = `Rapply/coachees/${newCoacheeId}`
 
     try {
       if (fromDirectoryName !== toDirectoryName) {
-        const root = new Directory(Paths.document, "CoachScribe/coachees")
+        const root = new Directory(Paths.document, "Rapply/coachees")
         if (!root.exists) {
           root.create({ intermediates: true, idempotent: true })
         }

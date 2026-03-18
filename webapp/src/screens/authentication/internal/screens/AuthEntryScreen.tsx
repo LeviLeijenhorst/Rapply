@@ -4,7 +4,7 @@ import { LoadingSpinner } from '../../../../ui/LoadingSpinner'
 import Svg, { G, Rect } from 'react-native-svg'
 
 import { AuthCard } from '../ui/AuthCard'
-import { CoachscribeLogo } from '../../../../components/brand/CoachscribeLogo'
+import { RapplyLogo } from '../../../../components/brand/RapplyLogo'
 import { Text } from '../../../../ui/Text'
 import { colors } from '../../../../design/theme/colors'
 import { useToast } from '../../../../toast/ToastProvider'
@@ -117,7 +117,7 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
                 {/* Brand header */}
                 <View style={styles.brandHeader}>
                   {/* Brand logo */}
-                  <CoachscribeLogo />
+                  <RapplyLogo />
                   {/* Brand tagline */}
                   <Text style={styles.brandTagline}>Focus op de mens</Text>
                 </View>
@@ -127,7 +127,7 @@ export function AuthEntryScreen({ mode, onStartLogin, errorMessage }: Props) {
                 </Text>
                 {/* Welcome description */}
                 <Text style={[styles.welcomeParagraph, isCompact ? styles.welcomeParagraphCompact : undefined]}>
-                  CoachScribe ondersteunt <Text isBold style={styles.welcomeParagraphBold}>loopbaan- en re-integratieprofessionals</Text> bij heldere dossiervorming en het bewaren van overzicht.
+                  Rapply ondersteunt <Text isBold style={styles.welcomeParagraphBold}>loopbaan- en re-integratieprofessionals</Text> bij heldere dossiervorming en het bewaren van overzicht.
                 </Text>
                 {/* Welcome description */}
                 <Text style={[styles.welcomeParagraph, isCompact ? styles.welcomeParagraphCompact : undefined]}>

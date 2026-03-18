@@ -2,14 +2,14 @@ import type { SiteCopy } from "@/content/siteCopy/types";
 
 const sharedFaqItems = [
   {
-    question: "Voor wie is CoachScribe bedoeld?",
+    question: "Voor wie is Rapply bedoeld?",
     answer:
       "Voor loopbaan- en re-integratieprofessionals die gesprekken willen vastleggen en daar consistente rapportages en dossiernotities van willen maken.",
   },
   {
-    question: "Is CoachScribe geschikt voor Poortwachter-rapportages?",
+    question: "Is Rapply geschikt voor Poortwachter-rapportages?",
     answer:
-      "CoachScribe ondersteunt verslaglegging en structuur voor o.a. Plan van Aanpak, evaluaties en (tweede spoor) rapportages. Je houdt altijd zelf de eindcontrole op inhoud en formulering.",
+      "Rapply ondersteunt verslaglegging en structuur voor o.a. Plan van Aanpak, evaluaties en (tweede spoor) rapportages. Je houdt altijd zelf de eindcontrole op inhoud en formulering.",
   },
   {
     question: "Hoe zit het met AVG en privacy?",
@@ -38,7 +38,7 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
     heroTitleLine1: "Betere begeleiding begint bij",
     heroTitleLine2: "betrouwbare verslaglegging",
     subheadline:
-      "CoachScribe helpt loopbaan- en re-integratieprofessionals gesprekken vastleggen, structureren en omzetten naar professionele rapportages - met privacy en controle als uitgangspunt.",
+      "Rapply helpt loopbaan- en re-integratieprofessionals gesprekken vastleggen, structureren en omzetten naar professionele rapportages - met privacy en controle als uitgangspunt.",
     primaryCta: "Probeer het uit",
     secondaryCta: "Bekijk hoe het werkt",
     features: [
@@ -65,7 +65,7 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
     ],
     availabilityTitleLine1: "Binnenkort ook",
     availabilityTitleLine2: "op Android en iOS",
-    availabilityTextLine1: "Gebruik CoachScribe op laptop, tablet en telefoon.",
+    availabilityTextLine1: "Gebruik Rapply op laptop, tablet en telefoon.",
     availabilityTextLine2: "Alles blijft gesynchroniseerd.",
     faqTitle: "Veelgestelde vragen",
     faqItems: [...sharedFaqItems],
@@ -94,13 +94,13 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
     sectionForProfessionalsTitlePrefix: "Voor professionals,",
     sectionForProfessionalsTitleHighlight: "gebouwd met de praktijk",
     sectionForProfessionalsParagraphs: [
-      "We ontwikkelen CoachScribe samen met professionals die dagelijks moeten rapporteren.",
+      "We ontwikkelen Rapply samen met professionals die dagelijks moeten rapporteren.",
       "Zo sluiten templates en output aan op echte trajecten.",
       "Wil je meedenken of input geven? Neem contact met ons op!",
     ],
     sectionForProfessionalsCta: "Contact",
     footerMicrocopyLine1:
-      "CoachScribe helpt bij professionele verslaglegging en dossieropbouw voor loopbaan- en re-integratietrajecten.",
+      "Rapply helpt bij professionele verslaglegging en dossieropbouw voor loopbaan- en re-integratietrajecten.",
     footerMicrocopyLine2: "",
     footerMicrocopyLine3: "",
   },
@@ -146,10 +146,10 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
     faqItems: [...sharedFaqItems],
   },
   coaches: {
-    heroTitleLine1: "Is CoachScribe",
+    heroTitleLine1: "Is Rapply",
     heroTitleLine2: "iets voor jou?",
     heroSubtext:
-      "Ben je loopbaan- of re-integratieprofessional en wil je sneller, consistenter en AVG-bewust rapporteren? CoachScribe helpt je van gesprek naar dossier en rapportage.",
+      "Ben je loopbaan- of re-integratieprofessional en wil je sneller, consistenter en AVG-bewust rapporteren? Rapply helpt je van gesprek naar dossier en rapportage.",
     heroCta: "Probeer het uit",
     typesSectionTitle: "Professionals: een breed werkveld",
     types: [
@@ -191,18 +191,18 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
       {
         title: "Nog veel meer",
         description:
-          "Werk je in een aangrenzend veld met veel gesprekken en verslaglegging? Dan sluit CoachScribe waarschijnlijk ook aan.",
+          "Werk je in een aangrenzend veld met veel gesprekken en verslaglegging? Dan sluit Rapply waarschijnlijk ook aan.",
       },
       {
         title: "Nog veel meer",
         description:
-          "Werk je in een aangrenzend veld met veel gesprekken en verslaglegging? Dan sluit CoachScribe waarschijnlijk ook aan.",
+          "Werk je in een aangrenzend veld met veel gesprekken en verslaglegging? Dan sluit Rapply waarschijnlijk ook aan.",
       },
     ],
     workflowTitlePrefix: "Jouw",
     workflowTitleHighlight: "werkwijze",
     workflowParagraphs: [
-      "Elke professional heeft een eigen werkwijze. Daarom werkt CoachScribe met templates die zijn afgestemd op rapportages zoals Plan van Aanpak, evaluaties en tweede spoor.",
+      "Elke professional heeft een eigen werkwijze. Daarom werkt Rapply met templates die zijn afgestemd op rapportages zoals Plan van Aanpak, evaluaties en tweede spoor.",
       "Deze templates zijn ontwikkeld in samenwerking met professionals, zodat ze aansluiten op hoe trajecten in de praktijk verlopen.",
       "Mocht er niets tussen zitten? Geen probleem. Ontwerp gemakkelijk je eigen template die precies aansluit op jouw manier van verslaglegging en dossieropbouw.",
     ],
@@ -213,7 +213,7 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
     heroTitleMain: "Aangenaam ",
     heroTitleAccent: ":)",
     heroSubtext:
-      "CoachScribe is gebouwd voor professionals die met gevoelige trajectinformatie werken. Ons doel: betrouwbare verslaglegging en rapportages, met privacy en controle als uitgangspunt.",
+      "Rapply is gebouwd voor professionals die met gevoelige trajectinformatie werken. Ons doel: betrouwbare verslaglegging en rapportages, met privacy en controle als uitgangspunt.",
     heroCta: "Contact",
     values: [
       {
@@ -251,18 +251,18 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
       {
         name: "Levi Leijenhorst",
         description: [
-          "Levi richt zich op product en techniek binnen CoachScribe. Hij werkt aan veilige verwerking, betrouwbare verslaglegging en een workflow die past bij de praktijk van loopbaan- en re-integratieprofessionals. Daarnaast spreekt hij regelmatig gebruikers om scherp te blijven op wat er echt nodig is.",
+          "Levi richt zich op product en techniek binnen Rapply. Hij werkt aan veilige verwerking, betrouwbare verslaglegging en een workflow die past bij de praktijk van loopbaan- en re-integratieprofessionals. Daarnaast spreekt hij regelmatig gebruikers om scherp te blijven op wat er echt nodig is.",
         ],
       },
       {
         name: "Jonas Kroon",
         description: [
-          "Jonas richt zich op design, gebruikservaring en positionering. Hij zorgt dat CoachScribe simpel blijft in gebruik, maar professioneel in output - van templates tot export in huisstijl. Ook hij haalt continu feedback op bij professionals om het product te verbeteren.",
+          "Jonas richt zich op design, gebruikservaring en positionering. Hij zorgt dat Rapply simpel blijft in gebruik, maar professioneel in output - van templates tot export in huisstijl. Ook hij haalt continu feedback op bij professionals om het product te verbeteren.",
         ],
       },
     ],
     contactHeading: "Kom in contact",
     contactText:
-      "Wil je zien hoe CoachScribe past binnen jouw rapportage- en dossierproces? Laat een bericht achter, dan nemen we contact met je op.",
+      "Wil je zien hoe Rapply past binnen jouw rapportage- en dossierproces? Laat een bericht achter, dan nemen we contact met je op.",
   },
 };

@@ -13,7 +13,7 @@ export default function CoachesWorkflowSection() {
             </h1>
             <div className="max-w-xl space-y-5 text-[16px] font-medium text-black/70">
               <p>
-                Elke coach heeft een eigen werkwijze. Daarom werkt CoachScribe
+                Elke coach heeft een eigen werkwijze. Daarom werkt Rapply
                 met templates afgestemd op loopbaan- en re-integratiecoaching.
               </p>
               <p>
@@ -30,7 +30,7 @@ export default function CoachesWorkflowSection() {
           <div className="mt-5 flex w-full justify-center lg:justify-end">
             <Image
               src={workflowImage}
-              alt="CoachScribe templates op laptop"
+              alt="Rapply templates op laptop"
               className="h-auto w-full max-w-[360px] object-contain md:max-w-[500px] xl:max-w-[640px]"
               priority
             />

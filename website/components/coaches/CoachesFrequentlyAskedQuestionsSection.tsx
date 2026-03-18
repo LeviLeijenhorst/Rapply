@@ -5,34 +5,34 @@ import SectionContainer from "@/components/home/SectionContainer";
 
 const questions = [
   {
-    question: "Voor welke coaches is CoachScribe geschikt?",
+    question: "Voor welke coaches is Rapply geschikt?",
     answer:
-      "CoachScribe is specifiek ontwikkeld voor loopbaan- en re-integratiecoaches. Het helpt je om sessies gestructureerd vast te leggen, clientinformatie veilig te bewaren en snel terug te vinden wat belangrijk is zodat jij je kunt focussen op de begeleiding zelf.",
+      "Rapply is specifiek ontwikkeld voor loopbaan- en re-integratiecoaches. Het helpt je om sessies gestructureerd vast te leggen, clientinformatie veilig te bewaren en snel terug te vinden wat belangrijk is zodat jij je kunt focussen op de begeleiding zelf.",
   },
   {
-    question: "Kan CoachScribe worden gebruikt voor re-integratietrajecten?",
+    question: "Kan Rapply worden gebruikt voor re-integratietrajecten?",
     answer:
-      "Ja. CoachScribe ondersteunt re-integratiecoaches bij het vastleggen van gesprekken en het bijhouden van voortgang per client. Of je nu werkt aan een eerste of tweede spoor traject, CoachScribe helpt je om overzicht te bewaren en verslaglegging efficient te houden.",
+      "Ja. Rapply ondersteunt re-integratiecoaches bij het vastleggen van gesprekken en het bijhouden van voortgang per client. Of je nu werkt aan een eerste of tweede spoor traject, Rapply helpt je om overzicht te bewaren en verslaglegging efficient te houden.",
   },
   {
-    question: "Ondersteunt CoachScribe verslaglegging voor UWV of werkgevers?",
+    question: "Ondersteunt Rapply verslaglegging voor UWV of werkgevers?",
     answer:
-      "CoachScribe helpt je om sessieverslagen gestructureerd bij te houden. De gegenereerde verslagen kun je gebruiken als basis voor rapportages richting UWV, werkgevers of opdrachtgevers. Jij bepaalt altijd wat je deelt en wat je bewaart.",
+      "Rapply helpt je om sessieverslagen gestructureerd bij te houden. De gegenereerde verslagen kun je gebruiken als basis voor rapportages richting UWV, werkgevers of opdrachtgevers. Jij bepaalt altijd wat je deelt en wat je bewaart.",
   },
   {
-    question: "Is CoachScribe geschikt als ik werk met meerdere opdrachtgevers tegelijk?",
+    question: "Is Rapply geschikt als ik werk met meerdere opdrachtgevers tegelijk?",
     answer:
-      "Ja. CoachScribe is ontworpen voor coaches die meerdere clienten en trajecten tegelijk begeleiden. Je houdt per client een overzichtelijk dossier bij, ongeacht voor welke opdrachtgever of organisatie je werkt.",
+      "Ja. Rapply is ontworpen voor coaches die meerdere clienten en trajecten tegelijk begeleiden. Je houdt per client een overzichtelijk dossier bij, ongeacht voor welke opdrachtgever of organisatie je werkt.",
   },
   {
-    question: "Kan ik CoachScribe gebruiken als zelfstandig loopbaancoach?",
+    question: "Kan ik Rapply gebruiken als zelfstandig loopbaancoach?",
     answer:
-      "Ja. CoachScribe is geschikt voor zowel zelfstandige coaches als coaches die in dienst zijn van een organisatie of re-integratiebureau. Je kunt direct starten, zonder minimum aantal clienten of sessies.",
+      "Ja. Rapply is geschikt voor zowel zelfstandige coaches als coaches die in dienst zijn van een organisatie of re-integratiebureau. Je kunt direct starten, zonder minimum aantal clienten of sessies.",
   },
   {
     question: "Hoe zit het met de privacy van mijn clienten?",
     answer:
-      "Privacy staat bij CoachScribe op de eerste plaats. Alle gegevens worden versleuteld opgeslagen en verwerkt binnen de Europese Unie, in lijn met de AVG. Jouw data wordt nooit gebruikt om AI-modellen te trainen, en jij bepaalt zelf wat je bewaart of verwijdert.",
+      "Privacy staat bij Rapply op de eerste plaats. Alle gegevens worden versleuteld opgeslagen en verwerkt binnen de Europese Unie, in lijn met de AVG. Jouw data wordt nooit gebruikt om AI-modellen te trainen, en jij bepaalt zelf wat je bewaart of verwijdert.",
   },
 ];
 

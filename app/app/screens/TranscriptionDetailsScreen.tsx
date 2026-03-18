@@ -203,13 +203,13 @@ export default function TranscriptionDetailsScreen() {
       const oldCoacheeId = oldCoacheeName.trim().length ? slugifyId(oldCoacheeName) : "loose_recordings"
       const newCoacheeName = selectedCoachee ?? ""
       const newCoacheeId = newCoacheeName.trim().length ? slugifyId(newCoacheeName) : "loose_recordings"
-      const oldBaseDirectory = `CoachScribe/coachees/${oldCoacheeId}/${existingRecordingId}`
-      const newBaseDirectory = `CoachScribe/coachees/${newCoacheeId}/${existingRecordingId}`
+      const oldBaseDirectory = `Rapply/coachees/${oldCoacheeId}/${existingRecordingId}`
+      const newBaseDirectory = `Rapply/coachees/${newCoacheeId}/${existingRecordingId}`
       const titleToSave = (title || "").trim() || "Naamloze opname"
 
       try {
         if (oldBaseDirectory !== newBaseDirectory) {
-          const parent = new Directory(Paths.document, `CoachScribe/coachees/${newCoacheeId}`)
+          const parent = new Directory(Paths.document, `Rapply/coachees/${newCoacheeId}`)
           if (!parent.exists) {
             parent.create({ intermediates: true, idempotent: true })
           }
@@ -265,7 +265,7 @@ export default function TranscriptionDetailsScreen() {
 
     const coacheeId = selectedCoachee?.trim().length ? slugifyId(selectedCoachee!) : "loose_recordings"
     const recordingId = String(Date.now())
-    const baseDirectory = `CoachScribe/coachees/${coacheeId}/${recordingId}`
+    const baseDirectory = `Rapply/coachees/${coacheeId}/${recordingId}`
     const audioFileName = `audio`
     const meteringJson = hasMetering ? JSON.stringify({ samples: metering }) : ""
     const titleToSave = (title || "").trim() || "Naamloze opname"

@@ -104,7 +104,7 @@ export default function SettingsAccountScreen() {
             setLoading(true)
             await postToSecureApi("/account/delete", {})
             try {
-              await deleteDirectory("CoachScribe")
+              await deleteDirectory("Rapply")
             } catch {}
           try {
               await deleteDirectory("coachees")

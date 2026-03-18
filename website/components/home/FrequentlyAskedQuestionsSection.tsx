@@ -5,34 +5,34 @@ import SectionContainer from "@/components/home/SectionContainer";
 
 const questions = [
   {
-    question: "Wat is CoachScribe?",
+    question: "Wat is Rapply?",
     answer:
-      "CoachScribe is een AI-ondersteunde tool voor coaches om gesprekken eenvoudig op te nemen, automatisch te laten samenvatten en overzichtelijke, bruikbare rapportages te maken. Het helpt je om minder tijd kwijt te zijn aan administratie, terwijl je wel grip houdt op de inhoud, nuance en context van al je sessies.",
+      "Rapply is een AI-ondersteunde tool voor coaches om gesprekken eenvoudig op te nemen, automatisch te laten samenvatten en overzichtelijke, bruikbare rapportages te maken. Het helpt je om minder tijd kwijt te zijn aan administratie, terwijl je wel grip houdt op de inhoud, nuance en context van al je sessies.",
   },
   {
-    question: "Is CoachScribe veilig?",
+    question: "Is Rapply veilig?",
     answer:
-      "Ja. CoachScribe is veilig ingericht met sterke technische en organisatorische maatregelen om jouw gegevens te beschermen. Alle data wordt versleuteld opgeslagen en verwerkt binnen de Europese Unie, in overeenstemming met de AVG. Jouw gegevens worden niet gebruikt om AI-modellen te trainen en alleen bewaard zolang dat functioneel nodig is.",
+      "Ja. Rapply is veilig ingericht met sterke technische en organisatorische maatregelen om jouw gegevens te beschermen. Alle data wordt versleuteld opgeslagen en verwerkt binnen de Europese Unie, in overeenstemming met de AVG. Jouw gegevens worden niet gebruikt om AI-modellen te trainen en alleen bewaard zolang dat functioneel nodig is.",
   },
   {
     question: "Worden er AI modellen getraind met mijn informatie?",
     answer:
-      "Nee. Jouw gegevens worden niet gebruikt om AI-modellen te trainen of te verbeteren. Ze worden uitsluitend verwerkt om de functionaliteiten van CoachScribe voor jou uit te voeren.",
+      "Nee. Jouw gegevens worden niet gebruikt om AI-modellen te trainen of te verbeteren. Ze worden uitsluitend verwerkt om de functionaliteiten van Rapply voor jou uit te voeren.",
   },
   {
-    question: "Voor wie is CoachScribe bedoeld?",
+    question: "Voor wie is Rapply bedoeld?",
     answer:
-      "CoachScribe is specifiek ontwikkeld voor loopbaan- en re-integratieprofessionals die werken met meerdere clienten en trajecten. Het helpt je om sessies gestructureerd vast te leggen, voortgang bij te houden en verslaglegging richting opdrachtgevers of UWV eenvoudiger te maken.",
+      "Rapply is specifiek ontwikkeld voor loopbaan- en re-integratieprofessionals die werken met meerdere clienten en trajecten. Het helpt je om sessies gestructureerd vast te leggen, voortgang bij te houden en verslaglegging richting opdrachtgevers of UWV eenvoudiger te maken.",
   },
   {
-    question: "Is CoachScribe een vervanging voor een menselijke coach?",
+    question: "Is Rapply een vervanging voor een menselijke coach?",
     answer:
-      "Nee. CoachScribe ondersteunt coaches met automatisering van taken zoals notities maken en verslaglegging, maar vervangt nooit het menselijke oordeel, de contextbegrip of de relatie tussen coach en client.",
+      "Nee. Rapply ondersteunt coaches met automatisering van taken zoals notities maken en verslaglegging, maar vervangt nooit het menselijke oordeel, de contextbegrip of de relatie tussen coach en client.",
   },
   {
     question: "Kan ik niet gewoon ChatGPT gebruiken?",
     answer:
-      "Nee. ChatGPT is een algemene AI en beschikt niet over de functionaliteit voor sessie opname, gestructureerde verslaglegging of AVG-proof beheer van clientgegevens, waardoor het niet geschikt is voor dit soort toepassingen. Daarnaast is CoachScribe ontworpen speciaal voor coaches en kan het dus een stuk gerichter te werk gaan.",
+      "Nee. ChatGPT is een algemene AI en beschikt niet over de functionaliteit voor sessie opname, gestructureerde verslaglegging of AVG-proof beheer van clientgegevens, waardoor het niet geschikt is voor dit soort toepassingen. Daarnaast is Rapply ontworpen speciaal voor coaches en kan het dus een stuk gerichter te werk gaan.",
   },
 ];
 

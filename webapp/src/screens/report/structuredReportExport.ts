@@ -37,6 +37,18 @@ function parseLegacyActivityDistribution(value: string): Array<{ activiteit: str
     })
 }
 
+function serializeActivityDistribution(rows: Array<{ activiteit: string; uren: number }>): string {
+  return rows
+    .map((row) => {
+      const activiteit = normalizeWhitespace(String(row?.activiteit ?? ''))
+      const uren = formatNormalizedDecimal(parseNormalizedDecimal((row as any)?.uren ?? 0))
+      if (!activiteit) return ''
+      return uren ? `${activiteit} (${uren} uur)` : activiteit
+    })
+    .filter(Boolean)
+    .join('; ')
+}
+
 function parseNormalizedDecimal(value: unknown): number {
   const numeric = typeof value === 'number' ? value : Number(String(value ?? '').replace(',', '.'))
   if (!Number.isFinite(numeric)) return 0
@@ -156,6 +168,12 @@ export function buildStructuredExportContext(template: PipelineTemplate, report:
     }
     context['5_3_totaal_aantal_begeleidingsuren'] = formatNormalizedDecimal(parseNormalizedDecimal(total))
   }
+  context['5_3'] = serializeActivityDistribution(
+    (rp53Rows as Array<any>).map((row) => ({
+      activiteit: String((asObject(row as JsonValue)?.activiteit ?? (row as any)?.activiteit ?? '') || ''),
+      uren: parseNormalizedDecimal(asObject(row as JsonValue)?.uren ?? (row as any)?.uren ?? 0),
+    })),
+  )
 
   const er71 = parseJsonObjectFromAnswer(readAnswer(report.fields, 'er_werkfit_7_1'))
   const er71Rows = er71 ? asArray(er71.activiteiten) : parseLegacyActivityDistribution(answerToText(readAnswer(report.fields, 'er_werkfit_7_1')))
@@ -171,6 +189,12 @@ export function buildStructuredExportContext(template: PipelineTemplate, report:
     }
     context['7_1_totaal_aantal_begeleidingsuren'] = formatNormalizedDecimal(parseNormalizedDecimal(total))
   }
+  context['7_1'] = serializeActivityDistribution(
+    (er71Rows as Array<any>).map((row) => ({
+      activiteit: String((asObject(row as JsonValue)?.activiteit ?? (row as any)?.activiteit ?? '') || ''),
+      uren: parseNormalizedDecimal(asObject(row as JsonValue)?.uren ?? (row as any)?.uren ?? 0),
+    })),
+  )
 
   const rp82 = parseJsonObjectFromAnswer(readAnswer(report.fields, 'rp_werkfit_8_2'))
   if (rp82) {
@@ -216,6 +240,8 @@ export function buildStructuredExportContext(template: PipelineTemplate, report:
 
   const rp81 = parseJsonObjectFromAnswer(readAnswer(report.fields, 'rp_werkfit_8_1'))
   if (rp81 && typeof rp81.keuze === 'number') context['rp_werkfit_8_1_keuze'] = String(rp81.keuze)
+  const rp61 = parseJsonObjectFromAnswer(readAnswer(report.fields, 'rp_werkfit_6_1'))
+  if (rp61 && typeof rp61.maanden === 'number') context['rp_werkfit_6_1_maanden'] = String(rp61.maanden)
 
   if (er42 && typeof er42.keuze === 'number') context['er_werkfit_4_2_keuze'] = String(er42.keuze)
   if (er61 && typeof er61.reden === 'number') {
@@ -224,6 +250,17 @@ export function buildStructuredExportContext(template: PipelineTemplate, report:
   }
   if (er73 && typeof er73.resultaat === 'number') context['er_werkfit_7_3_resultaat'] = String(er73.resultaat)
   if (er82 && typeof er82.akkoord === 'number') context['er_werkfit_8_2_akkoord'] = String(er82.akkoord)
+  if (er82 && typeof er82.toelichting === 'string') context['er_werkfit_8_2_toelichting'] = normalizeWhitespace(er82.toelichting)
+  if (!context['er_werkfit_8_2_toelichting']) {
+    const rawEr82 = answerToText(readAnswer(report.fields, 'er_werkfit_8_2'))
+    const parsedEr82 = parseJsonObjectFromAnswer(rawEr82)
+    if (parsedEr82 && typeof parsedEr82.toelichting === 'string') {
+      context['er_werkfit_8_2_toelichting'] = normalizeWhitespace(String(parsedEr82.toelichting || ''))
+    } else {
+      const match = rawEr82.match(/(?:toelichting|motivatie|motivering)\s*:\s*([\s\S]+)/i)
+      if (match?.[1]) context['er_werkfit_8_2_toelichting'] = normalizeWhitespace(match[1])
+    }
+  }
 
   const rawName =
     answerToText(readAnswer(report.fields, 'rp_werkfit_1_1')) ||

@@ -14,7 +14,7 @@ H4
 Example: Worden er AI modellen getraind met mijn informatie?
 
 Text
-Example: Zet de opname aan en focus je volledig op jouw cliënt. CoachScribe neemt het gehele gesprek veilig op terwijl jij je bezig houdt met waar je goed in bent; mensen helpen.
+Example: Zet de opname aan en focus je volledig op jouw cliënt. Rapply neemt het gehele gesprek veilig op terwijl jij je bezig houdt met waar je goed in bent; mensen helpen.
 
 Link
 Examples: Product, Over ons, Privacybeleid (all in the footer)

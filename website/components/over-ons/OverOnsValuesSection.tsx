@@ -26,7 +26,7 @@ const values: ValueItem[] = [
   {
     title: "Samenwerking",
     description:
-      "CoachScribe ontstaat niet in isolatie. We ontwikkelen samen met coaches, partners en elkaar.",
+      "Rapply ontstaat niet in isolatie. We ontwikkelen samen met coaches, partners en elkaar.",
     icon: peopleIcon,
   },
   {
@@ -38,13 +38,13 @@ const values: ValueItem[] = [
   {
     title: "Innovatie",
     description:
-      "We testen en verbeteren continu, zodat CoachScribe beter aansluit bij de praktijk van coaches.",
+      "We testen en verbeteren continu, zodat Rapply beter aansluit bij de praktijk van coaches.",
     icon: magicpenIcon,
   },
   {
     title: "Transparantie",
     description:
-      "We zijn open over hoe CoachScribe werkt en hoe we omgaan met data, zodat coaches altijd weten waar ze aan toe zijn.",
+      "We zijn open over hoe Rapply werkt en hoe we omgaan met data, zodat coaches altijd weten waar ze aan toe zijn.",
     icon: sunIcon,
   },
   {

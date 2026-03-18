@@ -19,7 +19,7 @@ export type TranscriptionStatus = "idle" | "transcribing" | "done" | "error"
 
 export async function writeTranscriptionStatus(coacheeName: string | undefined, recordingId: string, status: TranscriptionStatus, errorMessage?: string) {
   const coacheeId = coacheeName?.trim().length ? slugifyCoacheeName(coacheeName!) : "loose_recordings"
-  const baseDirectory = `CoachScribe/coachees/${coacheeId}/${recordingId}`
+  const baseDirectory = `Rapply/coachees/${coacheeId}/${recordingId}`
   const payload = JSON.stringify({ status, updatedAt: Date.now(), error: errorMessage || null })
   await writeEncryptedFile(baseDirectory, "status.json.enc", payload, "text")
 }
@@ -27,7 +27,7 @@ export async function writeTranscriptionStatus(coacheeName: string | undefined, 
 export async function readTranscriptionStatus(coacheeName: string | undefined, recordingId: string): Promise<TranscriptionStatus> {
   try {
     const coacheeId = coacheeName?.trim().length ? slugifyCoacheeName(coacheeName!) : "loose_recordings"
-    const baseDirectory = `CoachScribe/coachees/${coacheeId}/${recordingId}`
+    const baseDirectory = `Rapply/coachees/${coacheeId}/${recordingId}`
     const txt = await readEncryptedFile(baseDirectory, "status.json.enc")
     const data = JSON.parse(txt) as { status?: TranscriptionStatus }
     return (data.status as TranscriptionStatus) || "idle"
@@ -40,7 +40,7 @@ export type SummaryStatus = "idle" | "generating" | "done" | "error"
 
 export async function writeSummaryStatus(coacheeName: string | undefined, recordingId: string, status: SummaryStatus, errorMessage?: string) {
   const coacheeId = coacheeName?.trim().length ? slugifyCoacheeName(coacheeName!) : "loose_recordings"
-  const baseDirectory = `CoachScribe/coachees/${coacheeId}/${recordingId}`
+  const baseDirectory = `Rapply/coachees/${coacheeId}/${recordingId}`
   const payload = JSON.stringify({ status, updatedAt: Date.now(), error: errorMessage || null })
   await writeEncryptedFile(baseDirectory, "summary_status.json.enc", payload, "text")
 }
@@ -48,7 +48,7 @@ export async function writeSummaryStatus(coacheeName: string | undefined, record
 export async function readSummaryStatus(coacheeName: string | undefined, recordingId: string): Promise<SummaryStatus> {
   try {
     const coacheeId = coacheeName?.trim().length ? slugifyCoacheeName(coacheeName!) : "loose_recordings"
-    const baseDirectory = `CoachScribe/coachees/${coacheeId}/${recordingId}`
+    const baseDirectory = `Rapply/coachees/${coacheeId}/${recordingId}`
     const txt = await readEncryptedFile(baseDirectory, "summary_status.json.enc")
     const data = JSON.parse(txt) as { status?: SummaryStatus }
     return (data.status as SummaryStatus) || "idle"
@@ -85,7 +85,7 @@ export async function startTranscription(params: {
     await writeTranscriptionStatus(coacheeName, recordingId, "transcribing")
     await writeSummaryStatus(coacheeName, recordingId, "generating")
     const coacheeId = coacheeName?.trim().length ? slugifyCoacheeName(coacheeName!) : "loose_recordings"
-    const baseDirectory = `CoachScribe/coachees/${coacheeId}/${recordingId}`
+    const baseDirectory = `Rapply/coachees/${coacheeId}/${recordingId}`
     const { transcript, summary } = await transcribeRecordingViaEncryptedUpload({ recordingId, sourceUri })
     await writeEncryptedFile(baseDirectory, "transcript.txt.enc", transcript, "text")
     await writeEncryptedFile(baseDirectory, "summary.txt.enc", summary, "text")
@@ -103,7 +103,7 @@ export async function startTranscription(params: {
 
 export async function transcriptFileExists(coacheeName: string | undefined, recordingId: string): Promise<boolean> {
   const coacheeId = coacheeName?.trim().length ? slugifyCoacheeName(coacheeName!) : "loose_recordings"
-  const baseDirectory = `CoachScribe/coachees/${coacheeId}/${recordingId}`
+  const baseDirectory = `Rapply/coachees/${coacheeId}/${recordingId}`
   const files = await listFiles(baseDirectory)
   return files.includes("transcript.txt.enc")
 }
@@ -112,7 +112,7 @@ const ensureSummaryInFlight = new Set<string>()
 
 export async function ensureSummaryExists(coacheeName: string | undefined, recordingId: string): Promise<boolean> {
   const coacheeId = coacheeName?.trim().length ? slugifyCoacheeName(coacheeName!) : "loose_recordings"
-  const baseDirectory = `CoachScribe/coachees/${coacheeId}/${recordingId}`
+  const baseDirectory = `Rapply/coachees/${coacheeId}/${recordingId}`
   const key = `${coacheeId}/${recordingId}`
   if (ensureSummaryInFlight.has(key)) return false
   ensureSummaryInFlight.add(key)

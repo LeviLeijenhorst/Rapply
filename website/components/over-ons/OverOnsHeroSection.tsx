@@ -32,7 +32,7 @@ export default function OverOnsHeroSection() {
               die connectie.
               <br />
               <br />
-              Daarom bouwen wij CoachScribe: zodat loopbaancoaches en
+              Daarom bouwen wij Rapply: zodat loopbaancoaches en
               re-integratieprofessionals geen tijd meer verliezen aan notities,
               verslagen en administratie, maar zich volledig kunnen richten op
               wat echt telt. Het helpen van mensen.

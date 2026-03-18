@@ -29,7 +29,7 @@ import SubscriptionScreen from "@/screens/SubscriptionScreen"
 import SubscriptionCancelScreen from "@/screens/SubscriptionCancelScreen"
 import SubscriptionTipsScreen from "@/screens/SubscriptionTipsScreen"
 import SubscriptionPraktijkScreen from "@/screens/SubscriptionPraktijkScreen"
-import CoachScribeMark from "@/screens/svgs/CoachScribeMark"
+import RapplyMark from "@/screens/svgs/RapplyMark"
 
 import type { AppStackParamList, NavigationProps } from "./navigationTypes"
 import { navigationRef, useBackButtonHandler, getActiveRouteName } from "./navigationUtilities"
@@ -154,7 +154,7 @@ export const AppNavigator = (props: NavigationProps) => {
                 ],
               }}
             >
-              <CoachScribeMark size={36} color="#000000" strokeWidth={1} />
+              <RapplyMark size={36} color="#000000" strokeWidth={1} />
             </Animated.View>
           </View>
         )}

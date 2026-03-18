@@ -9,12 +9,12 @@ export default function ProductOverviewSection() {
       <div className="flex w-full flex-col items-center gap-10">
         <Image
           src={featuresImage}
-          alt="CoachScribe functies overzicht"
+          alt="Rapply functies overzicht"
           className="hidden h-auto w-full rounded-[28px] md:block"
         />
         <Image
           src={product2MobileImage}
-          alt="CoachScribe functies overzicht mobiel"
+          alt="Rapply functies overzicht mobiel"
           className="h-auto w-full rounded-[28px] md:hidden"
         />
       </div>

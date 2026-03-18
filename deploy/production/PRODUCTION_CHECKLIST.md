@@ -1,4 +1,4 @@
-## Production checklist (CoachScribe)
+## Production checklist (Rapply)
 
 ### Infrastructure
 
@@ -10,17 +10,17 @@
 
 ### Supabase
 
-- API reachable at `https://supabase.coachscribe.nl`
-- Studio reachable at `https://admin.coachscribe.nl` (protected)
+- API reachable at `https://supabase.Rapply.nl`
+- Studio reachable at `https://admin.Rapply.nl` (protected)
 - SMTP configured and tested:
   - signup email arrives
   - password reset email arrives
 - RLS enabled on all user data tables (this repo’s migration already does this)
 - Storage bucket is private (`transcription-uploads`)
 
-### CoachScribe server API
+### Rapply server API
 
-- API reachable at `https://backend.coachscribe.nl/health`
+- API reachable at `https://backend.Rapply.nl/health`
 - `NODE_ENV=production`
 - `CORS_ALLOWED_ORIGINS` set to your allowed origins
 - Rate limiting enabled (defaults are fine to start)
