@@ -1,10 +1,10 @@
-# Relibra — Product & System Overview
+# Rapply — Product & System Overview
 
-This document describes the functionality and domain model of the Relibra web application.
+This document describes the functionality and domain model of the Rapply web application.
 
 It combines the **product vision**, **core domain concepts**, and **system behavior**.
 
-Relibra is designed for reintegration professionals who need to manage client trajectories, document sessions, and generate formal reports while minimizing administrative overhead.
+Rapply is designed for reintegration professionals who need to manage client trajectories, document sessions, and generate formal reports while minimizing administrative overhead.
 
 All data processing and storage must occur inside the European Union.
 
@@ -12,7 +12,7 @@ All data processing and storage must occur inside the European Union.
 
 # 1. Product Overview
 
-Relibra helps reintegration coaches capture client interactions, build structured client knowledge, and generate formal reports with AI assistance.
+Rapply helps reintegration coaches capture client interactions, build structured client knowledge, and generate formal reports with AI assistance.
 
 The system focuses on:
 

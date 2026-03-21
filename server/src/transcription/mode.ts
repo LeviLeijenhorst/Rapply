@@ -1,19 +1,24 @@
-export type TranscriptionMode = "azure-fast-batch" | "azure-realtime-live"
-export type TranscriptionProviderRuntime = "azure" | "speechmatics"
+export type TranscriptionMode = "batch" | "realtime"
+export type TranscriptionProviderRuntime = "azure-speech" | "speechmatics" | "self-hosted-whisper"
 
 // Parses the configured transcription mode.
 function normalizeTranscriptionMode(value: unknown): TranscriptionMode | null {
   const normalized = String(value || "").trim().toLowerCase()
-  if (normalized === "azure-fast-batch") return "azure-fast-batch"
-  if (normalized === "azure-realtime-live") return "azure-realtime-live"
+  if (!normalized) return null
+  if (normalized === "batch" || normalized === "azure-fast-batch") return "batch"
+  if (normalized === "realtime" || normalized === "azure-realtime-live") return "realtime"
   return null
 }
 
 // Parses the configured transcription provider.
 function normalizeTranscriptionProvider(value: unknown): TranscriptionProviderRuntime | null {
   const normalized = String(value || "").trim().toLowerCase()
-  if (normalized === "azure") return "azure"
+  if (!normalized) return null
+  if (normalized === "azure" || normalized === "azure-speech") return "azure-speech"
   if (normalized === "speechmatics") return "speechmatics"
+  if (normalized === "whisper" || normalized === "verda-whisper" || normalized === "self-hosted-whisper") {
+    return "self-hosted-whisper"
+  }
   return null
 }
 
@@ -31,7 +36,7 @@ export async function readTranscriptionRuntimeSettings(): Promise<{
   const providerFromEnv = process.env.DEFAULT_TRANSCRIPTION_PROVIDER
 
   return {
-    mode: normalizeTranscriptionMode(modeFromEnv) || "azure-fast-batch",
-    provider: normalizeTranscriptionProvider(providerFromEnv) || "speechmatics",
+    mode: normalizeTranscriptionMode(modeFromEnv) || "batch",
+    provider: normalizeTranscriptionProvider(providerFromEnv) || "azure-speech",
   }
 }

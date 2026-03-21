@@ -5,7 +5,7 @@ import type { ScrollView, TextInput } from 'react-native'
 import type { ChatStateMessage } from '@/types/chatState'
 import type { NewInputQuickAction } from '@/screens/record/types'
 
-export type ClientLeftTabKey = 'sessies' | 'notities' | 'rapportages' | 'documenten'
+export type ClientLeftTabKey = 'sessies' | 'notities' | 'rapportages' | 'documenten' | 'informatie'
 
 export type ClientRightTabKey = 'chatbot' | 'status'
 
@@ -133,8 +133,9 @@ export type ClientLeftTabsProps = {
   filteredInputs: InputListItem[]
   hoveredItemId: string | null
   hoveredMenuItemId: string | null
-  isDocumentsTab: boolean
+  isInformationTab: boolean
   isSearchExpanded: boolean
+  informationContent: React.ReactNode
   leftColumnStyle: any
   menuInputId: string | null
   searchInputRef: React.RefObject<TextInput | null>

@@ -151,10 +151,8 @@ export async function transcribeViaEncryptedUpload(params: {
     })
 
     const transcript = String(result?.text || result?.transcript || "")
-    const summary = String(result?.summary || "")
     if (!transcript.trim()) throw new Error("No transcript returned")
-    if (!summary.trim()) throw new Error("No summary returned")
-    return { transcript, summary }
+    return { transcript }
   } catch (error: any) {
     const message = String(error?.message || error || "")
     logger.error("[transcription] transcribeViaEncryptedUpload failed", { message })
@@ -174,5 +172,28 @@ export async function transcribeViaEncryptedUpload(params: {
       }
     } catch {}
   }
+}
+
+export async function generateSummaryFromTranscript(params: {
+  transcript: string
+  recordingId: string
+}): Promise<string> {
+  const transcript = String(params.transcript || "").trim()
+  if (!transcript) {
+    throw new Error("Missing transcript")
+  }
+
+  const result = await postToSecureApi("/summary/generate", {
+    transcript,
+    sourceInputType: "recording",
+    sourceSessionId: params.recordingId,
+  })
+
+  const summary = String(result?.summary || "").trim()
+  if (!summary) {
+    throw new Error("No summary returned")
+  }
+
+  return summary
 }
 

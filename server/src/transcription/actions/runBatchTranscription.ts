@@ -1,5 +1,6 @@
 import { TranscriptionError } from "../../errors/TranscriptionError"
 import { runAzureSpeechBatchTranscription } from "../providers/azureSpeech"
+import { runSelfHostedWhisperBatchTranscription } from "../providers/selfHostedWhisper"
 import { runSpeechmaticsBatchTranscription } from "../providers/speechmatics"
 import { fetchEncryptedUploadStream } from "../storage"
 import type { TranscriptionProvider } from "../routes/types"
@@ -14,7 +15,7 @@ export async function runBatchTranscription(params: {
 }): Promise<string> {
   const encryptedUploadStream = await fetchEncryptedUploadStream({ blobName: params.uploadPath })
 
-  if (params.provider === "azure-speech-fast" || params.provider === "azure-speech-realtime") {
+  if (params.provider === "azure-speech-batch" || params.provider === "azure-speech-realtime") {
     return await runAzureSpeechBatchTranscription({
       encryptedStream: encryptedUploadStream,
       keyBase64: params.keyBase64,
@@ -25,6 +26,15 @@ export async function runBatchTranscription(params: {
 
   if (params.provider === "speechmatics-batch" || params.provider === "speechmatics-realtime") {
     return await runSpeechmaticsBatchTranscription({
+      encryptedStream: encryptedUploadStream,
+      keyBase64: params.keyBase64,
+      mimeType: params.mimeType,
+      languageCode: params.languageCode,
+    })
+  }
+
+  if (params.provider === "self-hosted-whisper-batch") {
+    return await runSelfHostedWhisperBatchTranscription({
       encryptedStream: encryptedUploadStream,
       keyBase64: params.keyBase64,
       mimeType: params.mimeType,

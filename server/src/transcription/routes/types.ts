@@ -5,10 +5,11 @@ export type RegisterTranscriptionRoutesParams = {
 }
 
 export type TranscriptionProvider =
-  | "azure-speech-fast"
+  | "azure-speech-batch"
   | "azure-speech-realtime"
   | "speechmatics-batch"
   | "speechmatics-realtime"
+  | "self-hosted-whisper-batch"
   | "none"
 
 export type StartRequest = {

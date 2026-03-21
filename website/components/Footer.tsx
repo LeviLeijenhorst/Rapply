@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import logo from "@/home/logo.png";
+import BrandWordmark from "@/components/BrandWordmark";
 import linkedinIcon from "@/home/LinkedIn.svg";
 import instagramIcon from "@/home/Instagram.svg";
 
@@ -40,15 +40,9 @@ export default function Footer() {
           {/* Footer brand */}
           <div className="col-span-2 flex w-full max-w-[430px] flex-col lg:col-span-1 lg:w-fit lg:max-w-none">
             <div className="flex flex-col gap-6">
-              {/* Brand logo */}
-              <div className="-mb-[108px] flex items-center">
-                <Image
-                  src={logo}
-                  alt="Rapply logo"
-                  width={261}
-                  height={132}
-                  className="-translate-x-[53px] -translate-y-[20px] h-[132px] w-[261px] object-contain"
-                />
+              {/* Brand wordmark */}
+              <div className="flex items-center">
+                <BrandWordmark />
               </div>
               {/* Brand description */}
               <p className="text-[16px] font-medium leading-relaxed">
@@ -61,10 +55,10 @@ export default function Footer() {
             </div>
             {/* Brand contact */}
             <a
-              href="mailto:contact@Rapply.nl"
+              href="mailto:contact@rapply.nl"
               className="mt-8 text-[16px] font-medium"
             >
-              contact@Rapply.nl
+              contact@rapply.nl
             </a>
           </div>
           {/* Footer navigation */}

@@ -1,45 +1,45 @@
 {
   "app": {
-    "[project]/Coachscribe/website/app/(site)/ROI/page": [
+    "[project]/app/(site)/ROI/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
-    "[project]/Coachscribe/website/app/(site)/coaches/page": [
+    "[project]/app/(site)/coaches/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
-    "[project]/Coachscribe/website/app/(site)/contact/page": [
+    "[project]/app/(site)/contact/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
-    "[project]/Coachscribe/website/app/(site)/gebruikersovereenkomst/page": [
+    "[project]/app/(site)/gebruikersovereenkomst/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
-    "[project]/Coachscribe/website/app/(site)/over-ons/page": [
+    "[project]/app/(site)/over-ons/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
-    "[project]/Coachscribe/website/app/(site)/page": [
+    "[project]/app/(site)/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
-    "[project]/Coachscribe/website/app/(site)/pricing/page": [
+    "[project]/app/(site)/pricing/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
-    "[project]/Coachscribe/website/app/(site)/privacybeleid/page": [
+    "[project]/app/(site)/privacybeleid/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
-    "[project]/Coachscribe/website/app/(site)/product/page": [
+    "[project]/app/(site)/product/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
-    "[project]/Coachscribe/website/app/(site)/toestemming-vragen/page": [
+    "[project]/app/(site)/toestemming-vragen/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
-    "[project]/Coachscribe/website/app/(site)/veiligheid/page": [
+    "[project]/app/(site)/veiligheid/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
-    "[project]/Coachscribe/website/app/(site)/verwerkersovereenkomst/page": [
+    "[project]/app/(site)/verwerkersovereenkomst/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
-    "[project]/Coachscribe/website/app/(site)/wachtlijst/page": [
+    "[project]/app/(site)/wachtlijst/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ],
-    "[project]/Coachscribe/website/app/_not-found/page": [
+    "[project]/app/_not-found/page": [
       "static/media/83459a130389a713-s.p.d10ff594.woff2"
     ]
   },

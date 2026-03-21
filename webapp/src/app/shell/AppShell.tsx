@@ -34,7 +34,7 @@ import {
   setSubscriptionReturnPath,
 } from '../../screens/record/state/subscriptionReturnDraft'
 import { createMollieExtraMinutesCheckout } from '../../api/billing/billingApi'
-import { CoachscribeLogo } from '../../components/brand/CoachscribeLogo'
+import { CoachscribeLogo } from '../../components/brand/RapplyLogo'
 import { MonitorIcon } from '../../icons/MonitorIcon'
 import { AppShellRouteView } from './AppShellRouteView'
 import {

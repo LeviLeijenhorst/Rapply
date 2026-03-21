@@ -136,7 +136,7 @@ A. Doeleinden
 
 B. Soorten persoonsgegevens
 - accountgegevens (Entra gebruikers-id, e-mail, weergavenaam);
-- coachee-gegevens;
+- cliëntgegevens;
 - sessiegegevens;
 - transcripties, samenvattingen, notities en rapporten;
 - chatberichten;

@@ -2,7 +2,7 @@ import React from 'react'
 import { Image, Pressable, ScrollView, View } from 'react-native'
 
 import { Text } from '../../../ui/Text'
-import { CoachscribeLogo } from '../../../components/brand/CoachscribeLogo'
+import { CoachscribeLogo } from '../../../components/brand/RapplyLogo'
 import { CheckmarkIcon } from '../../../icons/CheckmarkIcon'
 import { MicrophoneSmallIcon } from '../../../icons/MicrophoneSmallIcon'
 import { colors } from '../../../design/theme/colors'

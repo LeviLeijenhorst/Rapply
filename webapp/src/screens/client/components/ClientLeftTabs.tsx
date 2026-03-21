@@ -7,6 +7,7 @@ import {
   ClientPageRapportageIcon,
   ClientPageSessiesIcon,
 } from '@/icons/ClientPageSvgIcons'
+import { MijnAccountIcon } from '@/icons/MijnAccountIcon'
 import { MoreOptionsIcon } from '@/icons/MoreOptionsIcon'
 import { PlusIcon } from '@/icons/PlusIcon'
 import { colors } from '@/design/theme/colors'
@@ -21,8 +22,9 @@ export function ClientLeftTabs({
   filteredInputs,
   hoveredItemId,
   hoveredMenuItemId,
-  isDocumentsTab,
+  isInformationTab,
   isSearchExpanded,
+  informationContent,
   leftColumnStyle,
   menuInputId,
   searchInputRef,
@@ -69,141 +71,155 @@ export function ClientLeftTabs({
             isSelected={activeTabKey === 'documenten'}
             onPress={() => onSelectTab('documenten')}
           />
+          <LeftTabButton
+            label="Informatie"
+            icon={(color) => <MijnAccountIcon color={color} size={18} />}
+            isSelected={activeTabKey === 'informatie'}
+            onPress={() => onSelectTab('informatie')}
+          />
         </View>
       </View>
 
       <View style={[styles.card, styles.bottomCardConnected]}>
-        <View style={styles.inputsHeaderRow}>
-          <View style={styles.inputsHeaderTitleWrap}>
-            <Text isSemibold style={styles.inputsHeaderTitle}>
-              {title}
-            </Text>
-            <Text style={styles.inputsHeaderCount}>{`(${filteredInputs.length})`}</Text>
-          </View>
-          <View style={styles.inputsHeaderActions}>
-            {shouldShowSearch ? (
-              <ExpandableSearchField
-                isExpanded={isSearchExpanded}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder={searchPlaceholder}
-                onExpand={() => setIsSearchOpen(true)}
-                onBlur={() => {
-                  if (searchQuery.trim().length === 0) setIsSearchOpen(false)
-                }}
-                inputRef={searchInputRef}
-                collapsedLabel="Zoeken"
-                expandedWidth={220}
-                collapsedWidth={138}
-                containerStyle={styles.searchField}
-                inputStyle={styles.searchFieldInput}
-              />
-            ) : null}
-            <Pressable
-              onPress={onAddItem}
-              accessibilityRole="button"
-              accessibilityLabel={
-                activeTabKey === 'notities'
-                  ? 'Nieuwe notitie'
-                  : activeTabKey === 'rapportages'
-                    ? 'Nieuwe rapportage'
-                    : activeTabKey === 'documenten'
-                      ? 'Nieuw document'
-                      : 'Nieuwe sessie'
-              }
-              style={({ hovered }) => [styles.quickAddButton, hovered ? styles.quickAddButtonHovered : undefined]}
-            >
-              <View style={styles.quickAddIconWrap}>
-                <PlusIcon color="#FFFFFF" size={18} />
-              </View>
-            </Pressable>
-          </View>
-        </View>
-
-        <MainContainer contentKey={`client-list-${activeTabKey}`}>
+        {isInformationTab ? (
+          <MainContainer contentKey={`client-list-${activeTabKey}`} style={styles.informationContentWrap}>
+            {informationContent}
+          </MainContainer>
+        ) : (
           <>
-            <View style={styles.tableHeaderRow}>
-              <Text style={[styles.tableHeaderText, styles.tableInputCol]}>{tableFirstColumnLabel}</Text>
-              <View style={styles.tableStatusCol} />
-              <Text style={[styles.tableHeaderText, styles.tableDateCol]}>Datum</Text>
-              {showsDurationColumn ? <Text style={[styles.tableHeaderText, styles.tableDurationCol]}>Duur</Text> : null}
+            <View style={styles.inputsHeaderRow}>
+              <View style={styles.inputsHeaderTitleWrap}>
+                <Text isSemibold style={styles.inputsHeaderTitle}>
+                  {title}
+                </Text>
+                <Text style={styles.inputsHeaderCount}>{`(${filteredInputs.length})`}</Text>
+              </View>
+              <View style={styles.inputsHeaderActions}>
+                {shouldShowSearch ? (
+                  <ExpandableSearchField
+                    isExpanded={isSearchExpanded}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder={searchPlaceholder}
+                    onExpand={() => setIsSearchOpen(true)}
+                    onBlur={() => {
+                      if (searchQuery.trim().length === 0) setIsSearchOpen(false)
+                    }}
+                    inputRef={searchInputRef}
+                    collapsedLabel="Zoeken"
+                    expandedWidth={220}
+                    collapsedWidth={138}
+                    containerStyle={styles.searchField}
+                    inputStyle={styles.searchFieldInput}
+                  />
+                ) : null}
+                <Pressable
+                  onPress={onAddItem}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    activeTabKey === 'notities'
+                      ? 'Nieuwe notitie'
+                      : activeTabKey === 'rapportages'
+                        ? 'Nieuwe rapportage'
+                        : activeTabKey === 'documenten'
+                          ? 'Nieuw document'
+                          : 'Nieuwe sessie'
+                  }
+                  style={({ hovered }) => [styles.quickAddButton, hovered ? styles.quickAddButtonHovered : undefined]}
+                >
+                  <View style={styles.quickAddIconWrap}>
+                    <PlusIcon color="#FFFFFF" size={18} />
+                  </View>
+                </Pressable>
+              </View>
             </View>
 
-            <ScrollView style={styles.inputsScroll} contentContainerStyle={styles.inputsScrollContent} showsVerticalScrollIndicator={false}>
-              {filteredInputs.length === 0 ? (
-                <View style={styles.emptyTableState}>
-                  <Text style={styles.emptyInputsText}>Geen items gevonden.</Text>
+            <MainContainer contentKey={`client-list-${activeTabKey}`}>
+              <>
+                <View style={styles.tableHeaderRow}>
+                  <Text style={[styles.tableHeaderText, styles.tableInputCol]}>{tableFirstColumnLabel}</Text>
+                  <View style={styles.tableStatusCol} />
+                  <Text style={[styles.tableHeaderText, styles.tableDateCol]}>Datum</Text>
+                  {showsDurationColumn ? <Text style={[styles.tableHeaderText, styles.tableDurationCol]}>Duur</Text> : null}
                 </View>
-              ) : null}
-              {filteredInputs.map((item) => {
-                const isSessionProcessing =
-                  (item.rowType === 'session' || item.rowType === 'document') &&
-                  (item.transcriptionStatus === 'transcribing' || item.transcriptionStatus === 'generating')
-                const isPressableRow = item.rowType !== 'document'
-                return (
-                <Pressable
-                  key={item.id}
-                  onPress={isPressableRow ? () => onPressRow(item) : undefined}
-                  accessibilityRole={isPressableRow ? 'button' : undefined}
-                  accessibilityLabel={
-                    item.rowType === 'note'
-                      ? `Open notitie ${item.title}`
-                      : item.rowType === 'report'
-                        ? `Open rapportage ${item.title}`
-                        : item.rowType === 'document'
-                          ? `Document ${item.title}`
-                          : `Open sessie ${item.title}`
-                  }
-                  onHoverIn={() => setHoveredItemId(item.id)}
-                  onHoverOut={() => setHoveredItemId((previous) => (previous === item.id ? null : previous))}
-                  style={({ hovered }) => [styles.tableRow, hovered ? styles.tableRowHovered : undefined, !isPressableRow ? styles.tableRowStatic : undefined]}
-                >
-                  <View style={styles.tableInputCol}>
-                    <Text isSemibold style={styles.tableInputTitle}>
-                      {item.title}
-                    </Text>
-                    <Text style={styles.tableInputSub}>{item.trajectoryLabel}</Text>
-                  </View>
-                  <View style={styles.tableStatusCol}>
-                    {isSessionProcessing ? <ActivityIndicator size="small" color={colors.selected} /> : null}
-                  </View>
-                  <View style={styles.tableDateCol}>
-                    <Text style={styles.tableDateMain}>{item.dateLabel}</Text>
-                    {!item.isReport ? <Text style={styles.tableDateSub}>{item.timeLabel}</Text> : null}
-                  </View>
-                  {showsDurationColumn ? (
-                    <View style={styles.tableDurationCol}>
-                      <Text style={styles.tableDurationText}>{item.durationLabel || '-'}</Text>
+
+                <ScrollView style={styles.inputsScroll} contentContainerStyle={styles.inputsScrollContent} showsVerticalScrollIndicator={false}>
+                  {filteredInputs.length === 0 ? (
+                    <View style={styles.emptyTableState}>
+                      <Text style={styles.emptyInputsText}>Geen items gevonden.</Text>
                     </View>
                   ) : null}
-                  <Pressable
-                    pointerEvents={
-                      hoveredItemId === item.id || hoveredMenuItemId === item.id || menuInputId === item.id
-                        ? 'auto'
-                        : 'none'
-                    }
-                    onHoverIn={() => setHoveredMenuItemId(item.id)}
-                    onHoverOut={() => setHoveredMenuItemId((previous) => (previous === item.id ? null : previous))}
-                    onPress={(event) => {
-                      ;(event as any)?.stopPropagation?.()
-                      onOpenRowMenu(item, event)
-                    }}
-                    style={({ hovered }) => [
-                      styles.rowMenuButton,
-                      hoveredItemId === item.id || hoveredMenuItemId === item.id || menuInputId === item.id
-                        ? undefined
-                        : styles.rowMenuButtonHidden,
-                      hovered ? styles.rowMenuButtonHovered : undefined,
-                    ]}
-                  >
-                    <MoreOptionsIcon color="#656565" size={18} />
-                  </Pressable>
-                </Pressable>
-                )
-              })}
-            </ScrollView>
+                  {filteredInputs.map((item) => {
+                    const isSessionProcessing =
+                      (item.rowType === 'session' || item.rowType === 'document') &&
+                      (item.transcriptionStatus === 'transcribing' || item.transcriptionStatus === 'generating')
+                    const isPressableRow = item.rowType !== 'document'
+                    return (
+                      <Pressable
+                        key={item.id}
+                        onPress={isPressableRow ? () => onPressRow(item) : undefined}
+                        accessibilityRole={isPressableRow ? 'button' : undefined}
+                        accessibilityLabel={
+                          item.rowType === 'note'
+                            ? `Open notitie ${item.title}`
+                            : item.rowType === 'report'
+                              ? `Open rapportage ${item.title}`
+                              : item.rowType === 'document'
+                                ? `Document ${item.title}`
+                                : `Open sessie ${item.title}`
+                        }
+                        onHoverIn={() => setHoveredItemId(item.id)}
+                        onHoverOut={() => setHoveredItemId((previous) => (previous === item.id ? null : previous))}
+                        style={({ hovered }) => [styles.tableRow, hovered ? styles.tableRowHovered : undefined, !isPressableRow ? styles.tableRowStatic : undefined]}
+                      >
+                        <View style={styles.tableInputCol}>
+                          <Text isSemibold style={styles.tableInputTitle}>
+                            {item.title}
+                          </Text>
+                          <Text style={styles.tableInputSub}>{item.trajectoryLabel}</Text>
+                        </View>
+                        <View style={styles.tableStatusCol}>
+                          {isSessionProcessing ? <ActivityIndicator size="small" color={colors.selected} /> : null}
+                        </View>
+                        <View style={styles.tableDateCol}>
+                          <Text style={styles.tableDateMain}>{item.dateLabel}</Text>
+                          {!item.isReport ? <Text style={styles.tableDateSub}>{item.timeLabel}</Text> : null}
+                        </View>
+                        {showsDurationColumn ? (
+                          <View style={styles.tableDurationCol}>
+                            <Text style={styles.tableDurationText}>{item.durationLabel || '-'}</Text>
+                          </View>
+                        ) : null}
+                        <Pressable
+                          pointerEvents={
+                            hoveredItemId === item.id || hoveredMenuItemId === item.id || menuInputId === item.id
+                              ? 'auto'
+                              : 'none'
+                          }
+                          onHoverIn={() => setHoveredMenuItemId(item.id)}
+                          onHoverOut={() => setHoveredMenuItemId((previous) => (previous === item.id ? null : previous))}
+                          onPress={(event) => {
+                            ;(event as any)?.stopPropagation?.()
+                            onOpenRowMenu(item, event)
+                          }}
+                          style={({ hovered }) => [
+                            styles.rowMenuButton,
+                            hoveredItemId === item.id || hoveredMenuItemId === item.id || menuInputId === item.id
+                              ? undefined
+                              : styles.rowMenuButtonHidden,
+                            hovered ? styles.rowMenuButtonHovered : undefined,
+                          ]}
+                        >
+                          <MoreOptionsIcon color="#656565" size={18} />
+                        </Pressable>
+                      </Pressable>
+                    )
+                  })}
+                </ScrollView>
+              </>
+            </MainContainer>
           </>
-        </MainContainer>
+        )}
       </View>
     </View>
   )
@@ -308,6 +324,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   bottomCardConnected: { marginTop: 0, borderTopLeftRadius: 0, borderTopRightRadius: 12 },
+  informationContentWrap: { flex: 1 },
   inputsHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',

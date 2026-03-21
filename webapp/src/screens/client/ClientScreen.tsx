@@ -12,7 +12,6 @@ import { ActionMenu } from '@/ui/overlays/ActionMenu'
 import { Text } from '@/ui/Text'
 import { ConfirmChatClearModal } from '@/screens/shared/modals/ConfirmChatClearModal'
 import { ConfirmInputDeleteModal } from '@/screens/shared/modals/ConfirmInputDeleteModal'
-import { ClientUpsertModal } from '@/screens/shared/modals/ClientUpsertModal'
 import { ConfirmNoteDeleteModal } from '@/screens/shared/modals/ConfirmNoteDeleteModal'
 import { NoteEditModal } from '@/screens/shared/modals/NoteEditModal'
 import { WarningModal } from '@/ui/modals/WarningModal'
@@ -29,6 +28,7 @@ import type {
   InputListItem,
 } from '@/screens/client/clientScreen.types'
 import { ClientHeaderCard } from '@/screens/client/components/ClientHeaderCard'
+import { ClientInfoTab } from '@/screens/client/components/ClientInfoTab'
 import { ClientLeftTabs } from '@/screens/client/components/ClientLeftTabs'
 import { ClientRightTabs } from '@/screens/client/components/ClientRightTabs'
 import { ClientChatbot } from '@/screens/client/components/chatbot/clientChatbot'
@@ -61,14 +61,6 @@ export function ClientScreen({
   const clientName = client?.name ?? 'Client'
   const clientProfileValues = useMemo(() => getClientUpsertValues(client), [client])
   const clientTrajectories = useMemo(() => getClientTrajectories(data, clientId), [clientId, data])
-  const clientTrajectoryOptions = useMemo(
-    () =>
-      clientTrajectories.map((trajectory) => ({
-        id: trajectory.id,
-        label: String(trajectory.name || '').trim() || 'Traject',
-      })),
-    [clientTrajectories],
-  )
   const selectedTrajectoryId = String(clientProfileValues.trajectoryId || '').trim()
   const activeTrajectory = useMemo(
     () => getActiveTrajectory(clientTrajectories, selectedTrajectoryId),
@@ -99,7 +91,6 @@ export function ClientScreen({
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [isClearChatModalVisible, setIsClearChatModalVisible] = useState(false)
   const [isAssistantFullscreen, setIsAssistantFullscreen] = useState(false)
-  const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false)
   const [isDeleteClientWarningVisible, setIsDeleteClientWarningVisible] = useState(false)
   const [assignedCoaches, setAssignedCoaches] = useState<AssignedCoach[]>([])
   const [organizationCoaches, setOrganizationCoaches] = useState<OrganizationCoach[]>([])
@@ -117,10 +108,20 @@ export function ClientScreen({
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const isSearchExpanded = isSearchOpen || normalizedQuery.length > 0
   const isDocumentsTab = leftActiveTabKey === 'documenten'
+  const isInformationTab = leftActiveTabKey === 'informatie'
   const showsDurationColumn = false
-  const visibleItems = isDocumentsTab ? documentItems : leftActiveTabKey === 'notities' ? noteItems : leftActiveTabKey === 'rapportages' ? reportItems : sessionItems
+  const visibleItems = isInformationTab
+    ? []
+    : isDocumentsTab
+      ? documentItems
+      : leftActiveTabKey === 'notities'
+        ? noteItems
+        : leftActiveTabKey === 'rapportages'
+          ? reportItems
+          : sessionItems
   const filteredInputs = visibleItems.filter((item) => item.searchText.includes(normalizedQuery))
   const chatContextInputIds = useMemo(() => {
+    if (leftActiveTabKey === 'informatie') return new Set<string>()
     if (leftActiveTabKey === 'documenten') return new Set(documentItems.map((item) => item.targetInputId))
     if (leftActiveTabKey === 'notities') return new Set(noteItems.map((item) => item.targetInputId))
     if (leftActiveTabKey === 'rapportages') return new Set(reportItems.map((item) => item.targetInputId))
@@ -168,14 +169,16 @@ export function ClientScreen({
   })
 
   const searchPlaceholder =
-    leftActiveTabKey === 'documenten'
-      ? 'Zoek documenten...'
-      : leftActiveTabKey === 'notities'
-        ? 'Zoek notities...'
-        : leftActiveTabKey === 'rapportages'
-          ? 'Zoek rapportages...'
-          : 'Zoek sessies...'
-  const shouldShowSearch = visibleItems.length > 1
+    leftActiveTabKey === 'informatie'
+      ? ''
+      : leftActiveTabKey === 'documenten'
+        ? 'Zoek documenten...'
+        : leftActiveTabKey === 'notities'
+          ? 'Zoek notities...'
+          : leftActiveTabKey === 'rapportages'
+            ? 'Zoek rapportages...'
+            : 'Zoek sessies...'
+  const shouldShowSearch = !isInformationTab && visibleItems.length > 1
 
   const isMenuVisible = !!menuInputId && !!menuAnchorPoint
   const pendingDeleteInputTitle = pendingDeleteInputId
@@ -186,21 +189,25 @@ export function ClientScreen({
   const pendingDeleteNoteTitle = pendingDeleteNoteId ? data.notes.find((item: any) => item.id === pendingDeleteNoteId)?.title : null
   const editingNote = editingNoteId ? data.notes.find((item: any) => item.id === editingNoteId) ?? null : null
   const leftPanelTitle =
-    leftActiveTabKey === 'documenten'
-      ? 'Documenten'
-      : leftActiveTabKey === 'notities'
-        ? 'Notities'
-        : leftActiveTabKey === 'rapportages'
-          ? 'Rapportages'
-          : 'Recente sessies'
+    leftActiveTabKey === 'informatie'
+      ? 'Cliëntinformatie'
+      : leftActiveTabKey === 'documenten'
+        ? 'Documenten'
+        : leftActiveTabKey === 'notities'
+          ? 'Notities'
+          : leftActiveTabKey === 'rapportages'
+            ? 'Rapportages'
+            : 'Recente sessies'
   const tableFirstColumnLabel =
-    leftActiveTabKey === 'documenten'
-      ? 'Document'
-      : leftActiveTabKey === 'notities'
-        ? 'Notitie'
-        : leftActiveTabKey === 'rapportages'
-          ? 'Rapportage'
-          : 'Sessie'
+    leftActiveTabKey === 'informatie'
+      ? ''
+      : leftActiveTabKey === 'documenten'
+        ? 'Document'
+        : leftActiveTabKey === 'notities'
+          ? 'Notitie'
+          : leftActiveTabKey === 'rapportages'
+            ? 'Rapportage'
+            : 'Sessie'
 
   const assistantPanelHeight = Math.max(640, windowHeight - 180)
   const rightColumnFloatingStyle = useMemo(
@@ -362,6 +369,7 @@ export function ClientScreen({
   }
 
   function handleAddItemForLeftTab() {
+    if (leftActiveTabKey === 'informatie') return
     if (leftActiveTabKey === 'documenten') {
       onPressCreateInput(activeTrajectory?.id ?? null, 'import-document')
       return
@@ -375,6 +383,26 @@ export function ClientScreen({
       return
     }
     onPressCreateInput(activeTrajectory?.id ?? null)
+  }
+
+  function handleSaveClientProfile(values: ReturnType<typeof getClientUpsertValues>) {
+    if (!client) return
+    saveClientProfileChanges(
+      {
+        updateClient,
+        updateTrajectory,
+        createTrajectory: (nextValues) =>
+          createTrajectory({
+            clientId: nextValues.clientId,
+            name: nextValues.name,
+            dienstType: nextValues.dienstType,
+            uwvContactName: nextValues.uwvContactName,
+            orderNumber: nextValues.orderNumber,
+            startDate: nextValues.startDate,
+          } as any),
+      },
+      { clientId: client.id, activeTrajectory, values },
+    )
   }
 
   function openRowMenu(item: InputListItem, event?: any) {
@@ -406,7 +434,7 @@ export function ClientScreen({
         clientName={clientName}
         isCreateInputDisabled={isCreateInputDisabled}
         sessionCount={sessionCount}
-        onOpenEditClient={() => setIsEditClientModalOpen(true)}
+        onOpenClientInfo={() => setLeftActiveTabKey('informatie')}
         onPressCreateReports={() => onPressCreateReports(activeTrajectory?.id ?? null)}
         onPressCreateInput={() => onPressCreateInput(activeTrajectory?.id ?? null)}
       />
@@ -536,8 +564,20 @@ export function ClientScreen({
           filteredInputs={filteredInputs}
           hoveredItemId={hoveredItemId}
           hoveredMenuItemId={hoveredMenuItemId}
-          isDocumentsTab={isDocumentsTab}
+          isInformationTab={isInformationTab}
           isSearchExpanded={isSearchExpanded}
+          informationContent={
+            <ClientInfoTab
+              initialValues={{
+                ...clientProfileValues,
+                trajectoryId: activeTrajectory?.id ?? '',
+                orderNumber: String(activeTrajectory?.orderNumber || ''),
+                uwvContactName: String(activeTrajectory?.uwvContactName || ''),
+              }}
+              onDelete={() => setIsDeleteClientWarningVisible(true)}
+              onSave={handleSaveClientProfile}
+            />
+          }
           leftColumnStyle={leftColumnMatchHeightStyle}
           menuInputId={menuInputId}
           searchInputRef={searchInputRef}
@@ -682,40 +722,6 @@ export function ClientScreen({
         }}
       />
 
-      <ClientUpsertModal
-        visible={isEditClientModalOpen}
-        mode="edit"
-        initialValues={{
-          ...clientProfileValues,
-          trajectoryId: activeTrajectory?.id ?? '',
-          orderNumber: String(activeTrajectory?.orderNumber || ''),
-          uwvContactName: String(activeTrajectory?.uwvContactName || ''),
-        }}
-        trajectoryOptions={clientTrajectoryOptions}
-        onClose={() => setIsEditClientModalOpen(false)}
-        onDelete={() => setIsDeleteClientWarningVisible(true)}
-        onSave={(values) => {
-          if (!client) return
-          const result = saveClientProfileChanges(
-            {
-              updateClient,
-              updateTrajectory,
-              createTrajectory: (values) =>
-                createTrajectory({
-                  clientId: values.clientId,
-                  name: values.name,
-                  dienstType: values.dienstType,
-                  uwvContactName: values.uwvContactName,
-                  orderNumber: values.orderNumber,
-                  startDate: values.startDate,
-                } as any),
-            },
-            { clientId: client.id, activeTrajectory, values },
-          )
-          if (result.didSave) setIsEditClientModalOpen(false)
-        }}
-      />
-
       <WarningModal
         visible={isDeleteClientWarningVisible}
         title="Client verwijderen"
@@ -725,7 +731,6 @@ export function ClientScreen({
         onClose={() => setIsDeleteClientWarningVisible(false)}
         onConfirm={() => {
           setIsDeleteClientWarningVisible(false)
-          setIsEditClientModalOpen(false)
           if (!client) return
           deleteClient(client.id)
           onBack()

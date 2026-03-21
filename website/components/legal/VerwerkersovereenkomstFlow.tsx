@@ -698,7 +698,7 @@ export default function VerwerkersovereenkomstFlow() {
                     if (isBullet(line)) {
                       return (
                         <p key={`bullet-${index}`} className="pl-3 text-[13.5px] leading-[1.45]">
-                          • {line.replace(/^- /, "").trim()}
+                          â€¢ {line.replace(/^- /, "").trim()}
                         </p>
                       );
                     }
@@ -720,7 +720,7 @@ export default function VerwerkersovereenkomstFlow() {
                   })}
                 </div>
                 <div className="mt-5 border-t border-[#BD0265] pt-3 text-[11px] text-[#606060]">
-                  Rapply.nl | contact@Rapply.nl
+                  Rapply.nl | contact@rapply.nl
                 </div>
               </article>
             </div>

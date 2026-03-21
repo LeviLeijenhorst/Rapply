@@ -12,7 +12,7 @@ type Props = {
   clientName: string
   isCreateInputDisabled: boolean
   sessionCount: number
-  onOpenEditClient: () => void
+  onOpenClientInfo: () => void
   onPressCreateReports: () => void
   onPressCreateInput: () => void
 }
@@ -21,7 +21,7 @@ export function ClientHeaderCard({
   clientName,
   isCreateInputDisabled,
   sessionCount,
-  onOpenEditClient,
+  onOpenClientInfo,
   onPressCreateReports,
   onPressCreateInput,
 }: Props) {
@@ -35,7 +35,7 @@ export function ClientHeaderCard({
                 {clientName}
               </Text>
               <Pressable
-                onPress={onOpenEditClient}
+                onPress={onOpenClientInfo}
                 style={({ hovered }) => [styles.profileSettingsButton, hovered ? styles.profileSettingsButtonHovered : undefined]}
               >
                 <MoreOptionsIcon color="#93858D" size={18} />

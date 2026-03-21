@@ -38,7 +38,7 @@ Voorbeeld:
 
 "Tijdens onze sessies maak ik gebruik van een opname-tool voor verslaglegging. De opname wordt veilig verwerkt. Ga je hiermee akkoord?"
 
-Laat de coachee dit bevestigen.
+Laat de cliënt dit bevestigen.
 
 ### 3. Opnemen in je coachovereenkomst
 
@@ -50,7 +50,7 @@ Belangrijk: blijf het alsnog bij elke sessie kort benoemen.
 
 - De opname wordt gebruikt om een transcriptie en samenvatting te maken.
 - De gegevens worden beveiligd opgeslagen.
-- Alleen jij (en eventueel de coachee als jij dat deelt) hebben toegang.
+- Alleen jij (en eventueel de cliënt als jij dat deelt) hebben toegang.
 
 Wil je meer weten over privacy en beveiliging? Bekijk onze privacyverklaring op /privacybeleid.
 

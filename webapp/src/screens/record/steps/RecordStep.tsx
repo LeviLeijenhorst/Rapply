@@ -3,7 +3,7 @@ import { Animated, Pressable, TextInput, View } from 'react-native'
 
 import { Modal } from '../../../ui/animated/Modal'
 import { Text } from '../../../ui/Text'
-import { CoachscribeLogo } from '../../../components/brand/CoachscribeLogo'
+import { CoachscribeLogo } from '../../../components/brand/RapplyLogo'
 import { ModalCloseIcon } from '../../../icons/ModalCloseIcon'
 import { PauseIcon } from '../../../icons/PauseIcon'
 import { PlaySmallIcon } from '../../../icons/PlaySmallIcon'

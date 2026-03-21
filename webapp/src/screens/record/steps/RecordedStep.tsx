@@ -3,7 +3,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native'
 
 import { Dropdown } from '../../../ui/animated/Dropdown'
 import { Text } from '../../../ui/Text'
-import { CoachscribeLogo } from '../../../components/brand/CoachscribeLogo'
+import { CoachscribeLogo } from '../../../components/brand/RapplyLogo'
 import { ChevronDownIcon } from '../../../icons/ChevronDownIcon'
 import { MicrophoneSmallIcon } from '../../../icons/MicrophoneSmallIcon'
 import { ProfileCircleIcon } from '../../../icons/ProfileCircleIcon'

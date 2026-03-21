@@ -35,7 +35,7 @@ const featureItems = [
   {
     title: "Deel in jouw huisstijl",
     description:
-      "Deel verslagen direct met je coachee, in jouw eigen huisstijl. Voeg je logo en praktijkkleur toe, zodat elke PDF direct herkenbaar en professioneel oogt.\n\nGemaakt met oog op coach en coachee.",
+      "Deel verslagen direct met je cliënt, in jouw eigen huisstijl. Voeg je logo en praktijkkleur toe, zodat elke PDF direct herkenbaar en professioneel oogt.\n\nGemaakt met oog op coach en cliënt.",
     image: productThreeImage,
   },
 ];

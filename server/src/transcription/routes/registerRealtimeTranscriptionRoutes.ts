@@ -95,13 +95,20 @@ export function registerRealtimeTranscriptionRoutes(app: Express, params: Regist
       const settings = await readTranscriptionRuntimeSettings()
       const azureSpeechConfigured = !!String(env.azureSpeechKey || "").trim() && !!normalizeRegion(env.azureSpeechRegion)
       const speechmaticsConfigured = !!String(env.speechmaticsApiKey || "").trim()
+      const selfHostedWhisperConfigured = !!String(env.selfHostedWhisperEndpoint || "").trim()
 
       res.status(200).json({
         mode: settings.mode,
         provider: settings.provider,
-        providerConfigured: settings.provider === "azure" ? azureSpeechConfigured : speechmaticsConfigured,
+        providerConfigured:
+          settings.provider === "azure-speech"
+            ? azureSpeechConfigured
+            : settings.provider === "speechmatics"
+              ? speechmaticsConfigured
+              : selfHostedWhisperConfigured,
         azureSpeechConfigured,
         speechmaticsConfigured,
+        selfHostedWhisperConfigured,
       })
     }),
   )
@@ -112,13 +119,13 @@ export function registerRealtimeTranscriptionRoutes(app: Express, params: Regist
     asyncHandler(async (req, res) => {
       await requireAuthenticatedUser(req)
       const settings = await readTranscriptionRuntimeSettings()
-      if (settings.mode !== "azure-realtime-live") {
+      if (settings.mode !== "realtime") {
         sendError(res, 409, "Realtime transcription is disabled")
         return
       }
 
       try {
-        if (settings.provider === "azure") {
+        if (settings.provider === "azure-speech") {
           res.status(200).json({ mode: settings.mode, provider: settings.provider, ...(await issueAzureSpeechToken()) })
           return
         }
@@ -142,7 +149,7 @@ export function registerRealtimeTranscriptionRoutes(app: Express, params: Regist
     asyncHandler(async (req, res) => {
       const user = await requireAuthenticatedUser(req)
       const settings = await readTranscriptionRuntimeSettings()
-      if (settings.mode !== "azure-realtime-live") {
+      if (settings.mode !== "realtime") {
         sendError(res, 409, "Realtime transcription is disabled")
         return
       }

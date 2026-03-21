@@ -7,7 +7,7 @@ const questions = [
   {
     question: "Blijven gegevens binnen Europa?",
     answer:
-      "Ja. Alle aan sessies en coachees gerelateerde gegevens worden opgeslagen en verwerkt binnen de Europese Unie.",
+      "Ja. Alle aan sessies en cliënten gerelateerde gegevens worden opgeslagen en verwerkt binnen de Europese Unie.",
   },
   {
     question: "Worden onze gegevens gebruikt om AI-modellen te trainen?",

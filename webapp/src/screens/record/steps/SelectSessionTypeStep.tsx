@@ -2,7 +2,7 @@ import React from 'react'
 import { Image, Pressable, ScrollView, View } from 'react-native'
 
 import { Text } from '../../../ui/Text'
-import { CoachscribeLogo } from '../../../components/brand/CoachscribeLogo'
+import { CoachscribeLogo } from '../../../components/brand/RapplyLogo'
 import { MonitorIcon } from '../../../icons/MonitorIcon'
 import { ClientPageMicrophoneIcon } from '../../../icons/ClientPageSvgIcons'
 import { ImportAudioIcon } from '../../../icons/ImportAudioIcon'
