@@ -9,7 +9,7 @@ JNL Solutions, gevestigd aan Stationsplein 26, 6512 AB, Nijmegen, is verantwoord
 - Website: https://www.Rapply.nl
 - Adres: Stationsplein 26, 6512 AB, Nijmegen
 - Telefoon: +31 6 221 68 360
-- E-mail: contact@Rapply.nl
+- E-mail: contact@rapply.nl
 
 ## Rollen en verantwoordelijkheid
 
@@ -143,7 +143,7 @@ Belangrijke maatregelen zijn onder meer:
 - Toegangsbeperking tot systemen
 - Rate limiting en misbruikdetectie
 
-Bij vermoedens van een beveiligingsincident kun je contact opnemen via contact@Rapply.nl.
+Bij vermoedens van een beveiligingsincident kun je contact opnemen via contact@rapply.nl.
 
 ## Geautomatiseerde besluitvorming
 
@@ -163,7 +163,7 @@ Je hebt onder de AVG het recht om:
 - De verwerking te laten beperken
 - Bezwaar te maken tegen bepaalde verwerkingen
 
-Je kunt een verzoek sturen naar contact@Rapply.nl. Wij reageren binnen een maand.
+Je kunt een verzoek sturen naar contact@rapply.nl. Wij reageren binnen een maand.
 
 Je hebt ook het recht om een klacht in te dienen bij de Autoriteit Persoonsgegevens via www.autoriteitpersoonsgegevens.nl.
 

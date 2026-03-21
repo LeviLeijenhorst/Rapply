@@ -12,9 +12,9 @@ export default function CoachesPage() {
       <div className="flex w-full flex-col">
         <CoachesCtaSection />
         <CoachesTypesSection />
-        <CoachesWorkflowSection />
         <ProductCoachesSection />
-        <SecuritySection />
+        <CoachesWorkflowSection />
+        <SecuritySection plainBackground />
         <WinWinSection />
         <CoachesFrequentlyAskedQuestionsSection />
       </div>

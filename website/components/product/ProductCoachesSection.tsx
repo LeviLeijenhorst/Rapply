@@ -17,19 +17,22 @@ export default function ProductCoachesSection() {
           />
         </div>
         <div className="flex w-full flex-col items-start">
-          <h2 className="text-3xl font-semibold leading-tight text-black md:text-4xl">
-            In samenwerking met <span className="text-[#BD0265]">professionals</span>
+          <h2 className="font-[var(--font-catamaran)] text-[40px] font-medium leading-[120%] text-black">
+            <span className="block">Voor coaches,</span>
+            <span className="block text-[#BD0265]">door coaches.</span>
           </h2>
           <div className="mt-3 flex w-full flex-col gap-6">
             <p className="text-[16px] font-medium text-black/70">
-              Rapply is ontstaan uit tientallen gesprekken met loopbaan-
-              en re-integratieprofessionals uit het werkveld. Door te
-              onderzoeken welke functies echt waardevol zijn, hebben we een
-              product ontwikkeld dat volledig aansluit bij hun behoeften.
+              Rapply is niet gebouwd achter een bureau. Het is ontstaan
+              vanuit de praktijk, door tientallen gesprekken met loopbaan- en
+              re-integratiecoaches die dagelijks tegen dezelfde
+              uitdagingen aanliepen. Hun ervaringen, frustraties en behoeften
+              vormen de basis van elk onderdeel van het product.
             </p>
             <p className="text-[16px] font-medium text-black/70">
-              We blijven continu in contact met professionals om het product te
-              verbeteren en verder te ontwikkelen.
+              We blijven continu in gesprek met coaches om Rapply te
+              verbeteren. Want het werkveld verandert, en Rapply verandert
+              mee.
             </p>
             <p className="text-[16px] font-medium text-black/70">
               Wil je meedenken of input geven? Neem contact met ons op!

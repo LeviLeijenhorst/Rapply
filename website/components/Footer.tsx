@@ -12,7 +12,7 @@ const navigationLinks = [
   { label: "Veiligheid", destination: "/veiligheid" },
   { label: "Over Ons", destination: "/over-ons" },
   { label: "Contact", destination: "/contact" },
-  { label: "Probeer het uit", destination: "https://app.Rapply.nl" },
+  { label: "Maak een afspraak", destination: "https://calendly.com/jonaskroon/new-meeting?month=2026-02" },
 ];
 
 const connectLinks = [
@@ -46,11 +46,13 @@ export default function Footer() {
               </div>
               {/* Brand description */}
               <p className="text-[16px] font-medium leading-relaxed">
-                Rapply neemt sessies op van coaches
+                Rapply helpt loopbaan- en
                 <br />
-                en zet deze om in praktische verslagen die
+                re-integratiecoaches met het automatisch
                 <br />
-                aansluiten op de behoefte van de coach.
+                vastleggen van sessies en het genereren van
+                <br />
+                professionele verslagen.
               </p>
             </div>
             {/* Brand contact */}

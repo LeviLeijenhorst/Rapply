@@ -22,8 +22,9 @@ export default function CoachesCtaSection() {
           </div>
           <div className="mt-6">
             <Button
-              label="Probeer het uit"
-              destination="https://app.Rapply.nl"
+              label="Maak een afspraak"
+              destination="https://calendly.com/jonaskroon/new-meeting?month=2026-02"
+              openInNewTab
               showArrow
               className="font-normal"
             />
@@ -41,4 +42,3 @@ export default function CoachesCtaSection() {
     </SectionContainer>
   );
 }
-

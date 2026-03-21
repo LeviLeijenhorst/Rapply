@@ -7,7 +7,7 @@ const questions = [
   {
     question: "Blijven gegevens binnen Europa?",
     answer:
-      "Ja. Alle aan sessies en cliënten gerelateerde gegevens worden opgeslagen en verwerkt binnen de Europese Unie.",
+      "Ja. Alle aan sessies en coachees gerelateerde gegevens worden opgeslagen en verwerkt binnen de Europese Unie.",
   },
   {
     question: "Worden onze gegevens gebruikt om AI-modellen te trainen?",
@@ -60,7 +60,7 @@ export default function VeiligheidFaqSection() {
   const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
 
   return (
-    <SectionContainer className="bg-[#F8F9F9]" contentClassName="md:pt-10 md:pb-20">
+    <SectionContainer className="bg-[#F8F9F9]" contentClassName="pt-[80px] pb-20 md:pt-[80px] md:pb-20">
       <div id="faq" className="flex w-full flex-col gap-8">
         <h2 className="text-3xl font-semibold text-[#1D0A00] md:text-5xl xl:text-6xl">
           Veel gestelde vragen

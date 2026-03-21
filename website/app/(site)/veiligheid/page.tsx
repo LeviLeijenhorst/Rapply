@@ -1,6 +1,7 @@
 import VeiligheidHeroSection from "@/components/veiligheid/VeiligheidHeroSection";
 import VeiligheidEthicsSection from "@/components/veiligheid/VeiligheidEthicsSection";
 import VeiligheidFaqSection from "@/components/veiligheid/VeiligheidFaqSection";
+import VeiligheidSecuritySection from "@/components/veiligheid/VeiligheidSecuritySection";
 import SecuritySection from "@/components/home/SecuritySection";
 
 export default function VeiligheidPage() {
@@ -8,7 +9,10 @@ export default function VeiligheidPage() {
     <div className="w-full">
       <div className="flex w-full flex-col">
         <VeiligheidHeroSection />
-        <SecuritySection duplicateCards showActionButton={false} />
+        <VeiligheidSecuritySection />
+        <div className="mt-[80px]">
+          <SecuritySection duplicateCards showActionButton={false} />
+        </div>
         <VeiligheidEthicsSection />
         <VeiligheidFaqSection />
       </div>

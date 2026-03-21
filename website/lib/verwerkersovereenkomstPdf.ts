@@ -1,4 +1,4 @@
-﻿function slugifyFilename(value: string) {
+function slugifyFilename(value: string) {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -80,7 +80,7 @@ export async function downloadVerwerkersovereenkomstPdf(
     doc.setTextColor(96, 96, 96);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.text("coachscribe.nl  |  contact@coachscribe.nl", marginX, pageHeight - 44);
+  doc.text("Rapply.nl  |  contact@rapply.nl", marginX, pageHeight - 44);
   };
 
   drawPageChrome();

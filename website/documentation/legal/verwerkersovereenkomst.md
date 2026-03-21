@@ -24,7 +24,7 @@ Handelend onder de naam: Rapply
 Adres: Stationsplein 26  
 6512 AB Nijmegen  
 Nederland  
-E-mail: contact@Rapply.nl
+E-mail: contact@rapply.nl
 
 Website: https://www.Rapply.nl
 

@@ -5,14 +5,14 @@ import SectionContainer from "@/components/home/SectionContainer";
 
 const questions = [
   {
+    question: "Kan ik Rapply gebruiken op mijn telefoon?",
+    answer:
+      "Ja. Rapply is beschikbaar via de browser op je telefoon, tablet of laptop. Je kunt dus direct sessies opnemen via je smartphone zonder dat je een app nodig hebt. Een dedicated app voor de AppStore en PlayStore is daarnaast binnenkort beschikbaar.",
+  },
+  {
     question: "Kan ik mijn huisstijl toevoegen aan verslagen?",
     answer:
       "Ja. Je kunt je eigen logo en praktijk kleur toevoegen, zodat elk verslag direct herkenbaar is en professioneel oogt. Zo blijft de uitstraling consistent en duidelijk voor jou en je clienten.",
-  },
-  {
-    question: "Is er een app voor Rapply?",
-    answer:
-      "Binnenkort. Naar verwachting zal deze halverwege maart op de AppStore en PlayStore uit worden gebracht.",
   },
   {
     question: "Kan ik verslagen delen met clienten?",
@@ -27,7 +27,7 @@ const questions = [
   {
     question: "Kan ik templates gebruiken?",
     answer:
-      "Ja. Je kunt vooraf ingestelde templates gebruiken die zijn afgestemd op loopbaan- en re-integratieprofessionals. Zo hoef je niet telkens vanaf nul te beginnen en houd je verslagen consistent. Past er geen template bij jouw werkwijze? Dan maak je eenvoudig je eigen template.",
+      "Ja. Je kunt vooraf ingestelde templates gebruiken die zijn afgestemd op loopbaan- en re-integratiecoaches. Zo hoef je niet telkens vanaf nul te beginnen en houd je verslagen consistent. Past er geen template bij jouw werkwijze? Dan maak je eenvoudig je eigen template.",
   },
   {
     question: "Kan ik specifieke momenten in sessies terugluisteren?",

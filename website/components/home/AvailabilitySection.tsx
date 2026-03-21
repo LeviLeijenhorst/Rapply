@@ -2,9 +2,18 @@ import Image from "next/image";
 import SectionContainer from "@/components/home/SectionContainer";
 import phoneAndLaptopImage from "@/home/phone-and-laptop.png";
 
-export default function AvailabilitySection() {
+type AvailabilitySectionProps = {
+  compactTopSpacing?: boolean;
+};
+
+export default function AvailabilitySection({
+  compactTopSpacing = false,
+}: AvailabilitySectionProps) {
   return (
-    <SectionContainer className="bg-white" contentClassName="md:pt-20 md:pb-20">
+    <SectionContainer
+      className="bg-white"
+      contentClassName={`${compactTopSpacing ? "md:pt-0" : "md:pt-20"} md:pb-20`}
+    >
       {/* Availability content */}
       <div className="w-full rounded-3xl bg-[linear-gradient(to_top_right,_#B8D4FF,_#C6AFFF)] p-6">
         <div className="mx-auto flex w-full flex-col items-center gap-6 md:w-fit md:flex-row md:items-center md:justify-center md:gap-16">
@@ -21,15 +30,13 @@ export default function AvailabilitySection() {
           <div className="flex w-full flex-col items-center gap-4 text-center md:w-fit md:items-start md:text-left">
             {/* Availability title */}
             <h3 className="font-[var(--font-catamaran)] text-[40px] font-medium leading-[120%] text-white">
-              Binnenkort ook
+              Altijd binnen
               <br />
-              op Android en iOS
+              handbereik
             </h3>
             {/* Availability description */}
-            <p className="text-[16px] font-medium text-white/90">
-              Gebruik Rapply op je laptop, tablet of telefoon.
-              <br />
-              Alles blijft gesynchroniseerd.
+            <p className="max-w-[300px] text-[16px] font-medium text-white/90 md:max-w-[320px]">
+              Rapply werkt op je telefoon, tablet en laptop, gewoon via de browser. Sessies opnemen kan dus altijd en overal.
             </p>
           </div>
         </div>

@@ -79,8 +79,8 @@ export default function WebsiteAnalyticsTracker() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const anonymousId = readOrCreateStorageId("coachscribe_website_anon_id");
-    const sessionId = readOrCreateStorageId("coachscribe_website_session_id");
+    const anonymousId = readOrCreateStorageId("rapply_website_anon_id");
+    const sessionId = readOrCreateStorageId("rapply_website_session_id");
 
     const queueEvent = (event: Omit<WebsiteEvent, "anonymousId" | "sessionId" | "occurredAt">) => {
       eventBufferRef.current.push({

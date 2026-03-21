@@ -8,7 +8,7 @@ import BrandWordmark from "@/components/BrandWordmark";
 
 const navigationLinks = [
   { label: "Product", destination: "/product" },
-  { label: "Doelgroep", destination: "/coaches" },
+  { label: "Voor jou", destination: "/coaches" },
   { label: "Veiligheid", destination: "/veiligheid" },
   { label: "Over Ons", destination: "/over-ons" },
 ];
@@ -74,7 +74,7 @@ export default function NavigationBar() {
             <BrandWordmark />
           </Link>
           {/* Navigation links */}
-          <nav className="hidden items-center gap-10 text-[16px] font-medium text-black xl:absolute xl:left-1/2 xl:flex xl:w-[420px] xl:-translate-x-1/2 xl:justify-between xl:gap-0">
+          <nav className="hidden items-center gap-10 text-[16px] font-medium text-black xl:absolute xl:left-1/2 xl:flex xl:-translate-x-1/2">
             {navigationLinks.map((navigationLink) => (
               <Link
                 key={navigationLink.label}
@@ -90,7 +90,7 @@ export default function NavigationBar() {
             ))}
           </nav>
           {/* Navigation actions */}
-          <div className="hidden items-center gap-3 xl:ml-auto xl:flex">
+          <div className="hidden items-center gap-3 xl:flex">
             <Button
               label="Contact"
               destination="/contact"
@@ -98,8 +98,9 @@ export default function NavigationBar() {
               className="font-normal"
             />
             <Button
-              label="Probeer het uit"
-              destination="https://app.Rapply.nl"
+              label="Maak een afspraak"
+              destination="https://calendly.com/jonaskroon/new-meeting?month=2026-02"
+              openInNewTab
               variant="primary"
               className="font-normal"
             />
@@ -233,8 +234,9 @@ export default function NavigationBar() {
             </div>
             <div onClick={() => setIsMobileMenuOpen(false)}>
               <Button
-                label="Probeer het uit"
-                destination="https://app.Rapply.nl"
+                label="Maak een afspraak"
+                destination="https://calendly.com/jonaskroon/new-meeting?month=2026-02"
+                openInNewTab
                 variant="primary"
                 className="font-normal"
               />
@@ -245,7 +247,3 @@ export default function NavigationBar() {
     </header>
   );
 }
-
-
-
-

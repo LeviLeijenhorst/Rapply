@@ -48,7 +48,7 @@ export default function TestimonialsSection() {
             >
               {/* Testimonial quote */}
               <p className="text-base font-normal text-black/80">
-                "{testimonial.quote}"
+                &ldquo;{testimonial.quote}&rdquo;
               </p>
               {/* Testimonial author */}
               <div className="flex w-full flex-col gap-1">

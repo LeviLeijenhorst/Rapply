@@ -9,29 +9,26 @@ export default function HeroSection() {
         {/* Hero text */}
         <div className="flex w-full flex-col items-center gap-6 text-center lg:translate-y-[56px]">
           {/* Hero title */}
-          <h1 className="font-[var(--font-catamaran)] text-[38px] font-medium leading-[120%] text-black md:text-[50px] xl:text-[64px]">
-            AI-gegenereerde rapportages
-            <span className="block">
-              voor{" "}
-              <span className="text-[#BD0265]">
-                loopbaan- en re-integratieprofessionals
-              </span>
-            </span>
+          <h1 className="mx-auto font-[var(--font-catamaran)] text-[38px] font-medium leading-[120%] text-black md:text-[50px] xl:text-[64px]">
+            <span className="block text-[#BD0265]">AI-gegenereerde rapportages</span>
+            <span className="block text-black">voor loopbaan- en</span>
+            <span className="block whitespace-nowrap text-black">re-integratiecoaches</span>
           </h1>
           {/* Hero description */}
-          <p className="max-w-3xl text-[16px] font-medium text-black/70">
-            Rapply helpt loopbaan- en re-integratieprofessionals bij de
-            verslaglegging van hun sessies en het bewaren van overzicht per
-            traject.
-            <br />
-            Gesprekken worden veilig vastgelegd en georganiseerd, zodat jij je
-            volledig kunt focussen op de client.
-          </p>
+          <div className="mx-auto flex w-full flex-col items-center gap-0 text-[16px] font-medium text-black/70">
+            <p className="text-center md:whitespace-nowrap">
+              Rapply helpt loopbaan- en re-integratiecoaches bij de verslaglegging van hun sessies en het bewaren van het overzicht.
+            </p>
+            <p className="text-center">
+              Gesprekken worden veilig vastgelegd en georganiseerd, zodat jij je volledig kunt richten op de cliënt.
+            </p>
+          </div>
           {/* Hero actions */}
           <div className="flex w-full flex-wrap items-center justify-center gap-4">
             <Button
-              label="Probeer het uit"
-              destination="https://app.Rapply.nl"
+              label="Maak een afspraak"
+              destination="https://calendly.com/jonaskroon/new-meeting?month=2026-02"
+              openInNewTab
               variant="primary"
               showArrow
               className="font-normal"
@@ -48,4 +45,3 @@ export default function HeroSection() {
     </SectionContainer>
   );
 }
-

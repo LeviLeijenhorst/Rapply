@@ -12,7 +12,7 @@ Rapply is een dienst van **JNL Solutions**, gevestigd aan Stationsplein 26, 6512
 
 Contact:
 - Website: `https://www.Rapply.nl`
-- E-mail: contact@Rapply.nl
+- E-mail: contact@rapply.nl
 - Telefoon: +31 6 221 68 360
 
 ---
@@ -152,7 +152,7 @@ Wij mogen het gebruik van Rapply opschorten of beëindigen als:
 
 ### 15. Klachten en contact
 
-Heb je een vraag of klacht, mail dan naar contact@Rapply.nl. Wij proberen altijd samen tot een oplossing te komen.
+Heb je een vraag of klacht, mail dan naar contact@rapply.nl. Wij proberen altijd samen tot een oplossing te komen.
 
 ---
 

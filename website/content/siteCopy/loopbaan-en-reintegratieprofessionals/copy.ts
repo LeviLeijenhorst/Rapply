@@ -4,7 +4,7 @@ const sharedFaqItems = [
   {
     question: "Voor wie is Rapply bedoeld?",
     answer:
-      "Voor loopbaan- en re-integratieprofessionals die gesprekken willen vastleggen en daar consistente rapportages en dossiernotities van willen maken.",
+      "Voor loopbaan- en re-integratiecoaches die gesprekken willen vastleggen en daar consistente rapportages en dossiernotities van willen maken.",
   },
   {
     question: "Is Rapply geschikt voor Poortwachter-rapportages?",
@@ -38,8 +38,8 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
     heroTitleLine1: "Betere begeleiding begint bij",
     heroTitleLine2: "betrouwbare verslaglegging",
     subheadline:
-      "Rapply helpt loopbaan- en re-integratieprofessionals gesprekken vastleggen, structureren en omzetten naar professionele rapportages - met privacy en controle als uitgangspunt.",
-    primaryCta: "Probeer het uit",
+      "Rapply helpt loopbaan- en re-integratiecoaches gesprekken vastleggen, structureren en omzetten naar professionele rapportages - met privacy en controle als uitgangspunt.",
+    primaryCta: "Maak een afspraak",
     secondaryCta: "Bekijk hoe het werkt",
     features: [
       {
@@ -91,10 +91,10 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
           "Jij bepaalt wat je bewaart en wat je verwijdert. Geen training van publieke AI-modellen op jouw data.",
       },
     ],
-    sectionForProfessionalsTitlePrefix: "Voor professionals,",
+    sectionForProfessionalsTitlePrefix: "Voor coaches,",
     sectionForProfessionalsTitleHighlight: "gebouwd met de praktijk",
     sectionForProfessionalsParagraphs: [
-      "We ontwikkelen Rapply samen met professionals die dagelijks moeten rapporteren.",
+      "We ontwikkelen Rapply samen met coaches die dagelijks moeten rapporteren.",
       "Zo sluiten templates en output aan op echte trajecten.",
       "Wil je meedenken of input geven? Neem contact met ons op!",
     ],
@@ -109,7 +109,7 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
     heroTitleLine2: "Snel naar een professioneel rapport.",
     heroSubtext:
       "Zet gesprekken om naar gestructureerde verslagen en rapportages die passen bij jouw trajecten en templates.",
-    heroCta: "Probeer het uit",
+    heroCta: "Maak een afspraak",
     impactItems: [
       {
         title: "Overzicht",
@@ -149,9 +149,9 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
     heroTitleLine1: "Is Rapply",
     heroTitleLine2: "iets voor jou?",
     heroSubtext:
-      "Ben je loopbaan- of re-integratieprofessional en wil je sneller, consistenter en AVG-bewust rapporteren? Rapply helpt je van gesprek naar dossier en rapportage.",
-    heroCta: "Probeer het uit",
-    typesSectionTitle: "Professionals: een breed werkveld",
+      "Ben je loopbaan- of re-integratiecoach en wil je sneller, consistenter en AVG-bewust rapporteren? Rapply helpt je van gesprek naar dossier en rapportage.",
+    heroCta: "Maak een afspraak",
+    typesSectionTitle: "Coaches: een breed werkveld",
     types: [
       {
         title: "Loopbaanbegeleiding",
@@ -202,8 +202,8 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
     workflowTitlePrefix: "Jouw",
     workflowTitleHighlight: "werkwijze",
     workflowParagraphs: [
-      "Elke professional heeft een eigen werkwijze. Daarom werkt Rapply met templates die zijn afgestemd op rapportages zoals Plan van Aanpak, evaluaties en tweede spoor.",
-      "Deze templates zijn ontwikkeld in samenwerking met professionals, zodat ze aansluiten op hoe trajecten in de praktijk verlopen.",
+      "Elke coach heeft een eigen werkwijze. Daarom werkt Rapply met templates die zijn afgestemd op rapportages zoals Plan van Aanpak, evaluaties en tweede spoor.",
+      "Deze templates zijn ontwikkeld in samenwerking met coaches, zodat ze aansluiten op hoe trajecten in de praktijk verlopen.",
       "Mocht er niets tussen zitten? Geen probleem. Ontwerp gemakkelijk je eigen template die precies aansluit op jouw manier van verslaglegging en dossieropbouw.",
     ],
     faqTitle: "Veelgestelde vragen",
@@ -213,7 +213,7 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
     heroTitleMain: "Aangenaam ",
     heroTitleAccent: ":)",
     heroSubtext:
-      "Rapply is gebouwd voor professionals die met gevoelige trajectinformatie werken. Ons doel: betrouwbare verslaglegging en rapportages, met privacy en controle als uitgangspunt.",
+      "Rapply is gebouwd voor coaches die met gevoelige trajectinformatie werken. Ons doel: betrouwbare verslaglegging en rapportages, met privacy en controle als uitgangspunt.",
     heroCta: "Contact",
     values: [
       {
@@ -224,7 +224,7 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
       {
         title: "Samenwerking",
         description:
-          "We bouwen samen met professionals en partners aan wat in de praktijk echt werkt.",
+          "We bouwen samen met coaches en partners aan wat in de praktijk echt werkt.",
       },
       {
         title: "Kwaliteit",
@@ -251,13 +251,13 @@ export const loopbaanEnReintegratieprofessionalsCopy: SiteCopy = {
       {
         name: "Levi Leijenhorst",
         description: [
-          "Levi richt zich op product en techniek binnen Rapply. Hij werkt aan veilige verwerking, betrouwbare verslaglegging en een workflow die past bij de praktijk van loopbaan- en re-integratieprofessionals. Daarnaast spreekt hij regelmatig gebruikers om scherp te blijven op wat er echt nodig is.",
+          "Levi richt zich op product en techniek binnen Rapply. Hij werkt aan veilige verwerking, betrouwbare verslaglegging en een workflow die past bij de praktijk van loopbaan- en re-integratiecoaches. Daarnaast spreekt hij regelmatig gebruikers om scherp te blijven op wat er echt nodig is.",
         ],
       },
       {
         name: "Jonas Kroon",
         description: [
-          "Jonas richt zich op design, gebruikservaring en positionering. Hij zorgt dat Rapply simpel blijft in gebruik, maar professioneel in output - van templates tot export in huisstijl. Ook hij haalt continu feedback op bij professionals om het product te verbeteren.",
+          "Jonas richt zich op design, gebruikservaring en positionering. Hij zorgt dat Rapply simpel blijft in gebruik, maar professioneel in output - van templates tot export in huisstijl. Ook hij haalt continu feedback op bij coaches om het product te verbeteren.",
         ],
       },
     ],

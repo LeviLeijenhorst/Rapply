@@ -7,7 +7,7 @@ const questions = [
   {
     question: "Wat is Rapply?",
     answer:
-      "Rapply is een AI-ondersteunde tool voor coaches om gesprekken eenvoudig op te nemen, automatisch te laten samenvatten en overzichtelijke, bruikbare rapportages te maken. Het helpt je om minder tijd kwijt te zijn aan administratie, terwijl je wel grip houdt op de inhoud, nuance en context van al je sessies.",
+      "Rapply is een AI-ondersteunde tool voor loopbaancoaches en re-integratieprofessionals. Sessies worden veilig vastgelegd en automatisch omgezet in professionele rapportages die voldoen aan de eisen van opdrachtgevers en het UWV. Jij houdt de controle, Rapply neemt het schrijfwerk uit handen.",
   },
   {
     question: "Is Rapply veilig?",
@@ -22,7 +22,7 @@ const questions = [
   {
     question: "Voor wie is Rapply bedoeld?",
     answer:
-      "Rapply is specifiek ontwikkeld voor loopbaan- en re-integratieprofessionals die werken met meerdere clienten en trajecten. Het helpt je om sessies gestructureerd vast te leggen, voortgang bij te houden en verslaglegging richting opdrachtgevers of UWV eenvoudiger te maken.",
+      "Rapply is specifiek ontwikkeld voor loopbaan- en re-integratiecoaches die werken met meerdere clienten en trajecten. Het helpt je om sessies gestructureerd vast te leggen, voortgang bij te houden en verslaglegging richting opdrachtgevers of UWV eenvoudiger te maken.",
   },
   {
     question: "Is Rapply een vervanging voor een menselijke coach?",
@@ -32,7 +32,7 @@ const questions = [
   {
     question: "Kan ik niet gewoon ChatGPT gebruiken?",
     answer:
-      "Nee. ChatGPT is een algemene AI en beschikt niet over de functionaliteit voor sessie opname, gestructureerde verslaglegging of AVG-proof beheer van clientgegevens, waardoor het niet geschikt is voor dit soort toepassingen. Daarnaast is Rapply ontworpen speciaal voor coaches en kan het dus een stuk gerichter te werk gaan.",
+      "Nee. ChatGPT is een algemene AI zonder functionaliteit voor sessieopname, gestructureerde verslaglegging of AVG-proof beheer van cliëntgegevens. Daarnaast heeft ChatGPT geen kennis van de specifieke eisen die opdrachtgevers en het UWV stellen aan rapportages. Rapply is specifiek gebouwd voor loopbaancoaches en re-integratieprofessionals en werkt daar dan ook een stuk gerichter voor.",
   },
 ];
 

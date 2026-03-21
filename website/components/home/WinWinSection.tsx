@@ -15,7 +15,7 @@ export default function WinWinSection(props: WinWinSectionProps) {
       }`}
       data-reveal-disabled={props.disableReveal ? "1" : "0"}
     >
-      <div className="mx-auto w-full max-w-[1320px] px-6 md:px-10">
+      <div className="mx-auto w-full max-w-6xl px-6 md:px-10">
         <div className="grid grid-cols-1 gap-8 py-6 text-white md:grid-cols-2 md:items-center md:gap-10 md:py-8">
           <div>
             <h2 className="text-[36px] font-semibold leading-[44px] md:text-[44px] md:leading-[52px]">
@@ -23,7 +23,7 @@ export default function WinWinSection(props: WinWinSectionProps) {
             </h2>
             <p className="mt-4 max-w-[620px] text-[16px] leading-7 md:text-[18px] md:leading-8">
               Rapply is bedoeld om tijd, en dus ook geld, te besparen voor
-              professionals. Sterker nog, wanneer professionals meer tijd overhouden
+              coaches. Sterker nog, wanneer coaches meer tijd overhouden
               kunnen zij meer clienten helpen en meer verdienen.
             </p>
             <p className="mt-6 text-[16px] leading-7 md:text-[18px] md:leading-8">
@@ -31,7 +31,7 @@ export default function WinWinSection(props: WinWinSectionProps) {
             </p>
             <div className="mt-6">
               <Button
-                label="Reken uit"
+                label="Bereken"
                 destination="/ROI"
                 variant="secondary"
                 className="h-[46px] border-white bg-white text-[16px] font-semibold text-[#BD0265] hover:bg-[#FBE8F1]"

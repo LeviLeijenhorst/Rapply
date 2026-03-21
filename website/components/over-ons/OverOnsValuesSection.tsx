@@ -65,9 +65,9 @@ export default function OverOnsValuesSection() {
     const element = valueCardsRef.current;
     if (!element) return;
 
-    if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
-      setAreValueCardsVisible(true);
-      return;
+    if (typeof IntersectionObserver === "undefined") {
+      const frameId = requestAnimationFrame(() => setAreValueCardsVisible(true));
+      return () => cancelAnimationFrame(frameId);
     }
 
     const observer = new IntersectionObserver(
@@ -86,7 +86,7 @@ export default function OverOnsValuesSection() {
 
   return (
     <SectionContainer
-      className="mt-[60px] bg-white bg-[linear-gradient(135deg,rgba(169,217,243,0.5)_0%,rgba(237,194,217,0.5)_100%)]"
+      className="mt-[160px] bg-white bg-[linear-gradient(135deg,rgba(169,217,243,0.5)_0%,rgba(237,194,217,0.5)_100%)]"
       contentClassName="pb-[60px] pt-[60px] md:pb-[60px] md:pt-[60px]"
     >
       <div className="flex w-full flex-col gap-[40px]">

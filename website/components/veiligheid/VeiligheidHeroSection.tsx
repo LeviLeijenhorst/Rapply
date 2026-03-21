@@ -7,7 +7,7 @@ export default function VeiligheidHeroSection() {
   return (
     <SectionContainer className="bg-white">
       <div className="grid w-full items-center gap-10 lg:grid-cols-2">
-        <div className="flex w-full flex-col items-start">
+        <div className="flex w-full flex-col items-start lg:translate-y-[56px]">
           <div className="flex w-full flex-col items-start gap-4">
             <h1 className="font-[var(--font-catamaran)] text-[38px] font-medium leading-[110%] text-black md:text-[50px] xl:text-[64px]">
               <span className="block text-[#BD0265]">Gebouwd voor</span>
@@ -19,14 +19,14 @@ export default function VeiligheidHeroSection() {
               versleuteling tijdens opslag.
             </p>
           </div>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="mt-6 mb-[160px] flex flex-wrap items-center gap-x-4 gap-y-4">
             <Button
-              label="Privacybeleid bekijken"
+              label="Privacybeleid"
               destination="/privacybeleid"
               className="font-normal"
             />
             <Button
-              label="Verwerkersovereenkomst genereren"
+              label="Verwerkersovereenkomst"
               destination="/verwerkersovereenkomst"
               variant="secondary"
               className="font-normal"

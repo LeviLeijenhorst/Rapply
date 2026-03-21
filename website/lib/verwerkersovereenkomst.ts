@@ -72,7 +72,7 @@ Naam: JNL Solutions
 Adres: Stationsplein 26
 Postcode en plaats: 6512 AB, Nijmegen
 Land: Nederland
-E-mail: contact@Rapply.nl
+E-mail: contact@rapply.nl
 Website: https://www.Rapply.nl
 
 2. Onderwerp en duur
@@ -136,7 +136,7 @@ A. Doeleinden
 
 B. Soorten persoonsgegevens
 - accountgegevens (Entra gebruikers-id, e-mail, weergavenaam);
-- cliëntgegevens;
+- coachee-gegevens;
 - sessiegegevens;
 - transcripties, samenvattingen, notities en rapporten;
 - chatberichten;

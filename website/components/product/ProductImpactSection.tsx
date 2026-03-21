@@ -18,13 +18,13 @@ type ImpactItem = {
   icon: ReactNode;
 };
 
-const iconClassName = "h-10 w-10 shrink-0";
+const iconClassName = "h-6 w-6 shrink-0";
 
 const searchIcon = (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width="40"
-    height="40"
+    width="24"
+    height="24"
     viewBox="0 0 40 40"
     fill="none"
     className={iconClassName}
@@ -53,8 +53,8 @@ const searchIcon = (
 const clockIcon = (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width="40"
-    height="40"
+    width="24"
+    height="24"
     viewBox="0 0 40 40"
     fill="none"
     className={iconClassName}
@@ -75,8 +75,8 @@ const clockIcon = (
 const awardIcon = (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width="40"
-    height="40"
+    width="24"
+    height="24"
     viewBox="0 0 40 40"
     fill="none"
     className={iconClassName}
@@ -101,8 +101,8 @@ const awardIcon = (
 const focusIcon = (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width="40"
-    height="40"
+    width="24"
+    height="24"
     viewBox="0 0 40 40"
     fill="none"
     className={iconClassName}
@@ -131,8 +131,8 @@ const focusIcon = (
 const connectionIcon = (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width="40"
-    height="40"
+    width="24"
+    height="24"
     viewBox="0 0 40 40"
     fill="none"
     className={iconClassName}
@@ -172,8 +172,8 @@ const connectionIcon = (
 const calmIcon = (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width="40"
-    height="40"
+    width="24"
+    height="24"
     viewBox="0 0 40 40"
     fill="none"
     className={iconClassName}
@@ -244,7 +244,7 @@ const impactItems: ImpactItem[] = [
   {
     title: "Rust",
     description:
-      "Rapply neemt het mentale werk rondom je sessies uit handen. Je hoeft niets te onthouden of te reconstrueren. Dat geeft ruimte in je hoofd en rust tussen sessies.",
+      "Niets meer onthouden, niets meer reconstrueren. Rapply geeft je ruimte in je hoofd en rust tussen sessies.",
     image: imageF,
     icon: calmIcon,
   },
@@ -257,27 +257,27 @@ export default function ProductImpactSection() {
       contentClassName="md:pt-[60px] md:pb-[60px]"
     >
       <div className="flex w-full flex-col items-center">
-        <h2 className="text-center font-[var(--font-catamaran)] text-[36px] font-medium leading-[110%] text-black md:text-[50px] xl:text-[64px]">
+        <h2 className="text-center font-[var(--font-catamaran)] text-[40px] font-medium leading-[120%] text-black">
           De <span className="text-[#BD0265]">impact</span> van Rapply
         </h2>
         <div className="mt-10 grid w-full gap-6 md:grid-cols-2 xl:grid-cols-3">
           {impactItems.map((impactItem) => (
             <article
               key={impactItem.title}
-              className="flex min-h-[420px] w-full flex-col rounded-2xl bg-white p-6 px-8"
+              className="flex min-h-[400px] w-full flex-col rounded-2xl bg-white p-6 px-8"
             >
-              <div className="mb-3 flex items-center gap-3">
-                {impactItem.icon}
-                <h3 className="font-[var(--font-catamaran)] text-[40px] font-medium text-[#BD0265]">
-                  {impactItem.title}
-                </h3>
-              </div>
               <div className="mb-4 mt-1 flex h-[180px] items-center justify-center">
                 <Image
                   src={impactItem.image}
                   alt={impactItem.title}
                   className="h-auto max-h-full w-full max-w-[164px] object-contain"
                 />
+              </div>
+              <div className="mb-3 flex items-center gap-3">
+                {impactItem.icon}
+                <h3 className="font-[var(--font-catamaran)] text-[20px] font-bold text-[#BD0265]">
+                  {impactItem.title}
+                </h3>
               </div>
               <p className="text-[16px] font-normal text-black/70">
                 {impactItem.description}
@@ -287,8 +287,9 @@ export default function ProductImpactSection() {
         </div>
         <div className="mt-10">
           <Button
-            label="Probeer het uit"
-            destination="https://app.Rapply.nl"
+            label="Maak een afspraak"
+            destination="https://calendly.com/jonaskroon/new-meeting?month=2026-02"
+            openInNewTab
             variant="primary"
             showArrow
             className="font-normal"
@@ -298,5 +299,3 @@ export default function ProductImpactSection() {
     </SectionContainer>
   );
 }
-
-

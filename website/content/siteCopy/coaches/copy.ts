@@ -6,7 +6,7 @@ export const coachesCopy: SiteCopy = {
     heroTitleLine2: "volledige aandacht",
     subheadline:
       "Rapply helpt coaches bij verslaglegging van hun sessies en het bewaren van overzicht. Gesprekken worden veilig vastgelegd en georganiseerd, zodat jij je volledig kan focussen op de client.",
-    primaryCta: "Probeer het uit",
+    primaryCta: "Maak een afspraak",
     secondaryCta: "Hoe Het Werkt",
     features: [
       {
@@ -27,7 +27,7 @@ export const coachesCopy: SiteCopy = {
       {
         title: "Deel in jouw huisstijl",
         description:
-          "Deel verslagen direct met je cliënt, in jouw eigen huisstijl. Voeg je logo en praktijkkleur toe, zodat elke PDF direct herkenbaar en professioneel oogt.\n\nGemaakt met oog op coach en cliënt.",
+          "Deel verslagen direct met je coachee, in jouw eigen huisstijl. Voeg je logo en praktijkkleur toe, zodat elke PDF direct herkenbaar en professioneel oogt.\n\nGemaakt met oog op coach en coachee.",
       },
     ],
     availabilityTitleLine1: "Binnenkort ook",
@@ -39,7 +39,7 @@ export const coachesCopy: SiteCopy = {
       {
         question: "Wat is Rapply?",
         answer:
-          "Rapply is een AI-ondersteunde tool voor coaches om gesprekken eenvoudig op te nemen, automatisch te laten samenvatten en overzichtelijke verslagen te maken. Het helpt je om minder tijd kwijt te zijn aan administratie, terwijl je wel grip houdt op inhoud, nuance en context.",
+          "Rapply is een AI-ondersteunde tool voor loopbaancoaches en re-integratieprofessionals. Sessies worden veilig vastgelegd en automatisch omgezet in professionele rapportages die voldoen aan de eisen van opdrachtgevers en het UWV. Jij houdt de controle, Rapply neemt het schrijfwerk uit handen.",
       },
       {
         question: "Is Rapply veilig?",
@@ -64,7 +64,7 @@ export const coachesCopy: SiteCopy = {
       {
         question: "Kan ik niet gewoon ChatGPT gebruiken?",
         answer:
-          "Nee. ChatGPT is een algemene AI en beschikt niet over de functionaliteit voor sessie opname, gestructureerde verslaglegging of AVG-proof beheer van clientgegevens, waardoor het niet geschikt is voor dit soort toepassingen. Daarnaast is Rapply ontworpen speciaal voor coaches en kan het dus een stuk gerichter te werk gaan.",
+          "Nee. ChatGPT is een algemene AI zonder functionaliteit voor sessieopname, gestructureerde verslaglegging of AVG-proof beheer van cliëntgegevens. Daarnaast heeft ChatGPT geen kennis van de specifieke eisen die opdrachtgevers en het UWV stellen aan rapportages. Rapply is specifiek gebouwd voor loopbaancoaches en re-integratieprofessionals en werkt daar dan ook een stuk gerichter voor.",
       },
     ],
   },
@@ -92,7 +92,7 @@ export const coachesCopy: SiteCopy = {
     sectionForProfessionalsTitlePrefix: "Voor coaches,",
     sectionForProfessionalsTitleHighlight: "door coaches",
     sectionForProfessionalsParagraphs: [
-      "Rapply is ontstaan uit tientallen gesprekken met professionals in het werkveld. Door te onderzoeken welke functies echt waardevol zijn, hebben we een product ontwikkeld dat volledig aansluit bij de behoeften van coaches.",
+      "Rapply is ontstaan uit tientallen gesprekken met coaches in het werkveld. Door te onderzoeken welke functies echt waardevol zijn, hebben we een product ontwikkeld dat volledig aansluit bij de behoeften van coaches.",
       "We blijven continu in contact met coaches om het product te verbeteren en verder te ontwikkelen.",
       "Wil je meedenken of input geven? Neem contact met ons op!",
     ],
@@ -106,7 +106,7 @@ export const coachesCopy: SiteCopy = {
     heroTitleLine2: "met onze features",
     heroSubtext:
       "Rapply neemt het noteren van gesprekken en verslaggeving uit handen. Jij behoudt de volledige controle, wij helpen je met de details, en het overzicht.",
-    heroCta: "Probeer het uit",
+    heroCta: "Maak een afspraak",
     impactItems: [
       {
         title: "Overzicht",
@@ -131,7 +131,7 @@ export const coachesCopy: SiteCopy = {
       {
         title: "Connectie",
         description:
-          "Wanneer je alle details van je cliënt kent, voelt die zich vertrouwd en kan jij door afwezigheid van notities de connectie verdiepen.",
+          "Wanneer je alle details van je coachee kent, voelt die zich vertrouwd en kan jij door afwezigheid van notities de connectie verdiepen.",
       },
       {
         title: "Rust",
@@ -147,14 +147,14 @@ export const coachesCopy: SiteCopy = {
           "Ja. Je kunt vooraf ingestelde templates gebruiken om snel gestructureerde verslagen te maken. Zo hoef je niet telkens vanaf nul te beginnen en houd je verslagen consistent en overzichtelijk. Zit er geen template tussen die bij jouw workflow past? Geen probleem, het is ook mogelijk om je eigen templates te maken.",
       },
       {
+        question: "Kan ik Rapply gebruiken op mijn telefoon?",
+        answer:
+          "Ja. Rapply is beschikbaar via de browser op je telefoon, tablet of laptop. Je kunt dus direct sessies opnemen via je smartphone zonder dat je een app nodig hebt. Een dedicated app voor de AppStore en PlayStore is daarnaast binnenkort beschikbaar.",
+      },
+      {
         question: "Kan ik mijn huisstijl toevoegen aan verslagen?",
         answer:
           "Ja. Je kunt je eigen logo en praktijk kleur toevoegen, zodat elk verslag direct herkenbaar is en professioneel oogt. Zo blijft de uitstraling consistent en duidelijk voor jou en je clienten.",
-      },
-      {
-        question: "Is er een app voor Rapply?",
-        answer:
-          "Binnenkort. Naar verwachting zal deze halverwege maart op de AppStore en PlayStore uit worden gebracht.",
       },
       {
         question: "Kan ik verslagen delen met clienten?",
@@ -178,7 +178,7 @@ export const coachesCopy: SiteCopy = {
     heroTitleLine2: "iets voor jou?",
     heroSubtext:
       "Ben jij een coach en ervaar je mentale druk door het bijhouden van sessies en clienten? Ben je teveel tijd kwijt aan voorbereiding en naslagwerk? Wellicht dat wij jou kunnen helpen :)",
-    heroCta: "Probeer het uit",
+    heroCta: "Maak een afspraak",
     typesSectionTitle: "Coach: een breed begrip",
     types: [
       {
@@ -194,7 +194,7 @@ export const coachesCopy: SiteCopy = {
       {
         title: "Businesscoach",
         description:
-          "Een business coach begeleidt professionals en ondernemers bij professionele ontwikkeling, besluitvorming en het realiseren van zakelijke doelen.",
+          "Een business coach begeleidt coaches en ondernemers bij professionele ontwikkeling, besluitvorming en het realiseren van zakelijke doelen.",
       },
       {
         title: "Budgetcoach",
@@ -204,7 +204,7 @@ export const coachesCopy: SiteCopy = {
       {
         title: "Leadershipcoach",
         description:
-          "Een leadership coach begeleidt professionals in het ontwikkelen van effectief leiderschap, zelfinzicht en impact binnen hun rol en organisatie.",
+          "Een leadership coach begeleidt coaches in het ontwikkelen van effectief leiderschap, zelfinzicht en impact binnen hun rol en organisatie.",
       },
       {
         title: "Studentencoach",
@@ -239,7 +239,7 @@ export const coachesCopy: SiteCopy = {
       {
         question: "Voor welke coaches is Rapply geschikt?",
         answer:
-          "Rapply is geschikt voor alle professionals die gesprekken voeren met clienten en daar gestructureerde verslagen van willen bijhouden. Het helpt coaches overzicht te houden, informatie veilig te bewaren en sneller terug te vinden wat belangrijk is uit sessies.",
+          "Rapply is geschikt voor alle coaches die gesprekken voeren met clienten en daar gestructureerde verslagen van willen bijhouden. Het helpt coaches overzicht te houden, informatie veilig te bewaren en sneller terug te vinden wat belangrijk is uit sessies.",
       },
       {
         question: "Kan Rapply worden gebruikt door loopbaancoaches?",

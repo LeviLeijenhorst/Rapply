@@ -28,20 +28,15 @@ export default function RevealOnScroll({
     const element = containerRef.current;
     if (!element) return;
 
-    if (typeof window === "undefined") {
-      setIsVisible(true);
-      return;
-    }
-
-    if (!("IntersectionObserver" in window)) {
-      setIsVisible(true);
-      return;
+    if (typeof IntersectionObserver === "undefined") {
+      const frameId = requestAnimationFrame(() => setIsVisible(true));
+      return () => cancelAnimationFrame(frameId);
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting) return;
-        if (typeof window !== "undefined" && window.scrollY < minScrollY) {
+        if (window.scrollY < minScrollY) {
           return;
         }
         setIsVisible(true);
@@ -52,7 +47,7 @@ export default function RevealOnScroll({
 
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [minScrollY, rootMargin, threshold]);
 
   return (
     <div

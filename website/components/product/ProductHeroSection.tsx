@@ -7,22 +7,23 @@ export default function ProductHeroSection() {
   return (
     <SectionContainer className="bg-white">
       <div className="grid w-full items-center gap-10 lg:grid-cols-2">
-        <div className="flex w-full flex-col items-start lg:translate-y-[46px]">
+        <div className="flex w-full flex-col items-start lg:translate-y-[56px]">
           <div className="flex w-full flex-col items-start gap-4">
             <h1 className="font-[var(--font-catamaran)] text-[38px] font-medium leading-[110%] text-black md:text-[50px] xl:text-[64px]">
-              <span className="block text-[#BD0265]">Ervaar rust</span>
-              <span className="block">met onze features</span>
+              <span className="block text-[#BD0265]">Bespaar tijd,</span>
+              <span className="block">focus op de mens</span>
             </h1>
             <p className="max-w-xl text-[16px] font-medium text-black/70">
-              Rapply neemt het maken van notities tijdens gesprekken en de
-              verslaglegging uit handen. Op een manier die is afgestemd op de
-              werkwijze van loopbaan- en re-integratieprofessionals.
+              Stop met uren kwijt zijn aan verslagen. Rapply legt jouw
+              sessies automatisch vast en genereert direct een professioneel
+              verslag.
             </p>
           </div>
           <div className="mt-6">
             <Button
-              label="Probeer het uit"
-              destination="https://app.Rapply.nl"
+              label="Maak een afspraak"
+              destination="https://calendly.com/jonaskroon/new-meeting?month=2026-02"
+              openInNewTab
               variant="primary"
               showArrow
               className="font-normal"
@@ -41,4 +42,3 @@ export default function ProductHeroSection() {
     </SectionContainer>
   );
 }
-
