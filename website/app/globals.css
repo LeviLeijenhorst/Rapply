@@ -3,6 +3,7 @@
 :root {
   --background: white;
   --foreground: #0a0a0a;
+  --font-catamaran: "Catamaran", "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
 @theme inline {
