@@ -7,7 +7,7 @@ import {
   readStreamToBuffer,
 } from "./shared"
 
-type SelfHostedWhisperResponse = {
+type WhisperFastResponse = {
   text?: unknown
   transcript?: unknown
   result?: {
@@ -24,14 +24,14 @@ function buildAuthorizationHeaders(): Record<string, string> {
   }
 }
 
-function readTranscriptFromResponse(payload: SelfHostedWhisperResponse | null): string {
+function readTranscriptFromResponse(payload: WhisperFastResponse | null): string {
   return normalizeTranscriptSpacing(
     normalizeText(payload?.text || payload?.transcript || payload?.result?.text || payload?.result?.transcript),
   )
 }
 
-// Runs batch transcription against a self-hosted Whisper worker.
-export async function runSelfHostedWhisperBatchTranscription(params: {
+// Runs batch transcription against a Whisper Fast worker.
+export async function runWhisperFastBatchTranscription(params: {
   encryptedStream: NodeJS.ReadableStream
   keyBase64: string
   mimeType: string
@@ -39,7 +39,7 @@ export async function runSelfHostedWhisperBatchTranscription(params: {
 }): Promise<string> {
   const endpoint = normalizeText(env.selfHostedWhisperEndpoint)
   if (!endpoint) {
-    throw new Error("Self-hosted Whisper endpoint is not configured")
+    throw new Error("Whisper Fast endpoint is not configured")
   }
 
   const aesKey = ensureValidAesKey(params.keyBase64)
@@ -71,19 +71,19 @@ export async function runSelfHostedWhisperBatchTranscription(params: {
 
     const responseText = await response.text().catch(() => "")
     if (!response.ok) {
-      throw new Error(`Self-hosted Whisper transcription failed: status=${response.status}; response=${responseText || response.statusText}`)
+      throw new Error(`Whisper Fast transcription failed: status=${response.status}; response=${responseText || response.statusText}`)
     }
 
-    let payload: SelfHostedWhisperResponse | null = null
+    let payload: WhisperFastResponse | null = null
     try {
-      payload = responseText ? (JSON.parse(responseText) as SelfHostedWhisperResponse) : null
+      payload = responseText ? (JSON.parse(responseText) as WhisperFastResponse) : null
     } catch {
       payload = null
     }
 
     const transcript = readTranscriptFromResponse(payload)
     if (!transcript) {
-      throw new Error("Self-hosted Whisper transcription failed: missing transcript")
+      throw new Error("Whisper Fast transcription failed: missing transcript")
     }
 
     return transcript

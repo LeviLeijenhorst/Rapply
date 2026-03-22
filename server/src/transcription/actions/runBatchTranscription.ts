@@ -1,6 +1,6 @@
 import { TranscriptionError } from "../../errors/TranscriptionError"
 import { runAzureSpeechBatchTranscription } from "../providers/azureSpeech"
-import { runSelfHostedWhisperBatchTranscription } from "../providers/selfHostedWhisper"
+import { runWhisperFastBatchTranscription } from "../providers/whisperFast"
 import { runSpeechmaticsBatchTranscription } from "../providers/speechmatics"
 import { fetchEncryptedUploadStream } from "../storage"
 import type { TranscriptionProvider } from "../routes/types"
@@ -34,7 +34,7 @@ export async function runBatchTranscription(params: {
   }
 
   if (params.provider === "self-hosted-whisper-batch") {
-    return await runSelfHostedWhisperBatchTranscription({
+    return await runWhisperFastBatchTranscription({
       encryptedStream: encryptedUploadStream,
       keyBase64: params.keyBase64,
       mimeType: params.mimeType,

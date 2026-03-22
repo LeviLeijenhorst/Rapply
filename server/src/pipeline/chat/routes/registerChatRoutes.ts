@@ -1,11 +1,11 @@
 import type { Express, RequestHandler } from "express"
-import { normalizeText } from "../../ai/shared/normalize"
-import { requireAuthenticatedUser } from "../../identity/auth"
-import { readManualPricingContextForUser } from "../../billing/manualPricing"
-import { isMollieConfigured, syncMollieSubscriptionForUser, syncRecentMolliePaymentsForUser } from "../../billing/mollie"
-import { ensureBillingUser, readBillingStatus } from "../../billing/store"
-import { completeChatWithAzureOpenAi } from "../../chat/azureOpenAiChat"
-import { asyncHandler, sendError } from "../../http"
+import { normalizeText } from "../../../ai/shared/normalize"
+import { requireAuthenticatedUser } from "../../../identity/auth"
+import { readManualPricingContextForUser } from "../../../billing/manualPricing"
+import { isMollieConfigured, syncMollieSubscriptionForUser, syncRecentMolliePaymentsForUser } from "../../../billing/mollie"
+import { ensureBillingUser, readBillingStatus } from "../../../billing/store"
+import { completeChatWithAzureOpenAi } from "../azureOpenAiChat"
+import { asyncHandler, sendError } from "../../../http"
 
 type RegisterChatRoutesParams = {
   rateLimitAi: RequestHandler
