@@ -79,6 +79,7 @@ export async function runRequiredSchemaCheck(): Promise<{ missing: MissingSchema
         ('inputs','updated_at_unix_ms'),
         ('input_transcripts','input_id'),
         ('input_transcripts','transcript_text'),
+        ('input_transcripts','language_code'),
         ('input_summaries','input_id'),
         ('input_summaries','summary_text'),
         ('audio_streams','id'),
@@ -102,6 +103,17 @@ export async function runRequiredSchemaCheck(): Promise<{ missing: MissingSchema
         ('meeting_recording_tokens','owner_user_id'),
         ('meeting_recording_tokens','meeting_recording_id'),
         ('meeting_recording_tokens','expires_at'),
+        ('transcription_operations','operation_id'),
+        ('transcription_operations','owner_user_id'),
+        ('transcription_operations','status'),
+        ('async_transcription_operations','operation_id'),
+        ('async_transcription_operations','owner_user_id'),
+        ('async_transcription_operations','status'),
+        ('async_transcription_operations','provider'),
+        ('async_transcription_operations','upload_path'),
+        ('async_transcription_operations','language_code'),
+        ('async_transcription_operations','mime_type'),
+        ('async_transcription_operations','transcript_text'),
         ('notes','id'),
         ('notes','client_id'),
         ('notes','created_by_user_id'),
@@ -177,5 +189,30 @@ export async function queryMany<T>(text: string, values: unknown[]): Promise<T[]
 // Intent: execute
 export async function execute(text: string, values: unknown[]): Promise<void> {
   await pool.query(text, values)
+}
+
+// Intent: withTransaction
+export async function withTransaction<T>(fn: (client: { execute: (text: string, values: unknown[]) => Promise<void>; queryOne: <R>(text: string, values: unknown[]) => Promise<R | null> }) => Promise<T>): Promise<T> {
+  const client = await pool.connect()
+  try {
+    await client.query("BEGIN")
+    const result = await fn({
+      execute: async (text, values) => {
+        await client.query(text, values)
+      },
+      queryOne: async <R>(text: string, values: unknown[]) => {
+        const res = await client.query(text, values)
+        if (!res.rows?.length) return null
+        return res.rows[0] as R
+      },
+    })
+    await client.query("COMMIT")
+    return result
+  } catch (error) {
+    await client.query("ROLLBACK")
+    throw error
+  } finally {
+    client.release()
+  }
 }
 
