@@ -29,8 +29,12 @@ export function registerSummaryRoutes(app: Express, params: RegisterSummaryRoute
       }
 
       if (responseMode === "structured_item_summary") {
+        const keys = Array.isArray(req.body?.keys)
+          ? (req.body.keys as unknown[]).map((k) => String(k || "").trim()).filter(Boolean)
+          : []
         const structuredSummary = await generateStructuredItemSummary({
           transcript,
+          keys,
           includeDebug,
           debugContext: { sourceInputType, sourceSessionId },
         })

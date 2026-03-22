@@ -191,3 +191,28 @@ export async function execute(text: string, values: unknown[]): Promise<void> {
   await pool.query(text, values)
 }
 
+// Intent: withTransaction
+export async function withTransaction<T>(fn: (client: { execute: (text: string, values: unknown[]) => Promise<void>; queryOne: <R>(text: string, values: unknown[]) => Promise<R | null> }) => Promise<T>): Promise<T> {
+  const client = await pool.connect()
+  try {
+    await client.query("BEGIN")
+    const result = await fn({
+      execute: async (text, values) => {
+        await client.query(text, values)
+      },
+      queryOne: async <R>(text: string, values: unknown[]) => {
+        const res = await client.query(text, values)
+        if (!res.rows?.length) return null
+        return res.rows[0] as R
+      },
+    })
+    await client.query("COMMIT")
+    return result
+  } catch (error) {
+    await client.query("ROLLBACK")
+    throw error
+  } finally {
+    client.release()
+  }
+}
+

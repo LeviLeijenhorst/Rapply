@@ -141,7 +141,9 @@ export async function startTranscriptionOperation(params: {
     return buildOperationResponse(operation)
   } catch (error: any) {
     const errorMessage = String(error?.message || error)
-    await refundChargedSeconds({ userId: params.userId, operationId: params.operationId }).catch(() => undefined)
+    await refundChargedSeconds({ userId: params.userId, operationId: params.operationId }).catch((refundError) => {
+      console.error("[transcription] refund failed after operation error", { operationId: params.operationId, userId: params.userId, error: String(refundError?.message || refundError) })
+    })
     await markOperationFailed({ operationId: params.operationId, userId: params.userId, errorMessage }).catch(() => undefined)
     if (params.inputId) {
       await markInputFailed({ inputId: params.inputId, errorMessage }).catch(() => undefined)

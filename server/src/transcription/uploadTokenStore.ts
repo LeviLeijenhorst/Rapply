@@ -1,35 +1,38 @@
 import crypto from "crypto"
-import { execute, queryOne } from "../db"
+import { queryOne, withTransaction } from "../db"
 import { transcriptionUploadExpirationSeconds } from "./uploadExpiration"
 
 // Creates a one-time upload token for one transcription operation.
+// The operation row and the token row are created atomically so that a token
+// creation failure can never leave an orphaned operation behind.
 export async function createUploadToken(params: { userId: string; operationId: string; uploadPath: string }): Promise<{ uploadToken: string; expiresAtMs: number }> {
   const { userId, operationId, uploadPath } = params
-
-  await execute(
-    `
-    insert into public.async_transcription_operations (operation_id, owner_user_id, status, mode, upload_path)
-    values ($1, $2, 'queued', 'batch', $3)
-    on conflict (operation_id) do update
-      set owner_user_id = excluded.owner_user_id,
-          mode = excluded.mode,
-          upload_path = excluded.upload_path
-    `,
-    [operationId, userId, uploadPath],
-  )
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const token = cryptoRandomToken()
     const expiresAt = new Date(Date.now() + transcriptionUploadExpirationSeconds * 1000).toISOString()
 
     try {
-      await execute(
-        `
-        insert into public.async_transcription_upload_tokens (token, owner_user_id, operation_id, upload_blob_name, expires_at, used_at)
-        values ($1, $2, $3, $4, $5, null)
-        `,
-        [token, userId, operationId, uploadPath, expiresAt],
-      )
+      await withTransaction(async (tx) => {
+        await tx.execute(
+          `
+          insert into public.async_transcription_operations (operation_id, owner_user_id, status, mode, upload_path)
+          values ($1, $2, 'queued', 'batch', $3)
+          on conflict (operation_id) do update
+            set owner_user_id = excluded.owner_user_id,
+                mode = excluded.mode,
+                upload_path = excluded.upload_path
+          `,
+          [operationId, userId, uploadPath],
+        )
+        await tx.execute(
+          `
+          insert into public.async_transcription_upload_tokens (token, owner_user_id, operation_id, upload_blob_name, expires_at, used_at)
+          values ($1, $2, $3, $4, $5, null)
+          `,
+          [token, userId, operationId, uploadPath, expiresAt],
+        )
+      })
       return { uploadToken: token, expiresAtMs: Date.parse(expiresAt) }
     } catch (error: any) {
       const message = String(error?.message || "")

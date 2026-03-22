@@ -16,7 +16,7 @@ function normalizeTranscriptionProvider(value: unknown): TranscriptionProviderRu
   if (!normalized) return null
   if (normalized === "azure" || normalized === "azure-speech") return "azure-speech"
   if (normalized === "speechmatics") return "speechmatics"
-  if (normalized === "whisper" || normalized === "verda-whisper" || normalized === "whisper-fast") {
+  if (normalized === "whisper" || normalized === "verda-whisper" || normalized === "self-hosted-whisper" || normalized === "whisper-fast") {
     return "whisper-fast"
   }
   return null
