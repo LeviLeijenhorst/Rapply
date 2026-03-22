@@ -1,7 +1,7 @@
 import { callSecureApi } from '../../secureApi'
 
 export type TranscriptionMode = 'azure-fast-batch' | 'azure-realtime-live'
-export type TranscriptionProvider = 'azure' | 'speechmatics'
+export type TranscriptionProvider = 'azure' | 'speechmatics' | 'whisper-fast'
 
 type RuntimeConfigResponse = {
   mode?: string
@@ -9,6 +9,7 @@ type RuntimeConfigResponse = {
   providerConfigured?: boolean
   azureSpeechConfigured?: boolean
   speechmaticsConfigured?: boolean
+  whisperFastConfigured?: boolean
 }
 
 type RealtimeTokenResponse = {
@@ -24,7 +25,6 @@ type RealtimeTokenResponse = {
 type ChargeRealtimeResponse = {
   ok?: boolean
   secondsCharged?: number
-  remainingSecondsAfter?: number
   remainingSeconds?: number
 }
 
@@ -53,12 +53,15 @@ export type RealtimeTranscriberInput = {
 
 function normalizeMode(value: unknown): TranscriptionMode {
   const normalized = String(value || '').trim().toLowerCase()
-  if (normalized === 'azure-realtime-live') return 'azure-realtime-live'
+  if (normalized === 'azure-realtime-live' || normalized === 'realtime') return 'azure-realtime-live'
   return 'azure-fast-batch'
 }
 
 function normalizeProvider(value: unknown): TranscriptionProvider {
-  return String(value || '').trim().toLowerCase() === 'speechmatics' ? 'speechmatics' : 'azure'
+  const normalized = String(value || '').trim().toLowerCase()
+  if (normalized === 'speechmatics') return 'speechmatics'
+  if (normalized === 'whisper-fast') return 'whisper-fast'
+  return 'azure'
 }
 
 function normalizeLanguageForAzure(value: string | undefined): string {
@@ -165,19 +168,26 @@ export async function fetchTranscriptionRuntimeConfig(): Promise<{
   providerConfigured: boolean
   azureSpeechConfigured: boolean
   speechmaticsConfigured: boolean
+  whisperFastConfigured: boolean
 }> {
   const response = await callSecureApi<RuntimeConfigResponse>('/transcription/runtime-config', {})
   const provider = normalizeProvider(response?.provider)
   const azureSpeechConfigured = response?.azureSpeechConfigured === true
   const speechmaticsConfigured = response?.speechmaticsConfigured === true
+  const whisperFastConfigured = response?.whisperFastConfigured === true
   return {
     mode: normalizeMode(response?.mode),
     provider,
     providerConfigured:
       response?.providerConfigured === true ||
-      (provider === 'azure' ? azureSpeechConfigured : speechmaticsConfigured),
+      (provider === 'speechmatics'
+        ? speechmaticsConfigured
+        : provider === 'whisper-fast'
+          ? whisperFastConfigured
+          : azureSpeechConfigured),
     azureSpeechConfigured,
     speechmaticsConfigured,
+    whisperFastConfigured,
   }
 }
 

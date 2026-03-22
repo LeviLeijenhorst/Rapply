@@ -1,4 +1,6 @@
 import { callSecureApi } from '../../secureApi'
+import type { TranscriptionOperationResponse } from '../operationTypes'
+import { pollTranscriptionOperation } from './pollTranscriptionOperation'
 
 const TRANSCRIPTION_PREFLIGHT_TIMEOUT_MS = 30_000
 const TRANSCRIPTION_UPLOAD_BLOCK_TIMEOUT_MS = 10 * 60_000
@@ -9,7 +11,7 @@ const TRANSCRIPTION_PREFLIGHT_MAX_RETRIES = 2
 const TRANSCRIPTION_UPLOAD_MAX_RETRIES = 4
 const TRANSCRIPTION_UPLOAD_WHOLE_RETRIES = 1
 const TRANSCRIPTION_UPLOAD_CHUNK_BYTES = 4 * 1024 * 1024
-const AZURE_WAV_TARGET_SAMPLE_RATE = 16_000
+const TRANSCRIPTION_WAV_TARGET_SAMPLE_RATE = 16_000
 const ABORTED_REQUEST_ERROR = 'Request aborted'
 
 export class TranscriptionPipelineError extends Error {
@@ -21,6 +23,7 @@ export class TranscriptionPipelineError extends Error {
 
 type TranscriptionProgressHandlers = {
   onOperationPrepared?: (operationId: string) => void
+  onStatusChanged?: (status: string, label: string) => void
 }
 
 function isRequestAbortedError(error: unknown): boolean {
@@ -363,7 +366,7 @@ function encodeMonoPcm16Wav(samples: Float32Array, sampleRate: number): ArrayBuf
   return buffer
 }
 
-async function convertToOptimizedWav(blob: Blob, targetSampleRate = AZURE_WAV_TARGET_SAMPLE_RATE): Promise<Blob> {
+async function convertToOptimizedWav(blob: Blob, targetSampleRate = TRANSCRIPTION_WAV_TARGET_SAMPLE_RATE): Promise<Blob> {
   const AudioContextConstructor = window.AudioContext || (window as any).webkitAudioContext
   if (!AudioContextConstructor) {
     throw new Error('Audio conversion is not supported in this browser.')
@@ -434,7 +437,7 @@ async function normalizeAudioForTranscription(params: { audioBlob: Blob; mimeTyp
 
   if (shouldPreferWav) {
     try {
-      const converted = await convertToOptimizedWav(audioBlob, AZURE_WAV_TARGET_SAMPLE_RATE)
+      const converted = await convertToOptimizedWav(audioBlob, TRANSCRIPTION_WAV_TARGET_SAMPLE_RATE)
       return { audioBlob: converted, mimeType: 'audio/wav' }
     } catch (error) {
       if (requiresWav) {
@@ -450,7 +453,7 @@ async function normalizeAudioForTranscription(params: { audioBlob: Blob; mimeTyp
   }
 
   try {
-    const converted = await convertToOptimizedWav(audioBlob, AZURE_WAV_TARGET_SAMPLE_RATE)
+    const converted = await convertToOptimizedWav(audioBlob, TRANSCRIPTION_WAV_TARGET_SAMPLE_RATE)
     return { audioBlob: converted, mimeType: 'audio/wav' }
   } catch (error) {
     if (requiresWav) {
@@ -467,16 +470,19 @@ async function normalizeAudioForTranscription(params: { audioBlob: Blob; mimeTyp
 export async function transcribeAudioBatch(params: {
   audioBlob: Blob
   mimeType: string
+  inputId?: string | null
   languageCode?: string
   signal?: AbortSignal
   progress?: TranscriptionProgressHandlers
 }): Promise<{ transcript: string; summary: string }> {
   return withTimeout(
     (async () => {
-      const { audioBlob, mimeType, languageCode = 'nl', signal, progress } = params
+      const { audioBlob, mimeType, inputId = null, languageCode = 'nl', signal, progress } = params
       if (!audioBlob || audioBlob.size <= 0) {
         throw new Error('Er is geen audio opgenomen. Neem opnieuw op en probeer het opnieuw.')
       }
+
+      let startedOperationId = ''
 
       try {
         let preflight: {
@@ -560,6 +566,7 @@ export async function transcribeAudioBatch(params: {
         if (!operationId || !uploadToken || !uploadUrl) {
           throw new Error('Transcription preflight failed')
         }
+        startedOperationId = operationId
         progress?.onOperationPrepared?.(operationId)
 
         const uploadStartedAt = Date.now()
@@ -590,24 +597,39 @@ export async function transcribeAudioBatch(params: {
             operationId,
             uploadToken,
             keyBase64,
+            inputId,
             language_code: languageCode,
             mime_type: normalized.mimeType,
-            include_summary: false,
           },
           { timeoutMs: TRANSCRIPTION_START_TIMEOUT_MS, signal },
-        )) as {
-          transcript?: string
-          text?: string
-          summary?: string
-        }
+        )) as TranscriptionOperationResponse
+
+        startedOperationId = String(result.operationId || operationId).trim()
+        progress?.onStatusChanged?.(String(result.status || ''), String(result.statusLabel || ''))
+        const finalOperation = ['completed', 'failed', 'cancelled'].includes(String(result.status || ''))
+          ? result
+          : await pollTranscriptionOperation({
+              operationId: startedOperationId || operationId,
+              signal,
+              onUpdate: (operation) => {
+                progress?.onStatusChanged?.(String(operation.status || ''), String(operation.statusLabel || ''))
+              },
+            })
 
         console.log('[transcription] transcription response', {
-          hasTranscript: !!result.transcript || !!result.text,
-          hasSummary: !!result.summary,
+          status: finalOperation.status,
+          hasTranscript: !!finalOperation.transcript || !!finalOperation.text,
         })
 
-        const transcript = String(result.text || result.transcript || '')
-        const summary = String(result.summary || '')
+        if (finalOperation.status === 'failed') {
+          throw new Error(String(finalOperation.errorMessage || 'Transcriptie mislukt'))
+        }
+        if (finalOperation.status === 'cancelled') {
+          throw new Error(ABORTED_REQUEST_ERROR)
+        }
+
+        const transcript = String(finalOperation.text || finalOperation.transcript || '')
+        const summary = ''
 
         if (!transcript.trim()) {
           throw new Error('No transcript returned')
@@ -615,6 +637,9 @@ export async function transcribeAudioBatch(params: {
 
         return { transcript, summary }
       } catch (error) {
+        if ((isRequestAbortedError(error) || signal?.aborted) && startedOperationId) {
+          await cancelTranscriptionOperation({ operationId: startedOperationId }).catch(() => undefined)
+        }
         if (isRequestAbortedError(error) || signal?.aborted) {
           throw new Error(ABORTED_REQUEST_ERROR)
         }

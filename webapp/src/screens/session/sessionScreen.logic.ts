@@ -80,6 +80,7 @@ export function useInputScreen(props: InputScreenProps) {
     return resolveInputSummaryText(session)
   }, [isWrittenInput, session?.summary, session?.summaryStructured, session?.transcript, session?.type])
   const transcriptionStatus = isWrittenInput ? 'idle' : (session?.transcriptionStatus || 'idle')
+  const transcriptionProgressLabel = isWrittenInput ? null : (session?.transcriptionProgressLabel || null)
   const transcript = isWrittenInput ? null : (session?.transcript || null)
   const hasTranscript = Boolean(String(transcript || '').trim())
 
@@ -231,6 +232,7 @@ export function useInputScreen(props: InputScreenProps) {
     cancelTranscriptionRun(session.id)
     updateInput(session.id, {
       transcriptionStatus: 'done',
+      transcriptionProgressLabel: null,
       transcriptionError: 'Samenvatting genereren geannuleerd.',
     })
     showToast('Samenvatting genereren geannuleerd.')
@@ -246,6 +248,7 @@ export function useInputScreen(props: InputScreenProps) {
     setIsRegeneratingSummary(true)
     updateInput(session.id, {
       transcriptionStatus: 'generating',
+      transcriptionProgressLabel: null,
       transcriptionError: null,
     })
     try {
@@ -261,6 +264,7 @@ export function useInputScreen(props: InputScreenProps) {
           summaryStructured: structuredSummary,
           summary: null,
           transcriptionStatus: 'done',
+          transcriptionProgressLabel: null,
           transcriptionError: null,
         })
         showToast('Samenvatting opnieuw gegenereerd.')
@@ -284,6 +288,7 @@ export function useInputScreen(props: InputScreenProps) {
         summaryStructured: fallbackStructuredSummary || null,
         summary: fallbackStructuredSummary ? null : fallbackSummary,
         transcriptionStatus: 'done',
+        transcriptionProgressLabel: null,
         transcriptionError: null,
       })
       showToast('Samenvatting opnieuw gegenereerd.')
@@ -293,6 +298,7 @@ export function useInputScreen(props: InputScreenProps) {
       const isAbort = error instanceof Error && error.name === 'AbortError'
       updateInput(session.id, {
         transcriptionStatus: 'done',
+        transcriptionProgressLabel: null,
         transcriptionError: isAbort ? 'Samenvatting genereren geannuleerd.' : message,
       })
       if (!isAbort) showErrorToast(message)
@@ -310,6 +316,7 @@ export function useInputScreen(props: InputScreenProps) {
     isUploadedDocument,
     summary,
     transcriptionStatus,
+    transcriptionProgressLabel,
     transcript,
     canRegenerateSnippets,
     canRegenerateSummary,

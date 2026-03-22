@@ -21,6 +21,7 @@ export type InputDataItem = {
   summary?: string | null
   summaryStructured?: unknown
   transcriptionStatus?: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
+  transcriptionProgressLabel?: string | null
 }
 
 export type InputNoteItem = {
@@ -85,6 +86,7 @@ export type SummaryCardProps = {
   title?: string
   emptyText?: string
   transcriptionStatus: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
+  transcriptionProgressLabel?: string | null
   onPressEdit?: (() => void) | null
   onPressRegenerate?: (() => void) | null
   onPressCancelGeneration?: (() => void) | null

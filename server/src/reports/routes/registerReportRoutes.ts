@@ -25,7 +25,7 @@ export function registerReportRoutes(app: Express): void {
       const payload = req.body || {}
       const reportId = readId(payload.reportId, "reportId")
       const coachUserIds = Array.isArray(payload.coachUserIds)
-        ? payload.coachUserIds.map((id) => String(id || "").trim()).filter(Boolean)
+        ? payload.coachUserIds.map((id: unknown) => String(id || "").trim()).filter(Boolean)
         : []
       const updatedAtUnixMs = readUnixMs(payload.updatedAtUnixMs ?? Date.now(), "updatedAtUnixMs")
       await updateReportCoaches(user.userId, { reportId, coachUserIds, updatedAtUnixMs })

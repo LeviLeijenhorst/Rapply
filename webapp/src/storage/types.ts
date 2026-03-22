@@ -40,6 +40,7 @@ export type Input = {
   summaryStructured?: unknown
   reportDate: string | null
   transcriptionStatus: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
+  transcriptionProgressLabel?: string | null
   transcriptionError: string | null
 }
 

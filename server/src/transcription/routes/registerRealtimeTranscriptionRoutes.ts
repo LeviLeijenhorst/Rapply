@@ -4,10 +4,8 @@ import { readBillingStatus } from "../../billing/store"
 import { env } from "../../env"
 import { asyncHandler, sendError } from "../../http"
 import { readTranscriptionRuntimeSettings } from "../mode"
-import { chargeSecondsOnce } from "../store"
-import { markOperationCompleted } from "../actions/markOperationCompleted"
-import { markOperationFailed } from "../actions/markOperationFailed"
-import { readTranscriptionChargeContext } from "../actions/readTranscriptionChargeContext"
+import { chargeSecondsOnce, readTranscriptionChargeContext } from "../billingStore"
+import { markLegacyOperationCompleted, markLegacyOperationFailed } from "../operationStore"
 import type { RegisterTranscriptionRoutesParams } from "./types"
 
 const REALTIME_TOKEN_TTL_SECONDS = 540
@@ -95,7 +93,7 @@ export function registerRealtimeTranscriptionRoutes(app: Express, params: Regist
       const settings = await readTranscriptionRuntimeSettings()
       const azureSpeechConfigured = !!String(env.azureSpeechKey || "").trim() && !!normalizeRegion(env.azureSpeechRegion)
       const speechmaticsConfigured = !!String(env.speechmaticsApiKey || "").trim()
-      const selfHostedWhisperConfigured = !!String(env.selfHostedWhisperEndpoint || "").trim()
+      const whisperFastConfigured = !!String(env.whisperFastEndpoint || "").trim()
 
       res.status(200).json({
         mode: settings.mode,
@@ -105,10 +103,10 @@ export function registerRealtimeTranscriptionRoutes(app: Express, params: Regist
             ? azureSpeechConfigured
             : settings.provider === "speechmatics"
               ? speechmaticsConfigured
-              : selfHostedWhisperConfigured,
+              : whisperFastConfigured,
         azureSpeechConfigured,
         speechmaticsConfigured,
-        selfHostedWhisperConfigured,
+        whisperFastConfigured,
       })
     }),
   )
@@ -172,6 +170,7 @@ export function registerRealtimeTranscriptionRoutes(app: Express, params: Regist
         const charge = await chargeSecondsOnce({
           userId: user.userId,
           operationId,
+          scope: "legacy",
           secondsToCharge: Math.max(1, durationSeconds),
           planKey: null,
           cycleStartMs: chargeContext.cycleStartMs,
@@ -181,7 +180,7 @@ export function registerRealtimeTranscriptionRoutes(app: Express, params: Regist
           nonExpiringTotalSecondsOverride: undefined,
         })
 
-        await markOperationCompleted({ operationId, userId: user.userId })
+        await markLegacyOperationCompleted({ operationId, userId: user.userId, transcript: "" })
 
         const status = await readBillingStatus({
           userId: user.userId,
@@ -195,12 +194,11 @@ export function registerRealtimeTranscriptionRoutes(app: Express, params: Regist
         res.status(200).json({
           ok: true,
           secondsCharged: charge.secondsCharged,
-          remainingSecondsAfter: charge.remainingSecondsAfter,
           remainingSeconds: status.remainingSeconds,
         })
       } catch (error: any) {
         const message = String(error?.message || error)
-        await markOperationFailed({ operationId, userId: user.userId, errorMessage: message }).catch(() => undefined)
+        await markLegacyOperationFailed({ operationId, userId: user.userId, errorMessage: message }).catch(() => undefined)
         sendError(res, message === "Not enough seconds remaining" ? 402 : 500, message)
       }
     }),

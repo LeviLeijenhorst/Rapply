@@ -1,49 +1,6 @@
 {
-  "app": {
-    "[project]/app/(site)/ROI/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ],
-    "[project]/app/(site)/coaches/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ],
-    "[project]/app/(site)/contact/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ],
-    "[project]/app/(site)/gebruikersovereenkomst/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ],
-    "[project]/app/(site)/over-ons/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ],
-    "[project]/app/(site)/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ],
-    "[project]/app/(site)/pricing/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ],
-    "[project]/app/(site)/privacybeleid/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ],
-    "[project]/app/(site)/product/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ],
-    "[project]/app/(site)/toestemming-vragen/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ],
-    "[project]/app/(site)/veiligheid/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ],
-    "[project]/app/(site)/verwerkersovereenkomst/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ],
-    "[project]/app/(site)/wachtlijst/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ],
-    "[project]/app/_not-found/page": [
-      "static/media/83459a130389a713-s.p.d10ff594.woff2"
-    ]
-  },
-  "appUsingSizeAdjust": true,
+  "app": {},
+  "appUsingSizeAdjust": false,
   "pages": {},
   "pagesUsingSizeAdjust": false
 }

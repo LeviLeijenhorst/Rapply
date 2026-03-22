@@ -1,10 +1,8 @@
 {
-  "/(site)/coaches/page": "app/(site)/coaches/page.js",
-  "/(site)/contact/page": "app/(site)/contact/page.js",
-  "/(site)/gebruikersovereenkomst/page": "app/(site)/gebruikersovereenkomst/page.js",
-  "/(site)/over-ons/page": "app/(site)/over-ons/page.js",
+  "/(site)/veiligheid/page": "app/(site)/veiligheid/page.js",
   "/(site)/page": "app/(site)/page.js",
-  "/(site)/privacybeleid/page": "app/(site)/privacybeleid/page.js",
-  "/(site)/product/page": "app/(site)/product/page.js",
-  "/(site)/veiligheid/page": "app/(site)/veiligheid/page.js"
+  "/(site)/coaches/page": "app/(site)/coaches/page.js",
+  "/(site)/over-ons/page": "app/(site)/over-ons/page.js",
+  "/(site)/contact/page": "app/(site)/contact/page.js",
+  "/(site)/product/page": "app/(site)/product/page.js"
 }

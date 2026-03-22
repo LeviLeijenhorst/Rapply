@@ -1,14 +1,13 @@
 import type { Express } from "express"
 import { requireAuthenticatedUser } from "../../identity/auth"
 import { ensureBillingUser, readBillingStatus } from "../../billing/store"
-import { asyncHandler } from "../../http"
+import { asyncHandler, sendError } from "../../http"
 import { randomBase64Url } from "../random"
 import { createEncryptedUploadUrl } from "../storage"
-import { createUploadToken } from "../store"
+import { createUploadToken } from "../uploadTokenStore"
 import { transcriptionUploadExpirationSeconds } from "../uploadExpiration"
-import { getProviderMaxAudioBytes, getProviderMaxAudioDurationSeconds } from "../actions/providerLimits"
-import { readTranscriptionChargeContext } from "../actions/readTranscriptionChargeContext"
-import { resolveTranscriptionProviderWithRuntimeMode } from "../actions/resolveTranscriptionProvider"
+import { readTranscriptionChargeContext } from "../billingStore"
+import { getProviderMaxAudioBytes, getProviderMaxAudioDurationSeconds, resolveBatchTranscriptionPlan } from "../actions/resolveBatchTranscriptionPlan"
 import type { RegisterTranscriptionRoutesParams } from "./types"
 
 // Registers the route that prepares a batch upload and returns billing limits.
@@ -29,7 +28,12 @@ export function registerTranscriptionPreflightRoutes(app: Express, params: Regis
         includedSecondsOverride: chargeContext.includedSecondsOverride,
         freeSecondsOverride: chargeContext.freeSecondsOverride,
       })
-      const transcriptionProvider = await resolveTranscriptionProviderWithRuntimeMode()
+      const plan = resolveBatchTranscriptionPlan()
+      const transcriptionProvider = plan.provider
+      if (transcriptionProvider === "none") {
+        sendError(res, 503, "No batch transcription provider is configured")
+        return
+      }
       const maxAudioBytes = getProviderMaxAudioBytes(transcriptionProvider)
       const maxAudioDurationSeconds = getProviderMaxAudioDurationSeconds(transcriptionProvider)
 

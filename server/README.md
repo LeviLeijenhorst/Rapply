@@ -20,11 +20,11 @@ npm install
 - **REVENUECAT_SECRET_KEY**: optional for local dev (billing plan detection)
 - **AZURE_SPEECH_KEY** and **AZURE_SPEECH_REGION**: required when Azure Speech is the active transcription provider
 - **SPEECHMATICS_API_KEY**: required when Speechmatics is the active transcription provider
-- **SELF_HOSTED_WHISPER_ENDPOINT**: HTTP endpoint for the batch Whisper worker (for example the Verda-hosted worker)
-- **SELF_HOSTED_WHISPER_API_KEY**: optional bearer token for the Whisper worker
-- **SELF_HOSTED_WHISPER_TIMEOUT_MS**: optional timeout for one batch transcription request
+- **WHISPER_FAST_ENDPOINT**: HTTP endpoint for the batch Whisper worker (for example the Verda-hosted worker)
+- **WHISPER_FAST_API_KEY**: optional bearer token for the Whisper worker
+- **WHISPER_FAST_TIMEOUT_MS**: optional timeout for one batch transcription request
 - **DEFAULT_TRANSCRIPTION_MODE**: `batch` or `realtime` (legacy values are still accepted)
-- **DEFAULT_TRANSCRIPTION_PROVIDER**: `azure-speech`, `speechmatics`, or `self-hosted-whisper`
+- **DEFAULT_TRANSCRIPTION_PROVIDER**: `azure-speech`, `speechmatics`, or `whisper-fast`
 - **AZURE_OPENAI_ENDPOINT** and **AZURE_OPENAI_KEY**: required for all Azure OpenAI calls
 - **AZURE_OPENAI_REASONING_DEPLOYMENT**: optional but recommended; used for the report reasoning step (target model: `o3`)
 - **AZURE_OPENAI_REPORT_DEPLOYMENT**: optional but recommended; used for report writing, field regeneration, and pipeline chat (target model: `gpt-5` or `gpt-5-chat`)

@@ -181,6 +181,7 @@ function normalizeInputs(raw: unknown, fallback: Input[]): Input[] {
             : null,
         reportDate: nullableText(candidate.reportDate),
         transcriptionStatus: normalizeTranscriptionStatus(candidate.transcriptionStatus),
+        transcriptionProgressLabel: nullableText(candidate.transcriptionProgressLabel),
         transcriptionError: nullableText(candidate.transcriptionError),
       } satisfies Input
     })

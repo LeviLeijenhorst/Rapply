@@ -1,3 +1,18 @@
+type AsyncInferencePayload = {
+  Id?: unknown
+  id?: unknown
+  StatusPath?: unknown
+  statusPath?: unknown
+  ResultPath?: unknown
+  resultPath?: unknown
+  text?: unknown
+  transcript?: unknown
+  result?: {
+    text?: unknown
+    transcript?: unknown
+  }
+}
+
 // Normalizes optional string input into a trimmed string.
 export function normalizeText(value: unknown): string {
   return String(value || "").trim()
@@ -39,4 +54,46 @@ export async function readStreamToBuffer(stream: NodeJS.ReadableStream, maxBytes
   }
 
   return Buffer.concat(chunks)
+}
+
+export function buildAuthorizationHeaders(apiKey: string): Record<string, string> {
+  const normalizedApiKey = normalizeText(apiKey)
+  if (!normalizedApiKey) return {}
+  return {
+    Authorization: `Bearer ${normalizedApiKey}`,
+  }
+}
+
+export function resolveUrl(baseUrl: string, value: string): string {
+  const normalizedBaseUrl = normalizeText(baseUrl)
+  const normalizedValue = normalizeText(value)
+  if (!normalizedValue) return ""
+  try {
+    return new URL(normalizedValue, normalizedBaseUrl).toString()
+  } catch {
+    return normalizedValue
+  }
+}
+
+export function readTranscriptFromPayload(payload: AsyncInferencePayload | null): string {
+  return normalizeTranscriptSpacing(
+    normalizeText(payload?.text || payload?.transcript || payload?.result?.text || payload?.result?.transcript),
+  )
+}
+
+export function readAsyncInferencePaths(params: { endpoint: string; payload: AsyncInferencePayload | null }): {
+  externalJobId: string
+  externalStatusPath: string
+  externalResultPath: string
+} | null {
+  const externalJobId = normalizeText(params.payload?.Id || params.payload?.id)
+  const externalStatusPath = resolveUrl(params.endpoint, normalizeText(params.payload?.StatusPath || params.payload?.statusPath))
+  const externalResultPath = resolveUrl(params.endpoint, normalizeText(params.payload?.ResultPath || params.payload?.resultPath))
+
+  if (!externalJobId || !externalStatusPath || !externalResultPath) return null
+  return {
+    externalJobId,
+    externalStatusPath,
+    externalResultPath,
+  }
 }

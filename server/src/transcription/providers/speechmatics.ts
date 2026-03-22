@@ -1,11 +1,6 @@
 import { env } from "../../env"
-import { Csa1DecryptStream, ensureValidAesKey } from "../csa1"
-import {
-  guessAudioUploadFileName,
-  normalizeText,
-  normalizeTranscriptSpacing,
-  readStreamToBuffer,
-} from "./shared"
+import type { ProviderOperationPollResult, ProviderOperationStartResult } from "../operationTypes"
+import { guessAudioUploadFileName, normalizeText, normalizeTranscriptSpacing } from "./shared"
 
 type SpeechmaticsJobResponse = {
   id?: string
@@ -25,11 +20,6 @@ function normalizeSpeechmaticsLanguage(value: string): string {
 function normalizeBatchApiBase(value: string): string {
   const trimmed = normalizeText(value)
   return trimmed.replace(/\/+$/g, "") || "https://asr.api.speechmatics.com/v2"
-}
-
-// Waits between polling attempts.
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 // Returns whether a Speechmatics status code is worth retrying.
@@ -93,47 +83,35 @@ async function createSpeechmaticsJob(params: {
   return jobId
 }
 
-// Polls Speechmatics until a batch transcription job finishes or fails.
-async function waitForSpeechmaticsJob(params: {
+// Reads the current Speechmatics batch job status.
+async function readSpeechmaticsJobStatus(params: {
   apiBase: string
   apiKey: string
   jobId: string
-}): Promise<void> {
-  const deadline = Date.now() + 20 * 60_000
-
-  for (let attempt = 1; Date.now() < deadline; attempt += 1) {
-    const response = await fetch(`${params.apiBase}/jobs/${encodeURIComponent(params.jobId)}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${params.apiKey}`,
-      },
-    })
-    const bodyText = await response.text().catch(() => "")
-    if (!response.ok) {
-      if (attempt < 8 && shouldRetryStatus(response.status)) {
-        await sleep(Math.min(2000 + attempt * 400, 5000))
-        continue
-      }
-      throw new Error(`Speechmatics job-status failed: status=${response.status}; response=${bodyText || response.statusText}`)
-    }
-
-    let payload: any = null
-    try {
-      payload = bodyText ? JSON.parse(bodyText) : null
-    } catch {
-      payload = null
-    }
-
-    const status = normalizeText(payload?.job?.status || payload?.status).toLowerCase()
-    if (status === "done" || status === "completed") return
-    if (status === "rejected" || status === "failed" || status === "error" || status === "expired") {
-      throw new Error(`Speechmatics transcription failed: status=${status || "unknown"}`)
-    }
-
-    await sleep(Math.min(1200 + attempt * 250, 4000))
+}): Promise<"queued" | "running" | "completed" | "failed"> {
+  const response = await fetch(`${params.apiBase}/jobs/${encodeURIComponent(params.jobId)}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${params.apiKey}`,
+    },
+  })
+  const bodyText = await response.text().catch(() => "")
+  if (!response.ok) {
+    throw new Error(`Speechmatics job-status failed: status=${response.status}; response=${bodyText || response.statusText}`)
   }
 
-  throw new Error("Speechmatics transcription timed out")
+  let payload: any = null
+  try {
+    payload = bodyText ? JSON.parse(bodyText) : null
+  } catch {
+    payload = null
+  }
+
+  const status = normalizeText(payload?.job?.status || payload?.status).toLowerCase()
+  if (status === "done" || status === "completed") return "completed"
+  if (status === "rejected" || status === "failed" || status === "error" || status === "expired") return "failed"
+  if (status === "running" || status === "processing") return "running"
+  return "queued"
 }
 
 // Downloads the final Speechmatics transcript payload.
@@ -223,42 +201,75 @@ function extractSpeechmaticsTranscript(resultJson: any): { text: string; isDiari
   }
 }
 
-// Runs batch transcription with Speechmatics for one encrypted upload.
-export async function runSpeechmaticsBatchTranscription(params: {
-  encryptedStream: NodeJS.ReadableStream
-  keyBase64: string
+export async function startSpeechmaticsTranscription(params: {
+  audioBuffer: Buffer
   mimeType: string
   languageCode: string
-}): Promise<string> {
+}): Promise<ProviderOperationStartResult> {
   const apiKey = normalizeText(env.speechmaticsApiKey)
   if (!apiKey) {
     throw new Error("Speechmatics API key is not configured")
   }
 
-  const aesKey = ensureValidAesKey(params.keyBase64)
-  const decryptedAudioStream = params.encryptedStream.pipe(new Csa1DecryptStream(aesKey))
-  const audioBuffer = await readStreamToBuffer(decryptedAudioStream, 250 * 1024 * 1024)
   const apiBase = normalizeBatchApiBase(env.speechmaticsBatchApiUrl)
 
   const jobId = await createSpeechmaticsJob({
     apiBase,
     apiKey,
-    audioBuffer,
+    audioBuffer: params.audioBuffer,
     contentType: normalizeText(params.mimeType).toLowerCase() || "application/octet-stream",
     language: normalizeSpeechmaticsLanguage(params.languageCode),
   })
-  await waitForSpeechmaticsJob({ apiBase, apiKey, jobId })
+
+  return {
+    status: "queued",
+    externalJobId: jobId,
+    externalStatusPath: `${apiBase}/jobs/${encodeURIComponent(jobId)}`,
+    externalResultPath: `${apiBase}/jobs/${encodeURIComponent(jobId)}/transcript`,
+  }
+}
+
+export async function pollSpeechmaticsTranscription(params: {
+  externalJobId: string
+}): Promise<ProviderOperationPollResult> {
+  const apiKey = normalizeText(env.speechmaticsApiKey)
+  if (!apiKey) {
+    throw new Error("Speechmatics API key is not configured")
+  }
+
+  const apiBase = normalizeBatchApiBase(env.speechmaticsBatchApiUrl)
+  const status = await readSpeechmaticsJobStatus({
+    apiBase,
+    apiKey,
+    jobId: params.externalJobId,
+  })
+
+  if (status === "queued" || status === "running") {
+    return { status }
+  }
+  if (status === "failed") {
+    return {
+      status: "failed",
+      errorMessage: "Speechmatics transcription failed",
+    }
+  }
 
   const transcript = extractSpeechmaticsTranscript(
     await fetchSpeechmaticsTranscript({
       apiBase,
       apiKey,
-      jobId,
+      jobId: params.externalJobId,
     }),
   )
   if (!normalizeText(transcript.text)) {
-    throw new Error("No transcript returned")
+    return {
+      status: "failed",
+      errorMessage: "No transcript returned",
+    }
   }
 
-  return transcript.text
+  return {
+    status: "completed",
+    transcript: transcript.text,
+  }
 }

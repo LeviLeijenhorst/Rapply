@@ -1,11 +1,6 @@
 import { env } from "../../env"
-import { Csa1DecryptStream, ensureValidAesKey } from "../csa1"
-import {
-  guessAudioUploadFileName,
-  normalizeText,
-  normalizeTranscriptSpacing,
-  readStreamToBuffer,
-} from "./shared"
+import type { ProviderOperationStartResult } from "../operationTypes"
+import { guessAudioUploadFileName, normalizeText, normalizeTranscriptSpacing } from "./shared"
 
 // Checks whether a value is a plain JSON object.
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -137,13 +132,12 @@ function extractAzureSpeechTranscript(resultJson: any): { text: string; isDiariz
   return { text: combinedText, isDiarized: false }
 }
 
-// Runs batch transcription with Azure Speech for one encrypted upload.
-export async function runAzureSpeechBatchTranscription(params: {
-  encryptedStream: NodeJS.ReadableStream
-  keyBase64: string
+// Keeps legacy Azure batch transcription available through the new provider contract.
+export async function startAzureSpeechTranscription(params: {
+  audioBuffer: Buffer
   mimeType: string
   languageCode: string
-}): Promise<string> {
+}): Promise<ProviderOperationStartResult> {
   const key = normalizeText(env.azureSpeechKey)
   if (!key) {
     throw new Error("Azure Speech key is not configured")
@@ -154,14 +148,11 @@ export async function runAzureSpeechBatchTranscription(params: {
     throw new Error("Azure Speech region is not configured")
   }
 
-  const aesKey = ensureValidAesKey(params.keyBase64)
-  const decryptedAudioStream = params.encryptedStream.pipe(new Csa1DecryptStream(aesKey))
-  const audioBuffer = await readStreamToBuffer(decryptedAudioStream, 250 * 1024 * 1024)
   const resultJson = await requestAzureSpeechTranscription({
     region,
     key,
     locale: normalizeAzureLocale(params.languageCode),
-    audioBuffer,
+    audioBuffer: params.audioBuffer,
     contentType: normalizeText(params.mimeType).toLowerCase() || "application/octet-stream",
   })
 
@@ -174,5 +165,8 @@ export async function runAzureSpeechBatchTranscription(params: {
     )
   }
 
-  return transcript.text
+  return {
+    status: "completed",
+    transcript: transcript.text,
+  }
 }

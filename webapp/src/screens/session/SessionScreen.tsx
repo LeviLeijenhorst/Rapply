@@ -47,6 +47,7 @@ export function InputScreen(props: InputScreenProps) {
     isUploadedDocument,
     summary,
     transcriptionStatus,
+    transcriptionProgressLabel,
     transcript,
     canRegenerateSnippets,
     canRegenerateSummary,
@@ -153,6 +154,7 @@ export function InputScreen(props: InputScreenProps) {
               <SummaryCard
                 summary={summary}
                 transcriptionStatus={transcriptionStatus}
+                transcriptionProgressLabel={transcriptionProgressLabel}
                 title={isUploadedDocument ? 'Document' : 'Samenvatting'}
                 emptyText={isUploadedDocument ? 'Geen leesbare documenttekst beschikbaar.' : undefined}
                 onPressEdit={!isUploadedDocument ? () => setIsSummaryEditModalOpen(true) : null}

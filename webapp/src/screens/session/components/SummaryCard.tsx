@@ -24,6 +24,7 @@ export function SummaryCard({
   title = 'Samenvatting',
   emptyText,
   transcriptionStatus,
+  transcriptionProgressLabel,
   onPressEdit = null,
   onPressRegenerate = null,
   onPressCancelGeneration = null,
@@ -33,7 +34,10 @@ export function SummaryCard({
     .replace(/\n{3,}/g, '\n\n')
     .trim()
   const showLoadingState = transcriptionStatus === 'transcribing' || transcriptionStatus === 'generating'
-  const loadingText = transcriptionStatus === 'transcribing' ? 'Transcript wordt gegenereerd...' : 'Samenvatting wordt gegenereerd...'
+  const loadingText =
+    transcriptionStatus === 'transcribing'
+      ? String(transcriptionProgressLabel || '').trim() || 'Transcript wordt gegenereerd...'
+      : 'Samenvatting wordt gegenereerd...'
   const loadingEntranceProgress = React.useRef(new Animated.Value(showLoadingState ? 0 : 1)).current
   const summaryLines = summaryText.split('\n').map((line) => line.trim()).filter(Boolean)
 

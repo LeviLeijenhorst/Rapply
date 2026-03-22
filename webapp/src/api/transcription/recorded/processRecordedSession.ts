@@ -30,6 +30,7 @@ type InputUpdate = {
   summary?: string | null
   summaryStructured?: Input['summaryStructured']
   transcriptionStatus?: 'idle' | 'transcribing' | 'generating' | 'done' | 'error'
+  transcriptionProgressLabel?: string | null
   transcriptionError?: string | null
 }
 
@@ -242,6 +243,7 @@ export async function processRecordedInput(params: {
 
     updateInput(sessionId, {
       transcriptionStatus: 'transcribing',
+      transcriptionProgressLabel: 'Audio voorbereiden',
       transcriptionError: null,
     })
 
@@ -260,6 +262,7 @@ export async function processRecordedInput(params: {
       updateInput(sessionId, {
         transcript: presetTranscript,
         transcriptionStatus: 'generating',
+        transcriptionProgressLabel: null,
         transcriptionError: null,
       })
       hasTranscriptResult = true
@@ -288,6 +291,7 @@ export async function processRecordedInput(params: {
         audioBlobId: null,
         audioDurationSeconds: null,
         transcriptionStatus: 'done',
+        transcriptionProgressLabel: null,
         transcriptionError: null,
       })
       await markPendingPreviewTranscriptionSucceeded(sessionId)
@@ -298,15 +302,24 @@ export async function processRecordedInput(params: {
 
     const transcriptionAbortController = new AbortController()
     setTranscriptionAbortController(sessionId, runId, transcriptionAbortController)
-    const { transcript, summary } = await transcribeAudioBatch({
+    const { transcript } = await transcribeAudioBatch({
       audioBlob,
       mimeType,
+      inputId: sessionId,
       languageCode: 'nl',
       signal: transcriptionAbortController.signal,
       progress: {
         onOperationPrepared: (operationId) => {
           if (!isTranscriptionRunActive(sessionId, runId)) return
           setTranscriptionOperationId(sessionId, runId, operationId)
+        },
+        onStatusChanged: (_status, label) => {
+          if (!isTranscriptionRunActive(sessionId, runId)) return
+          updateInput(sessionId, {
+            transcriptionStatus: 'transcribing',
+            transcriptionProgressLabel: String(label || '').trim() || 'Transcript wordt gegenereerd...',
+            transcriptionError: null,
+          })
         },
       },
     })
@@ -319,6 +332,7 @@ export async function processRecordedInput(params: {
     updateInput(sessionId, {
       transcript,
       transcriptionStatus: 'generating',
+      transcriptionProgressLabel: null,
       transcriptionError: null,
     })
     hasTranscriptResult = true
@@ -347,6 +361,7 @@ export async function processRecordedInput(params: {
       audioBlobId: null,
       audioDurationSeconds: null,
       transcriptionStatus: 'done',
+      transcriptionProgressLabel: null,
       transcriptionError: null,
     })
     await markPendingPreviewTranscriptionSucceeded(sessionId)
@@ -381,6 +396,7 @@ export async function processRecordedInput(params: {
       updateInput(sessionId, {
         ...(fallbackSummary ? { summaryStructured: fallbackSummary, summary: null } : null),
         transcriptionStatus: 'done',
+        transcriptionProgressLabel: null,
         transcriptionError: errorMessage,
       })
       try {
@@ -410,6 +426,7 @@ export async function processRecordedInput(params: {
         summary: 'Er is geen spraak gedetecteerd in deze opname.',
         summaryStructured: null,
         transcriptionStatus: 'done',
+        transcriptionProgressLabel: null,
         transcriptionError: null,
       })
       try {
@@ -424,6 +441,7 @@ export async function processRecordedInput(params: {
 
     updateInput(sessionId, {
       transcriptionStatus: 'error',
+      transcriptionProgressLabel: null,
       transcriptionError: errorMessage,
     })
     finishTranscriptionRun(sessionId, runId)

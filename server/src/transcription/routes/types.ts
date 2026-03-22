@@ -1,21 +1,17 @@
 import type { RequestHandler } from "express"
+import type { BatchTranscriptionProvider } from "../operationTypes"
 
 export type RegisterTranscriptionRoutesParams = {
   rateLimitTranscription: RequestHandler
 }
 
-export type TranscriptionProvider =
-  | "azure-speech-batch"
-  | "azure-speech-realtime"
-  | "speechmatics-batch"
-  | "speechmatics-realtime"
-  | "self-hosted-whisper-batch"
-  | "none"
+export type TranscriptionProvider = BatchTranscriptionProvider | "none"
 
 export type StartRequest = {
   operationId: string
   uploadToken: string
   keyBase64: string
+  inputId: string | null
   languageCode: string
   mimeType: string
 }
