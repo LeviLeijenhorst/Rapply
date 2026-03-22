@@ -4,7 +4,7 @@ import type { TranscriptionProvider } from "../routes/types"
 
 // Resolves the batch provider directly from env availability.
 export function resolveTranscriptionProvider(): TranscriptionProvider {
-  if (env.selfHostedWhisperEndpoint) return "self-hosted-whisper-batch"
+  if (env.selfHostedWhisperEndpoint) return "whisper-fast-batch"
   if (env.speechmaticsApiKey) return "speechmatics-batch"
   if (env.azureSpeechKey && env.azureSpeechRegion) return "azure-speech-batch"
   return "none"
@@ -28,9 +28,9 @@ export async function resolveTranscriptionProviderWithRuntimeMode(): Promise<Tra
     return "none"
   }
 
-  if (settings.provider === "self-hosted-whisper") {
+  if (settings.provider === "whisper-fast") {
     if (!env.selfHostedWhisperEndpoint) return "none"
-    if (settings.mode === "batch") return "self-hosted-whisper-batch"
+    if (settings.mode === "batch") return "whisper-fast-batch"
     return "none"
   }
 

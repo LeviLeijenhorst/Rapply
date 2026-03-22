@@ -95,7 +95,7 @@ export function registerRealtimeTranscriptionRoutes(app: Express, params: Regist
       const settings = await readTranscriptionRuntimeSettings()
       const azureSpeechConfigured = !!String(env.azureSpeechKey || "").trim() && !!normalizeRegion(env.azureSpeechRegion)
       const speechmaticsConfigured = !!String(env.speechmaticsApiKey || "").trim()
-      const selfHostedWhisperConfigured = !!String(env.selfHostedWhisperEndpoint || "").trim()
+      const whisperFastConfigured = !!String(env.selfHostedWhisperEndpoint || "").trim()
 
       res.status(200).json({
         mode: settings.mode,
@@ -105,10 +105,10 @@ export function registerRealtimeTranscriptionRoutes(app: Express, params: Regist
             ? azureSpeechConfigured
             : settings.provider === "speechmatics"
               ? speechmaticsConfigured
-              : selfHostedWhisperConfigured,
+              : whisperFastConfigured,
         azureSpeechConfigured,
         speechmaticsConfigured,
-        selfHostedWhisperConfigured,
+        whisperFastConfigured,
       })
     }),
   )

@@ -1,5 +1,5 @@
 export type TranscriptionMode = "batch" | "realtime"
-export type TranscriptionProviderRuntime = "azure-speech" | "speechmatics" | "self-hosted-whisper"
+export type TranscriptionProviderRuntime = "azure-speech" | "speechmatics" | "whisper-fast"
 
 // Parses the configured transcription mode.
 function normalizeTranscriptionMode(value: unknown): TranscriptionMode | null {
@@ -16,8 +16,8 @@ function normalizeTranscriptionProvider(value: unknown): TranscriptionProviderRu
   if (!normalized) return null
   if (normalized === "azure" || normalized === "azure-speech") return "azure-speech"
   if (normalized === "speechmatics") return "speechmatics"
-  if (normalized === "whisper" || normalized === "verda-whisper" || normalized === "self-hosted-whisper") {
-    return "self-hosted-whisper"
+  if (normalized === "whisper" || normalized === "verda-whisper" || normalized === "self-hosted-whisper" || normalized === "whisper-fast") {
+    return "whisper-fast"
   }
   return null
 }

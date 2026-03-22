@@ -2,28 +2,7 @@ import { completeAzureOpenAiChat } from "../ai/azureOpenAi"
 import { normalizeText } from "../ai/shared/normalize"
 import { stripJsonCodeFences } from "../ai/shared/textSanitization"
 import { env } from "../env"
-import type { Session } from "../types/Session"
 import { generateSummary } from "./generateSummary"
-
-type StructuredItemSummary = Session["summaryStructured"]
-
-function normalizeStructuredSummaryCandidate(value: unknown): StructuredItemSummary {
-  const payload = (value && typeof value === "object" ? value : {}) as Record<string, unknown>
-  const read = (...keys: string[]) => {
-    for (const key of keys) {
-      const candidate = normalizeText(payload[key])
-      if (candidate) return candidate
-    }
-    return ""
-  }
-  return {
-    doelstelling: read("doelstelling", "kernpunten"),
-    belastbaarheid: read("belastbaarheid", "situatie"),
-    belemmeringen: read("belemmeringen", "aandachtspunten"),
-    voortgang: read("voortgang", "afspraken"),
-    arbeidsmarktorientatie: read("arbeidsmarktorientatie", "arbeidsorientatie", "vervolg"),
-  }
-}
 
 function extractFirstJsonObject(value: string): string | null {
   const text = String(value || "")
@@ -58,97 +37,57 @@ function extractFirstJsonObject(value: string): string | null {
   return null
 }
 
-function readStructuredSummaryFromRaw(raw: string): StructuredItemSummary | null {
+function normalizeStructuredSummaryFromResponse(value: unknown, keys: string[]): Record<string, string> {
+  const payload = (value && typeof value === "object" ? value : {}) as Record<string, unknown>
+  return Object.fromEntries(keys.map((key) => [key, normalizeText(payload[key]) || ""]))
+}
+
+function readStructuredSummaryFromRaw(raw: string, keys: string[]): Record<string, string> | null {
   const stripped = stripJsonCodeFences(String(raw || ""))
   const jsonCandidate = extractFirstJsonObject(stripped) ?? extractFirstJsonObject(raw)
   if (!jsonCandidate) return null
   try {
     const parsed = JSON.parse(jsonCandidate)
-    return normalizeStructuredSummaryCandidate(parsed)
+    return normalizeStructuredSummaryFromResponse(parsed, keys)
   } catch {
     return null
   }
 }
 
-function normalizeHeading(value: string): string {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "")
-}
-
-function buildFallbackSummaryFromMarkdown(markdown: string): StructuredItemSummary {
-  const summary = {
-    doelstelling: "",
-    belastbaarheid: "",
-    belemmeringen: "",
-    voortgang: "",
-    arbeidsmarktorientatie: "",
-  }
-  const sections = String(markdown || "")
-    .split(/^###\s+/m)
-    .map((part) => part.trim())
-    .filter(Boolean)
-  for (const section of sections) {
-    const firstLineBreakIndex = section.indexOf("\n")
-    const title = firstLineBreakIndex >= 0 ? section.slice(0, firstLineBreakIndex).trim() : section.trim()
-    const content = firstLineBreakIndex >= 0 ? section.slice(firstLineBreakIndex + 1).trim() : ""
-    if (!content) continue
-    const normalizedTitle = normalizeHeading(title)
-    if (normalizedTitle === "doelstelling" || normalizedTitle === "kernpunten" || normalizedTitle === "samenvatting") {
-      summary.doelstelling = content
-      continue
-    }
-    if (normalizedTitle === "belastbaarheid" || normalizedTitle === "situatie") {
-      summary.belastbaarheid = content
-      continue
-    }
-    if (normalizedTitle === "belemmeringen" || normalizedTitle === "aandachtspunten") {
-      summary.belemmeringen = content
-      continue
-    }
-    if (normalizedTitle === "voortgang" || normalizedTitle === "afspraken") {
-      summary.voortgang = content
-      continue
-    }
-    if (normalizedTitle === "arbeidsmarktorientatie" || normalizedTitle === "arbeidsorientatie" || normalizedTitle === "vervolg") {
-      summary.arbeidsmarktorientatie = content
-    }
-  }
-  if (!summary.doelstelling) {
-    summary.doelstelling = normalizeText(markdown)
-  }
-  return summary
+function buildEmptyStructuredSummary(keys: string[]): Record<string, string> {
+  return Object.fromEntries(keys.map((key) => [key, ""]))
 }
 
 export async function generateStructuredItemSummary(params: {
   transcript: string
+  keys: string[]
   includeDebug?: boolean
   debugContext?: {
     sourceSessionId?: string
     sourceInputType?: string
   }
-}): Promise<StructuredItemSummary> {
+}): Promise<Record<string, string>> {
+  const { keys } = params
+  if (keys.length === 0) return {}
+
   const deployment = normalizeText(env.azureOpenAiSummaryDeployment || env.azureOpenAiChatDeployment)
-  const markdownSummary = await generateSummary({
+  const summary = await generateSummary({
     transcript: params.transcript,
     includeDebug: params.includeDebug,
     debugContext: params.debugContext,
   })
 
   if (!deployment) {
-    return buildFallbackSummaryFromMarkdown(markdownSummary)
+    const result = buildEmptyStructuredSummary(keys)
+    if (keys[0]) result[keys[0]] = summary
+    return result
   }
 
+  const keyList = keys.map((key) => `- ${key}`).join("\n")
+  const exampleJson = JSON.stringify(Object.fromEntries(keys.map((key) => [key, ""])))
   const prompt = [
     "Zet onderstaande Nederlandse sessiesamenvatting om naar een JSON-object met exact deze keys:",
-    "- doelstelling",
-    "- belastbaarheid",
-    "- belemmeringen",
-    "- voortgang",
-    "- arbeidsmarktorientatie",
+    keyList,
     "",
     "Regels:",
     "- Gebruik alleen feiten uit de aangeleverde samenvatting.",
@@ -157,10 +96,10 @@ export async function generateStructuredItemSummary(params: {
     "- Bundel overlappende informatie tot 1 kernzin per veld.",
     "- Houd de stijl neutraal, compact en natuurlijk.",
     "- Als informatie ontbreekt: gebruik een lege string.",
-    '- Antwoord alleen met geldige JSON, bijvoorbeeld {"doelstelling":"","belastbaarheid":"","belemmeringen":"","voortgang":"","arbeidsmarktorientatie":""}.',
+    `- Antwoord alleen met geldige JSON, bijvoorbeeld ${exampleJson}.`,
     "",
     "Samenvatting:",
-    markdownSummary,
+    summary,
   ].join("\n")
 
   const raw = await completeAzureOpenAiChat({
@@ -178,5 +117,5 @@ export async function generateStructuredItemSummary(params: {
     ],
   })
 
-  return readStructuredSummaryFromRaw(raw) ?? buildFallbackSummaryFromMarkdown(markdownSummary)
+  return readStructuredSummaryFromRaw(raw, keys) ?? buildEmptyStructuredSummary(keys)
 }

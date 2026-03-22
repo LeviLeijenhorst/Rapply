@@ -47,12 +47,12 @@ function buildSummarySystemPrompt(inputType: SummaryInputType): string {
         : "Bronvorm: transcriptie van een gesprek."
   return [
     "Je bent een assistent voor professionele sessiesamenvattingen in het Nederlands.",
-    "Schrijf een heldere sessiesamenvatting in het Nederlands.",
+    "Schrijf een heldere sessiesamenvatting in het Nederlands als doorlopende tekst.",
+    "Gebruik geen markdown, geen bullet points, geen sterretjes, geen vet, geen cursief en geen speciale opmaak.",
     "Gebruik exact dit format:",
     "1) Eén korte alinea met de samenvatting van de sessie.",
     "2) Daarna letterlijk: 'Vervolgstappen:' op een nieuwe regel.",
-    "3) Onder 'Vervolgstappen:' alleen bullet points met concrete acties.",
-    "Gebruik '-' als bullet marker.",
+    "3) Na 'Vervolgstappen:' de acties als doorlopende tekst, gescheiden door puntkomma's.",
     "Gebruik alleen informatie uit het transcript.",
     "Noem geen details die niet in het transcript staan.",
     "Gebruik geen sprekerlabels.",
@@ -66,16 +66,13 @@ function buildSummarySystemPrompt(inputType: SummaryInputType): string {
     "Voorkom semantische duplicatie: noem hetzelfde punt niet meerdere keren in andere woorden.",
     sourceTypeLine,
     "Verwerk zowel directe gesprekstranscripties als nabesprekingen op dezelfde neutrale, feitelijke manier.",
-    "Zet onder 'Vervolgstappen:' altijd minimaal één bullet.",
-    "Als er geen expliciete vervolgstap in de input staat, gebruik dan: '- Geen concrete vervolgstappen genoemd.'",
+    "Schrijf na 'Vervolgstappen:' altijd minimaal één actie.",
+    "Als er geen expliciete vervolgstap in de input staat, schrijf dan: 'Geen concrete vervolgstappen genoemd.'",
     "",
     "Stijlvoorbeeld alinea 1:",
     "Cliënt heeft gewerkt aan het actualiseren van het cv en het uitbreiden van het LinkedIn-netwerk. Verder is er besproken welke stappen al zijn gezet en waar nog ondersteuning nodig is.",
     "Stijlvoorbeeld vervolgstappen:",
-    "Vervolgstappen:",
-    "- Versturen van gerichte connectieverzoeken op LinkedIn.",
-    "- Verwerken van ontvangen feedback op het cv.",
-    "- Inplannen van een kort voortgangsmoment.",
+    "Vervolgstappen: Versturen van gerichte connectieverzoeken op LinkedIn; verwerken van ontvangen feedback op het cv; inplannen van een kort voortgangsmoment.",
   ].join("\n")
 }
 
@@ -179,9 +176,8 @@ async function mergeChunkSummaries(params: {
     for (const input of groups) {
       const userPrompt = [
         "Voeg deze deelsamenvattingen samen zonder nieuwe feiten.",
-        "Gebruik exact dit format:",
-        "- eerst 1 korte samenvattingsalinea",
-        "- daarna 'Vervolgstappen:' met bullet points ('-' bullets)",
+        "Gebruik geen markdown, geen bullet points en geen speciale opmaak.",
+        "Gebruik exact dit format: eerst 1 korte samenvattingsalinea, daarna 'Vervolgstappen:' gevolgd door de acties als doorlopende tekst gescheiden door puntkomma's.",
         "",
         input,
       ].join("\n")
@@ -241,21 +237,15 @@ function ensureSummaryActionPoints(summary: string): string {
 
   const hasSection = /(?:^|\n)\s*vervolgstappen\s*:/i.test(normalized)
   if (!hasSection) {
-    return `${normalized}\n\nVervolgstappen:\n- Geen concrete vervolgstappen genoemd.`
+    return `${normalized}\n\nVervolgstappen: Geen concrete vervolgstappen genoemd.`
   }
 
-  const lines = normalized.split(/\r?\n/)
-  const sectionIndex = lines.findIndex((line) => /^\s*vervolgstappen\s*:/i.test(line))
-  if (sectionIndex < 0) {
-    return `${normalized}\n\nVervolgstappen:\n- Geen concrete vervolgstappen genoemd.`
+  const afterSection = normalized.replace(/^[\s\S]*vervolgstappen\s*:/i, "").trim()
+  if (!afterSection) {
+    return `${normalized.trimEnd()} Geen concrete vervolgstappen genoemd.`
   }
 
-  const tail = lines.slice(sectionIndex + 1).map((line) => line.trim())
-  const hasBullet = tail.some((line) => line.startsWith("- "))
-  if (hasBullet) return normalized
-
-  const prefix = lines.slice(0, sectionIndex + 1).join("\n").trimEnd()
-  return `${prefix}\n- Geen concrete vervolgstappen genoemd.`
+  return normalized
 }
 
 // Resolves the summary deployment from environment settings.

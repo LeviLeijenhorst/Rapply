@@ -1,5 +1,6 @@
 import { env } from "../../env"
 import { Csa1DecryptStream, ensureValidAesKey } from "../csa1"
+import type { TranscriptionProviderResult } from "../operationTypes"
 import {
   guessAudioUploadFileName,
   normalizeText,
@@ -261,4 +262,34 @@ export async function runSpeechmaticsBatchTranscription(params: {
   }
 
   return transcript.text
+}
+
+// Starts a Speechmatics transcription from a pre-decrypted audio buffer.
+export async function startSpeechmaticsTranscription(params: {
+  operationId: string
+  audioBuffer: Buffer
+  mimeType: string
+  languageCode: string
+}): Promise<TranscriptionProviderResult> {
+  const apiKey = normalizeText(env.speechmaticsApiKey)
+  if (!apiKey) throw new Error("Speechmatics API key is not configured")
+
+  const apiBase = normalizeBatchApiBase(env.speechmaticsBatchApiUrl)
+  const jobId = await createSpeechmaticsJob({
+    apiBase,
+    apiKey,
+    audioBuffer: params.audioBuffer,
+    contentType: normalizeText(params.mimeType).toLowerCase() || "application/octet-stream",
+    language: normalizeSpeechmaticsLanguage(params.languageCode),
+  })
+  await waitForSpeechmaticsJob({ apiBase, apiKey, jobId })
+
+  const transcript = extractSpeechmaticsTranscript(
+    await fetchSpeechmaticsTranscript({ apiBase, apiKey, jobId }),
+  )
+  if (!normalizeText(transcript.text)) {
+    throw new Error("No transcript returned")
+  }
+
+  return { status: "completed", transcript: transcript.text }
 }

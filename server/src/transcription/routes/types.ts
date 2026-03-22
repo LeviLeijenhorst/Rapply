@@ -9,7 +9,7 @@ export type TranscriptionProvider =
   | "azure-speech-realtime"
   | "speechmatics-batch"
   | "speechmatics-realtime"
-  | "self-hosted-whisper-batch"
+  | "whisper-fast-batch"
   | "none"
 
 export type StartRequest = {

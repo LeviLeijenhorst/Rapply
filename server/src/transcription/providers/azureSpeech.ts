@@ -1,5 +1,6 @@
 import { env } from "../../env"
 import { Csa1DecryptStream, ensureValidAesKey } from "../csa1"
+import type { TranscriptionProviderResult } from "../operationTypes"
 import {
   guessAudioUploadFileName,
   normalizeText,
@@ -175,4 +176,37 @@ export async function runAzureSpeechBatchTranscription(params: {
   }
 
   return transcript.text
+}
+
+// Starts an Azure Speech transcription from a pre-decrypted audio buffer.
+export async function startAzureSpeechTranscription(params: {
+  operationId: string
+  audioBuffer: Buffer
+  mimeType: string
+  languageCode: string
+}): Promise<TranscriptionProviderResult> {
+  const key = normalizeText(env.azureSpeechKey)
+  if (!key) throw new Error("Azure Speech key is not configured")
+
+  const region = normalizeRegion(env.azureSpeechRegion)
+  if (!region) throw new Error("Azure Speech region is not configured")
+
+  const resultJson = await requestAzureSpeechTranscription({
+    region,
+    key,
+    locale: normalizeAzureLocale(params.languageCode),
+    audioBuffer: params.audioBuffer,
+    contentType: normalizeText(params.mimeType).toLowerCase() || "application/octet-stream",
+  })
+
+  const transcript = extractAzureSpeechTranscript(resultJson)
+  if (!transcript.text) {
+    throw new Error(
+      "No transcript returned. " +
+        `Keys=${readObjectKeys(resultJson).join(",") || "none"}; ` +
+        `Preview=${buildJsonPreview(resultJson) || "empty"}`,
+    )
+  }
+
+  return { status: "completed", transcript: transcript.text }
 }

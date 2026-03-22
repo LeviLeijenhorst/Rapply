@@ -33,7 +33,7 @@ export async function runBatchTranscription(params: {
     })
   }
 
-  if (params.provider === "self-hosted-whisper-batch") {
+  if (params.provider === "whisper-fast-batch") {
     return await runWhisperFastBatchTranscription({
       encryptedStream: encryptedUploadStream,
       keyBase64: params.keyBase64,

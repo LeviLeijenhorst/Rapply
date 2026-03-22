@@ -1,5 +1,6 @@
 import { env } from "../../env"
 import { Csa1DecryptStream, ensureValidAesKey } from "../csa1"
+import type { TranscriptionProviderResult } from "../operationTypes"
 import {
   guessAudioUploadFileName,
   normalizeText,
@@ -87,6 +88,62 @@ export async function runWhisperFastBatchTranscription(params: {
     }
 
     return transcript
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+// Starts a WhisperFast transcription from a pre-decrypted audio buffer.
+export async function startWhisperFastTranscription(params: {
+  operationId: string
+  audioBuffer: Buffer
+  mimeType: string
+  languageCode: string
+}): Promise<TranscriptionProviderResult> {
+  const endpoint = normalizeText(env.selfHostedWhisperEndpoint)
+  if (!endpoint) {
+    throw new Error("WhisperFast endpoint is not configured")
+  }
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), Math.max(5_000, env.selfHostedWhisperTimeoutMs))
+
+  try {
+    const formData = new FormData()
+    formData.append(
+      "audio",
+      new Blob([new Uint8Array(params.audioBuffer)], {
+        type: normalizeText(params.mimeType).toLowerCase() || "application/octet-stream",
+      }),
+      guessAudioUploadFileName(params.mimeType),
+    )
+    formData.append("language", normalizeText(params.languageCode) || "nl")
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { ...buildAuthorizationHeaders() },
+      body: formData,
+      signal: controller.signal,
+    })
+
+    const responseText = await response.text().catch(() => "")
+    if (!response.ok) {
+      throw new Error(`WhisperFast transcription failed: status=${response.status}; response=${responseText || response.statusText}`)
+    }
+
+    let payload: WhisperFastResponse | null = null
+    try {
+      payload = responseText ? (JSON.parse(responseText) as WhisperFastResponse) : null
+    } catch {
+      payload = null
+    }
+
+    const transcript = readTranscriptFromResponse(payload)
+    if (!transcript) {
+      throw new Error("WhisperFast transcription failed: missing transcript")
+    }
+
+    return { status: "completed", transcript }
   } finally {
     clearTimeout(timeout)
   }

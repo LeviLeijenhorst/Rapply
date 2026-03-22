@@ -6,14 +6,6 @@ export type SessionInputType =
   | "uploaded_document"
   | "intake"
 
-export type StructuredSessionSummary = {
-  doelstelling: string
-  belastbaarheid: string
-  belemmeringen: string
-  voortgang: string
-  arbeidsmarktorientatie: string
-}
-
 export type Session = {
   id: string
   clientId: string | null
@@ -27,7 +19,7 @@ export type Session = {
   uploadFileName: string | null
   transcriptText: string | null
   summaryText: string | null
-  summaryStructured: StructuredSessionSummary | null
+  summaryStructured: Record<string, string> | null
   transcriptionStatus: "idle" | "transcribing" | "generating" | "done" | "error"
   transcriptionError: string | null
   createdAtUnixMs: number
